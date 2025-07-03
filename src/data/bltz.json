@@ -1,0 +1,106 @@
+{
+  "app_name": "BLTZ",
+  "domain": "bltz.me",
+  "overview": "BLTZ is a mobile-first Progressive Web App (PWA) that serves as a digital locker for football athletes (college, pro, or former). Athletes can share a custom profile link that showcases their career, highlights, and personal brand \u2014 transforming social moments into digital engagement.",
+  "tech_stack": {
+    "frontend": "Next.js",
+    "styling": "Tailwind CSS",
+    "backend": "Supabase (Auth + players table)",
+    "video_hosting": "Amazon S3",
+    "music_embed": "Spotify playlist embed",
+    "deployment": "Vercel"
+  },
+  "ui_design": {
+    "vibe": "Next-generation athletic design inspired by Nike Training Club, EA Sports, and Apple Fitness.",
+    "colors": {
+      "primary_blue": "#0432b5",
+      "gold_accent": "#FFbb00",
+      "dark_gradients": "Use linear dark overlays with subtle blur"
+    },
+    "typography": "Bold, clear sans-serif fonts with emphasis on athlete name and stats",
+    "elements": [
+      "Gradient overlays behind profile photos and cards",
+      "Card-based layout for video and playlist embeds",
+      "Responsive design optimized for mobile",
+      "Installable as PWA"
+    ]
+  },
+  "pages": [
+    {
+      "name": "Onboarding Page",
+      "path": "/onboarding",
+      "purpose": "Collect athlete's full name, hometown, team/school, position. Automatically creates a unique slug (e.g., /locker/daymeionhughes) and saves data to Supabase."
+    },
+    {
+      "name": "Login Page",
+      "path": "/login",
+      "purpose": "Allow returning athletes to authenticate via Supabase."
+    },
+    {
+      "name": "Locker Dashboard",
+      "path": "/dashboard",
+      "purpose": "Private view for athlete to manage content. Can upload profile image, video URL, Spotify embed, change theme color, toggle public/private visibility, and preview public locker."
+    },
+    {
+      "name": "Public Locker Page",
+      "path": "/locker/[username]",
+      "purpose": "Public-facing shareable URL displaying athlete's profile, highlight video, Spotify playlist, and AI-generated bio."
+    },
+    {
+      "name": "Settings Page",
+      "path": "/settings",
+      "purpose": "Update display name, bio, locker colors, visibility, Spotify and video links. All saved to Supabase."
+    }
+  ],
+  "user_flow": {
+    "new_user": [
+      "Visits bltz.me and clicks 'Get Started'",
+      "Completes onboarding form",
+      "System creates locker slug and saves to Supabase",
+      "Redirected to dashboard to upload video, playlist, and customize page",
+      "Shares locker via custom URL"
+    ],
+    "returning_user": [
+      "Logs in via Supabase Auth",
+      "Accesses dashboard to update content or open settings"
+    ],
+    "viewer": [
+      "Clicks shared URL (e.g., bltz.me/daymeionhughes)",
+      "Views public locker without logging in"
+    ]
+  },
+  "data_model": {
+    "table": "players",
+    "fields": [
+      "id (uuid)",
+      "username (text)",
+      "display_name (text)",
+      "team (text)",
+      "position (text)",
+      "hometown (text)",
+      "bio (text)",
+      "image_url (text)",
+      "highlight_url (text)",
+      "spotify_url (text)",
+      "is_public (boolean)",
+      "theme_primary (text)",
+      "theme_secondary (text)",
+      "earnings (numeric)",
+      "view_count (integer)",
+      "created_at (timestamp)"
+    ]
+  },
+  "security": {
+    "row_level_security": true,
+    "policies": [
+      "SELECT: Public if is_public = true OR user is owner",
+      "UPDATE/DELETE: Only by logged-in owner"
+    ]
+  },
+  "notes": {
+    "meta_tags": "Include Open Graph tags for social sharing",
+    "fallback_profiles": "Load 2-3 demo players for public preview",
+    "animations": "Use simple fade-in and scroll-in animations for modern UX",
+    "PWA": "Should be installable, responsive, and performant on mobile"
+  }
+}
