@@ -1,3 +1,3 @@
-export default function LoginPage() {
-  return <main className="flex min-h-screen items-center justify-center">Login Page</main>;
+export default function LockerPage() {
+  return <main className="flex min-h-screen items-center justify-center">Locker Page</main>;
 }
