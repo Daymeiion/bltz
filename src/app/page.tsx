@@ -16,6 +16,8 @@ export default function DashboardPage() {
           <Cog6ToothIcon className="w-6 h-6 text-white" />
         </button>
       </div>
+      {/* Tailwind CSS Test Element */}
+      <div className="bg-red-500 text-white p-4 rounded mb-4">Tailwind CSS is working!</div>
       {/* Main content scaffold for further sections */}
       <main className="w-full max-w-md flex-1 flex flex-col items-center p-4">
         <div className="w-full max-w-md bg-gray-900 rounded-xl shadow-lg p-6 mt-8">
