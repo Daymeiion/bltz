@@ -38,8 +38,8 @@ export default function HeroHeader({ backgroundImage, cardImage, profileImage, a
           src={profileImage}
           alt={alt || 'Profile'}
           width={180}
-          height={180}
-          className="absolute left-1/2 -translate-x-1/2 -top-16 rounded-full object-cover z-10"
+          height={220}
+          className="absolute left-1/2 -translate-x-1/2 bottom-0 z-10"
           priority
         />
       </div>
