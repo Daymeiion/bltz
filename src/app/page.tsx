@@ -1,14 +1,25 @@
 import players from '@/data/bltz_mock_players.json';
 import HeroHeader from '@/components/HeroHeader';
 import Image from 'next/image';
+import { ArrowLeftIcon, Cog6ToothIcon } from '@heroicons/react/24/outline';
 
 const athlete = players[0]; // Simulate logged-in user
 
 export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-black to-gray-900 text-white flex flex-col items-center">
+      {/* Top Nav Bar */}
+      <div className="flex items-center justify-between w-full max-w-md px-4 pt-6 pb-2">
+        <button>
+          <ArrowLeftIcon className="w-6 h-6 text-white" />
+        </button>
+        <h1 className="text-white text-lg font-bold tracking-widest">DASHBOARD</h1>
+        <button>
+          <Cog6ToothIcon className="w-6 h-6 text-white" />
+        </button>
+      </div>
       {/* Welcome Message */}
-      <div className="w-full max-w-md px-4 pt-6 pb-2 text-left">
+      <div className="w-full max-w-md px-4 pb-2 text-left">
         <div className="text-lg font-semibold">Welcome back,</div>
         <div className="text-2xl font-bold">{athlete.display_name}</div>
       </div>
@@ -16,7 +27,7 @@ export default function DashboardPage() {
       <HeroHeader
         backgroundImage="/assets/Football_Background.png"
         cardImage="/assets/card-placeholder.png" // Replace with your card image filename
-        profileImage={athlete.image_url}
+        profileImage="/assets/NFLPlayers.png"
         alt={athlete.display_name}
       />
       {/* Main content scaffold for further sections */}
