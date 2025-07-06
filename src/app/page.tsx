@@ -27,7 +27,7 @@ export default function DashboardPage() {
       <HeroHeader
         backgroundImage="/assets/Football_Background.png"
         cardImage="/assets/card_image.png"
-        profileImage="/assets/NFLPlayers.png"
+        profileImage="/assets/NFLPlayer.png"
         alt={athlete.display_name}
       />
       {/* Main content scaffold for further sections */}
