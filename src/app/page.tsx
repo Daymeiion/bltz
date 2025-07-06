@@ -1,6 +1,6 @@
-import { ArrowLeftIcon, Cog6ToothIcon } from '@heroicons/react/24/outline';
 import players from '@/data/bltz_mock_players.json';
 import HeroHeader from '@/components/HeroHeader';
+import Image from 'next/image';
 
 const athlete = players[0]; // Simulate logged-in user
 
@@ -19,25 +19,15 @@ export default function DashboardPage() {
         profileImage={athlete.image_url}
         alt={athlete.display_name}
       />
-      {/* Header (optional, can be moved or removed) */}
-      {/*
-      <div className="flex items-center justify-between w-full max-w-md px-4 pt-6 pb-2">
-        <button>
-          <ArrowLeftIcon className="w-6 h-6 text-white" />
-        </button>
-        <h1 className="text-white text-lg font-bold tracking-widest">DASHBOARD</h1>
-        <button>
-          <Cog6ToothIcon className="w-6 h-6 text-white" />
-        </button>
-      </div>
-      */}
       {/* Main content scaffold for further sections */}
       <main className="w-full max-w-md flex-1 flex flex-col items-center p-4">
         <div className="w-full max-w-md bg-gray-900 rounded-xl shadow-lg p-6 mt-8">
           <div className="flex flex-col items-center">
-            <img
+            <Image
               src={athlete.image_url}
               alt={athlete.display_name}
+              width={128}
+              height={128}
               className="w-32 h-32 rounded-full object-cover border-4 border-blue-700 shadow-md mb-4"
             />
             <h1 className="text-2xl font-bold mb-1">{athlete.display_name}</h1>
