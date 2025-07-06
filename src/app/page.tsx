@@ -9,7 +9,7 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-black to-gray-900 text-white flex flex-col items-center">
       {/* Top Nav Bar */}
-      <div className="flex items-center justify-between w-full max-w-md px-4 pt-6 pb-[10px] sm:pt-8 sm:pb-4">
+      <div className="flex items-center justify-between w-full px-4 pt-6 pb-[20px] sm:pt-8 sm:pb-6">
         <button>
           <ArrowLeftIcon className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
         </button>
@@ -21,8 +21,8 @@ export default function DashboardPage() {
         </button>
       </div>
       {/* Welcome Message */}
-      <div className="w-full max-w-md px-4 pb-2 text-left">
-        <div className="text-[14px] font-roboto font-bold">Welcome back,</div>
+      <div className="w-full max-w-md px-4 pb-2 text-left mb-[10px]">
+        <div className="text-[14px] font-roboto">Welcome back,</div>
         <div className="text-[18px] font-roboto font-bold">{athlete.display_name}</div>
       </div>
       {/* Quote Box */}
