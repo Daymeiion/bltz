@@ -1,12 +1,26 @@
 import { ArrowLeftIcon, Cog6ToothIcon } from '@heroicons/react/24/outline';
 import players from '@/data/bltz_mock_players.json';
+import HeroHeader from '@/components/HeroHeader';
 
 const athlete = players[0]; // Simulate logged-in user
 
 export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-black to-gray-900 text-white flex flex-col items-center">
-      {/* Header */}
+      {/* Welcome Message */}
+      <div className="w-full max-w-md px-4 pt-6 pb-2 text-left">
+        <div className="text-lg font-semibold">Welcome back,</div>
+        <div className="text-2xl font-bold">{athlete.display_name}</div>
+      </div>
+      {/* Hero Header */}
+      <HeroHeader
+        backgroundImage="/assets/Football_Background.png"
+        cardImage="/assets/card-placeholder.png" // Replace with your card image filename
+        profileImage={athlete.image_url}
+        alt={athlete.display_name}
+      />
+      {/* Header (optional, can be moved or removed) */}
+      {/*
       <div className="flex items-center justify-between w-full max-w-md px-4 pt-6 pb-2">
         <button>
           <ArrowLeftIcon className="w-6 h-6 text-white" />
@@ -16,8 +30,7 @@ export default function DashboardPage() {
           <Cog6ToothIcon className="w-6 h-6 text-white" />
         </button>
       </div>
-      {/* Tailwind CSS Test Element */}
-      <div className="bg-red-500 text-white p-4 rounded mb-4">Tailwind CSS is working!</div>
+      */}
       {/* Main content scaffold for further sections */}
       <main className="w-full max-w-md flex-1 flex flex-col items-center p-4">
         <div className="w-full max-w-md bg-gray-900 rounded-xl shadow-lg p-6 mt-8">
