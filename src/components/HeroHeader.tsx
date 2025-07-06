@@ -24,24 +24,26 @@ export default function HeroHeader({ backgroundImage, cardImage, profileImage, a
       <div className="absolute top-4 right-4 z-20 bg-black/60 rounded-full p-2">
         <Cog6ToothIcon className="w-6 h-6 text-white" />
       </div>
-      {/* Card and Profile Images */}
-      <div className="relative flex flex-col items-center z-10">
-        <Image
-          src={cardImage}
-          alt="Card"
-          width={260}
-          height={320}
-          className="mb-[-120px] drop-shadow-xl"
-          priority
-        />
-        <Image
-          src={profileImage}
-          alt={alt || 'Profile'}
-          width={180}
-          height={180}
-          className="rounded-full object-cover border-4 border-white shadow-lg"
-          priority
-        />
+      {/* Card and Profile Images Centered at Bottom */}
+      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 flex flex-col items-center z-10">
+        <div className="relative">
+          <Image
+            src={cardImage}
+            alt="Card"
+            width={260}
+            height={320}
+            className="drop-shadow-xl"
+            priority
+          />
+          <Image
+            src={profileImage}
+            alt={alt || 'Profile'}
+            width={180}
+            height={180}
+            className="rounded-full object-cover absolute left-1/2 -translate-x-1/2 -top-16 z-10"
+            priority
+          />
+        </div>
       </div>
     </div>
   );
