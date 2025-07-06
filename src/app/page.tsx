@@ -9,19 +9,27 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-black to-gray-900 text-white flex flex-col items-center">
       {/* Top Nav Bar */}
-      <div className="flex items-center justify-between w-full max-w-md px-4 pt-6 pb-2">
+      <div className="flex items-center justify-between w-full max-w-md px-4 pt-6 pb-2 sm:pt-8 sm:pb-4">
         <button>
-          <ArrowLeftIcon className="w-6 h-6 text-white" />
+          <ArrowLeftIcon className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
         </button>
-        <h1 className="text-white text-lg font-bold tracking-widest">DASHBOARD</h1>
+        <h1 className="text-white text-xl sm:text-2xl font-bold tracking-widest font-oswald uppercase text-center flex-1">
+          DASHBOARD
+        </h1>
         <button>
-          <Cog6ToothIcon className="w-6 h-6 text-white" />
+          <Cog6ToothIcon className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
         </button>
       </div>
       {/* Welcome Message */}
       <div className="w-full max-w-md px-4 pb-2 text-left">
         <div className="text-lg font-semibold">Welcome back,</div>
         <div className="text-2xl font-bold">{athlete.display_name}</div>
+      </div>
+      {/* Quote Box */}
+      <div className="w-full max-w-md flex justify-center mb-2 px-4">
+        <div className="px-4 py-3 text-center w-full font-roboto italic text-[14px] text-gray-200">
+          "Success is not owned, it's leased. And rent is due every day." – J.J. Watt
+        </div>
       </div>
       {/* Hero Header */}
       <HeroHeader
