@@ -25,25 +25,23 @@ export default function HeroHeader({ backgroundImage, cardImage, profileImage, a
         <Cog6ToothIcon className="w-6 h-6 text-white" />
       </div>
       {/* Card and Profile Images Centered at Bottom */}
-      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 flex flex-col items-center z-10">
-        <div className="relative">
-          <Image
-            src={cardImage}
-            alt="Card"
-            width={260}
-            height={320}
-            className="drop-shadow-xl"
-            priority
-          />
-          <Image
-            src={profileImage}
-            alt={alt || 'Profile'}
-            width={180}
-            height={180}
-            className="rounded-full object-cover absolute left-1/2 -translate-x-1/2 -top-16 z-10"
-            priority
-          />
-        </div>
+      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[260px] h-[320px] z-10">
+        <Image
+          src={cardImage}
+          alt="Card"
+          width={260}
+          height={320}
+          className="absolute bottom-0 left-1/2 -translate-x-1/2 drop-shadow-xl"
+          priority
+        />
+        <Image
+          src={profileImage}
+          alt={alt || 'Profile'}
+          width={180}
+          height={180}
+          className="absolute left-1/2 -translate-x-1/2 -top-16 rounded-full object-cover z-10"
+          priority
+        />
       </div>
     </div>
   );
