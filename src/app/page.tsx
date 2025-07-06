@@ -28,7 +28,7 @@ export default function DashboardPage() {
       {/* Quote Box */}
       <div className="w-full max-w-md flex justify-center mb-2 px-4">
         <div className="px-4 py-3 text-center w-full font-roboto italic text-[14px] text-gray-200">
-          "Success is not owned, it's leased. And rent is due every day." – J.J. Watt
+          &quot;Success is not owned, it&rsquo;s leased. And rent is due every day.&quot; &ndash; J.J. Watt
         </div>
       </div>
       {/* Hero Header */}
