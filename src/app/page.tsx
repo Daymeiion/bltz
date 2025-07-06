@@ -22,12 +22,12 @@ export default function DashboardPage() {
       </div>
       {/* Welcome Message */}
       <div className="w-full max-w-md px-4 pb-2 text-left mb-[10px]">
-        <div className="text-[14px] font-roboto">Welcome back,</div>
+        <div className="text-[12px] font-roboto font-medium">Welcome back,</div>
         <div className="text-[18px] font-roboto font-bold">{athlete.display_name}</div>
       </div>
       {/* Quote Box */}
       <div className="w-full max-w-md flex justify-center mb-2 px-4">
-        <div className="px-4 py-3 text-center w-full font-roboto italic text-[14px] text-gray-200">
+        <div className="px-4 py-3 text-center w-full font-roboto italic text-[12px] text-gray-300">
           &quot;Success is not owned, it&rsquo;s leased. And rent is due every day.&quot; &ndash; J.J. Watt
         </div>
       </div>
