@@ -26,7 +26,7 @@ export default function DashboardPage() {
       {/* Hero Header */}
       <HeroHeader
         backgroundImage="/assets/Football_Background.png"
-        cardImage="/assets/card-placeholder.png" // Replace with your card image filename
+        cardImage="/assets/card_image.png"
         profileImage="/assets/NFLPlayers.png"
         alt={athlete.display_name}
       />
