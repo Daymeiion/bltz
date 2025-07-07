@@ -24,8 +24,8 @@ export default function HeroHeader({ backgroundImage, cardImage, profileImage, a
       <Image
         src={cardImage}
         alt="Card"
-        fill
-        style={{ objectFit: 'contain', objectPosition: 'bottom' }}
+        width={260}
+        height={320}
         className="absolute bottom-0 left-1/2 -translate-x-1/2 z-10"
         priority
       />
