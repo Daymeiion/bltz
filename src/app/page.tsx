@@ -49,16 +49,20 @@ export default function DashboardPage() {
       {/* Private Locker Switch Row */}
       <div className="w-full lg:w-1/2 mx-auto flex items-center px-4 py-2 mb-4 justify-between">
         <div className="flex items-center">
-          <Switch isSelected={isPrivate} onValueChange={setIsPrivate} className="mr-3">
+          <Switch
+            isSelected={isPrivate}
+            onValueChange={setIsPrivate}
+            className={`mr-3 text-white font-roboto text-[14px] ${isPrivate ? 'bg-[#ffbb00]' : ''}`}
+          >
             Private locker
           </Switch>
         </div>
         <div className="flex items-center gap-2 ml-auto">
-          <Button isIconOnly aria-label="Notifications" variant="faded" size="sm">
-            <FaBell className="w-5 h-5" />
+          <Button isIconOnly aria-label="Notifications" variant="faded" size="sm" className="rounded-[8px]">
+            <FaBell className="w-7 h-7 stroke-gray-400" style={{ strokeWidth: 2 }} />
           </Button>
-          <Button isIconOnly aria-label="Show QR Code" variant="faded" size="sm" onClick={() => setShowQR(true)}>
-            <FaQrcode className="w-5 h-5" />
+          <Button isIconOnly aria-label="Show QR Code" variant="faded" size="sm" className="rounded-[8px]" onClick={() => setShowQR(true)}>
+            <FaQrcode className="w-7 h-7 stroke-gray-400" style={{ strokeWidth: 2 }} />
           </Button>
         </div>
       </div>
