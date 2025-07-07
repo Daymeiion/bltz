@@ -2,7 +2,6 @@ import players from '@/data/bltz_mock_players.json';
 import HeroHeader from '@/components/HeroHeader';
 import { Card, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { IconTrendingUp } from "@/components/ui/icons";
 import { ArrowLeftIcon, Cog6ToothIcon } from '@heroicons/react/24/outline';
 import { TrendingUp } from "lucide-react";
 
