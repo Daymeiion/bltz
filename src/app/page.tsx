@@ -1,13 +1,18 @@
+import React from "react";
 import players from '@/data/bltz_mock_players.json';
 import HeroHeader from '@/components/HeroHeader';
 import { Card, CardHeader, CardTitle, CardDescription, CardFooter, CardAction } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeftIcon, Cog6ToothIcon } from '@heroicons/react/24/outline';
 import { TrendingUp, TrendingDown } from "lucide-react";
+import { Switch, Button } from "@heroui/react";
+import { FaBell, FaQrcode } from "react-icons/fa";
 
 const athlete = players[0]; // Simulate logged-in user
 
 export default function DashboardPage() {
+  const [isPrivate, setIsPrivate] = React.useState(true);
+  const [showQR, setShowQR] = React.useState(false);
   return (
     <div className="min-h-screen bg-gradient-to-b from-black to-gray-900 text-white flex flex-col items-center">
       {/* Top Nav Bar */}
@@ -40,6 +45,37 @@ export default function DashboardPage() {
         profileImage="/assets/NFLPlayer.png"
         alt={athlete.display_name}
       />
+      {/* Private Locker Switch Row */}
+      <div className="w-full lg:w-1/2 mx-auto flex items-center px-4 py-2 mb-4 justify-between">
+        <div className="flex items-center">
+          <Switch isSelected={isPrivate} onValueChange={setIsPrivate} className="mr-3">
+            Private locker
+          </Switch>
+        </div>
+        <div className="flex items-center gap-2 ml-auto">
+          <Button isIconOnly aria-label="Notifications" variant="faded" size="sm">
+            <FaBell className="w-5 h-5" />
+          </Button>
+          <Button isIconOnly aria-label="Show QR Code" variant="faded" size="sm" onClick={() => setShowQR(true)}>
+            <FaQrcode className="w-5 h-5" />
+          </Button>
+        </div>
+      </div>
+      {/* QR Code Modal */}
+      {showQR && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white rounded-lg p-6 flex flex-col items-center">
+            <div className="mb-4 text-black font-bold text-lg">Share your locker</div>
+            {/* Placeholder QR code */}
+            <div className="w-40 h-40 bg-gray-200 flex items-center justify-center mb-4">
+              <span className="text-gray-500">QR CODE</span>
+            </div>
+            <Button color="primary" onClick={() => setShowQR(false)}>
+              Close
+            </Button>
+          </div>
+        </div>
+      )}
       {/* Shadcn Section Card */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 px-4 w-full lg:w-1/2 mx-auto *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card *:data-[slot=card]:shadow-xs lg:px-6">
         <Card className="w-full">
