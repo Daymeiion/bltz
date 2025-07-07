@@ -41,7 +41,7 @@ export default function DashboardPage() {
         alt={athlete.display_name}
       />
       {/* Shadcn Section Card */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 px-4 w-full *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card *:data-[slot=card]:shadow-xs lg:px-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 px-4 w-full lg:w-1/2 mx-auto *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card *:data-[slot=card]:shadow-xs lg:px-6">
         <Card className="w-full">
           <CardHeader>
             <CardDescription>Total Revenue</CardDescription>
