@@ -1,3 +1,4 @@
+'use client';
 import React from "react";
 import players from '@/data/bltz_mock_players.json';
 import HeroHeader from '@/components/HeroHeader';
