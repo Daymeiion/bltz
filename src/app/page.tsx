@@ -6,6 +6,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardFooter, CardAction } 
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeftIcon, Cog6ToothIcon } from '@heroicons/react/24/outline';
 import { TrendingUp, TrendingDown } from "lucide-react";
+import { Switch } from "@heroui/react";
 
 const athlete = players[0]; // Simulate logged-in user
 
@@ -29,6 +30,11 @@ export default function DashboardPage() {
       <section className="w-full max-w-md px-4 pb-2 text-left mb-[10px]">
         <div className="text-[12px] font-roboto font-medium">Welcome back,</div>
         <div className="text-[18px] font-roboto font-bold">{athlete.display_name}</div>
+      </section>
+      {/* HeroUI Switch Example */}
+      <section className="w-full max-w-md px-4 pb-2 text-left mb-[10px]">
+        <Switch>Default</Switch>
+        <Switch defaultSelected color="warning">Warning</Switch>
       </section>
       {/* Quote Box */}
       <section className="w-full max-w-md flex justify-center mb-2 px-4">
