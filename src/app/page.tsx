@@ -6,7 +6,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardFooter, CardAction } 
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeftIcon, Cog6ToothIcon } from '@heroicons/react/24/outline';
 import { TrendingUp, TrendingDown } from "lucide-react";
-import { Switch } from "@/components/ui/switch";
+import { Switch } from "../components/ui/switch";
 
 const athlete = players[0]; // Simulate logged-in user
 
