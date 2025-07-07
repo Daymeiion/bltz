@@ -1,5 +1,7 @@
 import players from '@/data/bltz_mock_players.json';
 import Image from 'next/image';
+import { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardAction } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 const athlete = players[0]; // Simulate logged-in user
 
