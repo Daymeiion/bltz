@@ -48,13 +48,9 @@ export default function DashboardPage() {
       />
       {/* Private Locker Switch Row */}
       <div className="w-full lg:w-1/2 mx-auto flex items-center px-4 py-2 mb-4 justify-between">
-        <div className="flex items-center">
-          <Switch
-            isSelected={isPrivate}
-            onValueChange={setIsPrivate}
-            className={`mr-3 text-white font-roboto text-[14px] ${isPrivate ? 'bg-[#ffbb00]' : ''}`}
-          >
-            Private locker
+        <div className={`flex items-center p-1 rounded transition-colors duration-200 ${isPrivate ? 'bg-[#ffbb00]' : ''}`}>
+          <Switch isSelected={isPrivate} onValueChange={setIsPrivate}>
+            <span className="text-white font-roboto text-[14px]">Private locker</span>
           </Switch>
         </div>
         <div className="flex items-center gap-2 ml-auto">
