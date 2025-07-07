@@ -30,7 +30,7 @@ export default function DashboardPage() {
           <p className="text-sm text-gray-400 mb-2">{athlete.hometown}</p>
           <p className="text-center text-base mb-4">{athlete.bio}</p>
         </div>
-        <Card className="w-full" >
+        <Card className="w-[85vw] mx-auto" >
   <CardHeader>
     <CardTitle>Card Title</CardTitle>
     <CardDescription>Card Description</CardDescription>
