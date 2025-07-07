@@ -6,13 +6,11 @@ import { Card, CardHeader, CardTitle, CardDescription, CardFooter, CardAction } 
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeftIcon, Cog6ToothIcon } from '@heroicons/react/24/outline';
 import { TrendingUp, TrendingDown } from "lucide-react";
-import { Switch, Button } from "@heroui/react";
 import { FaBell, FaQrcode } from "react-icons/fa";
 
 const athlete = players[0]; // Simulate logged-in user
 
 export default function DashboardPage() {
-  const [isPrivate, setIsPrivate] = React.useState(true);
   const [showQR, setShowQR] = React.useState(false);
   return (
     <div className="min-h-screen bg-gradient-to-b from-black to-gray-900 text-white flex flex-col items-center">
@@ -45,23 +43,7 @@ export default function DashboardPage() {
         cardImage="/assets/card_image.png"
         profileImage="/assets/NFLPlayer.png"
         alt={athlete.display_name}
-      />
-      {/* Private Locker Switch Row */}
-      <div className="w-full lg:w-1/2 mx-auto flex items-center px-4 py-2 mb-4 justify-between">
-        <div className={`flex items-center p-1 rounded transition-colors duration-200 ${isPrivate ? 'bg-[#ffbb00]' : ''}`}>
-          <Switch isSelected={isPrivate} onValueChange={setIsPrivate} className="mr-3">
-            Private locker
-          </Switch>
-        </div>
-        <div className="flex items-center gap-2 ml-auto">
-          <Button isIconOnly aria-label="Notifications" variant="faded" size="sm" className="rounded-[8px]">
-            <FaBell className="w-7 h-7 stroke-gray-400" style={{ strokeWidth: 2 }} />
-          </Button>
-          <Button isIconOnly aria-label="Show QR Code" variant="faded" size="sm" className="rounded-[8px]" onClick={() => setShowQR(true)}>
-            <FaQrcode className="w-7 h-7 stroke-gray-400" style={{ strokeWidth: 2 }} />
-          </Button>
-        </div>
-      </div>
+      /> 
       {/* QR Code Modal */}
       {showQR && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
@@ -71,9 +53,12 @@ export default function DashboardPage() {
             <div className="w-40 h-40 bg-gray-200 flex items-center justify-center mb-4">
               <span className="text-gray-500">QR CODE</span>
             </div>
-            <Button color="primary" onClick={() => setShowQR(false)}>
+            <button
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition"
+              onClick={() => setShowQR(false)}
+            >
               Close
-            </Button>
+            </button>
           </div>
         </div>
       )}
