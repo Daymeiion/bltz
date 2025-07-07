@@ -33,8 +33,8 @@ export default function DashboardPage() {
       </section>
       {/* HeroUI Switch Example */}
       <section className="w-full max-w-md px-4 pb-2 text-left mb-[10px]">
-        <Switch>Default</Switch>
-        <Switch defaultSelected color="warning">Warning</Switch>
+        <Switch className="text-white" color="default">Default</Switch>
+        <Switch defaultSelected color="warning" className="text-white">Warning</Switch>
       </section>
       {/* Quote Box */}
       <section className="w-full max-w-md flex justify-center mb-2 px-4">
