@@ -1,6 +1,6 @@
 import players from '@/data/bltz_mock_players.json';
 import HeroHeader from '@/components/HeroHeader';
-import Image from 'next/image';
+import { Card, CardHeader, CardBody, Image as HeroImage } from "@heroui/react";
 import { ArrowLeftIcon, Cog6ToothIcon } from '@heroicons/react/24/outline';
 
 const athlete = players[0]; // Simulate logged-in user
@@ -38,11 +38,28 @@ export default function DashboardPage() {
         profileImage="/assets/NFLPlayer.png"
         alt={athlete.display_name}
       />
+      {/* HeroUI Cards Row */}
+      <div className="w-full max-w-md flex flex-row justify-center gap-4 mt-4">
+        <Card className="w-[150px] h-[75px] rounded-xl flex flex-col justify-center items-center" style={{background: 'linear-gradient(90deg, #1e3a8a 0%, #2563eb 100%)'}}>
+          <CardHeader className="pb-0 pt-2 px-2 flex-col items-start">
+            <p className="text-tiny uppercase font-bold">Daily Mix</p>
+            <small className="text-default-500">12 Tracks</small>
+            <h4 className="font-bold text-small">Frontend Radio</h4>
+          </CardHeader>
+        </Card>
+        <Card className="w-[150px] h-[75px] rounded-xl flex flex-col justify-center items-center" style={{background: 'linear-gradient(90deg, #f59e42 0%, #fbbf24 100%)'}}>
+          <CardHeader className="pb-0 pt-2 px-2 flex-col items-start">
+            <p className="text-tiny uppercase font-bold">Stats</p>
+            <small className="text-default-500">Views</small>
+            <h4 className="font-bold text-small">1,234</h4>
+          </CardHeader>
+        </Card>
+      </div>
       {/* Main content scaffold for further sections */}
       <main className="w-full max-w-md flex-1 flex flex-col items-center p-4">
         <div className="w-full max-w-md bg-gray-900 rounded-xl shadow-lg p-6 mt-8">
           <div className="flex flex-col items-center">
-            <Image
+            <HeroImage
               src={athlete.image_url}
               alt={athlete.display_name}
               width={128}
