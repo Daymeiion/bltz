@@ -48,10 +48,12 @@ export default function DashboardPage() {
             <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
               $1,250.00
             </CardTitle>
-            <Badge variant="outline">
-              <TrendingUp className="size-4" />
-              +12.5%
-            </Badge>
+            <CardAction>
+              <Badge variant="outline" className="text-white">
+                <TrendingUp className="size-4 text-white" />
+                +12.5%
+              </Badge>
+            </CardAction>
           </CardHeader>
           <CardFooter className="flex-col items-start gap-1.5 text-sm">
             <div className="line-clamp-1 flex gap-2 font-medium">
@@ -69,8 +71,8 @@ export default function DashboardPage() {
               1,234
             </CardTitle>
             <CardAction>
-              <Badge variant="outline">
-                <TrendingDown className="size-4" />
+              <Badge variant="outline" className="text-white">
+                <TrendingDown className="size-4 text-white" />
                 -20%
               </Badge>
             </CardAction>
