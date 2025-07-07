@@ -1,6 +1,6 @@
 import { IconTrendingDown, IconTrendingUp } from "@tabler/icons-react"
-import { Badge } from "@/components/ui/badge"
 import * as React from "react"
+import { Badge } from "./badge"
 
 // Placeholder implementations for Card components
 export function Card({ children, ...props }: React.HTMLAttributes<HTMLDivElement>) {
