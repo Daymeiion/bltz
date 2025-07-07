@@ -2,14 +2,18 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
-function Card({ className, ...props }: React.ComponentProps<"div">) {
+function Card({ className, style, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="card"
       className={cn(
-        "w-full grid gap-6 rounded-xl border border-gray-400 h-[150px] bg-gradient-to-b from-blue-900 to-transparent py-6 shadow-sm",
+        "w-full grid gap-2 rounded-xl border border-gray-400 h-[150px] py-6 shadow-sm",
         className
       )}
+      style={{
+        background: 'linear-gradient(213deg, rgba(2, 0, 33, 1) 0%, rgba(9, 9, 121, 1) 29%, rgba(13, 0, 0, 0) 82%)',
+        ...style,
+      }}
       {...props}
     />
   )
