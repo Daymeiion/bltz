@@ -1,6 +1,6 @@
 import players from '@/data/bltz_mock_players.json';
 import HeroHeader from '@/components/HeroHeader';
-import { Card, CardHeader, CardBody, Image as HeroImage } from "@heroui/react";
+import { Card, CardHeader, Image as HeroImage } from "@heroui/react";
 import { ArrowLeftIcon, Cog6ToothIcon } from '@heroicons/react/24/outline';
 
 const athlete = players[0]; // Simulate logged-in user

@@ -1,4 +1,5 @@
 import players from '@/data/bltz_mock_players.json';
+import Image from 'next/image';
 
 const athlete = players[0]; // Simulate logged-in user
 
@@ -7,9 +8,11 @@ export default function DashboardPage() {
     <main className="min-h-screen bg-gray-950 text-white flex flex-col items-center p-4">
       <div className="w-full max-w-md bg-gray-900 rounded-xl shadow-lg p-6 mt-8">
         <div className="flex flex-col items-center">
-          <img
+          <Image
             src={athlete.image_url}
             alt={athlete.display_name}
+            width={128}
+            height={128}
             className="w-32 h-32 rounded-full object-cover border-4 border-blue-700 shadow-md mb-4"
           />
           <h1 className="text-2xl font-bold mb-1">{athlete.display_name}</h1>
