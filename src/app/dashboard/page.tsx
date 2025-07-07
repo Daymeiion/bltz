@@ -1,7 +1,14 @@
 import players from '@/data/bltz_mock_players.json';
 import Image from 'next/image';
-import { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardAction } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 
 const athlete = players[0]; // Simulate logged-in user
 
@@ -23,6 +30,19 @@ export default function DashboardPage() {
           <p className="text-sm text-gray-400 mb-2">{athlete.hometown}</p>
           <p className="text-center text-base mb-4">{athlete.bio}</p>
         </div>
+        <Card className="w-full" >
+  <CardHeader>
+    <CardTitle>Card Title</CardTitle>
+    <CardDescription>Card Description</CardDescription>
+    <CardAction>Card Action</CardAction>
+  </CardHeader>
+  <CardContent>
+    <p>Card Content</p>
+  </CardContent>
+  <CardFooter>
+    <p>Card Footer</p>
+  </CardFooter>
+</Card>
         <div className="flex justify-between items-center bg-gray-800 rounded-lg p-4 mb-4">
           <div className="text-center">
             <div className="text-lg font-bold">${athlete.earnings.toFixed(2)}</div>
