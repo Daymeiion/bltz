@@ -16,17 +16,17 @@ export default function HeroHeader({ backgroundImage, cardImage, profileImage, a
         src={backgroundImage}
         alt="Background"
         fill
-        style={{ objectFit: 'cover' }}
+        style={{ objectFit: 'cover', objectPosition: 'center' }}
         className="z-0"
         priority
       />
-      {/* Card Image Absolutely Bottom Center */}
+      {/* Card Image Absolutely Bottom Center, Always Flush */}
       <Image
         src={cardImage}
         alt="Card"
-        width={260}
-        height={320}
-        className="absolute bottom-0 left-1/2 -translate-x-1/2 drop-shadow-xl z-10"
+        fill
+        style={{ objectFit: 'contain', objectPosition: 'bottom' }}
+        className="absolute bottom-0 left-1/2 -translate-x-1/2 z-10"
         priority
       />
       {/* Profile Image Absolutely Bottom Center, Overlaying Card */}
