@@ -18,9 +18,10 @@ The BLTZ Message Center provides a comprehensive communication system between ad
 - **Compact Sidebar Design**: Space-efficient message display
 - **Unread Notifications**: Badge showing unread message count
 - **Contact Admin**: Direct messaging to admin only
-- **Message Threading**: Organized conversation view
+- **Message Threading**: Organized conversation view with working reply functionality
 - **Auto-refresh**: Messages update every 30 seconds
 - **Mobile Responsive**: Optimized for all screen sizes
+- **Fixed Send Button**: Properly connected form submission for message sending
 
 ## 🎨 **Sample Data**
 
@@ -132,6 +133,43 @@ To use real data instead of sample data:
 2. **Delivered** → Message successfully delivered
 3. **Read** → Recipient has viewed the message
 4. **Archived** → Message archived (future feature)
+
+## 🔧 **Recent Fixes & Improvements**
+
+### **Message Input Fixes (Latest Update)**
+- **Fixed Send Button**: Send button in thread messages now properly submits forms
+- **Improved Input Handling**: Replaced unreliable `querySelector` with `FormData` for better reliability
+- **Enhanced Error Handling**: Added proper null checking and error prevention
+- **Form Reset**: Messages are properly cleared after sending
+
+### **Technical Improvements**
+- **FormData Integration**: More reliable form data extraction using `name` attributes
+- **Better Error Prevention**: Added optional chaining (`?.trim()`) to prevent runtime errors
+- **Consistent Behavior**: Both admin and player message centers now work identically
+
+## 🛠️ **Troubleshooting**
+
+### **Common Issues & Solutions**
+
+#### **"Cannot read properties of null (reading 'value')" Error**
+- **Cause**: Input element not found by querySelector
+- **Solution**: Fixed with FormData integration - no longer occurs
+- **Prevention**: Use `name` attributes on form inputs
+
+#### **Send Button Not Working**
+- **Cause**: Missing `type="submit"` on send button
+- **Solution**: Added proper form submission handling
+- **Verification**: Click send button should now submit the form
+
+#### **Messages Not Clearing After Send**
+- **Cause**: Input value not being reset properly
+- **Solution**: Using `form.reset()` for reliable form clearing
+- **Result**: Input field now clears automatically after sending
+
+#### **Form Submission Issues**
+- **Cause**: Inconsistent form handling between components
+- **Solution**: Standardized FormData usage across all message forms
+- **Benefit**: More reliable and maintainable code
 
 ## 🎯 **Next Steps**
 

@@ -71,28 +71,28 @@ export function PerformanceChart({
       </div>
 
       {/* Chart */}
-      <div className="bg-white dark:bg-neutral-800 rounded-lg border border-neutral-200 dark:border-neutral-700 p-6">
+      <div className="bg-black dark:bg-black rounded-lg border border-neutral-200 dark:border-neutral-700 p-6">
         {data.length === 0 ? (
           <div className="h-64 flex items-center justify-center">
-            <p className="text-neutral-400 dark:text-neutral-600">No data available for this period</p>
+            <p className="text-neutral-400 dark:text-neutral-400">No data available for this period</p>
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-neutral-200 dark:stroke-neutral-700" />
+              <CartesianGrid strokeDasharray="3 3" className="stroke-neutral-600 dark:stroke-neutral-600" />
               <XAxis 
                 dataKey="date" 
                 tickFormatter={formatDate}
-                className="text-xs text-neutral-600 dark:text-neutral-400"
+                className="text-xs text-neutral-300 dark:text-neutral-300"
               />
               <YAxis 
                 yAxisId="left"
-                className="text-xs text-neutral-600 dark:text-neutral-400"
+                className="text-xs text-neutral-300 dark:text-neutral-300"
               />
               <YAxis 
                 yAxisId="right"
                 orientation="right"
-                className="text-xs text-neutral-600 dark:text-neutral-400"
+                className="text-xs text-neutral-300 dark:text-neutral-300"
               />
               <Tooltip 
                 contentStyle={{

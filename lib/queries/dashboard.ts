@@ -34,15 +34,6 @@ export interface Activity {
   metadata?: any;
 }
 
-export interface PlayerRanking {
-  player_id: string;
-  player_name: string;
-  rank: number;
-  total_views: number;
-  total_watch_time: number;
-  video_count: number;
-  follower_count: number;
-}
 
 /**
  * Get comprehensive dashboard statistics for a player
@@ -342,86 +333,4 @@ function generateEmptyStats(period: 'week' | 'month' | 'year') {
   return stats;
 }
 
-/**
- * Get player rankings
- */
-export async function getPlayerRankings(
-  limit: number = 10
-): Promise<PlayerRanking[]> {
-  const supabase = await createClient();
-
-  // Get all players with their stats
-  const { data: players } = await supabase
-    .from('players')
-    .select('id, name, full_name')
-    .eq('visibility', true);
-
-  if (!players || players.length === 0) {
-    return [];
-  }
-
-  // Get stats for each player
-  const playerStats = await Promise.all(
-    players.map(async (player) => {
-      // Get video count
-      const { count: videoCount } = await supabase
-        .from('videos')
-        .select('*', { count: 'exact', head: true })
-        .eq('player_id', player.id);
-
-      // Get total views
-      const { count: viewCount } = await supabase
-        .from('views')
-        .select('*', { count: 'exact', head: true })
-        .eq('player_id', player.id);
-
-      // Get total watch time
-      const { data: watchData } = await supabase
-        .from('views')
-        .select('seconds_watched')
-        .eq('player_id', player.id);
-
-      const totalWatchTime = watchData?.reduce((sum, v) => sum + (v.seconds_watched || 0), 0) || 0;
-
-      // Get unique viewers (follower proxy)
-      const { data: viewers } = await supabase
-        .from('views')
-        .select('user_id')
-        .eq('player_id', player.id)
-        .not('user_id', 'is', null);
-
-      const followerCount = viewers ? new Set(viewers.map(v => v.user_id)).size : 0;
-
-      return {
-        player_id: player.id,
-        player_name: player.full_name || player.name,
-        rank: 0, // Will be set after sorting
-        total_views: viewCount || 0,
-        total_watch_time: totalWatchTime,
-        video_count: videoCount || 0,
-        follower_count: followerCount,
-      };
-    })
-  );
-
-  // Sort by total views (you can change this to sort by other metrics)
-  const sorted = playerStats
-    .sort((a, b) => b.total_views - a.total_views)
-    .map((player, index) => ({
-      ...player,
-      rank: index + 1,
-    }))
-    .slice(0, limit);
-
-  return sorted;
-}
-
-/**
- * Get current player's rank
- */
-export async function getPlayerRank(playerId: string): Promise<number> {
-  const rankings = await getPlayerRankings(100); // Get more to find the rank
-  const playerRanking = rankings.find(r => r.player_id === playerId);
-  return playerRanking?.rank || 0;
-}
 

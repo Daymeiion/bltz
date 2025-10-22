@@ -145,11 +145,46 @@ The script creates Row Level Security (RLS) policies that allow:
    - Verify RLS policies are working
    - Check browser console for errors
 
+4. **"Cannot read properties of null (reading 'value')" Error** ⚡ **FIXED**
+   - **Cause**: Input element not found by querySelector
+   - **Solution**: Updated to use FormData with name attributes
+   - **Status**: Resolved in latest update
+
+5. **Send Button Not Working** ⚡ **FIXED**
+   - **Cause**: Missing `type="submit"` on send button
+   - **Solution**: Added proper form submission handling
+   - **Status**: Resolved in latest update
+
+6. **Messages Not Clearing After Send** ⚡ **FIXED**
+   - **Cause**: Input value not being reset properly
+   - **Solution**: Using `form.reset()` for reliable form clearing
+   - **Status**: Resolved in latest update
+
 ### Debug Steps
 1. Check Supabase logs for database errors
 2. Verify API endpoints are working
 3. Check browser network tab for failed requests
 4. Ensure all environment variables are set
+5. Verify form inputs have `name` attributes
+6. Check that send buttons have `type="submit"`
+
+## Recent Updates & Fixes ⚡
+
+### Message Input Improvements (Latest Update)
+- **Fixed Send Button Issues**: Send buttons now properly submit forms with `type="submit"`
+- **Improved Form Handling**: Replaced unreliable `querySelector` with `FormData` for better reliability
+- **Enhanced Error Prevention**: Added proper null checking and optional chaining
+- **Better Form Reset**: Messages now clear properly after sending using `form.reset()`
+
+### Technical Changes
+- **FormData Integration**: All message forms now use `name` attributes for reliable data extraction
+- **Consistent Behavior**: Both admin and player message centers work identically
+- **Error Prevention**: Added safeguards against runtime errors
+- **Better UX**: Improved user experience with reliable form submission
+
+### Files Updated
+- `components/admin/MessageCenter.tsx` - Fixed admin message input handling
+- `components/player/MessageCenter.tsx` - Fixed player message input handling
 
 ## Sample Data
 The system includes sample data that displays when:

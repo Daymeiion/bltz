@@ -1,12 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
 
-export type UserRole = "player" | "fan" | "admin";
+export type UserRole = "player" | "fan" | "admin" | "publisher";
 
 export interface UserProfile {
   id: string;
   email: string | null;
   role: UserRole;
-  display_name?: string | null;
+  username?: string | null;
+  full_name?: string | null;
   avatar_url?: string | null;
   player_id?: string | null;
 }
@@ -25,26 +26,45 @@ export async function getCurrentUserProfile(): Promise<UserProfile | null> {
   }
 
   // Fetch user profile from profiles table
-  const { data: profile, error: profileError } = await supabase
+  let { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("*")
     .eq("id", user.id)
     .single();
 
   if (profileError || !profile) {
-    // If profile doesn't exist, return basic user info with default role
-    return {
-      id: user.id,
-      email: user.email || null,
-      role: "fan" as UserRole, // Default role
-    };
+    // If profile doesn't exist, create one
+    const { data: newProfile, error: createError } = await supabase
+      .from("profiles")
+      .insert({
+        id: user.id,
+        username: user.email?.split('@')[0] || `user_${user.id.slice(0, 8)}`,
+        full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
+        role: "fan" as UserRole, // Default role
+        avatar_url: user.user_metadata?.avatar_url || null
+      })
+      .select()
+      .single();
+
+    if (createError || !newProfile) {
+      console.error("Error creating profile:", createError);
+      // Return basic user info without database ID if profile creation fails
+      return {
+        id: user.id,
+        email: user.email || null,
+        role: "fan" as UserRole,
+      };
+    }
+
+    profile = newProfile;
   }
 
   return {
     id: profile.id,
     email: profile.email || user.email || null,
     role: profile.role as UserRole,
-    display_name: profile.display_name,
+    username: profile.username,
+    full_name: profile.full_name,
     avatar_url: profile.avatar_url,
     player_id: profile.player_id,
   };

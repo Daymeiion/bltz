@@ -54,6 +54,7 @@ export function PlayerMessageCenter() {
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
   const [showCompose, setShowCompose] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [threadMessages, setThreadMessages] = useState<Message[]>([]);
   
   // Compose form state
   const [composeData, setComposeData] = useState({
@@ -265,8 +266,8 @@ export function PlayerMessageCenter() {
 
   const handleThreadMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    const input = e.currentTarget.querySelector('input[type="text"]') as HTMLInputElement;
-    const messageText = input.value.trim();
+    const formData = new FormData(e.currentTarget as HTMLFormElement);
+    const messageText = (formData.get('threadMessage') as string)?.trim() || '';
     
     if (!messageText && selectedImages.length === 0) return;
     if (!selectedMessage) return;
@@ -293,7 +294,36 @@ export function PlayerMessageCenter() {
           await uploadImages(data.message.id);
         }
 
-        input.value = "";
+        // Create the new message object for immediate display
+        const newMessage: Message = {
+          id: data.message.id,
+          subject: `Re: ${selectedMessage.subject}`,
+          content: messageText || "Sent images",
+          priority: "normal",
+          status: "sent",
+          is_read: false,
+          created_at: new Date().toISOString(),
+          sender: {
+            id: "current-user", // This would be the current user's ID
+            username: "You",
+            full_name: "You",
+            avatar_url: "/images/Headshot.png"
+          },
+          attachments: selectedImages.length > 0 ? [] : undefined
+        };
+
+        // Add the new message to the thread immediately
+        setThreadMessages(prev => [...prev, newMessage]);
+
+        // Auto-scroll to bottom to show the new message
+        setTimeout(() => {
+          const scrollContainer = document.querySelector('.message-center-scroll');
+          if (scrollContainer) {
+            scrollContainer.scrollTop = scrollContainer.scrollHeight;
+          }
+        }, 100);
+
+        (e.currentTarget as HTMLFormElement).reset();
         setSelectedImages([]);
         fetchMessages();
       } else {
@@ -384,6 +414,7 @@ export function PlayerMessageCenter() {
                 )}
                 onClick={() => {
                   setSelectedMessage(message);
+                  setThreadMessages([]); // Clear thread messages when selecting a new message
                   if (!message.is_read) {
                     handleMarkAsRead(message.id);
                   }
@@ -482,7 +513,7 @@ export function PlayerMessageCenter() {
                   })}
                 </div>
 
-                {/* Message Bubble */}
+                {/* Original Message Bubble */}
                 <div className="flex items-start gap-3">
                   <Avatar className="h-8 w-8">
                     <AvatarImage src={selectedMessage.sender.avatar_url} />
@@ -521,6 +552,38 @@ export function PlayerMessageCenter() {
                     </div>
                   </div>
                 </div>
+
+                {/* Thread Messages */}
+                {threadMessages.map((message, index) => (
+                  <div key={message.id || `thread-${index}`} className="flex items-start gap-3">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={message.sender.avatar_url} />
+                      <AvatarFallback className="bg-[#FFCA33]/10 text-[#FFCA33] text-xs">
+                        {message.sender.full_name?.charAt(0) || message.sender.username?.charAt(0)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <div className="bg-[#000CF5]/10 border border-[#000CF5]/30 rounded-lg p-3 max-w-md">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Badge className={cn("text-xs", getPriorityColor(message.priority))}>
+                            {message.priority}
+                          </Badge>
+                          <span className="text-xs text-neutral-400">{message.subject}</span>
+                        </div>
+                        <p className="text-white text-sm leading-relaxed">
+                          {message.content}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 mt-1 text-xs text-neutral-500">
+                        <span>{new Date(message.created_at).toLocaleTimeString()}</span>
+                        <div className="flex items-center gap-1">
+                          {getStatusIcon(message.status)}
+                          <span>{message.status}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -532,6 +595,7 @@ export function PlayerMessageCenter() {
                 </Button>
                 <div className="flex-1 relative">
                   <Input
+                    name="threadMessage"
                     placeholder="Write your message..."
                     className="bg-neutral-800 border-neutral-700 text-white pr-16"
                   />
@@ -556,9 +620,9 @@ export function PlayerMessageCenter() {
                     <Button variant="ghost" size="sm" className="text-neutral-400 hover:text-white p-1">
                       <Star className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="sm" className="text-neutral-400 hover:text-white p-1">
-                      <Send className="h-4 w-4" />
-                    </Button>
+                        <Button type="submit" variant="ghost" size="sm" className="text-neutral-400 hover:text-white p-1">
+                          <Send className="h-4 w-4" />
+                        </Button>
                   </div>
                 </div>
               
