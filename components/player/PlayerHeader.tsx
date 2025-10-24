@@ -127,8 +127,8 @@ export default function PlayerHeader({
       </div>
     </Card>
     {showSpotify && (
-      <div className="mt-2">
-        <SpotifyMiniPlayer className="ml-2" />
+      <div className="absolute left-2 top-16 z-40 w-80">
+        <SpotifyMiniPlayer />
       </div>
     )}
     
