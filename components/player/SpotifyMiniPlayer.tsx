@@ -1,44 +1,139 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 
 interface SpotifyMiniPlayerProps {
   className?: string;
 }
 
+interface SpotifyTrack {
+  title: string;
+  artist: string;
+  playlist: string;
+  image: string;
+  uri: string;
+  duration: number;
+}
+
 export default function SpotifyMiniPlayer({ className = "" }: SpotifyMiniPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
-  const [duration] = useState(225); // 3:45 in seconds
+  const [duration, setDuration] = useState(225); // Default 3:45 in seconds
   const [isHovered, setIsHovered] = useState(false);
+  const [deviceId, setDeviceId] = useState<string | null>(null);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
+  const playerRef = useRef<Spotify.Player | null>(null);
 
-  // Mock current track data
-  const currentTrack = {
+  // Current track data
+  const [currentTrack, setCurrentTrack] = useState<SpotifyTrack>({
     title: "Song Name",
     artist: "Artist Name",
     playlist: "Playlist Name",
-    image: "/images/spotify-album-cover.png"
-  };
+    image: "/images/spotify-album-cover.png",
+    uri: "spotify:track:3n3Ppam7vgaVa1iaRUc9Lp", // Default track URI
+    duration: 225
+  });
 
-  const togglePlay = () => {
-    setIsPlaying(!isPlaying);
-  };
+  // Initialize Spotify Web Playback SDK
+  useEffect(() => {
+    // Load Spotify Web Playback SDK
+    const script = document.createElement("script");
+    script.src = "https://sdk.scdn.co/spotify-player.js";
+    script.async = true;
+    document.body.appendChild(script);
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
+    // Get access token from API
+    const fetchToken = async () => {
+      try {
+        const response = await fetch('/api/auth/spotify/token');
+        if (response.ok) {
+          const data = await response.json();
+          setAccessToken(data.access_token);
+          localStorage.setItem('spotify_access_token', data.access_token);
+          return data.access_token;
+        }
+      } catch (error) {
+        console.error('Error fetching token:', error);
+      }
+      return null;
+    };
 
-  // Simulate progress
+    fetchToken().then(token => {
+      if (!token) return;
+
+      // Define callback for when SDK is ready
+      window.onSpotifyWebPlaybackSDKReady = () => {
+        const player = new window.Spotify.Player({
+          name: 'BLTZ Player',
+          getOAuthToken: (cb: (token: string) => void) => {
+            // Fetch fresh token on each call
+            fetch('/api/auth/spotify/token')
+              .then(res => res.json())
+              .then(data => cb(data.access_token))
+              .catch(err => console.error('Error getting token:', err));
+          },
+          volume: 0.5
+        });
+
+      // Error handling
+      player.addListener('initialization_error', ({ message }) => {
+        console.error('Failed to initialize', message);
+      });
+
+      player.addListener('authentication_error', ({ message }) => {
+        console.error('Failed to authenticate', message);
+      });
+
+      player.addListener('account_error', ({ message }) => {
+        console.error('Failed to validate Spotify account', message);
+      });
+
+      // Playback status updates
+      player.addListener('player_state_changed', (state) => {
+        if (!state) return;
+
+        setIsPlaying(!state.paused);
+        setCurrentTime(state.position / 1000); // Convert to seconds
+        setDuration(state.duration / 1000);
+
+        const track = state.track_window.current_track;
+        setCurrentTrack({
+          title: track.name,
+          artist: track.artists.map(a => a.name).join(', '),
+          playlist: track.album.name,
+          image: track.album.images[0]?.url || "/images/spotify-album-cover.png",
+          uri: track.uri,
+          duration: state.duration / 1000
+        });
+      });
+
+      // Ready
+      player.addListener('ready', ({ device_id }) => {
+        console.log('Ready with Device ID', device_id);
+        setDeviceId(device_id);
+      });
+
+        // Connect to the player
+        player.connect();
+        playerRef.current = player;
+      };
+    });
+
+    return () => {
+      if (playerRef.current) {
+        playerRef.current.disconnect();
+      }
+    };
+  }, []);
+
+  // Update current time while playing
   useEffect(() => {
     if (isPlaying) {
       const interval = setInterval(() => {
         setCurrentTime(prev => {
           if (prev >= duration) {
-            setIsPlaying(false);
-            return 0;
+            return duration;
           }
           return prev + 1;
         });
@@ -46,6 +141,51 @@ export default function SpotifyMiniPlayer({ className = "" }: SpotifyMiniPlayerP
       return () => clearInterval(interval);
     }
   }, [isPlaying, duration]);
+
+  const togglePlay = async () => {
+    if (!playerRef.current) {
+      console.error('Player not initialized');
+      return;
+    }
+
+    try {
+      await playerRef.current.togglePlay();
+    } catch (error) {
+      console.error('Error toggling playback:', error);
+    }
+  };
+
+  const skipToNext = async () => {
+    if (!playerRef.current) return;
+
+    try {
+      await playerRef.current.nextTrack();
+    } catch (error) {
+      console.error('Error skipping track:', error);
+    }
+  };
+
+  const repeatTrack = async () => {
+    if (!accessToken || !deviceId) return;
+
+    try {
+      await fetch(`https://api.spotify.com/v1/me/player/repeat?state=track&device_id=${deviceId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+    } catch (error) {
+      console.error('Error setting repeat:', error);
+    }
+  };
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
   const progressPercentage = (currentTime / duration) * 100;
 
@@ -115,14 +255,20 @@ export default function SpotifyMiniPlayer({ className = "" }: SpotifyMiniPlayerP
                 </button>
                 
                 {/* Skip Forward Icon */}
-                <button className="text-gray-400 hover:text-white transition-colors">
+                <button 
+                  onClick={skipToNext}
+                  className="text-gray-400 hover:text-white transition-colors"
+                >
                   <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M6 4l10 8-10 8V4zm12 0v16h-2V4h2z"/>
                   </svg>
                 </button>
                 
                 {/* Repeat Icon */}
-                <button className="text-gray-400 hover:text-white transition-colors">
+                <button 
+                  onClick={repeatTrack}
+                  className="text-gray-400 hover:text-white transition-colors"
+                >
                   <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/>
                   </svg>
