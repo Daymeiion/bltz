@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import Image from "next/image";
+import SpotifyMiniPlayer from "./SpotifyMiniPlayer";
 import { Card } from "@/components/ui/card";
 import ShareModal from "./ShareModal";
 
@@ -31,6 +32,7 @@ export default function PlayerHeader({
   const [fav, setFav] = useState(isFavorite);
   const [showShareModal, setShowShareModal] = useState(false);
   const [likeSrc, setLikeSrc] = useState("/images/icons/like-default.png");
+  const [showSpotify, setShowSpotify] = useState(false);
   const vidRef = useRef<HTMLVideoElement | null>(null);
 
   const toggleFav = (e: React.MouseEvent) => {
@@ -75,6 +77,17 @@ export default function PlayerHeader({
 		{/* bottom 100px gradient overlay */}
         <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-[250px] w-full bg-gradient-to-t from-black/100 to-transparent rounded-b-2xl" />
 
+        {/* Top-left Spotify glyph (toggle mini player) */}
+        <button
+          type="button"
+          aria-label="Open Spotify player"
+          onClick={() => setShowSpotify((v) => !v)}
+          className="absolute left-2 top-3 z-30 drop-shadow-lg hover:scale-105 transition-transform"
+        >
+          <div className="relative w-14 h-14 lg:w-10 lg:h-10">
+            <Image src="/images/spotify-logo.png" alt="Spotify" fill className="object-contain" />
+          </div>
+        </button>
 
         {/* Actions (fav only) */}
         <div className="absolute right-0 top-0 z-30 -mr-2">
@@ -113,6 +126,11 @@ export default function PlayerHeader({
         </div>
       </div>
     </Card>
+    {showSpotify && (
+      <div className="mt-2">
+        <SpotifyMiniPlayer className="ml-2" />
+      </div>
+    )}
     
     {/* ===== Text / meta - separate container below ===== */}
     <div className="px-0 pt-1 pb-0 text-center">
