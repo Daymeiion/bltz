@@ -15,21 +15,44 @@ The Spotify Mini Player integrates the Spotify Web Playback SDK to allow users t
 3. Fill in app details:
    - **App name**: BLTZ Player
    - **App description**: Music player for BLTZ platform
-   - **Redirect URI**: `http://localhost:3000/api/auth/spotify/callback`
-   - For production, add: `https://your-domain.com/api/auth/spotify/callback`
+   - **Redirect URI**: 
+     - Development: `http://127.0.0.1:3000/api/auth/spotify/callback` (use loopback IP, NOT localhost)
+     - Production: `https://your-domain.com/api/auth/spotify/callback`
 4. Click "Save"
 5. Copy your **Client ID** and **Client Secret**
 
-### 2. Add Environment Variables
+**Important**: Spotify requires `http://127.0.0.1` or `http://[::1]` for local development. `localhost` is NOT allowed.
+
+### 2. Configure Redirect URI
+When setting up your Spotify app, follow these Spotify requirements:
+
+#### Development Environment
+- **Use**: `http://127.0.0.1:3000/api/auth/spotify/callback`
+- **OR**: `http://[::1]:3000/api/auth/spotify/callback` (IPv6)
+- **NOT ALLOWED**: `http://localhost:3000/api/auth/spotify/callback`
+
+#### Production Environment
+- **Must use HTTPS**: `https://your-domain.com/api/auth/spotify/callback`
+- **HTTP only allowed** for loopback addresses (127.0.0.1 or [::1])
+
+#### Port Numbers
+- If using dynamic ports, register without port: `http://127.0.0.1`
+- Add port dynamically in authorization request
+- This is ONLY for loopback addresses
+
+### 3. Add Environment Variables
 Add these to your `.env.local` file:
 
 ```bash
 # Spotify API Credentials
 NEXT_PUBLIC_SPOTIFY_CLIENT_ID=your_client_id_here
 SPOTIFY_CLIENT_SECRET=your_client_secret_here
+
+# Redirect URI (must match Spotify app settings)
+NEXT_PUBLIC_SPOTIFY_REDIRECT_URI=http://127.0.0.1:3000/api/auth/spotify/callback
 ```
 
-### 3. User Authentication Flow
+### 4. User Authentication Flow
 
 #### First-Time Setup
 Users need to connect their Spotify account:
@@ -54,7 +77,7 @@ export async function GET(request: NextRequest) {
 }
 ```
 
-### 4. How It Works
+### 5. How It Works
 
 #### Authentication Flow
 ```
@@ -81,7 +104,7 @@ Player can now stream music
 5. Receives a device ID
 6. Player is ready to stream music
 
-### 5. Features
+### 6. Features
 
 #### Current Implementation
 - ✅ Play/Pause controls
@@ -98,7 +121,7 @@ Player can now stream music
 - **Skip Forward**: Go to next track
 - **Repeat**: Set track to repeat mode
 
-### 6. API Scopes
+### 7. API Scopes
 The player requests these Spotify permissions:
 - `streaming` - Play music in the browser
 - `user-read-email` - Read user email
@@ -109,7 +132,7 @@ The player requests these Spotify permissions:
 - `playlist-read-private` - Read private playlists
 - `playlist-read-collaborative` - Read collaborative playlists
 
-### 7. Testing
+### 8. Testing
 
 #### Local Testing
 1. Make sure you have Spotify Premium
@@ -124,7 +147,22 @@ The player requests these Spotify permissions:
 - **"Account error"**: User must have Spotify Premium
 - **No music playing**: Check browser console for errors
 
-### 8. Production Deployment
+### 9. Accessing Locally with 127.0.0.1
+
+Since Spotify requires `127.0.0.1` instead of `localhost`, you need to access your app at:
+- **Development URL**: `http://127.0.0.1:3000`
+- **NOT**: `http://localhost:3000`
+
+#### Update Your Hosts (Optional)
+If you want to use a custom domain locally:
+1. Edit your hosts file:
+   - Windows: `C:\Windows\System32\drivers\etc\hosts`
+   - Mac/Linux: `/etc/hosts`
+2. Add: `127.0.0.1 bltz.local`
+3. Access app at: `http://bltz.local:3000`
+4. Update redirect URI to: `http://bltz.local:3000/api/auth/spotify/callback`
+
+### 10. Production Deployment
 
 #### Update Redirect URIs
 1. Go to your Spotify app settings
@@ -138,7 +176,7 @@ The player requests these Spotify permissions:
 - ✅ Token refresh flow implemented
 - ✅ Client secrets never exposed to browser
 
-### 9. File Structure
+### 11. File Structure
 ```
 with-supabase-app/
 ├── components/
@@ -161,7 +199,7 @@ with-supabase-app/
     └── spotify.d.ts                     # TypeScript definitions
 ```
 
-### 10. Future Enhancements
+### 12. Future Enhancements
 - [ ] Volume control
 - [ ] Seek/scrub functionality
 - [ ] Queue management
