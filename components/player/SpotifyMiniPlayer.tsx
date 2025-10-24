@@ -51,7 +51,7 @@ export default function SpotifyMiniPlayer({ className = "" }: SpotifyMiniPlayerP
 
   return (
     <div 
-      className={`bg-black rounded-lg overflow-hidden relative shadow-xl ${className}`}
+      className={`bg-black rounded-md overflow-hidden relative shadow-xl ${className}`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
@@ -131,9 +131,9 @@ export default function SpotifyMiniPlayer({ className = "" }: SpotifyMiniPlayerP
             </>
           )}
 
-          {/* Duration - Always visible */}
+          {/* Duration - Always visible (counting down) */}
           <div className="text-white text-sm font-medium ml-4">
-            {formatTime(duration)}
+            {formatTime(duration - currentTime)}
           </div>
         </div>
       </div>
