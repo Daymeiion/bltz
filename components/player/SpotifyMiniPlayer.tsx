@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Play, Pause, SkipForward, RotateCcw } from "lucide-react";
+import Image from "next/image";
 
 interface SpotifyMiniPlayerProps {
   className?: string;
@@ -47,15 +47,17 @@ export default function SpotifyMiniPlayer({ className = "" }: SpotifyMiniPlayerP
     }
   }, [isPlaying, duration]);
 
+  const progressPercentage = (currentTime / duration) * 100;
+
   return (
     <div 
-      className={`bg-black rounded-lg overflow-hidden ${className}`}
+      className={`bg-black rounded-lg overflow-hidden relative shadow-2xl ${className}`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <div className="flex items-center h-16 px-3 relative">
+      <div className="flex items-center h-20 px-4 relative">
         {/* Album Art */}
-        <div className="relative w-12 h-12 flex-shrink-0">
+        <div className="relative w-16 h-16 flex-shrink-0">
           <img
             src={currentTrack.image}
             alt={currentTrack.playlist}
@@ -64,67 +66,86 @@ export default function SpotifyMiniPlayer({ className = "" }: SpotifyMiniPlayerP
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 flex items-center justify-between px-3">
+        <div className="flex-1 flex items-center justify-between px-4">
           {!isHovered ? (
             // Open Player State - Show track info and Spotify logo
             <>
               <div className="flex-1 min-w-0">
-                <div className="text-white text-sm font-medium truncate">
+                <div className="text-white text-base font-normal truncate mb-0.5">
                   {currentTrack.title}
                 </div>
-                <div className="text-green-400 text-sm font-medium truncate">
+                <div className="text-[#1DB954] text-base font-medium truncate mb-0.5">
                   {currentTrack.artist}
                 </div>
-                <div className="text-gray-400 text-xs truncate">
+                <div className="text-gray-400 text-sm truncate">
                   {currentTrack.playlist}
                 </div>
               </div>
               
               {/* Spotify Logo */}
-              <div className="flex items-center">
-                <div className="w-6 h-6 bg-green-400 rounded-full flex items-center justify-center">
-                  <div className="w-3 h-3 bg-black rounded-full"></div>
+              <div className="flex items-center ml-4">
+                <div className="relative w-10 h-10">
+                  <Image 
+                    src="/images/spotify-logo.png" 
+                    alt="Spotify" 
+                    fill 
+                    className="object-contain" 
+                  />
                 </div>
               </div>
             </>
           ) : (
             // Hover State - Show controls
             <>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-6 flex-1">
+                {/* Pause/Play Icon */}
                 <button
                   onClick={togglePlay}
-                  className="text-white hover:text-green-400 transition-colors"
+                  className="text-gray-400 hover:text-white transition-colors"
                 >
                   {isPlaying ? (
-                    <Pause className="h-4 w-4" />
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
+                    </svg>
                   ) : (
-                    <Play className="h-4 w-4" />
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M8 5v14l11-7z"/>
+                    </svg>
                   )}
                 </button>
                 
-                <button className="text-white hover:text-green-400 transition-colors">
-                  <SkipForward className="h-4 w-4" />
+                {/* Skip Forward Icon */}
+                <button className="text-gray-400 hover:text-white transition-colors">
+                  <svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M6 4l10 8-10 8V4zm12 0v16h-2V4h2z"/>
+                  </svg>
                 </button>
                 
-                <button className="text-white hover:text-green-400 transition-colors">
-                  <RotateCcw className="h-4 w-4" />
+                {/* Repeat Icon */}
+                <button className="text-gray-400 hover:text-white transition-colors">
+                  <svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/>
+                  </svg>
                 </button>
               </div>
             </>
           )}
 
           {/* Duration - Always visible */}
-          <div className="text-white text-sm font-medium ml-3">
+          <div className="text-white text-lg font-medium ml-6">
             {formatTime(duration)}
           </div>
         </div>
       </div>
 
-      {/* Progress Bar */}
-      <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-700">
+      {/* Gradient Progress Bar */}
+      <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-gray-800">
         <div
-          className="h-full bg-green-400 transition-all duration-300"
-          style={{ width: `${(currentTime / duration) * 100}%` }}
+          className="h-full transition-all duration-300"
+          style={{ 
+            width: `${progressPercentage}%`,
+            background: `linear-gradient(to right, #84cc16 0%, #84cc16 ${100 - progressPercentage}%, transparent 100%)`
+          }}
         />
       </div>
     </div>
