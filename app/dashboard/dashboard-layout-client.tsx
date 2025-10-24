@@ -9,7 +9,6 @@ import {
   IconUserBolt,
   IconHome,
   IconVideo,
-  IconTrophy,
 } from "@tabler/icons-react";
 import Link from "next/link";
 import { motion } from "motion/react";
@@ -61,20 +60,6 @@ export default function DashboardLayoutClient({
       ),
     },
     {
-      label: "Achievements",
-      href: "/dashboard/achievements",
-      icon: (
-        <IconTrophy className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
-      ),
-    },
-    {
-      label: "Settings",
-      href: "/dashboard/settings",
-      icon: (
-        <IconSettings className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
-      ),
-    },
-    {
       label: "Back to Home",
       href: "/",
       icon: (
@@ -103,7 +88,7 @@ export default function DashboardLayoutClient({
             <SidebarLink
               link={{
                 label: profile.full_name || profile.email || "User",
-                href: "/dashboard/settings",
+                href: "/dashboard",
                 icon: (
                   <Image
                     src={profile.avatar_url || "/images/Headshot.png"}
