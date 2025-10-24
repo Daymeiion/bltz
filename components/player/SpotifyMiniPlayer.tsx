@@ -144,7 +144,7 @@ export default function SpotifyMiniPlayer({ className = "" }: SpotifyMiniPlayerP
           className="h-full transition-all duration-300"
           style={{ 
             width: `${progressPercentage}%`,
-            background: `linear-gradient(to right, #84cc16 0%, #84cc16 ${100 - progressPercentage}%, transparent 100%)`
+            background: `linear-gradient(to right, transparent 0%, #84cc16 100%)`
           }}
         />
       </div>
