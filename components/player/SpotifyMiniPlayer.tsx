@@ -55,6 +55,18 @@ export default function SpotifyMiniPlayer({ className = "" }: SpotifyMiniPlayerP
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
+      {/* Spotify Logo - Top Right Corner */}
+      <div className="absolute top-1 right-1 z-10">
+        <div className="relative w-4 h-4">
+          <Image 
+            src="/images/spotify-logo.png" 
+            alt="Spotify" 
+            fill 
+            className="object-contain" 
+          />
+        </div>
+      </div>
+
       <div className="flex items-center h-14 px-3 relative">
         {/* Album Art */}
         <div className="relative w-10 h-10 flex-shrink-0">
@@ -68,9 +80,9 @@ export default function SpotifyMiniPlayer({ className = "" }: SpotifyMiniPlayerP
         {/* Content Area */}
         <div className="flex-1 flex items-center justify-between px-3">
           {!isHovered ? (
-            // Open Player State - Show track info and Spotify logo
+            // Open Player State - Show track info
             <>
-              <div className="flex-1 min-w-0">
+              <div className="flex-1 min-w-0 pr-6">
                 <div className="text-white text-xs font-normal truncate mb-0.5">
                   {currentTrack.title}
                 </div>
@@ -79,18 +91,6 @@ export default function SpotifyMiniPlayer({ className = "" }: SpotifyMiniPlayerP
                 </div>
                 <div className="text-gray-400 text-[10px] truncate">
                   {currentTrack.playlist}
-                </div>
-              </div>
-              
-              {/* Spotify Logo */}
-              <div className="flex items-center ml-3">
-                <div className="relative w-6 h-6">
-                  <Image 
-                    src="/images/spotify-logo.png" 
-                    alt="Spotify" 
-                    fill 
-                    className="object-contain" 
-                  />
                 </div>
               </div>
             </>
