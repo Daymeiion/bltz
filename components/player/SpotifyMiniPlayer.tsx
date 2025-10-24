@@ -51,13 +51,13 @@ export default function SpotifyMiniPlayer({ className = "" }: SpotifyMiniPlayerP
 
   return (
     <div 
-      className={`bg-black rounded-lg overflow-hidden relative shadow-2xl ${className}`}
+      className={`bg-black rounded-lg overflow-hidden relative shadow-xl ${className}`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <div className="flex items-center h-20 px-4 relative">
+      <div className="flex items-center h-14 px-3 relative">
         {/* Album Art */}
-        <div className="relative w-16 h-16 flex-shrink-0">
+        <div className="relative w-10 h-10 flex-shrink-0">
           <img
             src={currentTrack.image}
             alt={currentTrack.playlist}
@@ -66,25 +66,25 @@ export default function SpotifyMiniPlayer({ className = "" }: SpotifyMiniPlayerP
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 flex items-center justify-between px-4">
+        <div className="flex-1 flex items-center justify-between px-3">
           {!isHovered ? (
             // Open Player State - Show track info and Spotify logo
             <>
               <div className="flex-1 min-w-0">
-                <div className="text-white text-base font-normal truncate mb-0.5">
+                <div className="text-white text-xs font-normal truncate mb-0.5">
                   {currentTrack.title}
                 </div>
-                <div className="text-[#1DB954] text-base font-medium truncate mb-0.5">
+                <div className="text-[#1DB954] text-xs font-medium truncate mb-0.5">
                   {currentTrack.artist}
                 </div>
-                <div className="text-gray-400 text-sm truncate">
+                <div className="text-gray-400 text-[10px] truncate">
                   {currentTrack.playlist}
                 </div>
               </div>
               
               {/* Spotify Logo */}
-              <div className="flex items-center ml-4">
-                <div className="relative w-10 h-10">
+              <div className="flex items-center ml-3">
+                <div className="relative w-6 h-6">
                   <Image 
                     src="/images/spotify-logo.png" 
                     alt="Spotify" 
@@ -97,18 +97,18 @@ export default function SpotifyMiniPlayer({ className = "" }: SpotifyMiniPlayerP
           ) : (
             // Hover State - Show controls
             <>
-              <div className="flex items-center gap-6 flex-1">
+              <div className="flex items-center gap-4 flex-1">
                 {/* Pause/Play Icon */}
                 <button
                   onClick={togglePlay}
                   className="text-gray-400 hover:text-white transition-colors"
                 >
                   {isPlaying ? (
-                    <svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
                     </svg>
                   ) : (
-                    <svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M8 5v14l11-7z"/>
                     </svg>
                   )}
@@ -116,14 +116,14 @@ export default function SpotifyMiniPlayer({ className = "" }: SpotifyMiniPlayerP
                 
                 {/* Skip Forward Icon */}
                 <button className="text-gray-400 hover:text-white transition-colors">
-                  <svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M6 4l10 8-10 8V4zm12 0v16h-2V4h2z"/>
                   </svg>
                 </button>
                 
                 {/* Repeat Icon */}
                 <button className="text-gray-400 hover:text-white transition-colors">
-                  <svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/>
                   </svg>
                 </button>
@@ -132,14 +132,14 @@ export default function SpotifyMiniPlayer({ className = "" }: SpotifyMiniPlayerP
           )}
 
           {/* Duration - Always visible */}
-          <div className="text-white text-lg font-medium ml-6">
+          <div className="text-white text-sm font-medium ml-4">
             {formatTime(duration)}
           </div>
         </div>
       </div>
 
       {/* Gradient Progress Bar */}
-      <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-gray-800">
+      <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-800">
         <div
           className="h-full transition-all duration-300"
           style={{ 
