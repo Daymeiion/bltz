@@ -174,7 +174,7 @@ export function SiteConfiguration() {
                   {type}
                   <button
                     onClick={() => {
-                      const newTypes = settings.allowed_file_types.filter((_, i) => i !== index);
+                      const newTypes = settings.allowed_file_types.filter((_: string, i: number) => i !== index);
                       setSettings({...settings, allowed_file_types: newTypes});
                     }}
                     className="text-neutral-400 hover:text-white"
