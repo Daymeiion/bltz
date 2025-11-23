@@ -97,7 +97,7 @@ export default async function PlayerLocker({ params }: { params: Promise<{ slug:
                 <div className="flex justify-between items-center">
                   <h2 className="text-2xl font-bebas tracking-widest">Bio</h2>
                 </div>
-                <div className="rounded-md border border-white/5 bg-white/5 p-2 h-[150px] max-h-[150px] overflow-hidden shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+                <div className="rounded-md border border-white/5 bg-white/5 p-2 h-[165px] max-h-[165px] overflow-hidden shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
                   <div className="grid grid-cols-[1fr_1fr_2fr] gap-1 h-full">
                     {/* Column 1: profile image */}
                     <div className="rounded-md bg-black/20 border border-white/10 p-2 flex items-center justify-center overflow-hidden">

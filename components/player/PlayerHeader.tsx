@@ -151,7 +151,7 @@ export default function PlayerHeader({
 
      {/* ===== Scrollable Images Section (duplicate below stats) ===== */}
      <div className="mt-4 p-0">
-      <div className="flex gap-4 overflow-x-auto pb-0 pt-1" style={{ scrollbarWidth: 'none' }}>
+      <div className="flex gap-4 overflow-x-auto pb-0 pt-1 lg:overflow-x-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}>
         {/* Sample images - replace with your actual data */}
         {[
           { src: '/images/media-1.png', abbr: 'MED' },
@@ -200,7 +200,7 @@ export default function PlayerHeader({
     
     {/* ===== Scrollable Images Section (duplicate below stats) ===== */}
     <div className="mt-4 py-2">
-      <div className="flex gap-4 overflow-x-auto pb-0" style={{ scrollbarWidth: 'none' }}>
+      <div className="flex gap-4 overflow-x-auto pb-0 lg:overflow-x-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}>
         {/* Sample images - replace with your actual data */}
         {[
           { src: '/images/media-1.png', abbr: 'MED' },
