@@ -166,7 +166,7 @@ export function SiteConfiguration() {
               Allowed File Types
             </label>
             <div className="flex flex-wrap gap-2">
-              {settings.allowed_file_types.map((type, index) => (
+              {settings.allowed_file_types.map((type: string, index: number) => (
                 <span
                   key={index}
                   className="inline-flex items-center gap-1 bg-neutral-700 text-neutral-300 px-2 py-1 rounded text-xs"
