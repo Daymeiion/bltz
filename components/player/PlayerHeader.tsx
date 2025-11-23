@@ -4,6 +4,7 @@ import { useState, useRef } from "react";
 import Image from "next/image";
 import { Card } from "@/components/ui/card";
 import ShareModal from "./ShareModal";
+import { Heart } from "lucide-react";
 
 type Props = {
   fullName: string;
@@ -30,7 +31,6 @@ export default function PlayerHeader({
 }: Props) {
   const [fav, setFav] = useState(isFavorite);
   const [showShareModal, setShowShareModal] = useState(false);
-  const [likeSrc, setLikeSrc] = useState("/images/icons/like-default.png");
   const vidRef = useRef<HTMLVideoElement | null>(null);
   
   // Use the fullName prop directly - accept any valid string from database
@@ -55,15 +55,6 @@ export default function PlayerHeader({
     e.preventDefault();
     setFav((v) => !v);
     onToggleFavorite?.();
-    
-    // Show gif animation when clicked
-    const gifSrc = "/images/icons/like.gif";
-    setLikeSrc(gifSrc);
-    
-    // Reset to appropriate static PNG after animation
-    setTimeout(() => {
-      setLikeSrc(fav ? "/images/icons/like-default.png" : "/images/icons/like-selected.png");
-    }, 2000); // Adjust based on gif duration
   };
 
   return (
@@ -95,22 +86,22 @@ export default function PlayerHeader({
 
 
         {/* Actions (fav only) */}
-        <div className="absolute right-0 top-0 z-30 -mr-2">
+        <div className="absolute right-4 top-4 z-30">
           <button
             type="button"
             aria-label="Favorite"
             onClick={toggleFav}
-            className="flex items-center justify-center transition-all duration-200"
+            className={`flex items-center justify-center w-10 h-10 rounded-full bg-black/50 backdrop-blur-sm border border-white/20 transition-all duration-200 hover:bg-black/70 ${
+              fav 
+                ? "bg-red-500/90 border-red-400/50" 
+                : "hover:border-white/40"
+            }`}
           >
-            <Image
-              src={likeSrc}
-              alt="Like"
-              width={80}
-              height={80}
-              className={`w-18 h-18 lg:w-16 lg:h-16 transition-all duration-200 ${
+            <Heart
+              className={`w-5 h-5 transition-all duration-200 ${
                 fav 
-                  ? "opacity-100" 
-                  : "opacity-70 hover:opacity-100"
+                  ? "fill-white text-white" 
+                  : "text-white/80 fill-none"
               }`}
             />
           </button>
