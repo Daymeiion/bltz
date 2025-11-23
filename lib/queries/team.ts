@@ -87,7 +87,19 @@ export async function getMyTeammates(): Promise<TeammateWithPlayer[]> {
     return [];
   }
 
-  return data as TeammateWithPlayer[];
+  if (!data) {
+    return [];
+  }
+
+  // Map the data to ensure teammate is a single object, not an array
+  return data.map((item: any) => ({
+    id: item.id,
+    player_id: item.player_id,
+    teammate_player_id: item.teammate_player_id,
+    games_played_together: item.games_played_together,
+    last_played_together: item.last_played_together,
+    teammate: Array.isArray(item.teammate) ? item.teammate[0] : item.teammate,
+  })) as TeammateWithPlayer[];
 }
 
 /**
