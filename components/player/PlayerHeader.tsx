@@ -191,19 +191,19 @@ export default function PlayerHeader({
       </div>
     </div>
     
-    {/* ===== Scrollable Images Section (duplicate below stats) ===== */}
+    {/* ===== Scrollable Images Section (awards below stats) ===== */}
     <div className="mt-4 py-2">
       <div className="flex gap-4 overflow-x-auto pb-0 lg:overflow-x-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}>
-        {/* Helmet images - teams the player has played for */}
+        {/* Award images - player achievements */}
         {[
-          { src: '/images/49ers-sm-helmet.png', abbr: '49ers' },
-          { src: '/images/Broncos-sm-helmet.png', abbr: 'Broncos' },
-          { src: '/images/Bucs-sm-helmet.png', abbr: 'Bucs' },
-          { src: '/images/Commanders-sm-helmet.png', abbr: 'Commanders' },
-          { src: '/images/Jags-sm-helmet.png', abbr: 'Jags' },
-          { src: '/images/Lions-sm-helmet.png', abbr: 'Lions' },
-          { src: '/images/Oilers-sm-helmert.png', abbr: 'Oilers' },
-          { src: '/images/Texans-sm-helmet.png', abbr: 'Texans' },
+          { src: '/images/SilverHero1.png', abbr: 'Award 1' },
+          { src: '/images/SilverHero1.png', abbr: 'Award 2' },
+          { src: '/images/SilverHero1.png', abbr: 'Award 3' },
+          { src: '/images/SilverHero1.png', abbr: 'Award 4' },
+          { src: '/images/SilverHero1.png', abbr: 'Award 5' },
+          { src: '/images/SilverHero1.png', abbr: 'Award 6' },
+          { src: '/images/SilverHero1.png', abbr: 'Award 7' },
+          { src: '/images/SilverHero1.png', abbr: 'Award 8' },
         ].map((item, index) => (
           <div key={index} className="flex flex-col items-center min-w-0 shrink-0">
             <div className="relative w-14 h-14 mb-2">
