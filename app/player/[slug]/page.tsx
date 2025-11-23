@@ -63,7 +63,7 @@ export default async function PlayerLocker({ params }: { params: Promise<{ slug:
         </div>
         
         {/* Content */}
-        <div className="relative z-10 grid grid-cols-1 gap-1 lg:grid-cols-4 lg:gap-8">
+        <div className="relative z-10 grid grid-cols-1 gap-1 lg:grid-cols-4 lg:gap-12">
           {/* 1/4 column */}
           <aside className="space-y-2 lg:col-span-1 lg:sticky lg:top-6 lg:h-[calc(100vh-3rem)] lg:overflow-y-auto scrollbar-hide">
             <PlayerHeader
@@ -418,7 +418,7 @@ He is known by his middle name, Dante, to his close friends and family members. 
 
   return (
     <main className="mx-auto max-w-6xl p-2 scrollbar-hide">
-      <div className="grid grid-cols-1 gap-2 lg:grid-cols-4 lg:gap-6">
+      <div className="grid grid-cols-1 gap-2 lg:grid-cols-4 lg:gap-12">
         {/* 1/4 column */}
         <aside className="space-y-2 lg:col-span-1 lg:sticky lg:top-2 lg:h-[calc(100vh-1rem)] lg:overflow-y-auto scrollbar-hide">
             <PlayerHeader
