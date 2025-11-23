@@ -521,8 +521,8 @@ He is known by his middle name, Dante, to his close friends and family members. 
             </div>
           </div>
 
-          {/* Videos */}
-          <div className="space-y-3">
+          {/* Videos (desktop only) */}
+          <div className="space-y-3 hidden lg:block">
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-bebas tracking-widest">Videos</h2>
               <VideoGridModal playerName={player.full_name} videos={vids} />
@@ -536,8 +536,8 @@ He is known by his middle name, Dante, to his close friends and family members. 
             <VideoYTRow videos={MOCK_VIDEOS_YT} />
           </div>
 
-          {/* Media */}
-          <div className="space-y-3">
+          {/* Media (desktop only) */}
+          <div className="space-y-3 hidden lg:block">
             {(() => {
               // Use mock media items as placeholder
               const mediaItems = [
