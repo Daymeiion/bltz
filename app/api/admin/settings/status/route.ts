@@ -22,7 +22,7 @@ export async function GET() {
       "integration_settings"
     ];
 
-    const tableStatus = {};
+    const tableStatus: Record<string, { exists: boolean; error: string | null }> = {};
     
     for (const table of tables) {
       try {
