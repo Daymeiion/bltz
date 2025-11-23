@@ -85,22 +85,24 @@ export default function MediaMasonryModal({
                         distance={120}
                       >
                         {sortedMediaItems.map((item, index) => (
-                          <DockItem key={item.id} onClick={() => handleDockItemClick(index)}>
-                            <DockIcon>
-                              <img
-                                src={item.url}
-                                alt={item.title || `Media ${index + 1}`}
-                                className="w-full h-full object-cover rounded-lg transform rotate-90"
-                              />
-                            </DockIcon>
-                            <DockLabel>
-                              {new Date().toLocaleDateString('en-US', { 
-                                year: 'numeric', 
-                                month: 'short', 
-                                day: 'numeric' 
-                              })}
-                            </DockLabel>
-                          </DockItem>
+                          <div key={item.id} onClick={() => handleDockItemClick(index)} style={{ cursor: 'pointer' }}>
+                            <DockItem>
+                              <DockIcon>
+                                <img
+                                  src={item.url}
+                                  alt={item.title || `Media ${index + 1}`}
+                                  className="w-full h-full object-cover rounded-lg transform rotate-90"
+                                />
+                              </DockIcon>
+                              <DockLabel>
+                                {new Date().toLocaleDateString('en-US', { 
+                                  year: 'numeric', 
+                                  month: 'short', 
+                                  day: 'numeric' 
+                                })}
+                              </DockLabel>
+                            </DockItem>
+                          </div>
                         ))}
                       </Dock>
                     </div>
