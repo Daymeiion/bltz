@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const profile = await getCurrentUserProfile();
@@ -12,6 +12,7 @@ export async function PATCH(
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
+    const { id } = await params;
     const body = await request.json();
     const allowed = ["status", "severity", "title", "description", "link"] as const;
     const updates: Record<string, unknown> = {};
@@ -26,7 +27,7 @@ export async function PATCH(
     const { data, error } = await supabase
       .from("moderations")
       .update(updates)
-      .eq("id", params.id)
+      .eq("id", id)
       .select("id")
       .single();
     if (error) throw error;
@@ -40,7 +41,7 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const profile = await getCurrentUserProfile();
@@ -48,14 +49,15 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
+    const { id } = await params;
     const supabase = await createClient();
     const { error } = await supabase
       .from("moderations")
       .delete()
-      .eq("id", params.id);
+      .eq("id", id);
     if (error) throw error;
 
-    return NextResponse.json({ id: params.id, deleted: true });
+    return NextResponse.json({ id, deleted: true });
   } catch (error) {
     console.error("Error deleting moderation:", error);
     return NextResponse.json({ error: "Failed to delete moderation" }, { status: 500 });

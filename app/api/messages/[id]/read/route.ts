@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const profile = await getCurrentUserProfile();
@@ -12,7 +12,7 @@ export async function PUT(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const messageId = params.id;
+    const { id: messageId } = await params;
     const supabase = await createClient();
 
     // Check if user has access to this message
