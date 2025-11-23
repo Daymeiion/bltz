@@ -6,7 +6,6 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Navbar } from "@/components/ui/navbar";
 import "./globals.css";
-import "react-image-lightbox/style.css";
 
 const defaultUrl = process.env.VERCEL_URL
   ? `https://${process.env.VERCEL_URL}`

@@ -63,7 +63,6 @@
     "react-dom": "^19.0.0",
     "react-grid-gallery": "^1.0.1",
     "react-hook-form": "^7.62.0",
-    "react-image-lightbox": "^5.1.4",
     "react-photo-album": "^3.1.0",
     "react-resizable-panels": "^3.0.6",
     "recharts": "2.15.4",
