@@ -143,14 +143,16 @@ export default function PlayerHeader({
      {/* ===== Scrollable Images Section (duplicate below stats) ===== */}
      <div className="mt-4 p-0">
       <div className="flex gap-4 overflow-x-auto pb-0 pt-1 lg:overflow-x-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}>
-        {/* Sample images - replace with your actual data */}
+        {/* Helmet images - teams the player has played for */}
         {[
-          { src: '/images/media-1.png', abbr: 'MED' },
-          { src: '/images/media-2.png', abbr: 'VID' },
-          { src: '/images/media-3.png', abbr: 'PIC' },
-          { src: '/images/SilverHero1.png', abbr: 'CRD' },
-          { src: '/images/Headshot.png', abbr: 'HST' },
-          { src: '/images/video-thumb.png', abbr: 'THM' },
+          { src: '/images/49ers-sm-helmet.png', abbr: '49ers' },
+          { src: '/images/Broncos-sm-helmet.png', abbr: 'Broncos' },
+          { src: '/images/Bucs-sm-helmet.png', abbr: 'Bucs' },
+          { src: '/images/Commanders-sm-helmet.png', abbr: 'Commanders' },
+          { src: '/images/Jags-sm-helmet.png', abbr: 'Jags' },
+          { src: '/images/Lions-sm-helmet.png', abbr: 'Lions' },
+          { src: '/images/Oilers-sm-helmert.png', abbr: 'Oilers' },
+          { src: '/images/Texans-sm-helmet.png', abbr: 'Texans' },
         ].map((item, index) => (
           <div key={index} className="flex flex-col items-center min-w-0 shrink-0">
             <div className="relative w-14 h-14 mb-2">
@@ -192,14 +194,16 @@ export default function PlayerHeader({
     {/* ===== Scrollable Images Section (duplicate below stats) ===== */}
     <div className="mt-4 py-2">
       <div className="flex gap-4 overflow-x-auto pb-0 lg:overflow-x-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}>
-        {/* Sample images - replace with your actual data */}
+        {/* Helmet images - teams the player has played for */}
         {[
-          { src: '/images/media-1.png', abbr: 'MED' },
-          { src: '/images/media-2.png', abbr: 'VID' },
-          { src: '/images/media-3.png', abbr: 'PIC' },
-          { src: '/images/SilverHero1.png', abbr: 'CRD' },
-          { src: '/images/Headshot.png', abbr: 'HST' },
-          { src: '/images/video-thumb.png', abbr: 'THM' },
+          { src: '/images/49ers-sm-helmet.png', abbr: '49ers' },
+          { src: '/images/Broncos-sm-helmet.png', abbr: 'Broncos' },
+          { src: '/images/Bucs-sm-helmet.png', abbr: 'Bucs' },
+          { src: '/images/Commanders-sm-helmet.png', abbr: 'Commanders' },
+          { src: '/images/Jags-sm-helmet.png', abbr: 'Jags' },
+          { src: '/images/Lions-sm-helmet.png', abbr: 'Lions' },
+          { src: '/images/Oilers-sm-helmert.png', abbr: 'Oilers' },
+          { src: '/images/Texans-sm-helmet.png', abbr: 'Texans' },
         ].map((item, index) => (
           <div key={index} className="flex flex-col items-center min-w-0 shrink-0">
             <div className="relative w-14 h-14 mb-2">
