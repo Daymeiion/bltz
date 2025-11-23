@@ -534,7 +534,7 @@ He is known by his middle name, Dante, to his close friends and family members. 
                 { id: "1", url: "/images/media-5.jpg", title: "Game Highlight 1", credits: "Photo by John Smith", width: 1600, height: 900 },
                 { id: "2", url: "/images/media-6.jpg", title: "Game Highlight 2", credits: "Photo by Jane Doe", width: 800, height: 1200 },
                 { id: "3", url: "/images/media-1.png", title: "Action Shot", credits: "Photo by Sports Weekly", width: 1200, height: 800 },
-                { id: "4", url: "/images/SilverHero1.png", title: "Team Photo", credits: "Official Team Photo", width: 900, height: 1200 },
+                { id: "4", url: "/images/media-9.jpg", title: "Team Photo", credits: "Official Team Photo", width: 900, height: 1200 },
                 { id: "5", url: "/images/media-3.png", title: "Championship", credits: "Photo by League Photographer", width: 1200, height: 900 },
                 { id: "6", url: "/images/Headshot.png", title: "Portrait", credits: "Official Headshot", width: 800, height: 1000 },
                 { id: "7", url: "/images/media-2.png", title: "Training Day", credits: "Photo by Team Media", width: 1600, height: 900 },
