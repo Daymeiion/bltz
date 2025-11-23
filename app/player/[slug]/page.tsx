@@ -234,7 +234,7 @@ He is known by his middle name, Dante, to his close friends and family members. 
                         <MediaCarouselModal mediaItems={mediaItems} initialIndex={3}>
                           <WobbleCard containerClassName="h-48 col-span-2 rounded-md bg-transparent cursor-pointer" className="p-0">
                             <div className="relative rounded-md overflow-hidden w-full h-full">
-                              <Image src="/images/SilverHero1.png" alt="Card Image" fill className="object-cover" />
+                              <Image src="/images/media-6.jpg" alt="Media 4" fill className="object-cover" />
                               <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 to-transparent" />
                             </div>
                           </WobbleCard>
