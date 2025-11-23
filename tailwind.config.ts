@@ -14,6 +14,8 @@ export default {
     extend: {
       fontFamily: {
         'bebas': ['var(--font-bebas)', 'cursive'],
+        'oswald': ['var(--font-oswald)', 'sans-serif'],
+        'open-sans': ['var(--font-open-sans)', 'sans-serif'],
       },
       colors: {
         background: "hsl(var(--background))",

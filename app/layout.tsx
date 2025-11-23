@@ -1,6 +1,6 @@
 "use client";
 import type { Metadata } from "next";
-import { Geist, Oswald, Roboto_Condensed, Bebas_Neue } from "next/font/google";
+import { Geist, Oswald, Roboto_Condensed, Bebas_Neue, Open_Sans } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -38,6 +38,12 @@ const bebasNeue = Bebas_Neue({
   variable: "--font-bebas",
 });
 
+const openSans = Open_Sans({
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
+  variable: "--font-open-sans",
+});
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -69,7 +75,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${oswald.variable} ${robotoCondensed.variable} ${bebasNeue.variable}`}
+      className={`${geistSans.variable} ${oswald.variable} ${robotoCondensed.variable} ${bebasNeue.variable} ${openSans.variable}`}
     >
       <body className="min-h-screen text-white antialiased bg-black">
         <ThemeProvider

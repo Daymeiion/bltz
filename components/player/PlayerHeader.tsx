@@ -32,6 +32,24 @@ export default function PlayerHeader({
   const [showShareModal, setShowShareModal] = useState(false);
   const [likeSrc, setLikeSrc] = useState("/images/icons/like-default.png");
   const vidRef = useRef<HTMLVideoElement | null>(null);
+  
+  // Use the fullName prop directly - accept any valid string from database
+  // Only reject if it's explicitly "DEMO PLAYER" (all caps) or empty
+  const displayName = (() => {
+    if (!fullName || typeof fullName !== 'string') {
+      console.warn('[PlayerHeader] fullName is not a valid string:', fullName);
+      return "Unknown Player";
+    }
+    const trimmed = fullName.trim();
+    // Only reject if it's explicitly "DEMO PLAYER" (all caps) or empty string
+    // Accept "Demo Player", "demo player", and any other variation as valid names
+    if (trimmed === "DEMO PLAYER" || trimmed === "") {
+      console.warn('[PlayerHeader] Rejecting DEMO PLAYER (all caps)');
+      return "Unknown Player";
+    }
+    console.log('[PlayerHeader] Using displayName:', trimmed);
+    return trimmed;
+  })();
 
   const toggleFav = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -57,17 +75,17 @@ export default function PlayerHeader({
         {videoSrc ? (
           <video
             ref={vidRef}
-            className="absolute inset-0 h-full w-full object-cover rounded-b-2xl"
+            className="absolute inset-0 h-full w-full object-cover rounded-b-2xl z-0"
             src={videoSrc}
             poster={videoPoster}
             autoPlay
             muted
             loop
             playsInline
-            preload="metadata"
+            preload="auto"
           />
         ) : (
-          <div className="absolute inset-0  rounded-b-2xl" />
+          <div className="absolute inset-0 rounded-b-2xl z-0" />
         )}
 
         {/* gradient for legibility */}
@@ -108,7 +126,7 @@ export default function PlayerHeader({
         {/* Headshot at bottom, full width */}
         <div className="absolute bottom-0 left-0 right-0 z-20 px-0">
           <div className="relative w-full h-40">
-            <Image src={avatarUrl} alt={fullName} fill className="object-contain object-bottom" />
+            <Image src={avatarUrl} alt={displayName} fill className="object-contain object-bottom" />
           </div>
         </div>
       </div>
@@ -117,9 +135,15 @@ export default function PlayerHeader({
     {/* ===== Text / meta - separate container below ===== */}
     <div className="px-0 pt-1 pb-0 text-center">
       <div className="w-full px-2 pt-1 pb-0 bg-gradient-to-r from-transparent via-[#FFBB00] to-transparent flex items-center justify-center">
-        <h2 className="text-4xl lg:text-2xl font-bold tracking-wide" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
-          <span className="text-black">{fullName.split(" ").slice(0, -1).join(" ")}</span>{" "}
-          <span className="text-black">{fullName.split(" ").slice(-1)}</span>
+        <h2 className="text-4xl lg:text-2xl font-bold tracking-wide text-black" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
+          {displayName ? (
+            <>
+              <span className="text-black">{displayName.split(" ").slice(0, -1).join(" ")}</span>{" "}
+              <span className="text-black">{displayName.split(" ").slice(-1)}</span>
+            </>
+          ) : (
+            <span className="text-black">Unknown Player</span>
+          )}
         </h2>
       </div>
       <p className="mt-0 mb-0 text-lg opacity-75" style={{ fontFamily: 'Oswald, sans-serif' }}>{city}</p>
@@ -207,7 +231,7 @@ export default function PlayerHeader({
           "Hard work beats talent when talent doesn't work hard. Every game is an opportunity to prove yourself."
         </p>
         <footer className="text-sm opacity-70" style={{ fontFamily: 'Oswald, sans-serif' }}>
-          — DEMO PLAYER
+          — {displayName}
         </footer>
       </blockquote>
     </div>

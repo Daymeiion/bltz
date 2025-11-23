@@ -1,44 +1,194 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { SearchModal, SearchResult } from './search-modal';
 
 export const Navbar = () => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showSearchModal, setShowSearchModal] = useState(false);
+
+  // Debounced search function
+  const searchAll = useCallback(async (query: string) => {
+    if (!query || query.trim().length === 0) {
+      setSearchResults([]);
+      setIsSearching(false);
+      setShowSearchModal(false);
+      return;
+    }
+
+    setIsSearching(true);
+    setShowSearchModal(true);
+
+    try {
+      const response = await fetch(`/api/search?q=${encodeURIComponent(query)}&limit=9`);
+      if (response.ok) {
+        const data = await response.json();
+        console.log('[NAVBAR] Search response:', { 
+          query, 
+          resultsCount: data.results?.length || 0,
+          playersCount: data.players?.length || 0,
+          teamsCount: data.teams?.length || 0,
+          schoolsCount: data.schools?.length || 0,
+          data 
+        });
+        // Use the combined results array
+        setSearchResults(data.results || []);
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('[NAVBAR] Search failed:', { 
+          status: response.status, 
+          statusText: response.statusText,
+          error: errorData 
+        });
+        setSearchResults([]);
+      }
+    } catch (error) {
+      console.error('[NAVBAR] Error searching:', error);
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  }, []);
+
+  // Show modal immediately when user starts typing, then debounce search
+  useEffect(() => {
+    if (searchQuery.trim().length > 0) {
+      setShowSearchModal(true);
+      setIsSearching(true);
+    } else {
+      setShowSearchModal(false);
+      setIsSearching(false);
+      setSearchResults([]);
+    }
+
+    const timer = setTimeout(() => {
+      if (searchQuery.trim().length > 0) {
+        searchAll(searchQuery);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, searchAll]);
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
+  };
+
+  const handleCloseSearch = () => {
+    setShowSearchModal(false);
+    setSearchQuery('');
+    setSearchResults([]);
+  };
+
+  // Handle ESC key to close modal
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && showSearchModal) {
+        setShowSearchModal(false);
+        setSearchQuery('');
+        setSearchResults([]);
+      }
+    };
+
+    if (showSearchModal) {
+      document.addEventListener('keydown', handleEscape);
+      return () => document.removeEventListener('keydown', handleEscape);
+    }
+  }, [showSearchModal]);
 
   return (
-    <header className="antialiased relative overflow-visible">
-  <nav className="bg-white/30 backdrop-blur-md border-gray-200 px-4 lg:px-6 py-2.5 dark:bg-gray-800/30 overflow-visible">
+    <header className="antialiased relative overflow-visible z-[10000]">
+  <nav className="backdrop-blur-md border-gray-200 px-4 lg:px-6 py-2.5 overflow-visible relative z-[10000]">
       <div className="flex flex-wrap justify-between items-center overflow-visible">
           <div className="flex justify-start items-center">
-              <button id="toggleSidebar" aria-expanded="true" aria-controls="sidebar" className="hidden p-2 mr-3 text-gray-600 rounded cursor-pointer lg:inline hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-700">
-                <svg className="w-5 h-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 16 12"> <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M1 1h14M1 6h14M1 11h7"/> </svg>
-              </button>
-              <button aria-expanded="true" aria-controls="sidebar" className="p-2 mr-2 text-gray-600 rounded-lg cursor-pointer lg:hidden hover:text-gray-900 hover:bg-gray-100 focus:bg-gray-100 dark:focus:bg-gray-700 focus:ring-2 focus:ring-gray-100 dark:focus:ring-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white">
-                <svg className="w-[18px] h-[18px]" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 17 14"><path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M1 1h15M1 7h15M1 13h15"/></svg>
-                <span className="sr-only">Toggle sidebar</span>
-              </button>
               <a href="/" className="flex mr-4">
                 <img src="/bltz-white-logo.svg" className="mr-3 h-8" alt="BLTZ Logo" />
               </a>
             </div>
             
             {/* Centered Search Bar */}
-            <div className="flex-1 flex justify-center">
-              <form action="#" method="GET" className="hidden lg:block">
+            <div className="flex-1 flex justify-center relative z-[10001]">
+              <form action="#" method="GET" className="hidden lg:block w-full max-w-lg">
                 <label htmlFor="topbar-search" className="sr-only">Search</label>
-                <div className="relative mt-1 lg:w-96">
-                  <div className="flex absolute inset-y-0 left-0 items-center pl-3 pointer-events-none">
-                      <svg className="w-4 h-4 text-gray-500 dark:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20"> <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"/> </svg>
+                <div className="relative">
+                  <div className="flex absolute inset-y-0 left-0 items-center pl-3 pointer-events-none z-10">
+                      <svg className="w-5 h-5 text-primary-500 dark:text-primary-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20"> <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"/> </svg>
                   </div>
-                  <input type="text" name="email" id="topbar-search" className="bg-gray-50/40 border border-gray-300/40 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full pl-9 p-2.5 dark:bg-gray-700/40 dark:border-gray-600/40 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500" placeholder="Search" />
+                  <input 
+                    type="text" 
+                    name="email" 
+                    id="topbar-search" 
+                    value={searchQuery}
+                    onChange={handleSearchChange}
+                    onFocus={() => {
+                      if (searchQuery.trim().length > 0) {
+                        setShowSearchModal(true);
+                      }
+                    }}
+                    className="bg-white/10 dark:bg-white/5 border border-white/30 dark:border-gray-500/50 text-gray-900 dark:text-white sm:text-sm font-regular rounded-[100px] focus:border-primary-500 focus:border-2 focus:outline-none focus:ring-2 focus:ring-primary-500/20 block w-full pl-9 pr-10 py-2.5 placeholder-gray-400 dark:placeholder-gray-400 backdrop-blur-sm transition-all z-[10001] relative shadow-lg" 
+                    style={{ borderWidth: '1.5px' }} 
+                    placeholder="Search players, schools, and teams..." 
+                    autoComplete="off"
+                  />
+                  {searchQuery.length > 0 && (
+                    <button
+                      onClick={handleCloseSearch}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-white z-10"
+                      type="button"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
                 </div>
               </form>
             </div>
           <div className="flex items-center lg:order-2">
-              <button type="button" className="hidden sm:inline-flex items-center justify-center text-white bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:ring-primary-300 font-medium rounded-lg text-xs px-3 py-1.5 mr-2 dark:bg-primary-600 dark:hover:bg-primary-700 focus:outline-none dark:focus:ring-primary-800"><svg aria-hidden="true" className="mr-1 -ml-1 w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd"></path></svg> New Widget</button>
-              <button id="toggleSidebarMobileSearch" type="button" className="p-2 text-gray-500 rounded-lg lg:hidden hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white">
-                  <span className="sr-only">Search</span>
+              <button type="button" className="hidden sm:inline-flex items-center justify-center text-white bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:ring-primary-300 font-light rounded-lg text-xs px-3 py-1.5 mr-2 dark:bg-primary-600 dark:hover:bg-primary-700 focus:outline-none dark:focus:ring-primary-800"><svg aria-hidden="true" className="mr-1 -ml-1 w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd"></path></svg> New Widget</button>
+              {/* Mobile Search - shows when typing */}
+              {(searchQuery.length > 0 || showSearchModal) && (
+                <div className="lg:hidden absolute top-full left-0 right-0 px-4 py-2 bg-gray-900/95 dark:bg-gray-900/95 backdrop-blur-md border-b border-gray-700 z-[10001]">
+                  <div className="relative">
+                    <div className="flex absolute inset-y-0 left-0 items-center pl-3 pointer-events-none z-10">
+                      <svg className="w-5 h-5 text-primary-500" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20">
+                        <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"/>
+                      </svg>
+                    </div>
+                    <input 
+                      type="text" 
+                      id="mobile-search" 
+                      value={searchQuery}
+                      onChange={handleSearchChange}
+                      className="bg-white/10 dark:bg-white/5 border border-white/30 dark:border-gray-500/50 text-white sm:text-sm font-regular rounded-[100px] focus:border-primary-500 focus:border-2 focus:outline-none focus:ring-2 focus:ring-primary-500/20 block w-full pl-9 pr-10 py-2.5 placeholder-gray-400 backdrop-blur-sm transition-all" 
+                      style={{ borderWidth: '1.5px' }} 
+                      placeholder="Search players, schools, and teams..." 
+                      autoComplete="off"
+                    />
+                    {searchQuery.length > 0 && (
+                      <button
+                        onClick={handleCloseSearch}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+              <button 
+                id="toggleSidebarMobileSearch" 
+                type="button" 
+                onClick={() => setShowSearchModal(true)}
+                className="p-2 text-gray-500 rounded-lg lg:hidden hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+              >
+                  <span className="sr-only">Search players, Schools and Teams ... </span>
                   {/* Search icon */}
                     <svg className="w-4 h-4" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20">
                     <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"/>
@@ -68,7 +218,7 @@ export const Navbar = () => {
   {/* Dropdown Menus */}
   {/* Notifications Dropdown */}
   {showNotifications && (
-    <div className="absolute right-4 top-full mt-2 z-50 max-w-sm text-base list-none bg-white rounded-lg divide-y divide-gray-100 shadow-xl border border-gray-200 dark:divide-gray-600 dark:bg-gray-700 dark:border-gray-600">
+    <div className="absolute right-4 top-full mt-2 z-[100] max-w-sm text-base list-none bg-white rounded-lg divide-y divide-gray-100 shadow-xl border border-gray-200 dark:divide-gray-600 dark:bg-gray-700 dark:border-gray-600">
       <div className="block py-2 px-4 text-base font-medium text-center text-gray-700 bg-gray-50 dark:bg-gray-700 dark:text-gray-400 rounded-t-lg">
         Notifications
       </div>
@@ -92,7 +242,7 @@ export const Navbar = () => {
 
   {/* User Menu Dropdown */}
   {showUserMenu && (
-    <div className="absolute right-4 top-full mt-2 z-50 w-56 text-base list-none bg-white rounded divide-y divide-gray-100 shadow dark:bg-gray-700 dark:divide-gray-600">
+    <div className="absolute right-4 top-full mt-2 z-[100] w-56 text-base list-none bg-white rounded divide-y divide-gray-100 shadow dark:bg-gray-700 dark:divide-gray-600">
       <div className="py-3 px-4">
         <span className="block text-sm font-semibold text-gray-900 dark:text-white">Neil sims</span>
         <span className="block text-sm text-gray-500 truncate dark:text-gray-400">name@flowbite.com</span>
@@ -112,6 +262,15 @@ export const Navbar = () => {
       </ul>
     </div>
   )}
+
+  {/* Search Modal */}
+  <SearchModal
+    isOpen={showSearchModal}
+    results={searchResults}
+    isLoading={isSearching}
+    searchQuery={searchQuery}
+    onClose={handleCloseSearch}
+  />
 </header>
   );
 };

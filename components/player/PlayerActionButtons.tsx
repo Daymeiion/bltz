@@ -4,7 +4,17 @@ import { useState, useRef } from "react";
 import Image from "next/image";
 import ShareModal from "./ShareModal";
 
-export default function PlayerActionButtons() {
+type Props = {
+  playerName?: string;
+  playerImage?: string;
+  playerBadge?: string;
+};
+
+export default function PlayerActionButtons({ 
+  playerName = "DEMO PLAYER",
+  playerImage = "/images/Headshot.png",
+  playerBadge = "/images/SilverHero1.png"
+}: Props) {
   const [isFollowing, setIsFollowing] = useState(false);
   const [isNotifying, setIsNotifying] = useState(false);
   const [isShared, setIsShared] = useState(false);
@@ -90,9 +100,9 @@ export default function PlayerActionButtons() {
       <ShareModal
         isOpen={showShareModal}
         onClose={() => setShowShareModal(false)}
-        playerName="DEMO PLAYER"
-        playerImage="/images/Headshot.png"
-        playerBadge="/images/SilverHero1.png"
+        playerName={playerName}
+        playerImage={playerImage}
+        playerBadge={playerBadge}
       />
     </>
   );

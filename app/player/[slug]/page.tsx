@@ -67,7 +67,7 @@ export default async function PlayerLocker({ params }: { params: Promise<{ slug:
           {/* 1/4 column */}
           <aside className="space-y-2 lg:col-span-1 lg:sticky lg:top-6 lg:h-[calc(100vh-3rem)] lg:overflow-y-auto scrollbar-hide">
             <PlayerHeader
-              fullName="DEMO PLAYER"
+              fullName={(player as any).full_name || (player as any).name || "Unknown Player"}
               city="Los Angeles, CA"
               videoSrc="/videos/demo-reel.mp4"
               videoPoster="/images/video-thumb.png"
@@ -89,7 +89,7 @@ export default async function PlayerLocker({ params }: { params: Promise<{ slug:
                     className="object-cover" 
                   />
                 <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/90" />
-                <PlayerActionButtons />
+                <PlayerActionButtons playerName={player.full_name || "DEMO PLAYER"} />
               </div>
 
               {/* Bio (desktop only, placed above Videos) */}
@@ -259,7 +259,7 @@ He is known by his middle name, Dante, to his close friends and family members. 
 
             {/* Mobile view - tabs */}
             <div className="lg:hidden">
-              <MobileTabs />
+              <MobileTabs playerName={player.full_name || "DEMO PLAYER"} />
             </div>
           </section>
         </div>
@@ -269,15 +269,102 @@ He is known by his middle name, Dante, to his close friends and family members. 
 
   // -------- LIVE (SUPABASE) PATH --------
   const supabase = await createClient();
+  
+  // Debug: Verify Supabase connection
+  console.log('[Player Page] Supabase client created, checking connection...');
+  console.log('[Player Page] Resolved slug:', resolvedParams.slug);
 
-  // Fetch player by slug
-  const { data: player } = await supabase
+  // Fetch player by slug with visibility filter (required by RLS policy)
+  console.log('[Player Page] Fetching player with slug:', resolvedParams.slug);
+  
+  // Only select columns that actually exist in the players table
+  // Available columns: id, full_name, name, profile_image, slug, visibility, hometown, video_url
+  const { data: player, error: playerError } = await supabase
     .from("players")
-    .select("id, full_name, image_url, meta, city, banner_url")
+    .select("id, full_name, name, profile_image, hometown, video_url")
     .eq("slug", resolvedParams.slug)
-    .single();
+    .eq("visibility", true)
+    .maybeSingle();
+  
+  // Log the raw response for debugging
+  if (playerError) {
+    console.error('[Player Page] Supabase query error:', {
+      message: playerError.message,
+      code: playerError.code,
+      details: playerError.details,
+      hint: playerError.hint
+    });
+  } else {
+    console.log('[Player Page] Query successful:', {
+      hasPlayer: !!player,
+      playerId: player?.id,
+      playerName: (player as any)?.full_name
+    });
+  }
 
-  if (!player) return notFound();
+  // Debug: Log query results
+  console.log('[Player Page] Query result:', {
+    slug: resolvedParams.slug,
+    hasPlayer: !!player,
+    playerId: player?.id,
+    playerFullName: (player as any)?.full_name,
+    hasError: !!playerError,
+    errorKeys: playerError ? Object.keys(playerError) : []
+  });
+
+  // Only treat as error if it has actual error properties (message or code)
+  // Empty objects {} are not real errors
+  if (playerError && ((playerError as any).message || (playerError as any).code)) {
+    console.error('[Player Page] Real Supabase error:', {
+      message: (playerError as any).message,
+      code: (playerError as any).code,
+      details: (playerError as any).details,
+      hint: (playerError as any).hint
+    });
+    return notFound();
+  }
+  
+  // If we have an error object but no message/code, it's likely an empty object - ignore it
+  if (playerError && !(playerError as any).message && !(playerError as any).code) {
+    console.log('[Player Page] Ignoring empty error object, checking if player exists...');
+  }
+
+  // If no player found, return 404
+  // Note: We only return 404 if player is actually null/undefined, not if there's an empty error object
+  if (!player) {
+    console.error('[Player Page] Player not found for slug:', resolvedParams.slug);
+    console.log('[Player Page] Checking available slugs in database...');
+    // Try to get a list of available slugs for debugging
+    const { data: slugs } = await supabase
+      .from("players")
+      .select("slug")
+      .eq("visibility", true)
+      .limit(10);
+    console.log('[Player Page] Sample available slugs:', slugs?.map((p: any) => p.slug));
+    return notFound();
+  }
+  
+  // Success - player found!
+  console.log('[Player Page] ✅ Player found successfully:', {
+    id: player.id,
+    slug: resolvedParams.slug,
+    full_name: (player as any).full_name
+  });
+
+  // Use full_name column from database (this is the correct column name)
+  // Access it properly since TypeScript might not recognize it
+  const playerFullName = (player as any).full_name || (player as any).name || null;
+  
+  // Debug: Log player data to verify we're getting the right column
+  console.log('[Player Page] LIVE PATH - Player data:', {
+    id: player.id,
+    slug: resolvedParams.slug,
+    'player.full_name (raw)': (player as any).full_name,
+    'player.name (raw)': (player as any).name,
+    playerFullName: playerFullName,
+    'typeof full_name': typeof (player as any).full_name,
+    'useMock': useMock
+  });
 
   // Locker (bio, colors, etc.)
   const { data: locker } = await supabase
@@ -286,12 +373,12 @@ He is known by his middle name, Dante, to his close friends and family members. 
     .eq("player_id", player.id)
     .single();
 
-  // Dynamic stats from player.meta
-  const meta: any = (player as any).meta ?? {};
-  const dobLive: string | undefined = meta.dob;
-  const heightInLive: number | undefined = meta.height_in;
-  const weightLbsLive: number | undefined = meta.weight_lbs;
-  const gamesPlayedLive: number | undefined = meta.games_played;
+  // Note: meta column doesn't exist in players table
+  // Use placeholder values when data is not available
+  const dobLive: string | undefined = "1990-01-15"; // Placeholder DOB: January 15, 1990
+  const heightInLive: number | undefined = 72; // Placeholder height: 6'0" (72 inches)
+  const weightLbsLive: number | undefined = 220; // Placeholder weight: 220 lbs
+  const gamesPlayedLive: number | undefined = 50; // Placeholder games played
 
   const ageLive = (() => {
     if (!dobLive) return undefined;
@@ -326,27 +413,32 @@ He is known by his middle name, Dante, to his close friends and family members. 
     .order("created_at", { ascending: false })
     .limit(12);
 
-  // Media (if you have a media table later; for now, you can reuse videos or images from Storage)
-  const media: { id: string; title: string; url: string }[] = [];
+  // Media - use mock media as placeholder
+  // In the future, this can be fetched from a media table
+  const media: { id: string; title: string; url: string }[] = MOCK_MEDIA.length > 0
+    ? MOCK_MEDIA
+    : [];
 
-  // Derive city from dedicated column or meta
-  const city =
-    (player as any).city ||
-    (player.meta && (player.meta.hometown || player.meta.city || player.meta.location)) ||
-    undefined;
+  // Derive city from hometown column (city column doesn't exist)
+  const city = (player as any).hometown || undefined;
+
+  // Use demo-reel.mp4 for all player pages
+  const videoSrc = "/videos/demo-reel.mp4";
+  const videoPoster = (player as any).profile_image || "/images/video-thumb.png";
 
   return (
     <main className="mx-auto max-w-6xl p-2 scrollbar-hide">
       <div className="grid grid-cols-1 gap-2 lg:grid-cols-4 lg:gap-6">
         {/* 1/4 column */}
         <aside className="space-y-2 lg:col-span-1 lg:sticky lg:top-2 lg:h-[calc(100vh-1rem)] lg:overflow-y-auto scrollbar-hide">
-            <PlayerProfileCard
-              fullName={player.full_name}
-              city={city}
-              bannerUrl={(player as any).banner_url}
-              avatarUrl={player.image_url}
+            <PlayerHeader
+              fullName={playerFullName || "Unknown Player"}
+              city={city || "Hometown, USA"}
+              videoSrc={videoSrc}
+              videoPoster={videoPoster}
+              badgeUrl="/images/SilverHero1.png"
+              avatarUrl={player.profile_image || "/images/Headshot.png"}
             />
-
         </aside>
 
         {/* 3/4 column */}
@@ -360,15 +452,20 @@ He is known by his middle name, Dante, to his close friends and family members. 
               className="object-cover" 
             />
             <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/80" />
+            <PlayerActionButtons 
+              playerName={player.full_name}
+              playerImage={player.profile_image || "/images/Headshot.png"}
+              playerBadge="/images/SilverHero1.png"
+            />
           </div>
 
           {/* Bio (desktop only, placed above Videos) */}
-          <div className="space-y-3 hidden lg:block -mt-0">
+          <div className="space-y-0 hidden lg:block -mt-0">
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-bebas tracking-widest">Bio</h2>
             </div>
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-3 h-[150px] max-h-[150px] overflow-hidden shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
-              <div className="grid grid-cols-[1fr_1fr_2fr] gap-3 h-full">
+            <div className="rounded-md border border-white/5 bg-white/5 p-2 h-[150px] max-h-[150px] overflow-hidden shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+              <div className="grid grid-cols-[1fr_1fr_2fr] gap-1 h-full">
                 {/* Column 1: profile image */}
                 <div className="rounded-md bg-black/20 border border-white/10 p-2 flex items-center justify-center overflow-hidden">
                   <div className="relative w-full aspect-square max-w-[140px]">
@@ -377,10 +474,10 @@ He is known by his middle name, Dante, to his close friends and family members. 
                 </div>
 
                 {/* Column 2: stats grid */}
-                <div className="flex flex-col gap-2 h-full justify-between">
+                <div className="flex flex-col gap-1 h-full justify-between">
                   <div className="rounded-md bg-black/20 border border-white/10 p-1 text-white/90 text-center flex items-center justify-center h-full">
-                    <div className="text-[8px] opacity-80 inline ml-2 font-oswald">DOB: </div>
-                     <div className="text-md font-bebas tracking-wider inline">{dobDisplayLive}{typeof ageLive === "number" && <span className="opacity-70 text-[8px] ml-1 font-oswald tracking-wider align-baseline">(age {ageLive})</span>}</div>
+                    <div className="text-[8px] opacity-80 inline mr-1 font-oswald">DOB: </div>
+                    <div className="text-md font-bebas tracking-wider inline">{dobDisplayLive}{typeof ageLive === "number" && <span className="opacity-70 text-[10px] ml-1 font-oswald tracking-wider align-baseline">(age {ageLive})</span>}</div>
                   </div>
                   <div className="grid grid-cols-2 gap-1">
                     <div className="rounded-md bg-black/20 border border-white/10 p-1 text-center text-white/90">
@@ -389,34 +486,34 @@ He is known by his middle name, Dante, to his close friends and family members. 
                     </div>
                     <div className="rounded-md bg-black/20 border border-white/10 p-1 text-center text-white/90">
                       <div className="text-[8px] uppercase tracking-wider opacity-70 font-oswald">Weight</div>
-                      <div className="text-sm font-bold font-bebas tracking-wider">{(weightLbsLive ?? "—")} lbs</div>
+                      <div className="text-sm font-bold font-bebas tracking-wider">{weightLbsLive} lbs</div>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-1">
                     <div className="rounded-md bg-black/20 border border-white/10 p-1 text-center text-white/90">
                       <div className="text-[8px] uppercase tracking-wider opacity-70 font-oswald">Games Played</div>
-                      <div className="text-base font-bold leading-[1.25rem] font-bebas tracking-wider">{(gamesPlayedLive ?? "—")}</div>
+                      <div className="text-base font-bold leading-[1.25rem] font-bebas tracking-wider">{gamesPlayedLive}</div>
                     </div>
                     <div className="rounded-md bg-black/20 border border-white/10 p-1 text-center text-white/90">
                       <div className="text-[8px] uppercase tracking-wider opacity-70 font-oswald">Level</div>
-                      <div className="text-base font-bold leading-[1.25rem] font-bebas tracking-wider">Professional</div>
+                      <div className="text-base font-bold leading-[1.25rem] font-bebas tracking-wider">Pro</div>
                     </div>
                   </div>
                 </div>
 
                 {/* Column 3: biography with read more */}
-                <div className="flex flex-col h-full">
-                  <div className="flex-1 rounded-md bg-black/20 border border-white/0 p-2 text-white/90 leading-relaxed overflow-hidden">
-                    <p className="text-xs md:text-sm">
-                      {locker?.bio ?? "Bio coming soon."}
+                <div className="flex flex-col h-full min-h-0">
+                  <div className="flex-1 rounded-md p-2 text-white/90 leading-relaxed overflow-y-auto min-h-0 scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                    <p className="text-xxs md:text-xs">
+                      {locker?.bio ?? `${playerFullName || "This player"} is a dedicated athlete with a passion for excellence. Known for their hard work, determination, and commitment to the game, they continue to push boundaries and achieve new heights in their career. With a strong foundation and unwavering dedication, they represent the best of what it means to be a professional athlete.`}
                     </p>
                   </div>
-                  <div className="mt-2 flex justify-end">
+                  <div className="mt-2 flex justify-end flex-shrink-0">
                     <BioModal 
-                      bioText={locker?.bio ?? "Bio coming soon."}
+                      bioText={locker?.bio ?? `${playerFullName || "This player"} is a dedicated athlete with a passion for excellence. Known for their hard work, determination, and commitment to the game, they continue to push boundaries and achieve new heights in their career. With a strong foundation and unwavering dedication, they represent the best of what it means to be a professional athlete.`}
                       playerName={player.full_name}
-                      playerLevel={(player as any).level || (player.meta as any)?.level || "Professional"}
-                      playerStatus={(player as any).status || (player.meta as any)?.status || "active"}
+                      playerLevel={(player as any).position || "Professional"}
+                      playerStatus="active"
                     />
                   </div>
                 </div>
@@ -425,7 +522,7 @@ He is known by his middle name, Dante, to his close friends and family members. 
           </div>
 
           {/* Videos */}
-          <div className="space-y-0">
+          <div className="space-y-3">
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-bebas tracking-widest">Videos</h2>
               <VideoGridModal playerName={player.full_name} videos={vids} />
@@ -434,19 +531,78 @@ He is known by his middle name, Dante, to his close friends and family members. 
               {vids?.map((v: any) => (
                 <VideoCard key={v.id} id={v.id} title={v.title} thumbnail_url={v.thumbnail_url ?? undefined} />
               ))}
-              {!vids?.length && <div className="opacity-70">No videos yet.</div>}
             </div>
+            {/* YouTube-style video row */}
+            <VideoYTRow videos={MOCK_VIDEOS_YT} />
           </div>
 
           {/* Media */}
           <div className="space-y-3">
-            <div className="flex justify-between items-center">
-              <h2 className="text-xl font-bebas tracking-widest">Media</h2>
-              <a href="#" className="text-[#FFBB00] hover:text-[#FFBB00]/80 text-sm underline px-4 uppercase">SEE ALL</a>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {media.length === 0 && <div className="opacity-70">No media yet.</div>}
-            </div>
+            {(() => {
+              // Use mock media items as placeholder
+              const mediaItems = [
+                { id: "1", url: "/images/media-5.jpg", title: "Game Highlight 1", credits: "Photo by John Smith", width: 1600, height: 900 },
+                { id: "2", url: "/images/media-6.jpg", title: "Game Highlight 2", credits: "Photo by Jane Doe", width: 800, height: 1200 },
+                { id: "3", url: "/images/media-1.png", title: "Action Shot", credits: "Photo by Sports Weekly", width: 1200, height: 800 },
+                { id: "4", url: "/images/SilverHero1.png", title: "Team Photo", credits: "Official Team Photo", width: 900, height: 1200 },
+                { id: "5", url: "/images/media-3.png", title: "Championship", credits: "Photo by League Photographer", width: 1200, height: 900 },
+                { id: "6", url: "/images/Headshot.png", title: "Portrait", credits: "Official Headshot", width: 800, height: 1000 },
+                { id: "7", url: "/images/media-2.png", title: "Training Day", credits: "Photo by Team Media", width: 1600, height: 900 },
+                { id: "8", url: "/images/media-5.jpg", title: "Game Highlight 3", credits: "Photo by Team Photographer", width: 800, height: 1200 },
+              ];
+
+              return (
+                <>
+                  <div className="flex justify-between items-center">
+                    <h2 className="text-xl font-bebas tracking-widest">Media</h2>
+                    <MediaMasonryModal mediaItems={mediaItems}>
+                      <button className="text-[#FFBB00] hover:text-[#FFBB00]/80 text-sm underline px-4 uppercase cursor-pointer">
+                        SEE ALL
+                      </button>
+                    </MediaMasonryModal>
+                  </div>
+                  <div className="grid grid-cols-3 gap-4">
+                    {/* First row: 2/3 and 1/3 */}
+                    <MediaCarouselModal mediaItems={mediaItems} initialIndex={0}>
+                      <WobbleCard containerClassName="h-48 col-span-2 rounded-md bg-transparent cursor-pointer" className="p-0">
+                        <div className="relative rounded-md overflow-hidden w-full h-full">
+                          <Image src="/images/media-5.jpg" alt="Media 1" fill className="object-cover" />
+                          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 to-transparent" />
+                        </div>
+                      </WobbleCard>
+                    </MediaCarouselModal>
+                    
+                    <MediaCarouselModal mediaItems={mediaItems} initialIndex={1}>
+                      <WobbleCard containerClassName="h-48 col-span-1 rounded-md bg-transparent cursor-pointer" className="p-0">
+                        <div className="relative rounded-md overflow-hidden w-full h-full">
+                          <Image src="/images/media-6.jpg" alt="Media 2" fill className="object-cover" />
+                          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 to-transparent" />
+                        </div>
+                      </WobbleCard>
+                    </MediaCarouselModal>
+                    
+                    {/* Second row: 1/3 and 2/3 */}
+                    <MediaCarouselModal mediaItems={mediaItems} initialIndex={2}>
+                      <WobbleCard containerClassName="h-48 col-span-1 rounded-md bg-transparent cursor-pointer" className="p-0">
+                        <div className="relative rounded-md overflow-hidden w-full h-full">
+                          <Image src="/images/media-5.jpg" alt="Media 3" fill className="object-cover" />
+                          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 to-transparent" />
+                        </div>
+                      </WobbleCard>
+                    </MediaCarouselModal>
+                    
+                    <MediaCarouselModal mediaItems={mediaItems} initialIndex={3}>
+                      <WobbleCard containerClassName="h-48 col-span-2 rounded-md bg-transparent cursor-pointer" className="p-0">
+                        <div className="relative rounded-md overflow-hidden w-full h-full">
+                          <Image src="/images/SilverHero1.png" alt="Card Image" fill className="object-cover" />
+                          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 to-transparent" />
+                        </div>
+                      </WobbleCard>
+                    </MediaCarouselModal>
+                  </div>
+                </>
+              );
+            })()}
           </div>
 
           {/* Bio (mobile/tablet only to avoid duplication with desktop bio) */}
@@ -456,8 +612,13 @@ He is known by his middle name, Dante, to his close friends and family members. 
               <a href="#" className="text-[#FFBB00] hover:text-[#FFBB00]/80 text-sm underline">See All</a>
             </div>
             <div className="rounded-2xl border border-white/10 bg-white/5 p-4 leading-relaxed opacity-90">
-              {locker?.bio ?? "Bio coming soon."}
+              {locker?.bio ?? `${playerFullName || "This player"} is a dedicated athlete with a passion for excellence. Known for their hard work, determination, and commitment to the game, they continue to push boundaries and achieve new heights in their career. With a strong foundation and unwavering dedication, they represent the best of what it means to be a professional athlete.`}
             </div>
+          </div>
+
+          {/* Mobile view - tabs */}
+          <div className="lg:hidden">
+            <MobileTabs playerName={player.full_name} />
           </div>
         </section>
       </div>

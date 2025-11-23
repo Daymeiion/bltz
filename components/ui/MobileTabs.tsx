@@ -6,7 +6,11 @@ import { WobbleCard } from "@/components/ui/wobble-card";
 import Image from "next/image";
 import { MOCK_VIDEOS_YT } from "@/lib/mockVideosYT";
 
-export default function MobileTabs() {
+type Props = {
+  playerName?: string;
+};
+
+export default function MobileTabs({ playerName = "DEMO PLAYER" }: Props) {
   return (
     <div className="space-y-3">
         <HeroUITabs 
@@ -27,7 +31,7 @@ export default function MobileTabs() {
                 "Hard work beats talent when talent doesn't work hard. Every game is an opportunity to prove yourself."
               </p>
               <footer className="text-sm opacity-70" style={{ fontFamily: 'Oswald, sans-serif' }}>
-                — DEMO PLAYER
+                — {playerName}
               </footer>
             </blockquote>
           </div>
