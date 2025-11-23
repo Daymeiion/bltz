@@ -245,16 +245,6 @@ He is known by his middle name, Dante, to his close friends and family members. 
                 })()}
               </div>
 
-              {/* Bio (mobile/tablet only to avoid duplication with desktop bio) */}
-              <div className="space-y-3 lg:hidden">
-                <div className="flex justify-between items-center">
-                  <h2 className="text-2xl font-bebas tracking-widest">Bio</h2>
-                  <a href="#" className="text-[#FFBB00] hover:text-[#FFBB00]/80 text-sm underline">See All</a>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-5 leading-relaxed text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
-                  This is a short bio section. Replace with player locker bio from Supabase later.
-                </div>
-              </div>
             </div>
 
             {/* Mobile view - tabs */}
@@ -603,17 +593,6 @@ He is known by his middle name, Dante, to his close friends and family members. 
                 </>
               );
             })()}
-          </div>
-
-          {/* Bio (mobile/tablet only to avoid duplication with desktop bio) */}
-          <div className="space-y-3 lg:hidden">
-            <div className="flex justify-between items-center">
-              <h2 className="text-xl font-bebas tracking-widest">Bio</h2>
-              <a href="#" className="text-[#FFBB00] hover:text-[#FFBB00]/80 text-sm underline">See All</a>
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4 leading-relaxed opacity-90">
-              {locker?.bio ?? `${playerFullName || "This player"} is a dedicated athlete with a passion for excellence. Known for their hard work, determination, and commitment to the game, they continue to push boundaries and achieve new heights in their career. With a strong foundation and unwavering dedication, they represent the best of what it means to be a professional athlete.`}
-            </div>
           </div>
 
           {/* Mobile view - tabs */}
