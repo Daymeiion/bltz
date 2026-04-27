@@ -481,6 +481,7 @@
     line-height: 0.82;
     letter-spacing: -0.04em;
     margin: 0 auto;
+    padding-bottom: 10px;
     color: var(--accent-gold);
     background: linear-gradient(180deg, var(--accent-gold) 0%, #D88F1A 100%);
     -webkit-background-clip: text;
@@ -1061,8 +1062,8 @@
     .reel-card__sub { font-size: 11px; }
     .badge { padding: 5px 10px; font-size: 11px; }
     .duration { font-size: 11px; padding: 4px 8px; bottom: 10px; right: 10px; }
-    .play-icon { width: 56px; height: 56px; margin: -28px 0 0 -28px; }
-    .play-icon::after { border-left-width: 14px; border-top-width: 9px; border-bottom-width: 9px; }
+    .play-icon { width: 36px; height: 36px; margin: -18px 0 0 -18px; }
+    .play-icon::after { border-left-width: 9px; border-top-width: 6px; border-bottom-width: 6px; margin-left: 2px; }
   }
 
   /* Pulsing glow on play button when card is hovered */
@@ -1214,30 +1215,53 @@
   .reel-card__sub .dots i.gold { background: var(--accent-gold); }
   .reel-card__sub .dots i.blue { background: var(--accent-blue); }
 
-  /* TOP-LEFT BADGE (earned / rising / etc) */
+  /* BADGES — pill with color-tinted border + icon, dark glass background.
+     Each variant sets --badge-color used by border, text, and icon. */
   .badge {
     position: absolute;
-    top: 14px;
-    left: 14px;
+    top: 12px;
+    left: 12px;
     z-index: 2;
-    padding: 6px 11px;
-    border-radius: var(--r-md);
-    font-family: var(--font-display);
+    padding: 5px 10px 5px 8px;
+    border-radius: 9999px;
+    font-family: var(--font-mono);
     font-weight: 700;
-    font-size: 12px;
-    letter-spacing: 0.06em;
+    font-size: 10px;
+    letter-spacing: 0.16em;
     text-transform: uppercase;
     line-height: 1;
     display: inline-flex;
     align-items: center;
     gap: 5px;
+    background: rgba(11,14,26,0.72);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    border: 1px solid var(--badge-color, var(--fg-muted));
+    color: var(--badge-color, var(--fg-muted));
   }
-  .badge--earned    { background: var(--accent-gold); color: #0B0E1A; }
-  .badge--rising    { background: rgba(11,14,26,0.85); color: var(--accent-gold); border: 1px solid var(--border-gold); backdrop-filter: blur(6px); }
-  .badge--rising::before { content: '▲'; font-size: 9px; }
-  .badge--cal       { background: var(--accent-gold); color: #0B0E1A; }
-  .badge--nfl       { background: var(--accent-blue); color: #fff; }
-  .badge--personal  { background: rgba(11,14,26,0.78); color: #fff; backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.2); }
+  .badge::before {
+    font-size: 10px;
+    line-height: 1;
+    color: var(--badge-color, var(--fg-muted));
+  }
+  /* Source-coded provenance */
+  .badge--cal       { --badge-color: var(--accent-gold); }
+  .badge--cal::before      { content: '★'; }
+  .badge--nfl       { --badge-color: var(--accent-blue); }
+  .badge--nfl::before      { content: '▲'; font-size: 8px; }
+  .badge--athlete   { --badge-color: var(--success); }
+  .badge--athlete::before  { content: '✓'; font-weight: 900; }
+  .badge--personal  { --badge-color: var(--fg-muted); }
+  .badge--personal::before { content: none; }   /* no icon, like PENDING */
+  /* Status */
+  .badge--earned    { --badge-color: var(--accent-gold); padding-left: 10px; }
+  .badge--earned::before   { content: '$'; font-weight: 900; font-size: 11px; }
+  .badge--rising    { --badge-color: var(--accent-blue); }
+  .badge--rising::before   { content: '▲'; font-size: 8px; }
+  .badge--verified  { --badge-color: var(--success); }
+  .badge--verified::before { content: '✓'; font-weight: 900; }
+  .badge--flagged   { --badge-color: var(--error); }
+  .badge--flagged::before  { content: '⚑'; font-size: 11px; }
 
   /* DURATION pill bottom-right of thumb */
   .duration {
@@ -1262,8 +1286,8 @@
     position: absolute;
     top: 50%;
     left: 50%;
-    width: 64px; height: 64px;
-    margin: -32px 0 0 -32px;
+    width: 36px; height: 36px;
+    margin: -18px 0 0 -18px;
     border-radius: 50%;
     background: var(--accent-gold);
     display: flex;
@@ -1286,10 +1310,10 @@
   .play-icon::after {
     content: '';
     width: 0; height: 0;
-    border-left: 16px solid #0B0E1A;
-    border-top: 10px solid transparent;
-    border-bottom: 10px solid transparent;
-    margin-left: 4px;
+    border-left: 9px solid #0B0E1A;
+    border-top: 6px solid transparent;
+    border-bottom: 6px solid transparent;
+    margin-left: 2px;
   }
 
   /* BELIEVERS */
@@ -2003,6 +2027,80 @@
     .sort-tabs { width: 100%; overflow-x: auto; }
     .believers__grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
     .claim-cta { padding: 64px 20px 88px; }
+  }
+
+  /* ─────────────────────────────────────────────────────────────────
+     COLOR CONSISTENCY OVERRIDES
+     Rule: all JetBrains Mono = accent gold. All Barlow = white.
+     Exceptions: chips with colored backgrounds keep contrast colors.
+     ───────────────────────────────────────────────────────────────── */
+
+  /* MONO → GOLD */
+  .topbar__center, .topbar__right,
+  .hero__meta-top, .hero__sub, .hero__scroll-hint,
+  .profile__sub,
+  .kicker, .section-head .kicker,
+  .stat-card__year, .stat-card__label, .stat-card__label .attr,
+  .reel-card__sub, .duration,
+  .reel-card--see-all .count,
+  .career-feature__overline, .career-feature__pull,
+  .stat-hero__honor, .stat-hero__caption-meta, .stat-hero__caption-label,
+  .season-chip__year, .season-chip__label,
+  .stat-chart__axis, .stat-chart__title, .stat-chart__total-label, .stat-chart__total-sub,
+  .stat-row__year, .stat-row__year small, .stat-row__num,
+  .nfl-card__years, .nfl-card__teams, .nfl-stat__label, .nfl-honors,
+  .nfl-honors b,
+  .media-col__count,
+  .article__sub, .article__sub .outlet,
+  .press-card__author-name small, .press-card__meta,
+  .believer-card__jersey,
+  .believers__count-label,
+  .colophon span,
+  .foot__tag,
+  .skip-link {
+    color: var(--accent-gold) !important;
+  }
+
+  /* Badges set their own color via --badge-color; nothing to override here */
+  .duration { color: var(--fg-primary) !important; }    /* dark glass pill, white reads better */
+  .nfl-banner { color: #0B0E1A !important; }            /* gold banner, dark text */
+  .topbar__right .dot { color: var(--accent-gold) !important; }
+
+  /* BARLOW (display + body) → WHITE */
+  .topbar__brand, .topbar__athlete-name,
+  .hero__name, .profile__name,
+  button, .btn-primary, .btn-ghost, .see-all,
+  .section-head h2, .section-head h3,
+  .stat-card__num, .stat-card__year .yr,
+  .reel-card__title, .reel-card--see-all .label,
+  .career-feature__headline,
+  .stat-hero__num,
+  .season-chip__num,
+  .stat-chart__total-num,
+  .nfl-card__title, .nfl-stat__num,
+  .media-col__title,
+  .article__title,
+  .press-card__title, .press-card__author-name, .press-card__excerpt,
+  .press-card__more,
+  .believer-card__name,
+  .believers__count,
+  .claim-cta h2,
+  .foot-cta__big, .foot__brand,
+  .colophon__brand,
+  .modal__title {
+    color: var(--fg-primary) !important;
+  }
+
+  /* The hero stat number uses background-clip:text — must also reset fill */
+  .stat-hero__num {
+    background: none !important;
+    -webkit-text-fill-color: var(--fg-primary) !important;
+    -webkit-background-clip: border-box !important;
+    background-clip: border-box !important;
+    /* Drop-shadow becomes less useful once text is solid white — soften it */
+    filter:
+      drop-shadow(0 4px 14px rgba(0,0,0,0.6))
+      drop-shadow(0 12px 28px rgba(0,0,0,0.4)) !important;
   }
 
   /* Skip-to-content for keyboard */
