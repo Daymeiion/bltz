@@ -9,6 +9,7 @@ import type { DashboardStats, VideoWithStats, Activity } from "@/lib/queries/das
 import { useRouter } from "next/navigation";
 
 interface DashboardClientProps {
+  firstName: string;
   initialStats: DashboardStats;
   initialVideos: VideoWithStats[];
   initialActivities: Activity[];
@@ -17,18 +18,20 @@ interface DashboardClientProps {
   quoteAuthor: string;
 }
 
-export default function DashboardClient({ 
+export default function DashboardClient({
+  firstName,
   initialStats,
   initialVideos,
   initialActivities,
   initialPerformanceData,
   dailyQuote,
-  quoteAuthor
+  quoteAuthor,
 }: DashboardClientProps) {
   const router = useRouter();
 
   return (
-    <Dashboard 
+    <Dashboard
+      firstName={firstName}
       stats={initialStats}
       videos={initialVideos}
       activities={initialActivities}
@@ -41,15 +44,17 @@ export default function DashboardClient({
 }
 
 // Main dashboard content area
-const Dashboard = ({ 
+const Dashboard = ({
+  firstName,
   stats,
   videos,
   activities,
   performanceData,
   dailyQuote,
   quoteAuthor,
-  router
-}: { 
+  router,
+}: {
+  firstName: string;
   stats: DashboardStats;
   videos: VideoWithStats[];
   activities: Activity[];
@@ -76,7 +81,7 @@ const Dashboard = ({
           <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-6 p-8 rounded-md bg-gray-600/40 backdrop-blur-sm border border-gray-600/50">
             <div className="flex-1">
               <h1 className="text-4xl md:text-5xl font-black text-white mb-4 tracking-tight">
-                Welcome back, <span className="text-white">Champion!</span>
+                Welcome back, <span className="text-white">{firstName}.</span>
               </h1>
               <div className="flex items-start gap-4 bg-transparent p-4 rounded-md ">
                 <div className="w-1 h-full bg-transparent rounded-full" />

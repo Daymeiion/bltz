@@ -36,6 +36,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# Claude Code / Conductor worktrees (nested checkouts; never commit)
+.claude/
+
 # IDE
 .vscode
 .idea

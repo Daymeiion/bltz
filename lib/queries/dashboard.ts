@@ -133,6 +133,20 @@ export async function getDashboardStats(playerId: string): Promise<DashboardStat
     ? Math.round(((totalRevenue - estimatedLastMonthRevenue) / estimatedLastMonthRevenue) * 100)
     : totalRevenue > 0 ? 100 : 0;
 
+  // Real achievements until the gamification system ships. Counts are pulled
+  // from `player_awards` (founder-curated + AI-discovered awards on the player).
+  const { count: awardsCount } = await supabase
+    .from("player_awards")
+    .select("*", { count: "exact", head: true })
+    .eq("player_id", playerId);
+  const lastWeekDate = new Date();
+  lastWeekDate.setDate(lastWeekDate.getDate() - 7);
+  const { count: recentAwards } = await supabase
+    .from("player_awards")
+    .select("*", { count: "exact", head: true })
+    .eq("player_id", playerId)
+    .gte("created_at", lastWeekDate.toISOString());
+
   return {
     videoCount: videoCount || 0,
     videoGrowth: recentVideos || 0,
@@ -140,8 +154,8 @@ export async function getDashboardStats(playerId: string): Promise<DashboardStat
     viewGrowth,
     followerCount,
     followerGrowth,
-    achievementCount: 8, // Placeholder - implement achievements system
-    recentAchievements: 2, // Placeholder
+    achievementCount: awardsCount ?? 0,
+    recentAchievements: recentAwards ?? 0,
     revenue: Math.round(totalRevenue),
     revenueGrowth,
   };
