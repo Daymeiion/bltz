@@ -47,7 +47,7 @@ export default function MobileTabs({ playerName = "DEMO PLAYER" }: Props) {
                   fill
                   className="object-cover"
                   onError={(e) => {
-                    e.currentTarget.src = "/images/media-1.png";
+                    e.currentTarget.src = "/images/media-6.jpg";
                   }}
                 />
                 <div className="absolute inset-0 bg-black/40 flex items-end p-2">
@@ -66,7 +66,7 @@ export default function MobileTabs({ playerName = "DEMO PLAYER" }: Props) {
                   fill
                   className="object-cover"
                   onError={(e) => {
-                    e.currentTarget.src = "/images/media-2.png";
+                    e.currentTarget.src = "/images/media-9.jpg";
                   }}
                 />
                 <div className="absolute inset-0 bg-black/40 flex items-end p-2">
@@ -86,7 +86,7 @@ export default function MobileTabs({ playerName = "DEMO PLAYER" }: Props) {
                   fill
                   className="object-cover"
                   onError={(e) => {
-                    e.currentTarget.src = "/images/media-3.png";
+                    e.currentTarget.src = "/images/Headshot.png";
                   }}
                 />
                 <div className="absolute inset-0 bg-black/40 flex items-end p-2">

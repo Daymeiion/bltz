@@ -73,7 +73,7 @@ export default async function PlayerLocker({ params }: { params: Promise<{ slug:
               fullName={(player as any).full_name || (player as any).name || "Unknown Player"}
               city="Los Angeles, CA"
               videoSrc="/videos/demo-reel.mp4"
-              videoPoster="/images/video-thumb.png"
+              videoPoster="/images/Awards/video-thumb.png"
               badgeUrl="/images/SilverHero1.png"
               avatarUrl="/images/Headshot.png"
             />
@@ -241,7 +241,7 @@ export default async function PlayerLocker({ params }: { params: Promise<{ slug:
   const heroMedia = mediaItems[0]?.url ?? "/images/media-5.jpg";
   const city = player.hometown || undefined;
   const videoSrc = (player as any).video_url || "/videos/demo-reel.mp4";
-  const videoPoster = headshotUrl || "/images/video-thumb.png";
+  const videoPoster = headshotUrl || "/images/Awards/video-thumb.png";
 
   const bioCopy =
     locker?.bio ||
