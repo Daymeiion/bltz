@@ -12,12 +12,15 @@ import { SlugInput } from "./SlugInput";
 import { LivePreviewIframe } from "./LivePreviewIframe";
 import { ShieldCheck, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { BroadcastPanel, SourceChip } from "./BroadcastShell";
+import { VerificationRail } from "./VerificationRail";
 
 interface Props {
   userId: string;
   runId: string;
   draft: PipelineDraft;
   initialSlug?: string;
+  requiresVerification?: boolean;
 }
 
 interface FormState {
@@ -46,7 +49,7 @@ function defaultSlug(name: string): string {
     .slice(0, 48);
 }
 
-export function ReviewForm({ userId, runId, draft, initialSlug }: Props) {
+export function ReviewForm({ userId, runId, draft, initialSlug, requiresVerification = false }: Props) {
   const router = useRouter();
 
   const [state, setState] = React.useState<FormState>(() => ({
@@ -83,6 +86,10 @@ export function ReviewForm({ userId, runId, draft, initialSlug }: Props) {
   async function onSubmit(ev: React.FormEvent) {
     ev.preventDefault();
     setErr(null);
+    if (requiresVerification) {
+      setErr("Identity verification is required before this claimed locker can publish. Provider integration is the next security slice.");
+      return;
+    }
     if (!state.full_name.trim()) {
       setErr("Add your name before publishing.");
       return;
@@ -122,8 +129,12 @@ export function ReviewForm({ userId, runId, draft, initialSlug }: Props) {
         setSubmitting(false);
         return;
       }
-      const { slug } = (await r.json()) as { slug: string };
-      router.push(`/dashboard?welcome=1&slug=${encodeURIComponent(slug)}`);
+      const { slug, testMode } = (await r.json()) as { slug: string; testMode?: boolean };
+      if (testMode) {
+        router.push(`/onboarding?testPublished=1&slug=${encodeURIComponent(slug)}`);
+        return;
+      }
+      router.push(`/onboarding/complete?slug=${encodeURIComponent(slug)}`);
     } catch {
       setErr("Network error — try again.");
       setSubmitting(false);
@@ -152,8 +163,10 @@ export function ReviewForm({ userId, runId, draft, initialSlug }: Props) {
 
   return (
     <form onSubmit={onSubmit} className="space-y-10" noValidate>
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-2 lg:gap-10">
-        <div className="space-y-7">
+      <VerificationRail requiresVerification={requiresVerification} reviewed={Boolean(state.full_name && state.slug)} />
+
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_430px]">
+        <div className="space-y-6">
           <Section title="Headshot">
             <HeadshotUploader
               userId={userId}
@@ -170,12 +183,21 @@ export function ReviewForm({ userId, runId, draft, initialSlug }: Props) {
             />
           </Section>
 
+          <Section title="Found online" subtitle="These facts came from public sports sources. Edit the fields below if anything looks off.">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <FoundFact label="Birthdate" value={state.dob || "Not found"} />
+              <FoundFact label="Hometown" value={state.hometown || "Not found"} />
+              <FoundFact label="Pro teams" value={draft.pro_teams?.length ? draft.pro_teams.join(", ") : "Not found"} />
+              <FoundFact label="Videos" value={`${draft.youtube_urls.length} found`} />
+            </div>
+          </Section>
+
           <Section title="Identity">
             <Field label="Full name">
               <Input
                 value={state.full_name}
                 onChange={(e) => update("full_name", e.target.value)}
-                className="border-white/15 bg-black/40 text-white"
+                className="h-12 rounded border-white/15 bg-black/40 text-white"
               />
             </Field>
             <div className="grid grid-cols-2 gap-3">
@@ -184,14 +206,14 @@ export function ReviewForm({ userId, runId, draft, initialSlug }: Props) {
                   value={state.position}
                   onChange={(e) => update("position", e.target.value)}
                   placeholder="QB"
-                  className="border-white/15 bg-black/40 text-white"
+                  className="h-12 rounded border-white/15 bg-black/40 text-white"
                 />
               </Field>
               <Field label="Level">
                 <select
                   value={state.level}
                   onChange={(e) => update("level", e.target.value as FormState["level"])}
-                  className="h-9 w-full rounded-md border border-white/15 bg-black/40 px-3 text-white"
+                  className="h-12 w-full rounded border border-white/15 bg-black/40 px-3 text-white"
                 >
                   <option value="">Pick one</option>
                   <option value="hs">High school</option>
@@ -205,7 +227,7 @@ export function ReviewForm({ userId, runId, draft, initialSlug }: Props) {
               <Input
                 value={state.school}
                 onChange={(e) => update("school", e.target.value)}
-                className="border-white/15 bg-black/40 text-white"
+                className="h-12 rounded border-white/15 bg-black/40 text-white"
               />
             </Field>
             <Field label="Hometown">
@@ -213,7 +235,7 @@ export function ReviewForm({ userId, runId, draft, initialSlug }: Props) {
                 value={state.hometown}
                 onChange={(e) => update("hometown", e.target.value)}
                 placeholder="Optional"
-                className="border-white/15 bg-black/40 text-white"
+                className="h-12 rounded border-white/15 bg-black/40 text-white"
               />
             </Field>
           </Section>
@@ -224,7 +246,6 @@ export function ReviewForm({ userId, runId, draft, initialSlug }: Props) {
           >
             <ConfirmRow
               label="Date of birth"
-              fieldKey="dob"
               confirmed={!!state.confirmed.dob}
               onToggle={() => toggleConfirm("dob")}
             >
@@ -232,12 +253,11 @@ export function ReviewForm({ userId, runId, draft, initialSlug }: Props) {
                 type="date"
                 value={state.dob}
                 onChange={(e) => update("dob", e.target.value)}
-                className="border-white/15 bg-black/40 text-white"
+                className="h-12 rounded border-white/15 bg-black/40 text-white"
               />
             </ConfirmRow>
             <ConfirmRow
               label="Height (in)"
-              fieldKey="height_in"
               confirmed={!!state.confirmed.height_in}
               onToggle={() => toggleConfirm("height_in")}
             >
@@ -246,12 +266,11 @@ export function ReviewForm({ userId, runId, draft, initialSlug }: Props) {
                 inputMode="numeric"
                 value={state.height_in}
                 onChange={(e) => update("height_in", e.target.value)}
-                className="border-white/15 bg-black/40 text-white"
+                className="h-12 rounded border-white/15 bg-black/40 text-white"
               />
             </ConfirmRow>
             <ConfirmRow
               label="Weight (lbs)"
-              fieldKey="weight_lbs"
               confirmed={!!state.confirmed.weight_lbs}
               onToggle={() => toggleConfirm("weight_lbs")}
             >
@@ -260,12 +279,11 @@ export function ReviewForm({ userId, runId, draft, initialSlug }: Props) {
                 inputMode="numeric"
                 value={state.weight_lbs}
                 onChange={(e) => update("weight_lbs", e.target.value)}
-                className="border-white/15 bg-black/40 text-white"
+                className="h-12 rounded border-white/15 bg-black/40 text-white"
               />
             </ConfirmRow>
             <ConfirmRow
               label="Games played"
-              fieldKey="games_played"
               confirmed={!!state.confirmed.games_played}
               onToggle={() => toggleConfirm("games_played")}
             >
@@ -274,7 +292,7 @@ export function ReviewForm({ userId, runId, draft, initialSlug }: Props) {
                 inputMode="numeric"
                 value={state.games_played}
                 onChange={(e) => update("games_played", e.target.value)}
-                className="border-white/15 bg-black/40 text-white"
+                className="h-12 rounded border-white/15 bg-black/40 text-white"
               />
             </ConfirmRow>
           </Section>
@@ -284,7 +302,7 @@ export function ReviewForm({ userId, runId, draft, initialSlug }: Props) {
               value={state.bio}
               onChange={(e) => update("bio", e.target.value)}
               rows={6}
-              className="border-white/15 bg-black/40 text-white"
+              className="rounded border-white/15 bg-black/40 text-white"
               placeholder="Your career in your voice."
             />
             <p className="text-xs text-white/40">
@@ -297,9 +315,7 @@ export function ReviewForm({ userId, runId, draft, initialSlug }: Props) {
               <ul className="space-y-1 text-sm text-white/70">
                 {draft.sources.map((s) => (
                   <li key={s.url} className="flex items-center gap-2">
-                    <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs uppercase tracking-wider">
-                      {labelFor(s.source)}
-                    </span>
+                    <SourceChip>{labelFor(s.source)}</SourceChip>
                     <a
                       href={s.url}
                       target="_blank"
@@ -315,21 +331,24 @@ export function ReviewForm({ userId, runId, draft, initialSlug }: Props) {
           ) : null}
         </div>
 
-        <div className="lg:sticky lg:top-8 lg:self-start">
-          <p className="mb-2 text-xs uppercase tracking-widest text-white/50">
-            Live preview
-          </p>
+        <div className="xl:sticky xl:top-8 xl:self-start">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <p className="font-mono text-xs uppercase tracking-[0.2em] text-white/45">
+              Live locker preview
+            </p>
+            <SourceChip tone={requiresVerification ? "warn" : "success"}>
+              {requiresVerification ? "Private" : "Publish-ready"}
+            </SourceChip>
+          </div>
           <LivePreviewIframe slug={state.slug || "__preview__"} draft={previewDraft} />
         </div>
       </div>
 
       {err ? (
-        <p className="rounded-md border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">
-          {err}
-        </p>
+        <p className="border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">{err}</p>
       ) : null}
 
-      <div className="sticky bottom-0 -mx-6 flex flex-col-reverse gap-3 border-t border-white/10 bg-black/70 px-6 py-4 backdrop-blur md:static md:m-0 md:flex-row md:items-center md:justify-end md:border-0 md:bg-transparent md:p-0">
+      <div className="sticky bottom-0 -mx-4 flex flex-col-reverse gap-3 border-t border-white/10 bg-[#050711]/86 px-4 py-4 backdrop-blur sm:-mx-6 sm:px-6 md:static md:m-0 md:flex-row md:items-center md:justify-end md:border-0 md:bg-transparent md:p-0">
         <Button
           type="button"
           variant="ghost"
@@ -341,9 +360,13 @@ export function ReviewForm({ userId, runId, draft, initialSlug }: Props) {
         <Button
           type="submit"
           disabled={submitting}
-          className="h-12 bg-bltz-gold px-8 text-base font-bold text-black hover:bg-yellow-400"
+          className="h-12 rounded bg-[#2952FF] px-8 text-base font-bold text-white hover:bg-[#1f43d8]"
         >
-          {submitting ? "Publishing…" : "Publish my locker"}
+          {submitting
+            ? "Publishing..."
+            : requiresVerification
+              ? "Verify identity to publish"
+              : "Publish my locker"}
         </Button>
       </div>
     </form>
@@ -360,9 +383,9 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="space-y-3 rounded-2xl border border-white/10 bg-white/[0.03] p-5 md:p-6">
-      <header>
-        <h2 className="font-oswald text-lg font-bold uppercase tracking-tight text-white">
+    <BroadcastPanel className="space-y-3 p-5 md:p-6">
+      <header className="border-b border-white/10 pb-3">
+        <h2 className="font-oswald text-xl font-bold uppercase tracking-normal text-white">
           {title}
         </h2>
         {subtitle ? (
@@ -370,15 +393,26 @@ function Section({
         ) : null}
       </header>
       <div className="space-y-3">{children}</div>
-    </section>
+    </BroadcastPanel>
   );
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
-      <Label className="text-xs uppercase tracking-wider text-white/60">{label}</Label>
+      <Label className="font-mono text-xs uppercase tracking-[0.14em] text-white/58">{label}</Label>
       {children}
+    </div>
+  );
+}
+
+function FoundFact({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="border border-white/10 bg-black/24 p-3">
+      <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-white/42">
+        {label}
+      </p>
+      <p className="mt-1 text-sm font-semibold leading-6 text-white/78">{value}</p>
     </div>
   );
 }
@@ -386,12 +420,10 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 function ConfirmRow({
   label,
   confirmed,
-  fieldKey,
   onToggle,
   children,
 }: {
   label: string;
-  fieldKey: string;
   confirmed: boolean;
   onToggle: () => void;
   children: React.ReactNode;
@@ -399,15 +431,15 @@ function ConfirmRow({
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between">
-        <Label className="text-xs uppercase tracking-wider text-white/60">{label}</Label>
+        <Label className="font-mono text-xs uppercase tracking-[0.14em] text-white/58">{label}</Label>
         <button
           type="button"
           onClick={onToggle}
           className={cn(
-            "inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs",
+            "inline-flex min-h-7 items-center gap-1.5 border px-2 py-0.5 text-xs",
             confirmed
-              ? "bg-emerald-500/15 text-emerald-300"
-              : "bg-yellow-500/15 text-yellow-300",
+              ? "border-emerald-400/35 bg-emerald-500/15 text-emerald-300"
+              : "border-[#F5A623]/35 bg-yellow-500/15 text-yellow-300",
           )}
           aria-pressed={confirmed}
         >

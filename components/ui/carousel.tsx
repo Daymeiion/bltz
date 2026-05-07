@@ -43,7 +43,7 @@ const Slide = ({ slide, index, current, handleSlideClick }: SlideProps) => {
         cancelAnimationFrame(frameRef.current);
       }
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, []);
 
   const handleMouseMove = (event: React.MouseEvent) => {

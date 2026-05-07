@@ -13,7 +13,7 @@
 import { createServiceClient } from "@/lib/supabase/service";
 import { SCRAPERS } from "./scrapers";
 import { synthesize } from "./claude";
-import type { PipelineEvent, PlayerIdentityInput, ScraperResult } from "./types";
+import type { PipelineDraft, PipelineEvent, PlayerIdentityInput, ScraperResult } from "./types";
 
 const RUN_TIMEOUT_MS = 45_000;
 
@@ -26,35 +26,52 @@ export interface StartResult {
   runId: string;
 }
 
+/**
+ * Sink the pipeline writes events and status into. The Supabase-backed
+ * production sink writes to `onboarding_pipeline_runs`; the test-auth path
+ * uses an in-memory map sink so the loader UI shows the real pipeline
+ * without persisting test data.
+ */
+export interface PipelineSink {
+  emit(event: PipelineEvent): Promise<void> | void;
+  setStatus(
+    status: string,
+    patch?: {
+      started_at?: string;
+      completed_at?: string;
+      draft?: PipelineDraft;
+      error?: string;
+    },
+  ): Promise<void> | void;
+}
+
 function nowIso(): string {
   return new Date().toISOString();
 }
 
-/**
- * Append an event to the run row. We read–modify–write because Postgres
- * jsonb append concatenation requires a custom function and the volume
- * here is tiny (≤ 30 events per run).
- */
-async function emit(runId: string, event: PipelineEvent) {
-  const sb = createServiceClient();
-  const { data: row } = await sb
-    .from("onboarding_pipeline_runs")
-    .select("events")
-    .eq("id", runId)
-    .single();
-  const prev: PipelineEvent[] = Array.isArray(row?.events) ? (row!.events as PipelineEvent[]) : [];
-  await sb
-    .from("onboarding_pipeline_runs")
-    .update({ events: [...prev, event] })
-    .eq("id", runId);
-}
-
-async function setStatus(runId: string, status: string, patch: Record<string, unknown> = {}) {
-  const sb = createServiceClient();
-  await sb
-    .from("onboarding_pipeline_runs")
-    .update({ status, ...patch })
-    .eq("id", runId);
+function supabaseSink(runId: string): PipelineSink {
+  return {
+    async emit(event) {
+      const sb = createServiceClient();
+      const { data: row } = await sb
+        .from("onboarding_pipeline_runs")
+        .select("events")
+        .eq("id", runId)
+        .single();
+      const prev: PipelineEvent[] = Array.isArray(row?.events) ? (row!.events as PipelineEvent[]) : [];
+      await sb
+        .from("onboarding_pipeline_runs")
+        .update({ events: [...prev, event] })
+        .eq("id", runId);
+    },
+    async setStatus(status, patch = {}) {
+      const sb = createServiceClient();
+      await sb
+        .from("onboarding_pipeline_runs")
+        .update({ status, ...patch })
+        .eq("id", runId);
+    },
+  };
 }
 
 /**
@@ -82,15 +99,16 @@ export async function startRun({ userId, identity }: StartArgs): Promise<StartRe
     .single();
   if (error || !data) throw new Error(error?.message ?? "could not insert run");
 
+  const sink = supabaseSink(data.id);
   // Fire and forget. We don't await — the API route returns the runId
   // and the SSE channel takes over from here.
-  void executeRun(data.id, identity).catch(async (e) => {
-    await emit(data.id, {
+  void executePipeline(sink, identity).catch(async (e) => {
+    await sink.emit({
       at: nowIso(),
       phase: "error",
       message: `Pipeline failed: ${e?.message ?? "unknown error"}`,
     });
-    await setStatus(data.id, "manual", { error: e?.message ?? String(e) });
+    await sink.setStatus("manual", { error: e?.message ?? String(e) });
   });
 
   return { runId: data.id };
@@ -112,9 +130,16 @@ async function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise
   });
 }
 
-async function executeRun(runId: string, identity: PlayerIdentityInput) {
-  await setStatus(runId, "scraping", { started_at: nowIso() });
-  await emit(runId, {
+/**
+ * Run the pipeline against an arbitrary sink. Used by both the Supabase-
+ * backed `startRun` and the in-memory test path in `lib/onboarding/test-auth`.
+ */
+export async function executePipeline(
+  sink: PipelineSink,
+  identity: PlayerIdentityInput,
+) {
+  await sink.setStatus("scraping", { started_at: nowIso() });
+  await sink.emit({
     at: nowIso(),
     phase: "scrape_started",
     message: `Searching ${SCRAPERS.length} sources for ${identity.full_name}…`,
@@ -127,7 +152,7 @@ async function executeRun(runId: string, identity: PlayerIdentityInput) {
       const result = await withTimeout(run(identity), 12_000, source);
       results.push(result);
       if (result.ok) {
-        await emit(runId, {
+        await sink.emit({
           at: nowIso(),
           phase: "scrape_hit",
           source,
@@ -135,16 +160,16 @@ async function executeRun(runId: string, identity: PlayerIdentityInput) {
           message: friendlyHit(source, result),
         });
       } else {
-        await emit(runId, {
+        await sink.emit({
           at: nowIso(),
           phase: "scrape_miss",
           source,
           message: friendlyMiss(source, result.reason),
         });
       }
-    } catch (e: any) {
+    } catch {
       results.push({ source, ok: false, reason: "timeout" });
-      await emit(runId, {
+      await sink.emit({
         at: nowIso(),
         phase: "scrape_miss",
         source,
@@ -153,20 +178,20 @@ async function executeRun(runId: string, identity: PlayerIdentityInput) {
     }
   }
 
-  await emit(runId, {
+  await sink.emit({
     at: nowIso(),
     phase: "scrape_done",
     message: "Cross-referencing the facts…",
   });
 
-  await setStatus(runId, "generating");
-  await emit(runId, {
+  await sink.setStatus("generating");
+  await sink.emit({
     at: nowIso(),
     phase: "synthesis_started",
     message: "Drafting your locker bio…",
   });
 
-  let draft;
+  let draft: PipelineDraft;
   try {
     draft = await withTimeout(
       synthesize({ identity, results }),
@@ -174,12 +199,12 @@ async function executeRun(runId: string, identity: PlayerIdentityInput) {
       "synthesize",
     );
   } catch (e: any) {
-    await emit(runId, {
+    await sink.emit({
       at: nowIso(),
       phase: "manual_fallback",
       message: "I couldn't auto-draft this one — you can edit it yourself in a moment.",
     });
-    await setStatus(runId, "manual", {
+    await sink.setStatus("manual", {
       draft: {
         full_name: identity.full_name,
         bio: "",
@@ -197,24 +222,28 @@ async function executeRun(runId: string, identity: PlayerIdentityInput) {
     return;
   }
 
-  await emit(runId, {
+  await sink.emit({
     at: nowIso(),
     phase: "synthesis_done",
     message: `Found ${draft.awards.length} awards, ${draft.youtube_urls.length} videos, ${draft.photos.length} photos.`,
   });
 
-  await emit(runId, {
+  await sink.emit({
     at: nowIso(),
     phase: "complete",
     message: "Your draft locker is ready.",
   });
-  await setStatus(runId, "complete", {
+  await sink.setStatus("complete", {
     draft,
     completed_at: nowIso(),
   });
 }
 
 function friendlyHit(source: string, r: ScraperResult): string {
+  if (source === "nflverse") {
+    const team = r.facts?.pro_teams?.[0];
+    return team ? `Matched the official NFL roster (${team}).` : "Matched the official NFL roster.";
+  }
   if (source === "wikipedia") return "Found a Wikipedia bio.";
   if (source === "espn") return "Read your ESPN page.";
   if (source === "youtube")
@@ -226,5 +255,6 @@ function friendlyMiss(source: string, reason?: string): string {
   if (reason === "blocked") return `${source}: blocked, skipping.`;
   if (reason === "timeout") return `${source}: timed out.`;
   if (reason === "not_found") return `${source}: nothing matched.`;
+  if (reason === "ambiguous") return `${source}: multiple players share this name — needs school or position to confirm.`;
   return `${source}: not available.`;
 }

@@ -4,7 +4,7 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint app components hooks lib tests types *.ts *.tsx *.mjs --no-error-on-unmatched-pattern",
     "test": "vitest run",
     "test:watch": "vitest"
   },

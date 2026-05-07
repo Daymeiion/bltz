@@ -5,8 +5,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { isTestAuthEnabled } from "@/lib/onboarding/test-auth";
 
 export default function Page() {
+  const testAuthEnabled = isTestAuthEnabled();
+
   return (
     <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10">
       <div className="w-full max-w-sm">
@@ -23,6 +26,14 @@ export default function Page() {
                 You&apos;ve successfully signed up. Please check your email to
                 confirm your account before signing in.
               </p>
+              {testAuthEnabled ? (
+                <a
+                  href="/api/dev/test-auth?next=/onboarding"
+                  className="mt-4 inline-flex h-10 w-full items-center justify-center rounded-md bg-bltz-gold px-4 text-sm font-semibold text-black hover:bg-yellow-400"
+                >
+                  Continue as test player
+                </a>
+              ) : null}
             </CardContent>
           </Card>
         </div>

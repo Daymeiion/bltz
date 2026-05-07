@@ -20,6 +20,7 @@ export function LoginForm({
   className,
   ...props
 }: React.ComponentPropsWithoutRef<"div">) {
+  const testAuthEnabled = process.env.NODE_ENV === "development";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -102,6 +103,16 @@ export function LoginForm({
                 Sign up
               </Link>
             </div>
+            {testAuthEnabled ? (
+              <div className="mt-4 border-t pt-4">
+                <a
+                  href="/api/dev/test-auth?next=/onboarding"
+                  className="inline-flex h-10 w-full items-center justify-center rounded-md bg-bltz-gold px-4 text-sm font-semibold text-black hover:bg-yellow-400"
+                >
+                  Continue as test player
+                </a>
+              </div>
+            ) : null}
           </form>
         </CardContent>
       </Card>

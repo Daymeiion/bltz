@@ -12,6 +12,12 @@ interface SearchHit {
   snippet: string;
 }
 
+interface SummaryResponse {
+  extract?: string;
+  content_urls?: { desktop?: { page?: string } };
+  thumbnail?: { source?: string };
+}
+
 async function searchCandidates(
   identity: PlayerIdentityInput,
 ): Promise<SearchHit[]> {
@@ -37,7 +43,7 @@ async function fetchSummary(title: string): Promise<{
     headers: { "User-Agent": "BLTZ-OnboardBot/1.0" },
   });
   if (!r.ok) return null;
-  const j: any = await r.json();
+  const j = (await r.json()) as SummaryResponse;
   if (!j?.extract) return null;
   return {
     extract: j.extract,
@@ -48,20 +54,22 @@ async function fetchSummary(title: string): Promise<{
 
 const HEIGHT_RE = /(\d)\s*ft\s*(\d{1,2})\s*in/i;
 const WEIGHT_RE = /(\d{2,3})\s*lb/i;
-const DOB_RE = /\b(?:born[: ]+)?(\d{1,2})\s+(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{4})\b/i;
+const DOB_DMY_RE = /\b(?:born[: ]+)?(\d{1,2})\s+(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{4})\b/i;
+const DOB_MDY_RE = /\b(?:born[: ]+)?(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),\s+(\d{4})\b/i;
 
 function parseDob(text: string): string | undefined {
-  const m = text.match(DOB_RE);
-  if (!m) return undefined;
-  const day = m[1].padStart(2, "0");
-  const monthName = m[2];
-  const year = m[3];
+  const dmy = text.match(DOB_DMY_RE);
+  const mdy = text.match(DOB_MDY_RE);
+  const day = dmy?.[1] ?? mdy?.[2];
+  const monthName = dmy?.[2] ?? mdy?.[1];
+  const year = dmy?.[3] ?? mdy?.[3];
+  if (!day || !monthName || !year) return undefined;
   const months = [
     "january","february","march","april","may","june","july","august",
     "september","october","november","december",
   ];
   const monthNum = String(months.indexOf(monthName.toLowerCase()) + 1).padStart(2, "0");
-  return `${year}-${monthNum}-${day}`;
+  return `${year}-${monthNum}-${day.padStart(2, "0")}`;
 }
 
 function parseHeightInches(text: string): number | undefined {
@@ -99,6 +107,25 @@ function extractAwards(text: string, sourceUrl: string): ScrapedAward[] {
   return awards;
 }
 
+function extractHometown(text: string): string | undefined {
+  const fromMatch = text.match(/\bfrom\s+([A-Z][A-Za-z .'-]+,\s+[A-Z][A-Za-z .'-]+?)(?:\.|;|,?\s+(?:and|where|who|he|she|they)\b)/);
+  if (fromMatch) return fromMatch[1].replace(/\s+/g, " ").trim();
+  const bornMatch = text.match(/\bborn\s+(?:in\s+)?([A-Z][A-Za-z .'-]+,\s+[A-Z][A-Za-z .'-]+?)(?:\.|;|,?\s+(?:and|where|who|he|she|they)\b)/);
+  return bornMatch?.[1]?.replace(/\s+/g, " ").trim();
+}
+
+function extractProTeams(text: string): string[] {
+  const teams = new Set<string>();
+  const playedFor = text.match(/\bplayed for the\s+([^.;]+)/i);
+  if (playedFor?.[1]) {
+    for (const chunk of playedFor[1].split(/\s+and\s+|,\s*/)) {
+      const team = chunk.replace(/^the\s+/i, "").trim();
+      if (team && /^[A-Z]/.test(team)) teams.add(team);
+    }
+  }
+  return Array.from(teams).slice(0, 8);
+}
+
 export async function scrapeWikipedia(
   identity: PlayerIdentityInput,
 ): Promise<ScraperResult> {
@@ -124,6 +151,8 @@ export async function scrapeWikipedia(
         dob: parseDob(fullText),
         height_in: parseHeightInches(fullText),
         weight_lbs: parseWeight(fullText),
+        hometown: extractHometown(fullText),
+        pro_teams: extractProTeams(fullText),
         awards: extractAwards(fullText, summary.url),
         photos: summary.thumbnail
           ? [{ url: summary.thumbnail, credits: "Wikipedia" }]

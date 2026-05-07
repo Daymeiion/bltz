@@ -2,10 +2,22 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { StepIndicator } from "@/components/onboarding/StepIndicator";
 import { IdentityForm } from "@/components/onboarding/IdentityForm";
+import { getTestUser } from "@/lib/onboarding/test-auth";
+import { BroadcastHeader } from "@/components/onboarding/BroadcastShell";
 
 export const dynamic = "force-dynamic";
 
-export default async function OnboardingStartPage() {
+export default async function OnboardingStartPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ testPublished?: string; slug?: string }>;
+}) {
+  const params = await searchParams;
+  const testUser = await getTestUser();
+  if (testUser) {
+    return <OnboardingStartContent testPublished={params.testPublished === "1"} slug={params.slug} />;
+  }
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -20,20 +32,44 @@ export default async function OnboardingStartPage() {
 
   if (profile?.player_id) redirect("/dashboard");
 
-  return (
-    <div className="space-y-10">
-      <StepIndicator current={1} />
-      <header className="space-y-3 text-center">
-        <h1 className="font-oswald text-4xl font-bold uppercase tracking-tight text-white md:text-5xl">
-          Claim your locker
-        </h1>
-        <p className="text-base text-white/70 md:text-lg">
-          Tell us who suits up. We&apos;ll sweep public sources for your tape, awards,
-          and headshots — you confirm what stays.
-        </p>
-      </header>
+  return <OnboardingStartContent />;
+}
 
-      <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 md:p-8">
+function OnboardingStartContent({
+  testPublished = false,
+  slug,
+}: {
+  testPublished?: boolean;
+  slug?: string;
+}) {
+  return (
+    <div className="space-y-8">
+      {testPublished ? (
+        <div className="border border-emerald-400/30 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-100">
+          Test publish completed for <span className="font-semibold">{slug}</span>. No
+          Supabase player row was created.
+        </div>
+      ) : null}
+      <StepIndicator current={1} />
+
+      <div className="mx-auto max-w-3xl">
+        <BroadcastHeader
+          eyebrow="Step 1"
+          title={
+            <>
+              Verify the basics
+            </>
+          }
+          align="center"
+        >
+          <p>
+            Enter name, school or club, position, and level. BLTZ uses this to search
+            public sports sources for the right athlete.
+          </p>
+        </BroadcastHeader>
+      </div>
+
+      <section>
         <IdentityForm />
       </section>
 

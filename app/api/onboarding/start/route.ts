@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { startRun } from "@/lib/pipeline/run";
+import { createTestRun, getTestUser } from "@/lib/onboarding/test-auth";
 
 export const runtime = "nodejs";
 
@@ -14,6 +15,17 @@ const Body = z.object({
 });
 
 export async function POST(req: Request) {
+  const testUser = await getTestUser();
+  if (testUser) {
+    try {
+      const body = Body.parse(await req.json());
+      const run = createTestRun(body);
+      return NextResponse.json({ runId: run.id, testMode: true });
+    } catch (e: any) {
+      return NextResponse.json({ error: "invalid_input", detail: e?.message }, { status: 400 });
+    }
+  }
+
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });

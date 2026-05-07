@@ -1,22 +1,23 @@
 import { cn } from "@/lib/utils";
 
 const STEPS = [
-  { n: 1, label: "Identity" },
-  { n: 2, label: "Career sweep" },
+  { n: 1, label: "Verify" },
+  { n: 2, label: "Found data" },
   { n: 3, label: "Review" },
+  { n: 4, label: "Complete" },
 ];
 
-export function StepIndicator({ current }: { current: 1 | 2 | 3 }) {
+export function StepIndicator({ current }: { current: 1 | 2 | 3 | 4 }) {
   return (
-    <ol className="mb-10 flex items-center justify-center gap-3 text-xs uppercase tracking-widest font-oswald">
+    <ol className="mb-8 flex flex-wrap items-center justify-center gap-3 font-mono text-xs uppercase tracking-[0.16em]">
       {STEPS.map((s, i) => (
         <li key={s.n} className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <span
               className={cn(
-                "flex h-7 w-7 items-center justify-center rounded-full border text-[11px] font-bold",
+                "flex h-7 w-7 items-center justify-center border text-[11px] font-bold",
                 s.n <= current
-                  ? "border-bltz-gold bg-bltz-gold text-black"
+                  ? "border-[#2952FF] bg-[#2952FF] text-white"
                   : "border-white/20 bg-transparent text-white/50",
               )}
             >

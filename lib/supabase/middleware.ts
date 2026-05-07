@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { hasEnvVars } from "../utils";
+import { TEST_AUTH_COOKIE, isTestAuthEnabled } from "@/lib/onboarding/test-auth";
 
 /**
  * Auth + role-aware redirect middleware.
@@ -54,6 +55,7 @@ export function shouldRedirectToOnboarding(args: {
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
+  const testAuth = isTestAuthEnabled() && request.cookies.get(TEST_AUTH_COOKIE)?.value === "1";
 
   if (!hasEnvVars) {
     return supabaseResponse;
@@ -87,7 +89,7 @@ export async function updateSession(request: NextRequest) {
   const inOnboarding = pathname === ONBOARDING_PATH || pathname.startsWith(`${ONBOARDING_PATH}/`);
 
   // Rule 1: redirect anonymous users to login (with original path preserved).
-  if (!user && !isPublicPath(pathname) && pathname !== "/") {
+  if (!user && !testAuth && !isPublicPath(pathname) && pathname !== "/") {
     const url = request.nextUrl.clone();
     url.pathname = "/auth/login";
     if (pathname !== "/auth/login") {
@@ -97,6 +99,12 @@ export async function updateSession(request: NextRequest) {
   }
 
   // Rules 2 + 4: athlete-path redirect to onboarding.
+  if (testAuth && !inOnboarding && !isPublicPath(pathname)) {
+    const url = request.nextUrl.clone();
+    url.pathname = ONBOARDING_PATH;
+    return NextResponse.redirect(url);
+  }
+
   if (user && !inOnboarding && !isPublicPath(pathname)) {
     const userId = (user as { sub?: string }).sub;
     if (userId) {

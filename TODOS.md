@@ -4,6 +4,15 @@ Design and product debt deferred from /plan-design-review on 2026-04-24.
 
 ## Design
 
+### Onboarding redesign follow-ups
+- **What:** Complete the deferred items from the Broadcast Locker Reveal onboarding redesign: choose a third-party identity verification provider, design admin verification review tooling, define full photo rights management, revisit premium theme customization, and redesign the public locker beyond the onboarding preview.
+- **Why:** The approved onboarding redesign protects professional athlete identity and creates the first-run magic moment, but these adjacent systems need separate product and engineering passes.
+- **Pros:** Keeps this redesign focused while preserving the next set of high-trust athlete workflow needs.
+- **Cons:** Public publishing for claimed lockers remains provider-gated until verification integration is selected and implemented.
+- **Context:** Spec lives at `docs/superpowers/specs/2026-05-06-onboarding-broadcast-locker-reveal-design.md`; Not In Scope items were explicitly deferred by approval.
+- **Depends on:** Third-party ID verification provider decision, media rights policy, and a follow-up public locker design pass.
+- **When:** Next onboarding/security slice after the visual redesign lands.
+
 ### Logo / wordmark system
 - **What:** Commission or design a real BLTZ wordmark + glyph mark system.
 - **Why:** MVP ships with "BLTZ" set in Barlow Condensed 900 gold. Functional but

@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { StepIndicator } from "@/components/onboarding/StepIndicator";
 import { MagicMomentLoader } from "@/components/onboarding/MagicMomentLoader";
+import { getTestRun, getTestUser } from "@/lib/onboarding/test-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +13,17 @@ export default async function OnboardingLoaderPage({
 }) {
   const { run } = await searchParams;
   if (!run) redirect("/onboarding");
+
+  const testUser = await getTestUser();
+  const testRun = testUser ? getTestRun(run) : null;
+  if (testRun) {
+    return (
+      <div className="space-y-10">
+        <StepIndicator current={2} />
+        <MagicMomentLoader runId={testRun.id} />
+      </div>
+    );
+  }
 
   const supabase = await createClient();
   const {

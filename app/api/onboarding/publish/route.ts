@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import type { ScraperSource } from "@/lib/pipeline/types";
+import { getTestRun, getTestUser } from "@/lib/onboarding/test-auth";
 
 export const runtime = "nodejs";
 
@@ -49,12 +49,34 @@ const Body = z.object({
 /**
  * Atomically publish a locker draft.
  *
- * Steps performed in a single Postgres transaction (via RPC) when possible.
- * Falls back to sequential operations under the service-role client if the
- * RPC isn't deployed yet — each step is idempotent so a partial failure can
- * be retried without corruption.
+ * The route validates auth, run ownership, and the request shape, then hands
+ * the multi-table mutation to a Postgres RPC. Keeping the player/profile/token/
+ * run/media/award writes inside one database function prevents partial publish
+ * state and lets the database enforce idempotency for retried submissions.
  */
 export async function POST(req: Request) {
+  const testUser = await getTestUser();
+  if (testUser) {
+    let body: z.infer<typeof Body>;
+    try {
+      body = Body.parse(await req.json());
+    } catch (e: unknown) {
+      const detail = e instanceof Error ? e.message : String(e);
+      return NextResponse.json({ error: "invalid_input", detail }, { status: 400 });
+    }
+
+    if (!getTestRun(body.run_id)) {
+      return NextResponse.json({ error: "run_not_found" }, { status: 404 });
+    }
+
+    return NextResponse.json({
+      slug: body.slug,
+      playerId: null,
+      testMode: true,
+      message: "Test mode: no Supabase player row was created.",
+    });
+  }
+
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -62,8 +84,9 @@ export async function POST(req: Request) {
   let body: z.infer<typeof Body>;
   try {
     body = Body.parse(await req.json());
-  } catch (e: any) {
-    return NextResponse.json({ error: "invalid_input", detail: e?.message }, { status: 400 });
+  } catch (e: unknown) {
+    const detail = e instanceof Error ? e.message : String(e);
+    return NextResponse.json({ error: "invalid_input", detail }, { status: 400 });
   }
 
   const sb = createServiceClient();
@@ -124,123 +147,35 @@ export async function POST(req: Request) {
     confirmed_fields: body.confirmed_fields,
   };
 
-  // Upsert the player row. Branch on whether this is a claim flow vs self-serve.
-  let playerId: string | null = null;
+  const { data: published, error: publishErr } = await sb.rpc("publish_onboarding_run", {
+    p_run_id: body.run_id,
+    p_user_id: user.id,
+    p_player: playerPayload,
+    p_awards: body.awards,
+    p_headshot_url: body.headshot_url ?? null,
+    p_photos: body.photos.map((photo, index) => ({ ...photo, display_order: index + 1 })),
+    p_claim_player_id: claimPlayerId ?? null,
+    p_claim_token: run.claim_token ?? null,
+  });
 
-  if (claimPlayerId) {
-    const { error: updErr } = await sb
-      .from("players")
-      .update(playerPayload)
-      .eq("id", claimPlayerId);
-    if (updErr) {
-      return NextResponse.json({ error: "could_not_update_player", detail: updErr.message }, { status: 500 });
-    }
-    playerId = claimPlayerId;
-  } else {
-    // Look for a player already owned by this user.
-    const { data: ownPlayer } = await sb
-      .from("players")
-      .select("id")
-      .eq("user_id", user.id)
-      .maybeSingle();
-    if (ownPlayer) {
-      const { error: updErr } = await sb
-        .from("players")
-        .update(playerPayload)
-        .eq("id", ownPlayer.id);
-      if (updErr) {
-        return NextResponse.json({ error: "could_not_update_player", detail: updErr.message }, { status: 500 });
-      }
-      playerId = ownPlayer.id;
-    } else {
-      const { data: created, error: insErr } = await sb
-        .from("players")
-        .insert(playerPayload)
-        .select("id")
-        .single();
-      if (insErr || !created) {
-        return NextResponse.json({ error: "could_not_create_player", detail: insErr?.message }, { status: 500 });
-      }
-      playerId = created.id;
-    }
+  if (publishErr || !published) {
+    const detail = publishErr?.message;
+    const status =
+      detail === "slug_taken" || detail === "claim_token_already_claimed"
+        ? 409
+        : detail === "run_not_found"
+          ? 404
+          : 500;
+    const error =
+      detail === "slug_taken"
+        ? "slug_taken"
+        : detail === "run_not_found"
+          ? "run_not_found"
+          : detail === "claim_token_already_claimed"
+            ? "already_claimed"
+            : "could_not_publish";
+    return NextResponse.json({ error, detail }, { status });
   }
 
-  // Awards — upsert. We use simple insert + ignore unique-conflict via name+year.
-  if (body.awards.length > 0) {
-    const rows = body.awards.map((a) => ({
-      player_id: playerId,
-      name: a.name,
-      year: a.year ? Number(a.year) : null,
-      organization: a.organization ?? null,
-      source_url: a.source_url || null,
-      ai_discovered: true,
-      verified: false,
-      category: "sports" as const,
-      significance: "regional" as const,
-    }));
-    await sb.from("player_awards").insert(rows);
-  }
-
-  // Headshot media row, so the locker page can render it from `media`.
-  if (body.headshot_url) {
-    await sb.from("media").insert({
-      player_id: playerId,
-      url: body.headshot_url,
-      kind: "headshot",
-      provenance: "athlete_uploaded",
-      display_order: 0,
-    });
-  }
-
-  // Photos — write any remaining ones at higher display_order so the headshot stays first.
-  if (body.photos.length > 0) {
-    const rows = body.photos.map((p, i) => ({
-      player_id: playerId,
-      url: p.url,
-      kind: "photo" as const,
-      credits: p.credits ?? null,
-      width: p.width ?? null,
-      height: p.height ?? null,
-      display_order: i + 1,
-      provenance: "founder_archive" as ScraperSource,
-    }));
-    await sb.from("media").insert(rows);
-  }
-
-  // Promote the user profile to player + bind player_id.
-  const { error: profileErr } = await sb
-    .from("profiles")
-    .upsert(
-      {
-        id: user.id,
-        role: "player",
-        player_id: playerId,
-        full_name: body.full_name,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "id" },
-    );
-  if (profileErr) {
-    return NextResponse.json({ error: "could_not_update_profile", detail: profileErr.message }, { status: 500 });
-  }
-
-  // Mark claim token as used if applicable.
-  if (run.claim_token) {
-    await sb
-      .from("claim_tokens")
-      .update({ claimed_at: new Date().toISOString(), claimed_by: user.id })
-      .eq("token", run.claim_token);
-  }
-
-  // Mark the pipeline run as complete + bound to the player.
-  await sb
-    .from("onboarding_pipeline_runs")
-    .update({
-      status: "complete",
-      player_id: playerId,
-      completed_at: new Date().toISOString(),
-    })
-    .eq("id", body.run_id);
-
-  return NextResponse.json({ slug: body.slug, playerId });
+  return NextResponse.json(published);
 }

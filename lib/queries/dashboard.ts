@@ -272,7 +272,7 @@ export async function getPerformanceStats(
   const supabase = await createClient();
   
   const now = new Date();
-  let startDate = new Date();
+  const startDate = new Date();
   let grouping = 'day';
 
   switch (period) {

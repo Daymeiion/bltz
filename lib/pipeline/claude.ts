@@ -16,20 +16,33 @@
  */
 
 import OpenAI from "openai";
-import type { PipelineDraft, PlayerIdentityInput, ScraperResult } from "./types";
+import type { PipelineDraft, PlayerIdentityInput, ScraperResult, ScraperSource } from "./types";
 
 const PROMPT_VERSION = "bltz.synth.v1";
+
+/**
+ * Sources whose facts we treat as authoritative. Fields supplied by these
+ * sources are auto-confirmed in the synthesis gate — the athlete doesn't
+ * have to manually verify height/weight/DOB pulled from the official
+ * NFL roster, for example.
+ */
+const HIGH_TRUST_SOURCES: ReadonlySet<ScraperSource> = new Set(["nflverse"]);
+
+type FieldOrigin = Partial<Record<
+  "dob" | "height_in" | "weight_lbs" | "games_played" | "position" | "school" | "hometown",
+  ScraperSource
+>>;
 
 function pickFacts(
   identity: PlayerIdentityInput,
   results: ScraperResult[],
 ): Pick<
   PipelineDraft,
-  "dob" | "height_in" | "weight_lbs" | "games_played" | "position" | "school" | "hometown" | "awards" | "youtube_urls" | "photos"
-> {
-  // Latest-non-null wins per field — Wikipedia tends to have biographical
-  // facts (DOB), ESPN tends to have stats (HT/WT/GP). Order matters in the
-  // SCRAPERS registry.
+  "dob" | "height_in" | "weight_lbs" | "games_played" | "position" | "school" | "hometown" | "pro_teams" | "awards" | "youtube_urls" | "photos"
+> & { _origin: FieldOrigin } {
+  // First-non-null wins per field — high-trust structured sources (nflverse)
+  // are registered first in SCRAPERS, so their values seed the facts before
+  // prose scrapers fill gaps.
   let dob: string | undefined;
   let height_in: number | undefined;
   let weight_lbs: number | undefined;
@@ -37,18 +50,21 @@ function pickFacts(
   let position: string | undefined = identity.position ?? undefined;
   let school: string | undefined = identity.school ?? undefined;
   let hometown: string | undefined;
+  let pro_teams: string[] = [];
   const awards: PipelineDraft["awards"] = [];
   const youtube_urls: string[] = [];
   const photos: PipelineDraft["photos"] = [];
+  const origin: FieldOrigin = {};
   for (const r of results) {
     if (!r.ok || !r.facts) continue;
-    if (r.facts.dob && !dob) dob = r.facts.dob;
-    if (r.facts.height_in && !height_in) height_in = r.facts.height_in;
-    if (r.facts.weight_lbs && !weight_lbs) weight_lbs = r.facts.weight_lbs;
-    if (r.facts.games_played && !games_played) games_played = r.facts.games_played;
-    if (r.facts.position && !position) position = r.facts.position;
-    if (r.facts.school && !school) school = r.facts.school;
-    if (r.facts.hometown && !hometown) hometown = r.facts.hometown;
+    if (r.facts.dob && !dob) { dob = r.facts.dob; origin.dob = r.source; }
+    if (r.facts.height_in && !height_in) { height_in = r.facts.height_in; origin.height_in = r.source; }
+    if (r.facts.weight_lbs && !weight_lbs) { weight_lbs = r.facts.weight_lbs; origin.weight_lbs = r.source; }
+    if (r.facts.games_played && !games_played) { games_played = r.facts.games_played; origin.games_played = r.source; }
+    if (r.facts.position && !position) { position = r.facts.position; origin.position = r.source; }
+    if (r.facts.school && !school) { school = r.facts.school; origin.school = r.source; }
+    if (r.facts.hometown && !hometown) { hometown = r.facts.hometown; origin.hometown = r.source; }
+    if (r.facts.pro_teams) pro_teams = [...pro_teams, ...r.facts.pro_teams];
     if (r.facts.awards) awards.push(...r.facts.awards);
     if (r.facts.youtube_urls) youtube_urls.push(...r.facts.youtube_urls);
     if (r.facts.photos) photos.push(...r.facts.photos);
@@ -61,9 +77,11 @@ function pickFacts(
     position: position ?? null,
     school: school ?? null,
     hometown: hometown ?? null,
+    pro_teams: Array.from(new Set(pro_teams)).slice(0, 8),
     awards: dedupeAwards(awards),
     youtube_urls: Array.from(new Set(youtube_urls)).slice(0, 8),
     photos: photos.slice(0, 12),
+    _origin: origin,
   };
 }
 
@@ -99,6 +117,9 @@ function deterministicBio(
     bits.push(`Listed at ${ft}'${inch}", ${facts.weight_lbs} lbs.`);
   }
   if (facts.games_played) bits.push(`Career games: ${facts.games_played}.`);
+  if (facts.hometown) bits.push(`Hometown: ${facts.hometown}.`);
+  const proTeams = facts.pro_teams ?? [];
+  if (proTeams.length) bits.push(`Pro teams include ${proTeams.slice(0, 3).join(", ")}.`);
   if (facts.awards.length) {
     bits.push(
       `Recognized as ${facts.awards
@@ -127,26 +148,36 @@ function gate(
   factual: ReturnType<typeof pickFacts>,
 ): PipelineDraft {
   const confirmed: Partial<Record<string, boolean>> = { ...draft.confirmed };
-  const fields: (keyof typeof factual)[] = [
+  const fields = [
     "dob",
     "height_in",
     "weight_lbs",
     "games_played",
-  ];
+  ] as const;
   for (const f of fields) {
-    if (factual[f] && draft[f as keyof PipelineDraft]) {
+    const fromTrusted =
+      factual._origin[f] !== undefined &&
+      HIGH_TRUST_SOURCES.has(factual._origin[f]!);
+
+    if (factual[f] && draft[f]) {
       const a = String(factual[f]);
-      const b = String(draft[f as keyof PipelineDraft]);
+      const b = String(draft[f]);
       if (a !== b) {
         // Disagreement — keep the scraped value, mark unconfirmed.
-        (draft as any)[f] = factual[f];
+        if (f === "dob") draft.dob = factual.dob;
+        if (f === "height_in") draft.height_in = factual.height_in;
+        if (f === "weight_lbs") draft.weight_lbs = factual.weight_lbs;
+        if (f === "games_played") draft.games_played = factual.games_played;
         confirmed[f] = false;
       } else {
-        confirmed[f] = false; // still requires athlete confirmation
+        // Match — auto-confirm if the scraped value came from a high-trust
+        // source (e.g. nflverse master roster). Otherwise still requires
+        // the athlete to confirm during Review.
+        confirmed[f] = fromTrusted;
       }
-    } else if (draft[f as keyof PipelineDraft]) {
+    } else if (draft[f]) {
       // LLM invented a number. Drop it.
-      (draft as any)[f] = null;
+      draft[f] = null;
       confirmed[f] = false;
     }
   }
@@ -216,6 +247,7 @@ Prompt version: ${PROMPT_VERSION}.`;
     level: identity.level ?? null,
     school: factual.school,
     hometown: factual.hometown,
+    pro_teams: factual.pro_teams,
     awards: factual.awards,
     youtube_urls: factual.youtube_urls,
     photos: factual.photos,

@@ -12,6 +12,7 @@ export type PipelineStatus =
   | "manual";
 
 export type ScraperSource =
+  | "nflverse"
   | "wikipedia"
   | "espn"
   | "youtube"
@@ -77,6 +78,7 @@ export interface ScraperResult {
     position: string;
     school: string;
     hometown: string;
+    pro_teams: string[];
     bio_text: string;
     awards: ScrapedAward[];
     youtube_urls: string[];
@@ -97,6 +99,7 @@ export interface PipelineDraft {
   level?: PlayerIdentityInput["level"];
   school?: string | null;
   hometown?: string | null;
+  pro_teams?: string[];
   awards: ScrapedAward[];
   youtube_urls: string[];
   photos: { url: string; credits?: string; width?: number; height?: number }[];

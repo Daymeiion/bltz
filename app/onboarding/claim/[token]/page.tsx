@@ -3,6 +3,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { createClient } from "@/lib/supabase/server";
 import { StepIndicator } from "@/components/onboarding/StepIndicator";
 import { ClaimRecap } from "@/components/onboarding/ClaimRecap";
+import { BroadcastPanel } from "@/components/onboarding/BroadcastShell";
 
 export const dynamic = "force-dynamic";
 
@@ -78,7 +79,7 @@ export default async function ClaimPage({
           full_name: player.full_name,
           position: player.position,
           level: player.level,
-          school: (player.schools as any)?.name ?? null,
+          school: getSchoolName(player.schools),
           awards_count: awards_count ?? 0,
           videos_count: videos_count ?? 0,
           photos_count: photos_count ?? 0,
@@ -96,15 +97,26 @@ function ClaimError({ reason }: { reason: "invalid" | "expired" | "missing_playe
     missing_player: "We couldn't find the locker tied to this link.",
   } as const;
   return (
-    <div className="space-y-4 rounded-2xl border border-yellow-500/30 bg-yellow-500/5 p-6 text-center">
-      <h1 className="font-oswald text-2xl font-bold uppercase text-white">Claim link issue</h1>
+    <BroadcastPanel className="mx-auto max-w-xl space-y-4 border-yellow-500/30 bg-yellow-500/5 p-6 text-center">
+      <h1 className="font-oswald text-3xl font-bold uppercase text-white">Claim link issue</h1>
       <p className="text-white/80">{map[reason]}</p>
       <a
         href="/onboarding"
-        className="inline-block rounded-md bg-bltz-gold px-5 py-2 font-bold text-black hover:bg-yellow-400"
+        className="inline-flex min-h-11 items-center justify-center rounded bg-[#2952FF] px-5 py-2 font-bold text-white hover:bg-[#1f43d8]"
       >
         Start fresh
       </a>
-    </div>
+    </BroadcastPanel>
   );
+}
+
+function getSchoolName(schools: unknown): string | null {
+  if (!schools || typeof schools !== "object") return null;
+  if (Array.isArray(schools)) {
+    const first = schools[0];
+    return first && typeof first === "object" && "name" in first && typeof first.name === "string"
+      ? first.name
+      : null;
+  }
+  return "name" in schools && typeof schools.name === "string" ? schools.name : null;
 }

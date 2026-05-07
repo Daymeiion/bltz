@@ -22,8 +22,9 @@ export async function POST(req: Request) {
   let body: z.infer<typeof Body>;
   try {
     body = Body.parse(await req.json());
-  } catch (e: any) {
-    return NextResponse.json({ error: "invalid_input", detail: e?.message }, { status: 400 });
+  } catch (e: unknown) {
+    const detail = e instanceof Error ? e.message : String(e);
+    return NextResponse.json({ error: "invalid_input", detail }, { status: 400 });
   }
 
   const sb = createServiceClient();
@@ -36,6 +37,20 @@ export async function POST(req: Request) {
   if (tokenRow.claimed_at) return NextResponse.json({ error: "already_claimed" }, { status: 409 });
   if (new Date(tokenRow.expires_at).getTime() < Date.now())
     return NextResponse.json({ error: "expired" }, { status: 410 });
+
+  const { data: activeRun } = await sb
+    .from("onboarding_pipeline_runs")
+    .select("id, user_id")
+    .eq("claim_token", body.token)
+    .is("completed_at", null)
+    .maybeSingle();
+  if (activeRun) {
+    if (activeRun.user_id === user.id) {
+      return NextResponse.json({ runId: activeRun.id, reused: true });
+    }
+
+    return NextResponse.json({ error: "claim_in_progress" }, { status: 409 });
+  }
 
   const { data: player } = await sb
     .from("players")
@@ -131,6 +146,21 @@ export async function POST(req: Request) {
     .single();
 
   if (insertErr || !run) {
+    if (insertErr?.code === "23505") {
+      const { data: contestedRun } = await sb
+        .from("onboarding_pipeline_runs")
+        .select("id, user_id")
+        .eq("claim_token", body.token)
+        .is("completed_at", null)
+        .maybeSingle();
+
+      if (contestedRun?.user_id === user.id) {
+        return NextResponse.json({ runId: contestedRun.id, reused: true });
+      }
+
+      return NextResponse.json({ error: "claim_in_progress" }, { status: 409 });
+    }
+
     return NextResponse.json({ error: "could_not_seed", detail: insertErr?.message }, { status: 500 });
   }
 

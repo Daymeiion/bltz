@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import type { PipelineEvent } from "@/lib/pipeline/types";
+import { getTestRun, getTestUser } from "@/lib/onboarding/test-auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,6 +22,63 @@ export async function GET(
   { params }: { params: Promise<{ runId: string }> },
 ) {
   const { runId } = await params;
+  const testUser = await getTestUser();
+  const testRun = testUser ? getTestRun(runId) : null;
+  if (testRun) {
+    const stream = new ReadableStream<Uint8Array>({
+      async start(controller) {
+        const enc = new TextEncoder();
+        const send = (event: string, payload: unknown) => {
+          controller.enqueue(
+            enc.encode(`event: ${event}\ndata: ${JSON.stringify(payload)}\n\n`),
+          );
+        };
+
+        // Replay any events already on the run, then poll the in-memory map
+        // until the pipeline reaches a terminal state. The test-auth path
+        // drives the real scraper + synthesis pipeline against this same
+        // map (see lib/onboarding/test-auth.createTestRun), so the loader
+        // UI sees the same event timing it would in production.
+        let lastIdx = 0;
+        const startedAt = Date.now();
+        try {
+          while (Date.now() - startedAt < MAX_RUNTIME_MS) {
+            const current = getTestRun(runId);
+            if (!current) break;
+            for (let i = lastIdx; i < current.events.length; i++) {
+              send("event", current.events[i]);
+            }
+            lastIdx = current.events.length;
+            if (
+              current.status === "complete" ||
+              current.status === "error" ||
+              current.status === "manual"
+            ) {
+              send("done", {
+                status: current.status,
+                draft: current.draft,
+                error: current.error ?? null,
+              });
+              break;
+            }
+            await new Promise((resolve) => setTimeout(resolve, POLL_MS));
+          }
+        } finally {
+          controller.close();
+        }
+      },
+    });
+
+    return new Response(stream, {
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache, no-transform",
+        Connection: "keep-alive",
+        "X-Accel-Buffering": "no",
+      },
+    });
+  }
+
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return new Response("unauthorized", { status: 401 });

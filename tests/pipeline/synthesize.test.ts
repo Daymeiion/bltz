@@ -93,6 +93,65 @@ describe("synthesize (no API key — deterministic path)", () => {
     expect(draft.awards.map((a) => a.name)).toEqual(["Pro Bowl", "All-American"]);
   });
 
+  it("auto-confirms numeric stats when sourced from nflverse (high-trust)", async () => {
+    const results: ScraperResult[] = [
+      {
+        source: "nflverse",
+        ok: true,
+        facts: {
+          dob: "1995-09-17",
+          height_in: 74,
+          weight_lbs: 225,
+          position: "QB",
+          school: "Texas Tech",
+        },
+        urls: ["https://www.espn.com/nfl/player/_/id/3139477"],
+      },
+    ];
+    const draft = await synthesize({
+      identity: { full_name: "Patrick Mahomes", school: "Texas Tech", position: "QB", level: "pro" },
+      results,
+    });
+    expect(draft.dob).toBe("1995-09-17");
+    expect(draft.height_in).toBe(74);
+    expect(draft.weight_lbs).toBe(225);
+    expect(draft.confirmed?.dob).toBe(true);
+    expect(draft.confirmed?.height_in).toBe(true);
+    expect(draft.confirmed?.weight_lbs).toBe(true);
+  });
+
+  it("does not auto-confirm fields that nflverse missed but Wikipedia filled", async () => {
+    const results: ScraperResult[] = [
+      {
+        source: "nflverse",
+        ok: true,
+        facts: {
+          // nflverse hit but missing height/weight (rare but possible)
+          dob: "1995-09-17",
+          position: "QB",
+        },
+        urls: ["https://www.espn.com/nfl/player/_/id/3139477"],
+      },
+      {
+        source: "wikipedia",
+        ok: true,
+        facts: {
+          height_in: 74,
+          weight_lbs: 225,
+          bio_text: "QB.",
+        },
+        urls: ["https://en.wikipedia.org/x"],
+      },
+    ];
+    const draft = await synthesize({
+      identity: { full_name: "Patrick Mahomes", school: "Texas Tech", position: "QB", level: "pro" },
+      results,
+    });
+    expect(draft.confirmed?.dob).toBe(true); // nflverse-sourced
+    expect(draft.confirmed?.height_in).toBe(false); // wikipedia-sourced
+    expect(draft.confirmed?.weight_lbs).toBe(false);
+  });
+
   it("ignores failed scrapers entirely", async () => {
     const results: ScraperResult[] = [
       { source: "wikipedia", ok: false, reason: "blocked" },
