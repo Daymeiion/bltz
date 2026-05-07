@@ -38,7 +38,7 @@ function pickFacts(
   results: ScraperResult[],
 ): Pick<
   PipelineDraft,
-  "dob" | "height_in" | "weight_lbs" | "games_played" | "position" | "school" | "hometown" | "pro_teams" | "awards" | "youtube_urls" | "photos"
+  "dob" | "height_in" | "weight_lbs" | "games_played" | "position" | "school" | "hometown" | "pro_teams" | "awards" | "youtube_urls" | "photos" | "gsis_id"
 > & { _origin: FieldOrigin } {
   // First-non-null wins per field — high-trust structured sources (nflverse)
   // are registered first in SCRAPERS, so their values seed the facts before
@@ -51,6 +51,7 @@ function pickFacts(
   let school: string | undefined = identity.school ?? undefined;
   let hometown: string | undefined;
   let pro_teams: string[] = [];
+  let gsis_id: string | undefined;
   const awards: PipelineDraft["awards"] = [];
   const youtube_urls: string[] = [];
   const photos: PipelineDraft["photos"] = [];
@@ -65,6 +66,8 @@ function pickFacts(
     if (r.facts.school && !school) { school = r.facts.school; origin.school = r.source; }
     if (r.facts.hometown && !hometown) { hometown = r.facts.hometown; origin.hometown = r.source; }
     if (r.facts.pro_teams) pro_teams = [...pro_teams, ...r.facts.pro_teams];
+    // First nflverse hit wins for gsis_id; only nflverse emits this today.
+    if (r.facts.gsis_id && !gsis_id) gsis_id = r.facts.gsis_id;
     if (r.facts.awards) awards.push(...r.facts.awards);
     if (r.facts.youtube_urls) youtube_urls.push(...r.facts.youtube_urls);
     if (r.facts.photos) photos.push(...r.facts.photos);
@@ -81,6 +84,7 @@ function pickFacts(
     awards: dedupeAwards(awards),
     youtube_urls: Array.from(new Set(youtube_urls)).slice(0, 8),
     photos: photos.slice(0, 12),
+    gsis_id: gsis_id ?? null,
     _origin: origin,
   };
 }
@@ -251,6 +255,7 @@ Prompt version: ${PROMPT_VERSION}.`;
     awards: factual.awards,
     youtube_urls: factual.youtube_urls,
     photos: factual.photos,
+    gsis_id: factual.gsis_id,
     confirmed: { bio: false, dob: false, height_in: false, weight_lbs: false, games_played: false },
     sources: results
       .filter((r) => r.ok && r.urls?.length)

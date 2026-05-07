@@ -21,6 +21,10 @@ const Body = z.object({
   school: z.string().max(160).nullable().optional(),
   hometown: z.string().max(160).nullable().optional(),
   headshot_url: z.string().url().nullable().optional(),
+  // Stable cross-source player ID. Currently only the nflverse scraper sets
+  // this. Format: nflverse `gsis_id` (e.g. "00-0033873") or rare legacy
+  // alpha-id ("ABB498348"). Validated as a non-empty string up to 32 chars.
+  gsis_id: z.string().min(1).max(32).nullable().optional(),
   slug: z.string().min(3).max(48).regex(SLUG_RE, "invalid slug"),
   confirmed_fields: z.record(z.string(), z.boolean()).default({}),
   awards: z
@@ -141,6 +145,7 @@ export async function POST(req: Request) {
     image_url: body.headshot_url,
     profile_image: body.headshot_url,
     youtube_urls: body.youtube_urls,
+    gsis_id: body.gsis_id ?? null,
     visibility: true,
     is_public: true,
     user_id: user.id,

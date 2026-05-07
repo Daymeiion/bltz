@@ -83,6 +83,12 @@ export interface ScraperResult {
     awards: ScrapedAward[];
     youtube_urls: string[];
     photos: { url: string; credits?: string; width?: number; height?: number }[];
+    /**
+     * Stable cross-source player ID. Currently only emitted by the nflverse
+     * scraper (NFL `gsis_id`). Persisted to `players.gsis_id` on publish so
+     * the locker page can join `nfl_players` and surface live roster data.
+     */
+    gsis_id: string;
   }>;
   /** Raw URLs visited so we can show provenance to the athlete. */
   urls?: string[];
@@ -100,6 +106,13 @@ export interface PipelineDraft {
   school?: string | null;
   hometown?: string | null;
   pro_teams?: string[];
+  /**
+   * Optional NFL Game Stats and Information System ID. Populated by the
+   * nflverse scraper for athletes that match the cached roster snapshot;
+   * persisted to `players.gsis_id` on publish so the locker page can join
+   * `nfl_players` for live roster/team/draft data.
+   */
+  gsis_id?: string | null;
   awards: ScrapedAward[];
   youtube_urls: string[];
   photos: { url: string; credits?: string; width?: number; height?: number }[];

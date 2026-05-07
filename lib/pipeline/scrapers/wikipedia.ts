@@ -107,11 +107,50 @@ function extractAwards(text: string, sourceUrl: string): ScrapedAward[] {
   return awards;
 }
 
+// US state allow-list. Hometown must end with a real state (or D.C.), otherwise
+// the old regex was fooled by phrases like "from Texas Tech, Rice University…"
+// where neither part is a city.
+const US_STATES = [
+  "Alabama","Alaska","Arizona","Arkansas","California","Colorado","Connecticut",
+  "Delaware","Florida","Georgia","Hawaii","Idaho","Illinois","Indiana","Iowa",
+  "Kansas","Kentucky","Louisiana","Maine","Maryland","Massachusetts","Michigan",
+  "Minnesota","Mississippi","Missouri","Montana","Nebraska","Nevada",
+  "New Hampshire","New Jersey","New Mexico","New York","North Carolina",
+  "North Dakota","Ohio","Oklahoma","Oregon","Pennsylvania","Rhode Island",
+  "South Carolina","South Dakota","Tennessee","Texas","Utah","Vermont",
+  "Virginia","Washington","West Virginia","Wisconsin","Wyoming",
+] as const;
+const US_STATES_RE = `(?:${US_STATES.join("|")}|D\\.C\\.)`;
+const CITY_RE = `[A-Z][A-Za-z.'\\- ]+?`;
+
+// Keywords use [Bb]orn etc. to allow sentence-start capitalization
+// without an `i` flag, which would relax CITY_RE's "starts with uppercase"
+// anchor and let things like "from a, california" match.
+const HOMETOWN_PATTERNS: RegExp[] = [
+  // "Born ... in Tyler, Texas" (covers "born September 17, 1995, in X, Y")
+  new RegExp(`\\b[Bb]orn\\b[^.]{0,120}?\\bin\\s+(${CITY_RE}),\\s+(${US_STATES_RE})\\b`),
+  // "from Compton, California"
+  new RegExp(`\\b[Ff]rom\\s+(${CITY_RE}),\\s+(${US_STATES_RE})\\b`),
+  // "native of Houston, Texas"
+  new RegExp(`\\b[Nn]ative\\s+of\\s+(${CITY_RE}),\\s+(${US_STATES_RE})\\b`),
+];
+
 function extractHometown(text: string): string | undefined {
-  const fromMatch = text.match(/\bfrom\s+([A-Z][A-Za-z .'-]+,\s+[A-Z][A-Za-z .'-]+?)(?:\.|;|,?\s+(?:and|where|who|he|she|they)\b)/);
-  if (fromMatch) return fromMatch[1].replace(/\s+/g, " ").trim();
-  const bornMatch = text.match(/\bborn\s+(?:in\s+)?([A-Z][A-Za-z .'-]+,\s+[A-Z][A-Za-z .'-]+?)(?:\.|;|,?\s+(?:and|where|who|he|she|they)\b)/);
-  return bornMatch?.[1]?.replace(/\s+/g, " ").trim();
+  // Wikipedia articles open with a long navigation/TOC prefix before the
+  // actual lede prose. The "Early life" section (where birthplace lives)
+  // typically lands within the first ~8000 chars after stripping. Searching
+  // the whole article risks picking up other people's hometowns mentioned
+  // later, but the US-state allow-list keeps that risk low.
+  const window = text.slice(0, 8000);
+  for (const re of HOMETOWN_PATTERNS) {
+    const m = window.match(re);
+    if (m) {
+      const city = m[1].replace(/\s+/g, " ").trim();
+      const state = m[2];
+      return `${city}, ${state}`;
+    }
+  }
+  return undefined;
 }
 
 function extractProTeams(text: string): string[] {

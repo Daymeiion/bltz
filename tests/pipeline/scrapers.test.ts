@@ -158,6 +158,68 @@ describe("scrapeWikipedia", () => {
     expect(result.facts?.bio_text).toContain("former American football cornerback");
     expect(result.facts?.photos?.[0]?.url).toBe("https://upload.wikimedia.org/daymeion.jpg");
   });
+
+  it("rejects fake hometowns (regression: 'Texas Tech, Rice' from Mahomes article)", async () => {
+    // Real-world false positive seen during the live demo: the old regex
+    // matched "from Texas Tech, Rice University began recruiting…" and
+    // returned "Texas Tech, Rice" as the hometown. The fix requires the
+    // second component to be a US state.
+    const search = {
+      query: { search: [{ title: "Patrick Mahomes", pageid: 1, snippet: "" }] },
+    };
+    const summary = {
+      extract: "Patrick Mahomes is an American football quarterback.",
+      content_urls: { desktop: { page: "https://en.wikipedia.org/wiki/Patrick_Mahomes" } },
+    };
+    const article = `<html>
+      Patrick Lavon Mahomes II is an American football quarterback.
+      He decommitted from Texas Tech, Rice University also recruited him.
+      Born in Tyler, Texas, Mahomes attended Whitehouse High School.
+    </html>`;
+    let call = 0;
+    globalThis.fetch = vi.fn(async () => {
+      call++;
+      return new Response(
+        call === 1 ? JSON.stringify(search) : call === 2 ? JSON.stringify(summary) : article,
+        { status: 200, headers: { "content-type": call < 3 ? "application/json" : "text/html" } },
+      );
+    }) as unknown as typeof fetch;
+
+    const result = await scrapeWikipedia({ full_name: "Patrick Mahomes" });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    // Should pick the real "Tyler, Texas", not "Texas Tech, Rice".
+    expect(result.facts?.hometown).toBe("Tyler, Texas");
+  });
+
+  it("returns undefined hometown when no US state is present", async () => {
+    const search = {
+      query: { search: [{ title: "Generic Player", pageid: 1, snippet: "" }] },
+    };
+    const summary = {
+      extract: "Generic Player is a footballer.",
+      content_urls: { desktop: { page: "https://en.wikipedia.org/wiki/Generic" } },
+    };
+    const article = `<html>
+      Generic Player is from London, England.
+      Played for the New York Giants.
+    </html>`;
+    let call = 0;
+    globalThis.fetch = vi.fn(async () => {
+      call++;
+      return new Response(
+        call === 1 ? JSON.stringify(search) : call === 2 ? JSON.stringify(summary) : article,
+        { status: 200, headers: { "content-type": call < 3 ? "application/json" : "text/html" } },
+      );
+    }) as unknown as typeof fetch;
+
+    const result = await scrapeWikipedia({ full_name: "Generic Player" });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    // International hometown not yet supported — better to return nothing
+    // than to risk false positives like "Texas Tech, Rice".
+    expect(result.facts?.hometown).toBeUndefined();
+  });
 });
 
 describe("scrapeNflverse", () => {

@@ -148,6 +148,7 @@ function toResult(row: NflPlayerRow): ScraperResult {
       school: row.college_name ?? undefined,
       pro_teams: proTeams,
       photos,
+      gsis_id: row.gsis_id,
     },
     urls,
   };

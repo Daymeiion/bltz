@@ -26,6 +26,27 @@ const LEVEL_LABEL: Record<string, string> = {
   former: "Former pro",
 };
 
+// 3-letter team codes used by nflverse / NFL.com. Mapped here so the locker
+// can render a clean team name on the verified-roster badge instead of "KC".
+const NFL_TEAM_NAMES: Record<string, string> = {
+  ARI: "Arizona Cardinals", ATL: "Atlanta Falcons", BAL: "Baltimore Ravens",
+  BUF: "Buffalo Bills", CAR: "Carolina Panthers", CHI: "Chicago Bears",
+  CIN: "Cincinnati Bengals", CLE: "Cleveland Browns", DAL: "Dallas Cowboys",
+  DEN: "Denver Broncos", DET: "Detroit Lions", GB: "Green Bay Packers",
+  HOU: "Houston Texans", IND: "Indianapolis Colts", JAX: "Jacksonville Jaguars",
+  KC: "Kansas City Chiefs", LA: "Los Angeles Rams", LAC: "Los Angeles Chargers",
+  LAR: "Los Angeles Rams", LV: "Las Vegas Raiders", MIA: "Miami Dolphins",
+  MIN: "Minnesota Vikings", NE: "New England Patriots", NO: "New Orleans Saints",
+  NYG: "New York Giants", NYJ: "New York Jets", PHI: "Philadelphia Eagles",
+  PIT: "Pittsburgh Steelers", SEA: "Seattle Seahawks", SF: "San Francisco 49ers",
+  TB: "Tampa Bay Buccaneers", TEN: "Tennessee Titans", WAS: "Washington Commanders",
+};
+
+function nflTeamName(code: string | null | undefined): string | null {
+  if (!code) return null;
+  return NFL_TEAM_NAMES[code] ?? code;
+}
+
 function formatDob(dob?: string | null) {
   if (!dob) return "—";
   const d = new Date(dob);
@@ -159,10 +180,21 @@ export default async function PlayerLocker({ params }: { params: Promise<{ slug:
   // -------- LIVE (SUPABASE) PATH --------
   const supabase = await createClient();
 
+  // The `nfl_player` join pulls cached nflverse data when this athlete was
+  // matched against the NFL roster during onboarding. PostgREST resolves the
+  // join automatically via the `players.gsis_id → nfl_players.gsis_id` FK.
+  // It's null for HS / non-FBS / unmatched players, in which case the locker
+  // falls back to whatever the athlete entered manually.
   const { data: player, error: playerError } = await supabase
     .from("players")
     .select(
-      "id, full_name, name, slug, profile_image, headshot_url, hometown, video_url, bio, position, level, dob, height_in, weight_lbs, games_played, current_status",
+      `id, full_name, name, slug, profile_image, headshot_url, hometown, video_url,
+       bio, position, level, dob, height_in, weight_lbs, games_played, current_status,
+       gsis_id,
+       nfl_player:nfl_players (
+         headshot_url, latest_team, status, draft_year, draft_round, draft_pick,
+         draft_team, position, position_group, college_name, espn_id, pfr_id
+       )`,
     )
     .eq("slug", slug)
     .eq("visibility", true)
@@ -192,9 +224,15 @@ export default async function PlayerLocker({ params }: { params: Promise<{ slug:
 
   const levelLabel = player.level ? LEVEL_LABEL[player.level] ?? "—" : "—";
 
-  // Headshot precedence: explicit headshot_url, then media kind=headshot, then
-  // legacy profile_image, then default. Avatar shown in the 1/4 column header
-  // and in the bio strip.
+  // PostgREST returns one-to-one joins as a single object, but TS infers
+  // an array. Coerce to the single-object shape the rest of the page uses.
+  const nflPlayer = (Array.isArray((player as any).nfl_player)
+    ? (player as any).nfl_player[0]
+    : (player as any).nfl_player) ?? null;
+
+  // Headshot precedence: athlete-uploaded media → explicit headshot_url on
+  // the players row → cached nflverse headshot (NFL.com CDN, URL-only, never
+  // rehosted) → legacy profile_image → default placeholder.
   const { data: headshotMedia } = await supabase
     .from("media")
     .select("url")
@@ -205,8 +243,9 @@ export default async function PlayerLocker({ params }: { params: Promise<{ slug:
     .maybeSingle();
 
   const headshotUrl =
-    player.headshot_url ||
     headshotMedia?.url ||
+    player.headshot_url ||
+    nflPlayer?.headshot_url ||
     (player as any).profile_image ||
     "/images/Headshot.png";
 
@@ -274,6 +313,39 @@ export default async function PlayerLocker({ params }: { params: Promise<{ slug:
               playerBadge="/images/SilverHero1.png"
             />
           </div>
+
+          {/* Verified NFL roster badge — only renders when the athlete was
+              matched against the cached nflverse roster during onboarding. */}
+          {nflPlayer && (
+            <div className="hidden lg:flex items-center gap-3 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-emerald-200">
+              <svg
+                viewBox="0 0 20 20"
+                aria-hidden="true"
+                className="h-4 w-4 flex-shrink-0 fill-emerald-400"
+              >
+                <path d="M10 0a10 10 0 100 20 10 10 0 000-20zm4.7 7.3l-5.4 5.4a1 1 0 01-1.4 0L5.3 10a1 1 0 111.4-1.4L8 9.9l4.3-4.3a1 1 0 011.4 1.4z" />
+              </svg>
+              <div className="flex-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-oswald uppercase tracking-wider">
+                <span className="font-bold">Verified NFL roster</span>
+                {nflPlayer.latest_team && (
+                  <span className="text-white/90">
+                    {nflTeamName(nflPlayer.latest_team)}
+                  </span>
+                )}
+                {nflPlayer.draft_year && (
+                  <span className="text-white/60">
+                    Drafted {nflPlayer.draft_year}
+                    {nflPlayer.draft_round && nflPlayer.draft_pick
+                      ? ` · Round ${nflPlayer.draft_round}, Pick ${nflPlayer.draft_pick}`
+                      : ""}
+                    {nflPlayer.draft_team
+                      ? ` by ${nflTeamName(nflPlayer.draft_team)}`
+                      : ""}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Bio (desktop) */}
           <div className="space-y-0 hidden lg:block -mt-0">

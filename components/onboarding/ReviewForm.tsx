@@ -116,6 +116,10 @@ export function ReviewForm({ userId, runId, draft, initialSlug, requiresVerifica
           school: state.school || null,
           hometown: state.hometown || null,
           headshot_url: state.headshot_url || null,
+          // gsis_id is not editable in the Review form — it's set by the
+          // pipeline when nflverse matches and is forwarded to publish so
+          // the locker page can join the cached NFL roster data.
+          gsis_id: draft.gsis_id ?? null,
           slug: state.slug,
           confirmed_fields: state.confirmed,
           awards: draft.awards,
