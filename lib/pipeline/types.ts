@@ -53,6 +53,13 @@ export interface PlayerIdentityInput {
    * "graduation year" or "draft year".
    */
   cohort_year?: number | null;
+  /**
+   * Optional ESPN college team ID. Captured from the logo-rich school
+   * autocomplete during identity entry. When set, the locker page joins
+   * `cfb_teams` to render team colors and logo automatically. Stays null
+   * for HS / non-D1 / free-typed entries.
+   */
+  cfb_team_id?: string | null;
 }
 
 export interface ScrapedAward {
@@ -113,6 +120,13 @@ export interface PipelineDraft {
    * `nfl_players` for live roster/team/draft data.
    */
   gsis_id?: string | null;
+  /**
+   * Optional ESPN college team ID. Captured from the logo-rich school
+   * autocomplete on the identity form and forwarded unchanged by
+   * synthesis. Persisted to `players.cfb_team_id` so the locker page
+   * can join `cfb_teams` for team colors and logo.
+   */
+  cfb_team_id?: string | null;
   awards: ScrapedAward[];
   youtube_urls: string[];
   photos: { url: string; credits?: string; width?: number; height?: number }[];

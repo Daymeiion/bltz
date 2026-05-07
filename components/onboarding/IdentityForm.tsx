@@ -33,6 +33,12 @@ export function IdentityForm() {
 
   const [fullName, setFullName] = React.useState("");
   const [school, setSchool] = React.useState("");
+  // ESPN team ID captured when the user picks a school from the
+  // logo-rich autocomplete. Stays null when the athlete free-types a
+  // program ESPN doesn't track (high school, club, non-D1 college).
+  // Forwarded to the pipeline so the locker page can render team
+  // colors and logo automatically without a separate scrape pass.
+  const [cfbTeamId, setCfbTeamId] = React.useState<string | null>(null);
   const [position, setPosition] = React.useState("");
   const [level, setLevel] = React.useState<"hs" | "college" | "pro" | "former" | "">("");
   const [errors, setErrors] = React.useState<FieldErrors>({});
@@ -61,6 +67,9 @@ export function IdentityForm() {
         body: JSON.stringify({
           full_name: fullName.trim(),
           school: school.trim(),
+          // Only sent when the user actually picked a school from the
+          // logo-rich autocomplete. Free-typed entries leave this null.
+          cfb_team_id: cfbTeamId,
           position,
           level,
         }),
@@ -118,7 +127,13 @@ export function IdentityForm() {
             <Label className="text-sm uppercase tracking-wider text-white/70">
               School or club
             </Label>
-            <SchoolCombobox value={school} onChange={setSchool} />
+            <SchoolCombobox
+              value={school}
+              onChange={(v, meta) => {
+                setSchool(v);
+                setCfbTeamId(meta?.cfb_team_id ?? null);
+              }}
+            />
             {errors.school ? (
               <p className="text-sm text-red-400">{errors.school}</p>
             ) : null}

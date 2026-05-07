@@ -12,6 +12,8 @@ const Body = z.object({
   position: z.string().max(60).optional().nullable(),
   level: z.enum(["hs", "college", "pro", "former"]).optional().nullable(),
   cohort_year: z.number().int().min(1950).max(2100).optional().nullable(),
+  // ESPN team ID forwarded from the logo-rich school autocomplete.
+  cfb_team_id: z.string().min(1).max(32).optional().nullable(),
 });
 
 export async function POST(req: Request) {

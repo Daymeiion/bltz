@@ -120,6 +120,9 @@ export function ReviewForm({ userId, runId, draft, initialSlug, requiresVerifica
           // pipeline when nflverse matches and is forwarded to publish so
           // the locker page can join the cached NFL roster data.
           gsis_id: draft.gsis_id ?? null,
+          // cfb_team_id likewise carried through from the user's school
+          // autocomplete selection so the locker can render team colors.
+          cfb_team_id: draft.cfb_team_id ?? null,
           slug: state.slug,
           confirmed_fields: state.confirmed,
           awards: draft.awards,

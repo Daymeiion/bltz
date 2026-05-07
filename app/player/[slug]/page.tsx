@@ -180,20 +180,27 @@ export default async function PlayerLocker({ params }: { params: Promise<{ slug:
   // -------- LIVE (SUPABASE) PATH --------
   const supabase = await createClient();
 
-  // The `nfl_player` join pulls cached nflverse data when this athlete was
-  // matched against the NFL roster during onboarding. PostgREST resolves the
-  // join automatically via the `players.gsis_id → nfl_players.gsis_id` FK.
-  // It's null for HS / non-FBS / unmatched players, in which case the locker
-  // falls back to whatever the athlete entered manually.
+  // Two FK joins on this row:
+  //   - nfl_player: cached nflverse roster data (set when onboarding matched
+  //     the athlete against NFL.com via gsis_id)
+  //   - cfb_team:   cached ESPN college team (set when the athlete picked
+  //                 their school from the logo-rich autocomplete on the
+  //                 identity form, via cfb_team_id → cfb_teams.espn_id)
+  // PostgREST resolves both automatically. Either or both can be null,
+  // depending on the athlete's level and how they entered their school.
   const { data: player, error: playerError } = await supabase
     .from("players")
     .select(
       `id, full_name, name, slug, profile_image, headshot_url, hometown, video_url,
        bio, position, level, dob, height_in, weight_lbs, games_played, current_status,
-       gsis_id,
+       gsis_id, cfb_team_id,
        nfl_player:nfl_players (
          headshot_url, latest_team, status, draft_year, draft_round, draft_pick,
          draft_team, position, position_group, college_name, espn_id, pfr_id
+       ),
+       cfb_team:cfb_teams (
+         espn_id, display_name, location, mascot, abbreviation,
+         primary_color, alt_color, logo_url, logo_dark_url
        )`,
     )
     .eq("slug", slug)
@@ -225,10 +232,13 @@ export default async function PlayerLocker({ params }: { params: Promise<{ slug:
   const levelLabel = player.level ? LEVEL_LABEL[player.level] ?? "—" : "—";
 
   // PostgREST returns one-to-one joins as a single object, but TS infers
-  // an array. Coerce to the single-object shape the rest of the page uses.
+  // an array. Coerce both to the single-object shape the rest of the page uses.
   const nflPlayer = (Array.isArray((player as any).nfl_player)
     ? (player as any).nfl_player[0]
     : (player as any).nfl_player) ?? null;
+  const cfbTeam = (Array.isArray((player as any).cfb_team)
+    ? (player as any).cfb_team[0]
+    : (player as any).cfb_team) ?? null;
 
   // Headshot precedence: athlete-uploaded media → explicit headshot_url on
   // the players row → cached nflverse headshot (NFL.com CDN, URL-only, never
@@ -342,6 +352,48 @@ export default async function PlayerLocker({ params }: { params: Promise<{ slug:
                       ? ` by ${nflTeamName(nflPlayer.draft_team)}`
                       : ""}
                   </span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Verified college program badge — themed in the school's
+              official primary color so each locker page subtly inherits
+              its program's identity. Logo URL points at ESPN's CDN
+              (whitelisted in next.config.ts). */}
+          {cfbTeam && (
+            <div
+              className="hidden lg:flex items-center gap-3 rounded-md border px-3 py-2"
+              style={{
+                borderColor: `${cfbTeam.primary_color ?? "#666666"}55`,
+                backgroundColor: `${cfbTeam.primary_color ?? "#666666"}1a`,
+                color: cfbTeam.primary_color ?? "#cccccc",
+              }}
+            >
+              {cfbTeam.logo_url ? (
+                <span className="relative h-6 w-6 flex-shrink-0">
+                  <Image
+                    src={cfbTeam.logo_url}
+                    alt={`${cfbTeam.display_name ?? "Team"} logo`}
+                    fill
+                    sizes="24px"
+                    className="object-contain"
+                  />
+                </span>
+              ) : (
+                <svg
+                  viewBox="0 0 20 20"
+                  aria-hidden="true"
+                  className="h-4 w-4 flex-shrink-0 fill-current"
+                >
+                  <path d="M10 0a10 10 0 100 20 10 10 0 000-20zm4.7 7.3l-5.4 5.4a1 1 0 01-1.4 0L5.3 10a1 1 0 111.4-1.4L8 9.9l4.3-4.3a1 1 0 011.4 1.4z" />
+                </svg>
+              )}
+              <div className="flex-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-oswald uppercase tracking-wider">
+                <span className="font-bold text-white">Verified college program</span>
+                <span className="text-white/90">{cfbTeam.display_name}</span>
+                {cfbTeam.mascot && cfbTeam.mascot !== cfbTeam.display_name && (
+                  <span className="text-white/60">{cfbTeam.mascot}</span>
                 )}
               </div>
             </div>

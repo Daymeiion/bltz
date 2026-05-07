@@ -25,6 +25,9 @@ const Body = z.object({
   // this. Format: nflverse `gsis_id` (e.g. "00-0033873") or rare legacy
   // alpha-id ("ABB498348"). Validated as a non-empty string up to 32 chars.
   gsis_id: z.string().min(1).max(32).nullable().optional(),
+  // ESPN college team ID — carried from the school autocomplete on the
+  // identity form. Persisted to `players.cfb_team_id` for locker join.
+  cfb_team_id: z.string().min(1).max(32).nullable().optional(),
   slug: z.string().min(3).max(48).regex(SLUG_RE, "invalid slug"),
   confirmed_fields: z.record(z.string(), z.boolean()).default({}),
   awards: z
@@ -146,6 +149,7 @@ export async function POST(req: Request) {
     profile_image: body.headshot_url,
     youtube_urls: body.youtube_urls,
     gsis_id: body.gsis_id ?? null,
+    cfb_team_id: body.cfb_team_id ?? null,
     visibility: true,
     is_public: true,
     user_id: user.id,

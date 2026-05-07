@@ -256,6 +256,9 @@ Prompt version: ${PROMPT_VERSION}.`;
     youtube_urls: factual.youtube_urls,
     photos: factual.photos,
     gsis_id: factual.gsis_id,
+    // cfb_team_id flows from the IdentityForm autocomplete, not from any
+    // scraper. Carry it forward unchanged so it lands on the players row.
+    cfb_team_id: identity.cfb_team_id ?? null,
     confirmed: { bio: false, dob: false, height_in: false, weight_lbs: false, games_played: false },
     sources: results
       .filter((r) => r.ok && r.urls?.length)
