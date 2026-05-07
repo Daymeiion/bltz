@@ -48,6 +48,30 @@ Design and product debt deferred from /plan-design-review on 2026-04-24.
 ### OG card template
 - **Status:** SCOPED FOR MVP (week 1) — moved out of TODOs into design doc.
 
+### Automated nflverse + cfbverse data sync (V2)
+- **What:** Schedule the existing manual sync endpoints
+  (`/api/dev/nflverse-sync`, `/api/dev/cfbverse-sync`) to run weekly
+  via Vercel cron. Use the `*_SYNC_TOKEN` env vars already plumbed
+  in the route handlers for prod auth.
+- **Why:** Keep cached NFL roster + college team data fresh without
+  manual intervention. During NFL season, rosters change weekly
+  (trades, injuries, practice squad churn). College team data is
+  more static, but conferences realign and new programs occasionally
+  appear.
+- **Pros:** Locker pages always show current team + status. No
+  founder labor. Sub-30-min one-time setup.
+- **Cons:** None functional. Vercel cron costs (~$0/month at our
+  volume).
+- **Trigger:** V2, after the manual flow has been validated under
+  real onboarding traffic. The current weekly cadence (you run sync
+  manually if a known player's data looks stale) is fine for the
+  MVP cohort. Move to cron once we have >50 lockers or the next time
+  someone reports out-of-date team info.
+- **Context:** Architecture already supports this. Each sync route
+  accepts an `x-*-sync-token` header for production auth. Just need
+  a `vercel.json` cron entry pointing at the routes with the token
+  set as a header.
+
 ### Auto-highlight ML (player tracking from raw game film)
 - **What:** Train or integrate a model that auto-cuts highlight clips from full
   game footage by tracking jersey numbers.
