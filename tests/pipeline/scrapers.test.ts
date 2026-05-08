@@ -73,9 +73,42 @@ describe("scrapeESPN", () => {
     globalThis.fetch = originalFetch;
   });
 
-  it("returns not_found when no candidate player URL is on the search page", async () => {
+  function jsonResponse(body: unknown, status = 200) {
+    return new Response(JSON.stringify(body), {
+      status,
+      headers: { "content-type": "application/json" },
+    });
+  }
+
+  function searchHit(opts: {
+    name: string;
+    athleteId: string;
+    league: "college-football" | "nfl";
+    subtitle?: string;
+  }) {
+    const slug = opts.name.toLowerCase().replace(/\s+/g, "-");
+    return {
+      results: [
+        {
+          type: "player",
+          contents: [
+            {
+              type: "player",
+              displayName: opts.name,
+              uid: `s:20~l:23~a:${opts.athleteId}`,
+              subtitle: opts.subtitle ?? "California Golden Bears",
+              description: opts.league === "nfl" ? "NFL" : "NCAAF",
+              link: { web: `https://www.espn.com/${opts.league}/player/_/id/${opts.athleteId}/${slug}` },
+            },
+          ],
+        },
+      ],
+    };
+  }
+
+  it("returns not_found when the search has no player results", async () => {
     globalThis.fetch = vi.fn(async () =>
-      new Response("<html><body>nothing here</body></html>", { status: 200 }),
+      jsonResponse({ results: [{ type: "article", contents: [] }] }),
     ) as unknown as typeof fetch;
     const result = await scrapeESPN(identity);
     expect(result.ok).toBe(false);
@@ -83,25 +116,122 @@ describe("scrapeESPN", () => {
     expect(result.reason).toBe("not_found");
   });
 
-  it("parses HT, WT, GP off the player page", async () => {
-    const search = `<html><a href="https://www.espn.com/nfl/player/_/id/12345/daymeion-hughes">Daymeion Hughes</a></html>`;
-    const playerPage = `<html>HT: 5'10 WT: 187 GP: 14 More text...</html>`;
+  it("hits a college player and pulls structured facts (Joe Ayoob regression)", async () => {
+    // Real-world example: a Cal QB who never made the NFL. The old HTML
+    // scraper missed him because espn.com search demotes inactive D1
+    // players. The structured search endpoint indexes him.
+    const search = searchHit({
+      name: "Joe Ayoob",
+      athleteId: "168799",
+      league: "college-football",
+      subtitle: "California Golden Bears",
+    });
+    const profile = {
+      displayName: "Joe Ayoob",
+      position: { displayName: "Quarterback", abbreviation: "QB" },
+      height: 75,
+      weight: 223,
+      displayHeight: "6' 3\"",
+      displayWeight: "223 lbs",
+      dateOfBirth: "1984-08-08T07:00Z",
+      birthPlace: { city: "San Rafael", state: "CA", country: "USA" },
+      jersey: "18",
+      college: { name: "California" },
+    };
     let call = 0;
     globalThis.fetch = vi.fn(async () => {
       call++;
-      return new Response(call === 1 ? search : playerPage, {
-        status: 200,
-        headers: { "content-type": "text/html" },
-      });
+      return jsonResponse(call === 1 ? search : profile);
     }) as unknown as typeof fetch;
 
-    const result = await scrapeESPN(identity);
+    const result = await scrapeESPN({
+      full_name: "Joe Ayoob",
+      school: "California",
+      position: "QB",
+      level: "former",
+    });
+
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.facts?.height_in).toBe(70);
-    expect(result.facts?.weight_lbs).toBe(187);
-    expect(result.facts?.games_played).toBe(14);
-    expect(result.urls?.[0]).toContain("espn.com/nfl/player/_/id/12345");
+    expect(result.facts?.full_name).toBe("Joe Ayoob");
+    expect(result.facts?.position).toBe("QB");
+    expect(result.facts?.height_in).toBe(75);
+    expect(result.facts?.weight_lbs).toBe(223);
+    expect(result.facts?.dob).toBe("1984-08-08");
+    expect(result.facts?.hometown).toBe("San Rafael, CA");
+    expect(result.facts?.school).toBe("California");
+    expect(result.urls?.[0]).toContain("espn.com/college-football/player/_/id/168799");
+  });
+
+  it("disambiguates by school when multiple players share a name", async () => {
+    const search = {
+      results: [
+        {
+          type: "player",
+          contents: [
+            {
+              type: "player",
+              displayName: "John Smith",
+              uid: "s:20~l:23~a:111",
+              subtitle: "Texas Longhorns",
+              description: "NCAAF",
+              link: { web: "https://www.espn.com/college-football/player/_/id/111/john-smith" },
+            },
+            {
+              type: "player",
+              displayName: "John Smith",
+              uid: "s:20~l:23~a:222",
+              subtitle: "California Golden Bears",
+              description: "NCAAF",
+              link: { web: "https://www.espn.com/college-football/player/_/id/222/john-smith" },
+            },
+          ],
+        },
+      ],
+    };
+    const profile = {
+      displayName: "John Smith",
+      position: { abbreviation: "WR" },
+      height: 72,
+      weight: 195,
+      college: { name: "California" },
+    };
+    let call = 0;
+    globalThis.fetch = vi.fn(async () => {
+      call++;
+      return jsonResponse(call === 1 ? search : profile);
+    }) as unknown as typeof fetch;
+
+    const result = await scrapeESPN({
+      full_name: "John Smith",
+      school: "California",
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.urls?.[0]).toContain("/id/222/"); // Cal one, not Texas
+  });
+
+  it("falls back to a partial hit when profile fetch fails", async () => {
+    // Search succeeds, but core API returns an error code (happens for
+    // some very old or partial roster entries). We still return ok with
+    // just the displayName + URL so the user has something to confirm.
+    const search = searchHit({
+      name: "Old School Player",
+      athleteId: "9999",
+      league: "college-football",
+    });
+    let call = 0;
+    globalThis.fetch = vi.fn(async () => {
+      call++;
+      if (call === 1) return jsonResponse(search);
+      return jsonResponse({ code: 404 });
+    }) as unknown as typeof fetch;
+
+    const result = await scrapeESPN({ full_name: "Old School Player" });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.facts?.full_name).toBe("Old School Player");
+    expect(result.urls?.[0]).toContain("espn.com");
   });
 });
 

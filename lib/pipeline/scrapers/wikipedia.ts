@@ -54,8 +54,15 @@ async function fetchSummary(title: string): Promise<{
 
 const HEIGHT_RE = /(\d)\s*ft\s*(\d{1,2})\s*in/i;
 const WEIGHT_RE = /(\d{2,3})\s*lb/i;
-const DOB_DMY_RE = /\b(?:born[: ]+)?(\d{1,2})\s+(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{4})\b/i;
-const DOB_MDY_RE = /\b(?:born[: ]+)?(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),\s+(\d{4})\b/i;
+// "born" is REQUIRED, not optional. With it optional the regex matched any
+// date phrase in the article (e.g. "1 March 2026" referring to article
+// metadata) and the synthesis layer would treat that as the DOB. Wikipedia
+// bios reliably use one of these two patterns near the lede:
+//   "(born August 8, 1984)"      → MDY
+//   "(born 8 August 1984)"       → DMY (less common but legal)
+//   "born on August 8, 1984"     → MDY with optional "on"
+const DOB_DMY_RE = /\bborn\s+(?:on\s+)?(\d{1,2})\s+(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{4})\b/i;
+const DOB_MDY_RE = /\bborn\s+(?:on\s+)?(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),\s+(\d{4})\b/i;
 
 function parseDob(text: string): string | undefined {
   const dmy = text.match(DOB_DMY_RE);
