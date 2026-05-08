@@ -13,6 +13,7 @@ export type PipelineStatus =
 
 export type ScraperSource =
   | "nflverse"
+  | "cfbverse"
   | "wikipedia"
   | "espn"
   | "youtube"

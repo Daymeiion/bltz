@@ -244,6 +244,10 @@ function friendlyHit(source: string, r: ScraperResult): string {
     const team = r.facts?.pro_teams?.[0];
     return team ? `Matched the official NFL roster (${team}).` : "Matched the official NFL roster.";
   }
+  if (source === "cfbverse") {
+    const team = r.facts?.school;
+    return team ? `Matched the official college roster (${team}).` : "Matched the official college roster.";
+  }
   if (source === "wikipedia") return "Found a Wikipedia bio.";
   if (source === "espn") return "Read your ESPN page.";
   if (source === "youtube")

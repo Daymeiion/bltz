@@ -24,9 +24,12 @@ const PROMPT_VERSION = "bltz.synth.v1";
  * Sources whose facts we treat as authoritative. Fields supplied by these
  * sources are auto-confirmed in the synthesis gate — the athlete doesn't
  * have to manually verify height/weight/DOB pulled from the official
- * NFL roster, for example.
+ * NFL roster (nflverse) or D1 college roster cache (cfbverse).
  */
-const HIGH_TRUST_SOURCES: ReadonlySet<ScraperSource> = new Set(["nflverse"]);
+const HIGH_TRUST_SOURCES: ReadonlySet<ScraperSource> = new Set([
+  "nflverse",
+  "cfbverse",
+]);
 
 type FieldOrigin = Partial<Record<
   "dob" | "height_in" | "weight_lbs" | "games_played" | "position" | "school" | "hometown",
