@@ -25,9 +25,9 @@ export function StepIndicator({ current }: { current: 1 | 2 | 3 | 4 }) {
   return (
     <nav
       aria-label="Onboarding progress"
-      className="mx-auto mb-12 w-full max-w-3xl px-6 sm:px-10"
+      className="mx-auto mb-12 w-full max-w-3xl px-4 sm:px-6 md:px-10"
     >
-      <ol className="grid grid-cols-4 gap-3 sm:gap-4">
+      <ol className="grid grid-cols-4 gap-2 sm:gap-3 md:gap-4">
         {STEPS.map((s) => {
           const completed = s.n < current;
           const active = s.n === current;
@@ -35,23 +35,25 @@ export function StepIndicator({ current }: { current: 1 | 2 | 3 | 4 }) {
           return (
             <li
               key={s.n}
-              className="flex flex-col items-stretch gap-3"
+              className="flex min-w-0 flex-col items-stretch gap-2 sm:gap-3"
               aria-current={active ? "step" : undefined}
             >
               {/* The bar segment */}
               <span
                 aria-hidden
                 className={cn(
-                  "h-2.5 w-full rounded-full transition-all duration-500 ease-out",
+                  "h-2 w-full rounded-full transition-all duration-500 ease-out sm:h-2.5",
                   active && "bg-bltz-gold shadow-[0_0_18px_rgba(255,191,4,0.55)]",
                   completed && "bg-bltz-gold/85",
                   upcoming && "bg-white/12",
                 )}
               />
-              {/* Label row: animated check on completed steps, then name */}
+              {/* Label row: animated check on completed steps, then name.
+                  Sized responsively so all four labels fit on a 360-wide
+                  phone without truncation. */}
               <div
                 className={cn(
-                  "flex items-center gap-2 transition-colors duration-300",
+                  "flex min-w-0 items-center gap-1 transition-colors duration-300 sm:gap-1.5",
                   active && "text-white",
                   completed && "text-bltz-gold",
                   upcoming && "text-white/35",
@@ -64,7 +66,7 @@ export function StepIndicator({ current }: { current: 1 | 2 | 3 | 4 }) {
                   aria-hidden="true"
                   viewBox="0 0 20 20"
                   className={cn(
-                    "h-3.5 w-3.5 flex-shrink-0 transition-all duration-300 ease-out",
+                    "h-3 w-3 flex-shrink-0 transition-all duration-300 ease-out sm:h-3.5 sm:w-3.5",
                     completed
                       ? "scale-100 opacity-100"
                       : "scale-0 opacity-0",
@@ -80,7 +82,15 @@ export function StepIndicator({ current }: { current: 1 | 2 | 3 | 4 }) {
                     strokeLinejoin="round"
                   />
                 </svg>
-                <span className="truncate font-oswald text-sm font-semibold uppercase tracking-wider">
+                <span
+                  className={cn(
+                    "min-w-0 font-mono uppercase",
+                    // Responsive sizing: tighter tracking + smaller text
+                    // on phones (where each column is ~80px wide), then
+                    // breathes wider on tablet/desktop. Never truncates.
+                    "text-[9px] tracking-[0.04em] sm:text-[11px] sm:tracking-[0.08em] md:text-xs md:tracking-wider",
+                  )}
+                >
                   {s.label}
                 </span>
               </div>

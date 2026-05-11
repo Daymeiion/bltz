@@ -54,7 +54,6 @@ function OnboardingStartContent({
 
       <div className="mx-auto max-w-3xl">
         <BroadcastHeader
-          eyebrow="Step 1"
           title={
             <>
               Verify the basics
