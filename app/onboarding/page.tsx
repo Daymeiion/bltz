@@ -60,11 +60,7 @@ function OnboardingStartContent({
             </>
           }
           align="center"
-        >
-          <p className="font-mono text-sm leading-relaxed tracking-wide text-white/55">
-            BLTZ uses this to search public sports sources for the right athlete.
-          </p>
-        </BroadcastHeader>
+        />
       </div>
 
       <section>
