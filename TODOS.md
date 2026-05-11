@@ -48,6 +48,34 @@ Design and product debt deferred from /plan-design-review on 2026-04-24.
 ### OG card template
 - **Status:** SCOPED FOR MVP (week 1) — moved out of TODOs into design doc.
 
+### CFBD recruit data integration (V2)
+- **What:** Pull recruit signing / commitment data from CFBD's
+  `/recruiting/players` and `/recruiting/teams` endpoints into a new
+  `cfb_recruits` reference table. Wire into onboarding so an athlete
+  who is a recent recruit gets pre-fill from their recruiting profile
+  (star rating, position, commit school, transfer history).
+- **Why:** Recruit data covers a gap the current pipeline misses —
+  high-school seniors and JUCO transfers who haven't shown up in a
+  college roster yet. CFBD has detailed scout-grade profiles
+  (rating, ranking, position-specific notes) for ~5k recruits per
+  cycle. This is the moment when a high-school athlete is most
+  motivated to claim their digital identity.
+- **Pros:** Catches athletes BEFORE they appear in a college roster —
+  the same magic-moment win as cfb_players, but for the cohort that
+  hasn't enrolled yet. Star ratings + commitment school are exactly
+  the kind of social proof that makes a claim feel earned.
+- **Cons:** Adds another reference table to maintain. Recruit data
+  is most relevant in February–August (signing cycles); off-season
+  refresh is mostly noise.
+- **Trigger:** V2, after the cfb_players cache hits the bottom of
+  the rate-limit curve and we have confidence in the cfbverse
+  pattern. Costs ~1 API call per year × cycle for the per-team list,
+  plus per-recruit detail fetches.
+- **Context:** Same architecture as cfb_players. New table
+  `cfb_recruits`, new sync script under `lib/pipeline/cfbverse/`,
+  new scraper. Schema additions on `players`: `recruit_id`,
+  `recruit_stars`, `recruit_class_year`.
+
 ### Automated nflverse + cfbverse data sync (V2)
 - **What:** Schedule the existing manual sync endpoints
   (`/api/dev/nflverse-sync`, `/api/dev/cfbverse-sync`) to run weekly

@@ -71,7 +71,29 @@ async function postJson(url, headers, body) {
   }
 }
 
-// --- Pull cfb_teams list -----------------------------------------------------
+// --- Build D1 (FBS + FCS) allow-list -----------------------------------------
+// CFBD only indexes FBS + FCS programs. Our cfb_teams table holds 754
+// entries including D2 / D3 / DIII NCAA programs ESPN ships in their
+// public teams API. Iterating those wastes API calls on guaranteed 0
+// responses (the broken first run did exactly that). Build a fast
+// allow-list up front by calling CFBD's /teams/fbs and /teams/fcs once,
+// then we only iterate teams that intersect.
+console.log("Loading FBS + FCS allow-list from CFBD…");
+const fbsTeams = await fetchJson(
+  `https://api.collegefootballdata.com/teams/fbs`,
+  { Authorization: `Bearer ${CFBD_KEY}` },
+);
+const fcsTeams = await fetchJson(
+  `https://api.collegefootballdata.com/teams/fcs`,
+  { Authorization: `Bearer ${CFBD_KEY}` },
+);
+const d1Names = new Set(
+  [...fbsTeams, ...fcsTeams]
+    .map((t) => (t.school ?? "").trim())
+    .filter(Boolean),
+);
+console.log(`D1 allow-list: ${d1Names.size} programs (${fbsTeams.length} FBS + ${fcsTeams.length} FCS)`);
+
 console.log("Loading cfb_teams from Supabase…");
 let teamUrl =
   `${SB_URL}/rest/v1/cfb_teams?select=espn_id,location,display_name` +
@@ -84,15 +106,22 @@ const allTeams = await fetchJson(teamUrl, {
   Authorization: `Bearer ${SB_KEY}`,
 });
 let teams = [];
+let skippedNonD1 = 0;
 const seen = new Set();
 for (const t of allTeams) {
   const name = (t.location ?? "").trim();
   if (!name || seen.has(name)) continue;
   seen.add(name);
+  // Skip non-D1 teams. CFBD won't have roster data for them — iterating
+  // them was wasting API calls.
+  if (!d1Names.has(name)) {
+    skippedNonD1++;
+    continue;
+  }
   teams.push({ name, cfb_team_id: t.espn_id, display: t.display_name });
 }
 if (LIMIT) teams = teams.slice(0, LIMIT);
-console.log(`Teams to process: ${teams.length}`);
+console.log(`Teams to process: ${teams.length} (skipped ${skippedNonD1} non-D1)`);
 console.log(`Seasons: ${FROM_SEASON}..${TO_SEASON} (${TO_SEASON - FROM_SEASON + 1} per team)`);
 
 // --- Resume: skip teams whose rows were synced today -------------------------
