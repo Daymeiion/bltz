@@ -3,19 +3,15 @@ import { cn } from "@/lib/utils";
 /**
  * Onboarding step indicator.
  *
- * Renders four equal-width progress segments with the step name below
- * each. Each segment fills as the user advances:
+ * Four equal-width progress segments with a label below each. Each
+ * segment fills as the user advances; completed steps animate in a
+ * check mark next to the label.
  *
- *   ━━━━━━━ ─ ─ ─ ─ ─   ─ ─ ─   ─ ─ ─
- *   01 Suit up   02 Sweep   03 Sign off   04 Go live
+ *   ━━━━━━━━━━━━━ ━━━━━━━━━━━━━ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
+ *   ✓ Suit up    ✓ Career sweep   Sign off       Go live
  *
- * Segment color reflects state: brand blue for current/completed,
- * dimmed white for upcoming. The label below mirrors the same gradient
- * so the user's eye lands on the active step.
- *
- * Voice: athletic, action-first. The earlier labels ("Verify" / "Found
- * data" / "Review" / "Complete") were accurate but flat; these read
- * on-brand for BLTZ (locker, claim, broadcast vocabulary).
+ * Color: brand gold (electric, on-brand accent). Active segment glows.
+ * Voice on labels matches BLTZ broadcast vocabulary.
  */
 
 const STEPS = [
@@ -29,9 +25,9 @@ export function StepIndicator({ current }: { current: 1 | 2 | 3 | 4 }) {
   return (
     <nav
       aria-label="Onboarding progress"
-      className="mx-auto mb-10 w-full max-w-3xl px-1"
+      className="mx-auto mb-12 w-full max-w-3xl px-6 sm:px-10"
     >
-      <ol className="grid grid-cols-4 gap-2 sm:gap-3">
+      <ol className="grid grid-cols-4 gap-3 sm:gap-4">
         {STEPS.map((s) => {
           const completed = s.n < current;
           const active = s.n === current;
@@ -39,32 +35,52 @@ export function StepIndicator({ current }: { current: 1 | 2 | 3 | 4 }) {
           return (
             <li
               key={s.n}
-              className="flex flex-col items-stretch gap-2"
+              className="flex flex-col items-stretch gap-3"
               aria-current={active ? "step" : undefined}
             >
               {/* The bar segment */}
               <span
                 aria-hidden
                 className={cn(
-                  "h-1 w-full rounded-full transition-colors duration-300",
-                  active && "bg-[#2952FF] shadow-[0_0_12px_rgba(41,82,255,0.55)]",
-                  completed && "bg-[#2952FF]/70",
+                  "h-2.5 w-full rounded-full transition-all duration-500 ease-out",
+                  active && "bg-bltz-gold shadow-[0_0_18px_rgba(255,191,4,0.55)]",
+                  completed && "bg-bltz-gold/85",
                   upcoming && "bg-white/12",
                 )}
               />
-              {/* Label row: small step number + name */}
+              {/* Label row: animated check on completed steps, then name */}
               <div
                 className={cn(
-                  "flex items-baseline gap-1.5 transition-colors duration-300",
+                  "flex items-center gap-2 transition-colors duration-300",
                   active && "text-white",
-                  completed && "text-white/65",
-                  upcoming && "text-white/30",
+                  completed && "text-bltz-gold",
+                  upcoming && "text-white/35",
                 )}
               >
-                <span className="font-mono text-[10px] tabular-nums tracking-[0.18em]">
-                  {String(s.n).padStart(2, "0")}
-                </span>
-                <span className="truncate font-oswald text-xs font-semibold uppercase tracking-wider">
+                {/* Check icon — always rendered so the scale-in transition
+                    runs smoothly when state changes. Hidden visually
+                    (scale 0, opacity 0) for active/upcoming steps. */}
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 20 20"
+                  className={cn(
+                    "h-3.5 w-3.5 flex-shrink-0 transition-all duration-300 ease-out",
+                    completed
+                      ? "scale-100 opacity-100"
+                      : "scale-0 opacity-0",
+                  )}
+                  style={{ transformOrigin: "center" }}
+                >
+                  <path
+                    d="M4 10.5 L8.2 14.5 L16 6"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    fill="none"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+                <span className="truncate font-oswald text-sm font-semibold uppercase tracking-wider">
                   {s.label}
                 </span>
               </div>
