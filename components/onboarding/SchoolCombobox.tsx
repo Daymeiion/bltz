@@ -92,6 +92,20 @@ export function SchoolCombobox({ value, onChange, placeholder = "School or club"
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
+      {/* Bottom vignette — slight dark gradient rising from the bottom
+          of the viewport while the dropdown is open. Pulls focus
+          toward the suggestions and softens the surrounding form.
+          Fades in/out smoothly; pointer-events-none keeps clicks
+          falling through to whatever's underneath. */}
+      <div
+        aria-hidden
+        className={cn(
+          "pointer-events-none fixed inset-x-0 bottom-0 z-40 h-56",
+          "bg-gradient-to-t from-black/70 via-black/30 to-transparent",
+          "transition-opacity duration-300",
+          open ? "opacity-100" : "opacity-0",
+        )}
+      />
       <PopoverTrigger asChild>
         <button
           type="button"
@@ -99,7 +113,10 @@ export function SchoolCombobox({ value, onChange, placeholder = "School or club"
           aria-expanded={open}
           className={cn(
             "flex h-12 w-full items-center justify-between rounded-md border border-white/15 bg-black/40 px-4 text-left text-base text-white",
-            "focus-visible:border-bltz-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bltz-gold/40",
+            // No focus ring — relying on the dropdown opening as the
+            // visible "I'm interacting" signal. Caret stays gold so
+            // the form still hints at active.
+            "focus:outline-none focus-visible:outline-none focus-visible:border-bltz-gold/60",
           )}
         >
           <span className={cn(value ? "text-white" : "text-white/40")}>
@@ -108,11 +125,23 @@ export function SchoolCombobox({ value, onChange, placeholder = "School or club"
           <ChevronDown className="h-4 w-4 text-white/60" />
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 border-white/15 bg-[#0b1320]">
+      <PopoverContent
+        // No border on the popover frame. Subtle shadow keeps it
+        // visually anchored above the form without a hard stroke.
+        className="w-[var(--radix-popover-trigger-width)] p-0 border-0 bg-[#0b1320] shadow-2xl"
+      >
         {/* Override the cmdk Command's default `bg-popover` (which resolves
             to white under the light-theme tokens active on this app) so
-            the dropdown stays dark-themed end-to-end. */}
-        <Command shouldFilter={false} className="bg-transparent text-white">
+            the dropdown stays dark-themed end-to-end. Also strip the
+            border-b that the CommandInput's wrapper adds by default —
+            it was the "white stroke" appearing under the input. */}
+        <Command
+          shouldFilter={false}
+          className={cn(
+            "bg-transparent text-white",
+            "[&_[data-slot=command-input-wrapper]]:border-0",
+          )}
+        >
           <CommandInput
             value={query}
             onValueChange={(v) => {
@@ -122,8 +151,22 @@ export function SchoolCombobox({ value, onChange, placeholder = "School or club"
               onChange(v, { cfb_team_id: null });
             }}
             placeholder="Search schools…"
+            // Kill the browser focus ring on the actual input element.
+            className="border-0 focus:outline-none focus:ring-0"
           />
-          <CommandList>
+          <CommandList
+            // Custom-styled scrollbar: thin thumb, NO track background
+            // (the dropdown is dark; a grey track looks like a stroke
+            // attached to the right edge of the popover).
+            className={cn(
+              "[&::-webkit-scrollbar]:w-1.5",
+              "[&::-webkit-scrollbar-track]:bg-transparent",
+              "[&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-white/15",
+              "[&::-webkit-scrollbar-thumb:hover]:bg-white/30",
+            )}
+            // Firefox fallback (no track background, thin thumb).
+            style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(255,255,255,0.15) transparent" }}
+          >
             {loading ? (
               <div className="px-3 py-4 text-sm text-white/60">Searching…</div>
             ) : null}
