@@ -92,16 +92,19 @@ export function SchoolCombobox({ value, onChange, placeholder = "School or club"
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      {/* Bottom vignette — slight dark gradient rising from the bottom
-          of the viewport while the dropdown is open. Pulls focus
-          toward the suggestions and softens the surrounding form.
-          Fades in/out smoothly; pointer-events-none keeps clicks
-          falling through to whatever's underneath. */}
+      {/* Bottom vignette — dark gradient rising from the bottom of
+          the viewport while the dropdown is open. Pulls focus toward
+          the suggestions and dims the surrounding form. Fades
+          in/out; pointer-events-none keeps clicks falling through. */}
       <div
         aria-hidden
         className={cn(
-          "pointer-events-none fixed inset-x-0 bottom-0 z-40 h-56",
-          "bg-gradient-to-t from-black/70 via-black/30 to-transparent",
+          // Taller (h-[60vh]) and deeper at the base so the bottom
+          // half of the viewport noticeably recedes when the
+          // dropdown is open. Three-stop gradient so the falloff
+          // feels smooth rather than a hard band.
+          "pointer-events-none fixed inset-x-0 bottom-0 z-40 h-[60vh]",
+          "bg-gradient-to-t from-black/95 via-black/65 to-transparent",
           "transition-opacity duration-300",
           open ? "opacity-100" : "opacity-0",
         )}
