@@ -22,12 +22,14 @@
  */
 
 import dotenv from "dotenv";
-import { execSync } from "node:child_process";
-import { writeFileSync, unlinkSync, mkdtempSync, rmSync } from "node:fs";
-import { join } from "node:path";
-import { tmpdir } from "node:os";
 
 dotenv.config({ path: ".env.local" });
+
+// .env.local has NODE_TLS_REJECT_UNAUTHORIZED=0 (the Windows Node cert
+// chain workaround we set up earlier). Node fetch reads it at TLS
+// handshake time, so we can use the native fetch end-to-end and avoid
+// spawning a curl process per request — which is what was exhausting
+// Windows network sockets and silently failing past ~6.5k calls.
 
 const SB_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SB_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -51,33 +53,21 @@ const RESUME = args.includes("--resume");
 const REQUESTS_PER_MIN = parseInt(arg("--rpm", "100"), 10);
 const REQUEST_INTERVAL_MS = Math.ceil(60_000 / REQUESTS_PER_MIN);
 
-const tmpDir = mkdtempSync(join(tmpdir(), "bltz-backfill-"));
-process.on("exit", () => { try { rmSync(tmpDir, { recursive: true, force: true }); } catch {} });
-
-function curlJson(url, headers = {}) {
-  const headerArgs = Object.entries(headers)
-    .map(([k, v]) => `-H "${k}: ${v.replace(/"/g, '\\"')}"`)
-    .join(" ");
-  const out = execSync(
-    `curl -sS --ssl-no-revoke ${headerArgs} "${url}"`,
-    { encoding: "utf-8", maxBuffer: 50 * 1024 * 1024 },
-  );
-  return JSON.parse(out);
+async function fetchJson(url, headers = {}) {
+  const res = await fetch(url, { headers });
+  if (!res.ok) throw new Error(`fetch ${url} -> ${res.status}`);
+  return res.json();
 }
 
-function curlPostJson(url, headers, body) {
-  const bodyPath = join(tmpDir, `_body_${Date.now()}.json`);
-  writeFileSync(bodyPath, body);
-  try {
-    const headerArgs = Object.entries(headers)
-      .map(([k, v]) => `-H "${k}: ${v.replace(/"/g, '\\"')}"`)
-      .join(" ");
-    execSync(
-      `curl -sS --ssl-no-revoke -X POST "${url}" ${headerArgs} --data-binary @${bodyPath} --fail-with-body`,
-      { stdio: ["ignore", "pipe", "pipe"], maxBuffer: 50 * 1024 * 1024 },
-    );
-  } finally {
-    try { unlinkSync(bodyPath); } catch {}
+async function postJson(url, headers, body) {
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { ...headers, "Content-Type": "application/json" },
+    body,
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`POST ${url} -> ${res.status} ${text.slice(0, 200)}`);
   }
 }
 
@@ -89,7 +79,7 @@ let teamUrl =
 if (TEAM_FILTER) {
   teamUrl += `&or=(location.ilike.%25${encodeURIComponent(TEAM_FILTER)}%25,display_name.ilike.%25${encodeURIComponent(TEAM_FILTER)}%25)`;
 }
-const allTeams = curlJson(teamUrl, {
+const allTeams = await fetchJson(teamUrl, {
   apikey: SB_KEY,
   Authorization: `Bearer ${SB_KEY}`,
 });
@@ -111,7 +101,7 @@ if (RESUME) {
   const checkUrl =
     `${SB_URL}/rest/v1/cfb_players?select=team&last_synced_at=gte.${since}` +
     `&team=not.is.null`;
-  const synced = curlJson(checkUrl, {
+  const synced = await fetchJson(checkUrl, {
     apikey: SB_KEY,
     Authorization: `Bearer ${SB_KEY}`,
   });
@@ -147,7 +137,7 @@ for (const team of teams) {
     totalCalls++;
     let rows = [];
     try {
-      rows = curlJson(
+      rows = await fetchJson(
         `https://api.collegefootballdata.com/roster?team=${encodeURIComponent(team.name)}&year=${season}`,
         { Authorization: `Bearer ${CFBD_KEY}` },
       );
@@ -211,20 +201,17 @@ for (const team of teams) {
     for (let i = 0; i < rows.length; i += BATCH) {
       const batch = rows.slice(i, i + BATCH);
       try {
-        curlPostJson(
+        await postJson(
           endpoint,
           {
             apikey: SB_KEY,
             Authorization: `Bearer ${SB_KEY}`,
-            "Content-Type": "application/json",
             Prefer: "resolution=merge-duplicates,return=minimal",
           },
           JSON.stringify(batch),
         );
       } catch (e) {
-        const stderr = e?.stderr?.toString() ?? "";
-        const stdout = e?.stdout?.toString() ?? "";
-        console.error(`  ERR upsert ${team.name}: ${stderr.slice(0, 200) || stdout.slice(0, 200)}`);
+        console.error(`  ERR upsert ${team.name}: ${e?.message?.slice(0, 200) ?? e}`);
       }
     }
   }
