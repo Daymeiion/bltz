@@ -73,26 +73,26 @@ async function postJson(url, headers, body) {
 
 // --- Build D1 (FBS + FCS) allow-list -----------------------------------------
 // CFBD only indexes FBS + FCS programs. Our cfb_teams table holds 754
-// entries including D2 / D3 / DIII NCAA programs ESPN ships in their
-// public teams API. Iterating those wastes API calls on guaranteed 0
-// responses (the broken first run did exactly that). Build a fast
-// allow-list up front by calling CFBD's /teams/fbs and /teams/fcs once,
-// then we only iterate teams that intersect.
+// entries including D2 / D3 NCAA programs ESPN ships in their public teams
+// API. Iterating those wastes API calls on guaranteed 0 responses (the
+// broken first run did exactly that). Build a fast allow-list up front
+// by calling CFBD's /teams once and filtering to classification fbs/fcs.
+// One call returns the full universe (~1,900 rows) with classification
+// labels; client-side filter to ~265 D1 programs.
 console.log("Loading FBS + FCS allow-list from CFBD…");
-const fbsTeams = await fetchJson(
-  `https://api.collegefootballdata.com/teams/fbs`,
+const allCfbdTeams = await fetchJson(
+  `https://api.collegefootballdata.com/teams`,
   { Authorization: `Bearer ${CFBD_KEY}` },
 );
-const fcsTeams = await fetchJson(
-  `https://api.collegefootballdata.com/teams/fcs`,
-  { Authorization: `Bearer ${CFBD_KEY}` },
+const d1Teams = allCfbdTeams.filter(
+  (t) => t.classification === "fbs" || t.classification === "fcs",
 );
 const d1Names = new Set(
-  [...fbsTeams, ...fcsTeams]
-    .map((t) => (t.school ?? "").trim())
-    .filter(Boolean),
+  d1Teams.map((t) => (t.school ?? "").trim()).filter(Boolean),
 );
-console.log(`D1 allow-list: ${d1Names.size} programs (${fbsTeams.length} FBS + ${fcsTeams.length} FCS)`);
+const fbsCount = d1Teams.filter((t) => t.classification === "fbs").length;
+const fcsCount = d1Teams.filter((t) => t.classification === "fcs").length;
+console.log(`D1 allow-list: ${d1Names.size} programs (${fbsCount} FBS + ${fcsCount} FCS)`);
 
 console.log("Loading cfb_teams from Supabase…");
 let teamUrl =
