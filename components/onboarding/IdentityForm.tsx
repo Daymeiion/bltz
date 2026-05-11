@@ -104,7 +104,7 @@ export function IdentityForm() {
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
               placeholder="Jordan Carter"
-              className="h-14 rounded border-white/15 bg-black/40 px-4 text-base text-white placeholder:text-white/40 focus-visible:border-[#F5A623]"
+              className="h-14 rounded-md border-white/15 bg-black/40 px-4 text-base text-white placeholder:text-white/40 focus-visible:border-[#F5A623]"
               aria-invalid={Boolean(errors.fullName)}
             />
             {errors.fullName ? (
@@ -151,7 +151,7 @@ export function IdentityForm() {
                     key={l.value}
                     onClick={() => setLevel(l.value)}
                     className={cn(
-                      "min-h-12 border px-3 py-3 text-sm font-semibold transition",
+                      "min-h-12 rounded-md border px-3 py-3 text-sm font-semibold transition",
                       active
                         ? "border-[#F5A623] bg-[#F5A623] text-black"
                         : "border-white/15 bg-white/[0.04] text-white/80 hover:border-white/40",
@@ -169,7 +169,7 @@ export function IdentityForm() {
           </div>
 
           {errors.form ? (
-            <p className="border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+            <p className="rounded-md border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">
               {errors.form}
             </p>
           ) : null}
@@ -178,7 +178,7 @@ export function IdentityForm() {
             <Button
               type="submit"
               disabled={submitting}
-              className="h-12 w-full rounded bg-[#2952FF] text-base font-bold tracking-wide text-white hover:bg-[#1f43d8] md:px-10"
+              className="h-12 w-full rounded-md bg-[#2952FF] text-base font-bold tracking-wide text-white hover:bg-[#1f43d8] md:px-10"
             >
               {submitting ? "Searching..." : "Search my career"}
             </Button>

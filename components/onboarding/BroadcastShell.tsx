@@ -81,7 +81,10 @@ export function BroadcastPanel({
       className={cn(
         "border border-white/10 bg-[#14182B]/72 backdrop-blur",
         tone === "strong" ? "bg-[#14182B]/92" : "",
-        "rounded-lg",
+        // rounded-md matches the inner form controls (inputs, buttons,
+        // level grid, error box) so the whole panel reads as a single
+        // consistent radius system.
+        "rounded-md",
         className,
       )}
     >
