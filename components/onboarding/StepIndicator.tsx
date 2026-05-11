@@ -49,11 +49,13 @@ export function StepIndicator({ current }: { current: 1 | 2 | 3 | 4 }) {
                 )}
               />
               {/* Label row: animated check on completed steps, then name.
-                  Sized responsively so all four labels fit on a 360-wide
-                  phone without truncation. */}
+                  justify-center keeps the label centered within its grid
+                  column at every viewport width. Wraps to two lines on
+                  small phones for the longest label ("Career sweep")
+                  rather than truncating. */}
               <div
                 className={cn(
-                  "flex min-w-0 items-center gap-1 transition-colors duration-300 sm:gap-1.5",
+                  "flex min-w-0 items-center justify-center gap-1.5 text-center transition-colors duration-300",
                   active && "text-white",
                   completed && "text-bltz-gold",
                   upcoming && "text-white/35",
@@ -84,11 +86,11 @@ export function StepIndicator({ current }: { current: 1 | 2 | 3 | 4 }) {
                 </svg>
                 <span
                   className={cn(
-                    "min-w-0 font-mono uppercase",
-                    // Responsive sizing: tighter tracking + smaller text
-                    // on phones (where each column is ~80px wide), then
-                    // breathes wider on tablet/desktop. Never truncates.
-                    "text-[9px] tracking-[0.04em] sm:text-[11px] sm:tracking-[0.08em] md:text-xs md:tracking-wider",
+                    "min-w-0 font-mono uppercase leading-tight",
+                    // 14px (text-sm) on mobile is comfortable for mono
+                    // reading and is the size requested. Tracking eases
+                    // out at larger sizes for visual rhythm.
+                    "text-sm tracking-[0.04em] sm:tracking-[0.08em] md:tracking-wider",
                   )}
                 >
                   {s.label}
