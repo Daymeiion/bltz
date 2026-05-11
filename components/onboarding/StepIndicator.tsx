@@ -49,13 +49,15 @@ export function StepIndicator({ current }: { current: 1 | 2 | 3 | 4 }) {
                 )}
               />
               {/* Label row: animated check on completed steps, then name.
-                  justify-center keeps the label centered within its grid
-                  column at every viewport width. Wraps to two lines on
-                  small phones for the longest label ("Career sweep")
-                  rather than truncating. */}
+                  justify-center keeps the label horizontally centered;
+                  items-center + min-h-[2.5em] gives every row the
+                  height of a two-line wrap and vertically centers the
+                  text inside, so single-line labels ("Suit up") align
+                  with the wrapped two-line ones ("Career sweep") on
+                  small phones. */}
               <div
                 className={cn(
-                  "flex min-w-0 items-center justify-center gap-1.5 text-center transition-colors duration-300",
+                  "flex min-h-[2.5em] min-w-0 items-center justify-center gap-1.5 text-center transition-colors duration-300",
                   active && "text-white",
                   completed && "text-bltz-gold",
                   upcoming && "text-white/35",
