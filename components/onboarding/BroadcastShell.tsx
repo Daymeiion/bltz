@@ -38,7 +38,18 @@ export function BroadcastHeader({
       <h1 className="font-oswald text-4xl font-bold uppercase leading-[0.95] tracking-normal text-white sm:text-5xl lg:text-6xl">
         {title}
       </h1>
-      {children ? <div className="max-w-2xl text-base leading-7 text-white/68">{children}</div> : null}
+      {children ? (
+        <div
+          className={cn(
+            "max-w-2xl text-base leading-7 text-white/68",
+            // When the header is center-aligned, the children box must
+            // also center itself horizontally — not just the text inside.
+            align === "center" && "mx-auto",
+          )}
+        >
+          {children}
+        </div>
+      ) : null}
     </header>
   );
 }

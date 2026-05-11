@@ -62,9 +62,8 @@ function OnboardingStartContent({
           }
           align="center"
         >
-          <p>
-            Enter name, school or club, position, and level. BLTZ uses this to search
-            public sports sources for the right athlete.
+          <p className="font-mono text-sm leading-relaxed tracking-wide text-white/55">
+            BLTZ uses this to search public sports sources for the right athlete.
           </p>
         </BroadcastHeader>
       </div>
