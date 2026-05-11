@@ -4,25 +4,22 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * Position selector with Offense / Defense tabs.
+ * Position selector with Offense / Defense switch.
  *
- * 17 positions split into two tabs so the user only sees ~9-10
- * bubbles at a time instead of all 17 at once. Special teams
- * (K / P / LS) live under Offense by convention — the kicking
- * unit is positioned by the offensive coordinator and shares the
- * line of scrimmage with the offense on most plays.
+ * Animated segmented-control switch at the top: a gold "thumb"
+ * slides between Offense and Defense; the half it sits under
+ * inverts to dark text on gold, the other half dims.
  *
- * The tab defaults to whichever side the currently-selected
- * position belongs to. Switching tabs preserves the selection
- * (state lives on the parent form, not in the tab) — switching
- * back and forth doesn't lose what the athlete picked.
+ * Bubble grid flex-wraps and centers within the panel so any row
+ * count looks balanced (10 positions on offense wrap to two rows
+ * on phones, 7 on defense fit on one).
  *
- * Bubble visual + hover-raise animation kept from the previous
- * flat-grid revision.
+ * Bubbles: fixed-width pill, monospace bold at text-base for the
+ * "broadcast scoreboard / jersey patch" feel. Hover raises 4px
+ * with a deeper shadow.
  */
 
 const OFFENSE_POSITIONS: string[] = [
-  // Backfield + line
   "QB",
   "RB",
   "FB",
@@ -38,13 +35,10 @@ const OFFENSE_POSITIONS: string[] = [
 ];
 
 const DEFENSE_POSITIONS: string[] = [
-  // Line
   "DT",
   "DE",
-  // Linebackers
   "MLB",
   "OLB",
-  // Secondary
   "CB",
   "SS",
   "FS",
@@ -62,15 +56,10 @@ interface Props {
 }
 
 export function PositionField({ value, onChange }: Props) {
-  // Default the active tab to the side the current value sits on.
-  // If the athlete revisits the form (or claim flow pre-fills the
-  // position), the right bubble is already visible.
   const [tab, setTab] = React.useState<Tab>(() =>
     value ? tabForPosition(value) : "offense",
   );
 
-  // Keep the tab in sync when the parent value changes externally
-  // (e.g. a claim-link flow setting the position after mount).
   React.useEffect(() => {
     if (value) setTab(tabForPosition(value));
   }, [value]);
@@ -78,25 +67,46 @@ export function PositionField({ value, onChange }: Props) {
   const positions = tab === "offense" ? OFFENSE_POSITIONS : DEFENSE_POSITIONS;
 
   return (
-    <div className="space-y-3">
-      {/* Tab switcher */}
+    <div className="space-y-4">
+      {/* Animated switch: two halves, gold "thumb" slides between
+          them. The thumb is absolutely positioned and translates on
+          tab change for the segmented-control feel. */}
       <div
         role="tablist"
         aria-label="Position group"
-        className="grid grid-cols-2 overflow-hidden rounded-md border border-white/12 bg-white/[0.02]"
+        className="relative mx-auto flex w-full max-w-xs rounded-full border border-white/15 bg-black/30 p-1"
       >
-        <TabButton label="Offense" active={tab === "offense"} onClick={() => setTab("offense")} />
-        <TabButton label="Defense" active={tab === "defense"} onClick={() => setTab("defense")} />
+        {/* Sliding thumb. Always rendered; translateX flips when the
+            active tab flips. Sits under the two buttons via z-index. */}
+        <span
+          aria-hidden
+          className={cn(
+            "absolute inset-y-1 left-1 z-0 rounded-full bg-bltz-gold shadow-[0_4px_14px_rgba(245,166,35,0.55)]",
+            "transition-transform duration-300 ease-out",
+          )}
+          style={{
+            width: "calc(50% - 0.25rem)",
+            transform: tab === "defense" ? "translateX(100%)" : "translateX(0)",
+          }}
+        />
+        <SwitchButton
+          label="Offense"
+          active={tab === "offense"}
+          onClick={() => setTab("offense")}
+        />
+        <SwitchButton
+          label="Defense"
+          active={tab === "defense"}
+          onClick={() => setTab("defense")}
+        />
       </div>
 
-      {/* Bubble grid for the active side */}
+      {/* Bubble grid for the active side. Flex-wrap + justify-center
+          so any number of bubbles balances visually inside the panel. */}
       <div
         role="tabpanel"
         aria-label={`${tab} positions`}
-        // Responsive column count: 4 phones / 5 tablet / 6 desktop.
-        // With 7-10 positions per tab the grid stays full but never
-        // overflows to a third row at any width.
-        className="grid grid-cols-4 gap-2 sm:grid-cols-5 md:grid-cols-6 md:gap-3"
+        className="flex flex-wrap justify-center gap-3"
       >
         {positions.map((code) => {
           const active = value === code;
@@ -107,10 +117,11 @@ export function PositionField({ value, onChange }: Props) {
               onClick={() => onChange(code)}
               aria-pressed={active}
               className={cn(
-                "flex h-12 w-full items-center justify-center rounded-full border-2 font-mono text-xs font-bold uppercase",
+                "flex h-14 w-[72px] items-center justify-center rounded-full border-2",
+                "font-mono text-base font-bold uppercase tracking-tight",
                 "transition-all duration-200 ease-out",
                 active
-                  ? "-translate-y-0.5 border-bltz-gold bg-bltz-gold text-black shadow-[0_8px_22px_rgba(245,166,35,0.5),0_0_0_4px_rgba(245,166,35,0.12)]"
+                  ? "-translate-y-0.5 border-bltz-gold bg-bltz-gold text-black shadow-[0_8px_22px_rgba(245,166,35,0.55),0_0_0_4px_rgba(245,166,35,0.12)]"
                   : "border-white/20 bg-white/[0.04] text-white/85 shadow-[0_3px_8px_rgba(0,0,0,0.4)] hover:-translate-y-1 hover:border-white/60 hover:bg-white/[0.08] hover:shadow-[0_10px_22px_rgba(0,0,0,0.55)]",
               )}
             >
@@ -123,7 +134,7 @@ export function PositionField({ value, onChange }: Props) {
   );
 }
 
-function TabButton({
+function SwitchButton({
   label,
   active,
   onClick,
@@ -138,21 +149,17 @@ function TabButton({
       role="tab"
       aria-selected={active}
       onClick={onClick}
+      // z-10 so the button text sits above the sliding thumb. Both
+      // halves are width 1/2 so the layout is stable regardless of
+      // which tab is active.
       className={cn(
-        "relative px-4 py-2.5 font-oswald text-sm font-bold uppercase tracking-wider transition-colors duration-200",
-        active ? "text-white" : "text-white/45 hover:text-white/75",
+        "relative z-10 flex-1 rounded-full px-4 py-2.5",
+        "font-oswald text-sm font-bold uppercase tracking-wider",
+        "transition-colors duration-200",
+        active ? "text-black" : "text-white/55 hover:text-white/85",
       )}
     >
       {label}
-      {/* Underline indicator — gold for active, transparent otherwise.
-          Always rendered so the transition runs both ways smoothly. */}
-      <span
-        aria-hidden
-        className={cn(
-          "absolute inset-x-3 -bottom-px h-0.5 rounded-full transition-all duration-200",
-          active ? "bg-bltz-gold shadow-[0_0_8px_rgba(245,166,35,0.6)]" : "bg-transparent",
-        )}
-      />
     </button>
   );
 }
