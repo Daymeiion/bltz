@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 
 const STEPS = [
   { n: 1, label: "Suit up" },
-  { n: 2, label: "Career sweep" },
+  { n: 2, label: "Career" },
   { n: 3, label: "Sign off" },
   { n: 4, label: "Go live" },
 ] as const;
