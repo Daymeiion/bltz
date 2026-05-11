@@ -8,10 +8,7 @@ import { Button } from "@/components/ui/button";
 import { SchoolCombobox } from "./SchoolCombobox";
 import { cn } from "@/lib/utils";
 import { BroadcastPanel } from "./BroadcastShell";
-
-const POSITIONS = [
-  "QB", "RB", "WR", "TE", "OL", "DL", "LB", "CB", "S", "K", "P", "ATH",
-];
+import { PositionField } from "./PositionField";
 
 const LEVELS: { value: "hs" | "college" | "pro" | "former"; label: string }[] = [
   { value: "hs", label: "High school" },
@@ -135,27 +132,7 @@ export function IdentityForm() {
             <Label className="text-sm uppercase tracking-wider text-white/70">
               Position
             </Label>
-            <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
-              {POSITIONS.map((p) => {
-                const active = p === position;
-                return (
-                  <button
-                    type="button"
-                    key={p}
-                    onClick={() => setPosition(p)}
-                    className={cn(
-                      "min-h-11 border px-3 py-2 font-mono text-sm font-semibold uppercase transition",
-                      active
-                        ? "border-[#F5A623] bg-[#F5A623] text-black"
-                        : "border-white/15 bg-white/[0.04] text-white/80 hover:border-white/40",
-                    )}
-                    aria-pressed={active}
-                  >
-                    {p}
-                  </button>
-                );
-              })}
-            </div>
+            <PositionField value={position} onChange={setPosition} />
             {errors.position ? (
               <p className="text-sm text-red-400">{errors.position}</p>
             ) : null}
