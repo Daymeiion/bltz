@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { SchoolCombobox } from "./SchoolCombobox";
 import { cn } from "@/lib/utils";
-import { BroadcastPanel, SourceChip } from "./BroadcastShell";
+import { BroadcastPanel } from "./BroadcastShell";
 
 const POSITIONS = [
   "QB", "RB", "WR", "TE", "OL", "DL", "LB", "CB", "S", "K", "P", "ATH",
@@ -91,18 +91,10 @@ export function IdentityForm() {
   return (
     <form onSubmit={onSubmit} className="mx-auto max-w-2xl" noValidate>
       <BroadcastPanel tone="strong" className="p-5 sm:p-6">
-        <div className="mb-6 flex items-center justify-between gap-4 border-b border-white/10 pb-4">
-          <div>
-            <p className="font-mono text-xs uppercase tracking-[0.2em] text-white/42">
-              Scout card
-            </p>
-            <h2 className="mt-1 font-oswald text-2xl font-bold uppercase text-white">
-              Start the sweep
-            </h2>
-          </div>
-          <SourceChip tone="gold">Step 01</SourceChip>
-        </div>
-
+        {/* Title block removed — the new step indicator and the page-level
+            BroadcastHeader ("Verify the basics") already establish where
+            the athlete is in the flow. Having "Scout card / Start the
+            sweep / Step 01" inside the form was redundant copy. */}
         <div className="space-y-7">
           <div className="space-y-2">
             <Label htmlFor="fullName" className="text-sm uppercase tracking-wider text-white/70">
