@@ -10,8 +10,10 @@ import { cn } from "@/lib/utils";
 import { BroadcastPanel } from "./BroadcastShell";
 import { PositionField } from "./PositionField";
 
-const LEVELS: { value: "hs" | "college" | "pro" | "former"; label: string }[] = [
-  { value: "hs", label: "High school" },
+// Level switch options. "High school" was removed from the user-facing
+// picker — those athletes go through a different funnel today; keeping
+// the type wide for future expansion / claim-link pre-fills.
+const LEVELS: { value: "college" | "pro" | "former"; label: string }[] = [
   { value: "college", label: "College" },
   { value: "pro", label: "Pro" },
   { value: "former", label: "Former pro" },
@@ -94,7 +96,7 @@ export function IdentityForm() {
             sweep / Step 01" inside the form was redundant copy. */}
         <div className="space-y-7">
           <div className="space-y-2">
-            <Label htmlFor="fullName" className="text-sm uppercase tracking-wider text-white/70">
+            <Label htmlFor="fullName" className="block text-center text-sm uppercase tracking-wider text-white/70">
               Full name
             </Label>
             <Input
@@ -113,7 +115,7 @@ export function IdentityForm() {
           </div>
 
           <div className="space-y-2">
-            <Label className="text-sm uppercase tracking-wider text-white/70">
+            <Label className="block text-center text-sm uppercase tracking-wider text-white/70">
               School or club
             </Label>
             <SchoolCombobox
@@ -129,7 +131,7 @@ export function IdentityForm() {
           </div>
 
           <div className="space-y-2">
-            <Label className="text-sm uppercase tracking-wider text-white/70">
+            <Label className="block text-center text-sm uppercase tracking-wider text-white/70">
               Position
             </Label>
             <PositionField value={position} onChange={setPosition} />
@@ -139,24 +141,54 @@ export function IdentityForm() {
           </div>
 
           <div className="space-y-2">
-            <Label className="text-sm uppercase tracking-wider text-white/70">
+            <Label className="block text-center text-sm uppercase tracking-wider text-white/70">
               Level
             </Label>
-            <div className="grid grid-cols-2 gap-2">
+            {/* 3-option animated switch — same segmented-control pattern
+                as the position Offense/Defense switch. The gold thumb
+                slides between segments based on selection; the active
+                segment text inverts to dark on gold. */}
+            <div
+              role="radiogroup"
+              aria-label="Level"
+              className="relative mx-auto flex w-full max-w-md rounded-full border border-white/15 bg-black/30 p-1"
+            >
+              {/* Sliding thumb: 1/3 width, translates 0% / 100% / 200%
+                  depending on which segment is active. Hidden when no
+                  level is picked yet so the switch reads as "empty". */}
+              <span
+                aria-hidden
+                className={cn(
+                  "absolute inset-y-1 left-1 z-0 rounded-full bg-bltz-gold shadow-[0_4px_14px_rgba(245,166,35,0.55)]",
+                  "transition-all duration-300 ease-out",
+                  level ? "opacity-100" : "opacity-0",
+                )}
+                style={{
+                  width: "calc((100% - 0.5rem) / 3)",
+                  transform: `translateX(${
+                    level === "pro"
+                      ? "100%"
+                      : level === "former"
+                        ? "200%"
+                        : "0%"
+                  })`,
+                }}
+              />
               {LEVELS.map((l) => {
                 const active = l.value === level;
                 return (
                   <button
                     type="button"
+                    role="radio"
+                    aria-checked={active}
                     key={l.value}
                     onClick={() => setLevel(l.value)}
                     className={cn(
-                      "min-h-12 rounded-md border px-3 py-3 text-sm font-semibold transition",
-                      active
-                        ? "border-[#F5A623] bg-[#F5A623] text-black"
-                        : "border-white/15 bg-white/[0.04] text-white/80 hover:border-white/40",
+                      "relative z-10 flex-1 rounded-full px-3 py-2.5",
+                      "font-oswald text-sm font-bold uppercase tracking-wider",
+                      "transition-colors duration-200",
+                      active ? "text-black" : "text-white/55 hover:text-white/85",
                     )}
-                    aria-pressed={active}
                   >
                     {l.label}
                   </button>
@@ -178,7 +210,7 @@ export function IdentityForm() {
             <Button
               type="submit"
               disabled={submitting}
-              className="h-12 w-full rounded-md bg-[#2952FF] text-base font-bold tracking-wide text-white hover:bg-[#1f43d8] md:px-10"
+              className="h-12 w-full rounded-md bg-bltz-gold text-base font-bold tracking-wide text-black hover:bg-bltz-gold/85 disabled:opacity-50 md:px-10"
             >
               {submitting ? "Searching..." : "Search my career"}
             </Button>
