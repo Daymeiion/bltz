@@ -96,7 +96,7 @@ export function IdentityForm() {
             sweep / Step 01" inside the form was redundant copy. */}
         <div className="space-y-7">
           <div className="space-y-2">
-            <Label htmlFor="fullName" className="block text-center text-sm uppercase tracking-wider text-white/70">
+            <Label htmlFor="fullName" className="block text-center text-base uppercase tracking-wider text-white">
               Full name
             </Label>
             <Input
@@ -115,7 +115,7 @@ export function IdentityForm() {
           </div>
 
           <div className="space-y-2">
-            <Label className="block text-center text-sm uppercase tracking-wider text-white/70">
+            <Label className="block text-center text-base uppercase tracking-wider text-white">
               School or club
             </Label>
             <SchoolCombobox
@@ -131,7 +131,7 @@ export function IdentityForm() {
           </div>
 
           <div className="space-y-2">
-            <Label className="block text-center text-sm uppercase tracking-wider text-white/70">
+            <Label className="block text-center text-base uppercase tracking-wider text-white">
               Position
             </Label>
             <PositionField value={position} onChange={setPosition} />
@@ -141,7 +141,7 @@ export function IdentityForm() {
           </div>
 
           <div className="space-y-2">
-            <Label className="block text-center text-sm uppercase tracking-wider text-white/70">
+            <Label className="block text-center text-base uppercase tracking-wider text-white">
               Level
             </Label>
             {/* 3-option animated switch — same segmented-control pattern
@@ -207,10 +207,13 @@ export function IdentityForm() {
           ) : null}
 
           <div className="sticky bottom-0 -mx-5 border-t border-white/10 bg-[#050711]/86 px-5 py-4 backdrop-blur sm:-mx-6 sm:px-6 md:static md:m-0 md:border-0 md:bg-transparent md:p-0">
+            {/* Centered submit. 80% width on phones (still tap-friendly
+                while leaving margin), narrows to 1/3 on lg+ so it reads
+                as a deliberate CTA rather than a full-width form bar. */}
             <Button
               type="submit"
               disabled={submitting}
-              className="h-12 w-full rounded-md bg-bltz-gold text-base font-bold tracking-wide text-black hover:bg-bltz-gold/85 disabled:opacity-50 md:px-10"
+              className="mx-auto block h-12 w-4/5 rounded-md bg-bltz-gold text-base font-bold uppercase tracking-wide text-black hover:bg-bltz-gold/85 disabled:opacity-50 md:w-1/2 lg:w-1/3"
             >
               {submitting ? "Searching..." : "Search my career"}
             </Button>
