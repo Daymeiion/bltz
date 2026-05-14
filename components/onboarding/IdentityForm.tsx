@@ -206,7 +206,7 @@ export function IdentityForm() {
             </p>
           ) : null}
 
-          <div className="sticky bottom-0 -mx-5 border-t border-white/10 bg-[#050711]/86 px-5 py-4 backdrop-blur sm:-mx-6 sm:px-6 md:static md:m-0 md:border-0 md:bg-transparent md:p-0">
+          <div className="sticky bottom-0 -mx-5 border-t border-white/10 bg-[#050711]/86 px-5 py-4 backdrop-blur sm:-mx-6 sm:px-6 md:static md:m-0 md:border-0 md:bg-transparent md:p-0 md:pt-[10px]">
             {/* Centered submit. 80% width on phones (still tap-friendly
                 while leaving margin), narrows to 1/3 on lg+ so it reads
                 as a deliberate CTA rather than a full-width form bar. */}
