@@ -15,6 +15,8 @@ interface SearchHit {
 
 interface SummaryResponse {
   extract?: string;
+  description?: string;
+  type?: string;
   content_urls?: { desktop?: { page?: string } };
   thumbnail?: { source?: string };
 }
@@ -22,20 +24,51 @@ interface SummaryResponse {
 async function searchCandidates(
   identity: PlayerIdentityInput,
 ): Promise<SearchHit[]> {
-  const q = [identity.full_name, identity.school, identity.position]
-    .filter(Boolean)
-    .join(" ");
-  const url = `https://en.wikipedia.org/w/api.php?action=query&list=search&format=json&origin=*&srlimit=5&srsearch=${encodeURIComponent(q)}`;
-  const r = await fetch(url, {
-    headers: { "User-Agent": "BLTZ-OnboardBot/1.0" },
-  });
-  if (!r.ok) return [];
-  const data = (await r.json()) as { query?: { search?: SearchHit[] } };
-  return data.query?.search ?? [];
+  // Two passes, in this order:
+  //   1. Bare name. For obscure athletes (Traye Simmons, Joe Ayoob,
+  //      etc.) the bare-name search reliably surfaces their personal
+  //      Wikipedia article as the top hit. Adding school/position
+  //      keywords *up-front* drowns the article out with team-season
+  //      recaps that incidentally mention them.
+  //   2. Name + school + position. Helps disambiguate when multiple
+  //      athletes share a name and the bare query returns the wrong
+  //      person at #1 (e.g. two "Brandon Williams" entries).
+  // Results are merged in order with title-dedupe, so the bare-name
+  // hits show up first and the augmented hits backfill the candidate
+  // list. The article-validation step downstream picks the first
+  // candidate that looks like a real player article.
+  const queries: string[] = [identity.full_name];
+  if (identity.school || identity.position) {
+    queries.push(
+      [identity.full_name, identity.school, identity.position]
+        .filter(Boolean)
+        .join(" "),
+    );
+  }
+  const seen = new Set<string>();
+  const out: SearchHit[] = [];
+  for (const q of queries) {
+    const url = `https://en.wikipedia.org/w/api.php?action=query&list=search&format=json&origin=*&srlimit=5&srsearch=${encodeURIComponent(q)}`;
+    const r = await fetch(url, {
+      headers: { "User-Agent": "BLTZ-OnboardBot/1.0" },
+    });
+    if (!r.ok) continue;
+    const data = (await r.json()) as { query?: { search?: SearchHit[] } };
+    for (const h of data.query?.search ?? []) {
+      if (!seen.has(h.title)) {
+        seen.add(h.title);
+        out.push(h);
+      }
+    }
+  }
+  return out;
 }
 
 async function fetchSummary(title: string): Promise<{
   extract: string;
+  description: string;
+  type: string;
+  title: string;
   url: string;
   thumbnail?: string;
 } | null> {
@@ -48,9 +81,57 @@ async function fetchSummary(title: string): Promise<{
   if (!j?.extract) return null;
   return {
     extract: j.extract,
+    description: j.description ?? "",
+    type: j.type ?? "",
+    title,
     url: j.content_urls?.desktop?.page ?? `https://en.wikipedia.org/wiki/${encodeURIComponent(title)}`,
     thumbnail: j.thumbnail?.source,
   };
+}
+
+/**
+ * Reject Wikipedia summaries that aren't actually about the athlete. The
+ * search endpoint will happily return team-season articles ("2011 San
+ * Diego Chargers season") or rivalry pages when a player has no
+ * dedicated article — and the previous code blindly accepted whichever
+ * came back first, treating those as the athlete's bio. The bar here:
+ *
+ *   1. The article title must include the player's last name token, so
+ *      a "Traye Simmons" search can't latch onto a team-season recap
+ *      that incidentally mentions him.
+ *   2. The article description must suggest the subject is a person
+ *      (preferably a football player). Wikipedia's summary endpoint
+ *      sets `description` to a short label like "American football
+ *      linebacker" or "American basketball coach"; team-season pages
+ *      get descriptions like "Season of the NFL team". Requiring the
+ *      description to mention "football", "athlete", "player", or
+ *      "coach" filters those out without hand-listing every variation.
+ *   3. Disambiguation pages are skipped — they're never the bio.
+ */
+function looksLikePlayerArticle(
+  summary: NonNullable<Awaited<ReturnType<typeof fetchSummary>>>,
+  identity: PlayerIdentityInput,
+): boolean {
+  if (summary.type === "disambiguation") return false;
+
+  const titleLower = summary.title.toLowerCase();
+  const descLower = summary.description.toLowerCase();
+  const nameTokens = identity.full_name
+    .toLowerCase()
+    .split(/\s+/)
+    .filter((t) => t.length >= 3);
+  if (nameTokens.length === 0) return true;
+
+  const lastToken = nameTokens[nameTokens.length - 1];
+  if (!titleLower.includes(lastToken)) return false;
+
+  // Description signal: athlete/player/coach/etc. Empty descriptions
+  // also fail — we don't want to accept on ambiguous evidence.
+  const isPerson =
+    /\b(football|athlete|player|coach|quarterback|linebacker|cornerback|safety|tackle|guard|receiver|tight end|defensive|offensive|running back|punter|kicker|nfl|nba|mlb|olympic)\b/.test(
+      descLower,
+    );
+  return isPerson;
 }
 
 const HEIGHT_RE = /(\d)\s*ft\s*(\d{1,2})\s*in/i;
@@ -237,10 +318,21 @@ export async function scrapeWikipedia(
   try {
     const hits = await searchCandidates(identity);
     if (!hits.length) return { source: "wikipedia", ok: false, reason: "not_found" };
-    // Pick the first hit — for a tighter pass we'd score by snippet match
-    // against identity.school + identity.position.
-    const top = hits[0];
-    const summary = await fetchSummary(top.title);
+
+    // Walk the search results in relevance order and accept the first
+    // one that looks like a real athlete article. Without this loop, a
+    // player with no dedicated Wikipedia page (e.g. Traye Simmons) ends
+    // up "matched" against an incidental mention in a team-season recap
+    // and we end up rendering that as their bio.
+    let summary: NonNullable<Awaited<ReturnType<typeof fetchSummary>>> | null =
+      null;
+    for (const hit of hits) {
+      const s = await fetchSummary(hit.title);
+      if (s && looksLikePlayerArticle(s, identity)) {
+        summary = s;
+        break;
+      }
+    }
     if (!summary) return { source: "wikipedia", ok: false, reason: "not_found" };
 
     // Pull a longer excerpt by reading the article HTML for stat extraction.

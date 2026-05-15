@@ -433,6 +433,10 @@ function FoundDataPanel({
 
       <div className="grid gap-4 md:grid-cols-[1.25fr_1fr]">
         <div className="rounded-md border border-white/10 bg-black/30 p-5">
+          {/* Headshot is collected here (draft.photos) but rendered on
+              the Review screen, not on the Career sweep page. Founder
+              call: the career sweep is text + stats; the visual hero
+              moment belongs on the next step. */}
           <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-white/45">
             Bio draft
           </p>
