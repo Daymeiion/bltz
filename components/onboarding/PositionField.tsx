@@ -23,6 +23,11 @@ const OFFENSE_POSITIONS: string[] = [
   "QB",
   "RB",
   "FB",
+  // Receivers — grouped right after the backfield to mirror how
+  // depth charts and scout cards usually list skill positions.
+  "WR",
+  "TE",
+  // Offensive line
   "C",
   "T",
   "G",
@@ -35,13 +40,22 @@ const OFFENSE_POSITIONS: string[] = [
 ];
 
 const DEFENSE_POSITIONS: string[] = [
+  // Defensive line — interior to edge
   "DT",
+  "NT",
   "DE",
+  // EDGE is the modern hybrid DE/OLB designation common in pro
+  "EDGE",
+  // Linebackers — middle, inside, outside
   "MLB",
+  "ILB",
   "OLB",
+  // Secondary
   "CB",
   "SS",
   "FS",
+  // Generic catch-all for safety/corner crossovers
+  "DB",
 ];
 
 type Tab = "offense" | "defense";
