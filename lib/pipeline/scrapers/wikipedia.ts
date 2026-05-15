@@ -1,5 +1,6 @@
 import { fetchHtml, stripHtml } from "../fetch";
 import type { PlayerIdentityInput, ScraperResult, ScrapedAward } from "../types";
+import { NFL_FULL_NAMES } from "../teams";
 
 /**
  * Wikipedia scraper. We use the public REST API — no auth required and
@@ -136,6 +137,16 @@ const CITY_RE = `[A-Z][A-Za-z.'\\- ]+?`;
 const HOMETOWN_PATTERNS: RegExp[] = [
   // "Born ... in Tyler, Texas" (covers "born September 17, 1995, in X, Y")
   new RegExp(`\\b[Bb]orn\\b[^.]{0,120}?\\bin\\s+(${CITY_RE}),\\s+(${US_STATES_RE})\\b`),
+  // "grew up in San Diego, California"
+  new RegExp(`\\b[Gg]rew\\s+up\\s+in\\s+(${CITY_RE}),\\s+(${US_STATES_RE})\\b`),
+  // "raised in Compton, California"
+  new RegExp(`\\b[Rr]aised\\s+in\\s+(${CITY_RE}),\\s+(${US_STATES_RE})\\b`),
+  // "attended Fairfield High School in Fairfield, California". This pattern
+  // catches the most common Wikipedia phrasing for athletes whose lede
+  // doesn't include an explicit birthplace — high school location is a
+  // strong proxy for hometown and is mentioned in virtually every NFL
+  // bio. Allows "High School", "high school", and "HS".
+  new RegExp(`\\battended\\s+[A-Z][^.]{0,80}?(?:[Hh]igh\\s+[Ss]chool|HS)\\s+in\\s+(${CITY_RE}),\\s+(${US_STATES_RE})\\b`),
   // "from Compton, California"
   new RegExp(`\\b[Ff]rom\\s+(${CITY_RE}),\\s+(${US_STATES_RE})\\b`),
   // "native of Houston, Texas"
@@ -160,16 +171,64 @@ function extractHometown(text: string): string | undefined {
   return undefined;
 }
 
+// Verbs that signal "team X is HIS team" rather than an opponent or
+// incidental mention. Each pattern captures the trailing phrase after
+// "the " — we then validate each chunk against the known NFL team list
+// before accepting it, so "over the Pittsburgh Steelers" (an opponent)
+// never sneaks through.
+const PRO_TEAM_VERB_PATTERNS: RegExp[] = [
+  /\bplayed for the\s+([^.;:()]+)/gi,
+  /\b(?:was\s+)?drafted by the\s+([^.;:()]+)/gi,
+  /\b(?:was\s+)?selected by the\s+([^.;:()]+)/gi,
+  /\bsigned (?:with|by|as a free agent (?:with|by)) the\s+([^.;:()]+)/gi,
+  /\bjoined the\s+([^.;:()]+)/gi,
+  /\btraded to the\s+([^.;:()]+)/gi,
+  /\bclaimed (?:off waivers )?by the\s+([^.;:()]+)/gi,
+  /\bwon (?:Super Bowl|the Super Bowl|a Super Bowl|championship|the championship|a championship)\b[^.;]*?with the\s+([^.;:()]+)/gi,
+  /\bspent\s+[^.;]{0,40}?with the\s+([^.;:()]+)/gi,
+  /\b(?:released|cut|waived) by the\s+([^.;:()]+)/gi,
+];
+
 function extractProTeams(text: string): string[] {
-  const teams = new Set<string>();
-  const playedFor = text.match(/\bplayed for the\s+([^.;]+)/i);
-  if (playedFor?.[1]) {
-    for (const chunk of playedFor[1].split(/\s+and\s+|,\s*/)) {
-      const team = chunk.replace(/^the\s+/i, "").trim();
-      if (team && /^[A-Z]/.test(team)) teams.add(team);
+  // Pass 1 — verb gate. Collect every team that appears after one of the
+  // career verbs. We don't care WHERE in the text the verb matched here,
+  // only WHICH teams the article positively asserts the athlete played
+  // for. Without this gate, opponents (e.g. "over the Pittsburgh
+  // Steelers" in a Super Bowl recap) sneak in.
+  const valid = new Set<string>();
+  for (const re of PRO_TEAM_VERB_PATTERNS) {
+    for (const m of text.matchAll(re)) {
+      const tail = m[1];
+      // Tails can be lists: "Minnesota Vikings and San Francisco 49ers"
+      // or "Vikings, Cardinals, and 49ers". Split, then prefix-match each
+      // chunk against the known NFL team set.
+      for (const chunkRaw of tail.split(/\s+and\s+|,\s*/)) {
+        const chunk = chunkRaw.replace(/^the\s+/i, "").trim();
+        if (!chunk) continue;
+        for (const team of NFL_FULL_NAMES) {
+          if (chunk.startsWith(team)) {
+            valid.add(team);
+            break;
+          }
+        }
+      }
     }
   }
-  return Array.from(teams).slice(0, 8);
+
+  // Pass 2 — chronological sort. Wikipedia infoboxes list teams in
+  // career order ("Green Bay Packers (2007–2012) · Minnesota Vikings
+  // (2013) · Arizona Cardinals (2014) · San Francisco 49ers (2014)"),
+  // and that's typically the first place each team is named in the
+  // stripped article text. So the team's earliest indexOf() position is
+  // a reliable chronological anchor — far more so than the order of the
+  // verb-pattern regexes themselves.
+  const positions: { team: string; idx: number }[] = [];
+  for (const team of valid) {
+    const idx = text.indexOf(team);
+    if (idx >= 0) positions.push({ team, idx });
+  }
+  positions.sort((a, b) => a.idx - b.idx);
+  return positions.map((p) => p.team).slice(0, 8);
 }
 
 export async function scrapeWikipedia(

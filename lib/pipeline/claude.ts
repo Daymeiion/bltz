@@ -1,24 +1,22 @@
 /**
  * Synthesis layer.
  *
- * Despite the filename, the implementation is vendor-agnostic. The plan
- * scopes Claude as the canonical model; we wrap whichever provider key
- * is configured (OpenAI today, Anthropic later) behind a single function
- * so the orchestrator never needs to care.
+ * Two responsibilities:
+ *   1. Compose the locker bio. Today this means: use the Wikipedia lede
+ *      verbatim when available, fall back to a deterministic stat-driven
+ *      stub when it isn't. No LLM rewrite — the founder prefers showing
+ *      the athlete the encyclopedia's own prose over a paraphrase.
+ *   2. Run the hallucination gate — match each numeric stat against the
+ *      scraped value, null out anything that disagrees, and auto-confirm
+ *      stats sourced from high-trust roster caches (nflverse, cfbverse).
  *
- * The two responsibilities here:
- *   1. Polish the scraped facts into a 250-word athlete bio.
- *   2. Run the hallucination gate (T1) — refuse to commit any numeric
- *      stat that the prose disagrees with the scraped value on.
- *
- * Token-budget guard (P2): we cap input at ~6k characters per source
- * and bail at 25k total. The orchestrator passes a budget; we read it.
+ * Kept on the synthesize() entry point name so the orchestrator's call
+ * site doesn't need to know whether we're in pass-through or LLM-polish
+ * mode at any given moment.
  */
 
-import OpenAI from "openai";
 import type { PipelineDraft, PlayerIdentityInput, ScraperResult, ScraperSource } from "./types";
-
-const PROMPT_VERSION = "bltz.synth.v1";
+import { canonicalizeTeams } from "./teams";
 
 /**
  * Sources whose facts we treat as authoritative. Fields supplied by these
@@ -68,7 +66,20 @@ function pickFacts(
     if (r.facts.position && !position) { position = r.facts.position; origin.position = r.source; }
     if (r.facts.school && !school) { school = r.facts.school; origin.school = r.source; }
     if (r.facts.hometown && !hometown) { hometown = r.facts.hometown; origin.hometown = r.source; }
-    if (r.facts.pro_teams) pro_teams = [...pro_teams, ...r.facts.pro_teams];
+    // pro_teams ordering is intentionally Wikipedia-first so that
+    // chronological career history wins. nflverse only reports
+    // `latest_team` (the most recent stint), and processing it before
+    // Wikipedia would pin that team to the front of the list after
+    // dedupe — wrong order for a career timeline. Wikipedia's prose
+    // extractor already returns teams in narrative/infobox order, which
+    // matches the career chronology for football articles.
+    if (r.facts.pro_teams) {
+      if (r.source === "wikipedia") {
+        pro_teams = [...r.facts.pro_teams, ...pro_teams];
+      } else {
+        pro_teams = [...pro_teams, ...r.facts.pro_teams];
+      }
+    }
     // First nflverse hit wins for gsis_id; only nflverse emits this today.
     if (r.facts.gsis_id && !gsis_id) gsis_id = r.facts.gsis_id;
     if (r.facts.awards) awards.push(...r.facts.awards);
@@ -83,7 +94,11 @@ function pickFacts(
     position: position ?? null,
     school: school ?? null,
     hometown: hometown ?? null,
-    pro_teams: Array.from(new Set(pro_teams)).slice(0, 8),
+    // Canonicalize before dedupe — different scrapers report the same
+    // team in different shapes (nflverse "SF" vs Wikipedia "San
+    // Francisco 49ers"). canonicalizeTeams folds short codes into full
+    // names and dedupes in one pass, preserving the first-seen order.
+    pro_teams: canonicalizeTeams(pro_teams).slice(0, 8),
     awards: dedupeAwards(awards),
     youtube_urls: Array.from(new Set(youtube_urls)).slice(0, 8),
     photos: photos.slice(0, 12),
@@ -138,17 +153,11 @@ function deterministicBio(
   return bits.join(" ");
 }
 
-const BUDGET_DEFAULT = 25_000;
-
-function trim(s: string, max: number): string {
-  return s.length > max ? s.slice(0, max) + "…" : s;
-}
-
 /**
- * Hallucination gate. The LLM is allowed to embellish prose, but every
- * numeric stat in the draft must be either (a) absent or (b) match the
- * pickFacts() value exactly. Mismatches get nulled out and the field is
- * marked as `unconfirmed` so the Review screen badges it.
+ * Numeric-stat gate. Every numeric stat in the draft must either be
+ * absent or match the pickFacts() value exactly. Mismatches get nulled
+ * out and the field is marked unconfirmed so the Review screen badges
+ * it. Survives a future LLM-polish step too — same contract.
  */
 function gate(
   draft: PipelineDraft,
@@ -195,53 +204,25 @@ function gate(
 export interface SynthesizeOptions {
   identity: PlayerIdentityInput;
   results: ScraperResult[];
-  budgetChars?: number;
 }
 
 export async function synthesize(opts: SynthesizeOptions): Promise<PipelineDraft> {
   const { identity, results } = opts;
   const factual = pickFacts(identity, results);
 
-  // Compose source-grounded prompt. We cap each source bio chunk so the
-  // total stays under the budget regardless of how chatty Wikipedia is.
-  const budget = opts.budgetChars ?? BUDGET_DEFAULT;
-  const perSourceCap = Math.max(2_000, Math.floor(budget / Math.max(results.length, 1)));
-  const sourceBlobs = results
-    .filter((r) => r.ok && r.facts?.bio_text)
-    .map((r) => `### ${r.source}\n${trim(r.facts!.bio_text!, perSourceCap)}`)
-    .join("\n\n");
-
-  let bio = deterministicBio(identity, factual);
-
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (apiKey && sourceBlobs.length > 0) {
-    try {
-      const client = new OpenAI({ apiKey });
-      const sys = `You are writing a short locker-page biography for an athlete on BLTZ.
-Voice: confident, plain-spoken, present tense for active athletes.
-Hard rules:
-- 200–260 words.
-- Do NOT invent numeric stats (height, weight, games played, ages). Only use numbers if the SOURCES section states them verbatim.
-- Avoid the words "profile", "import", "follower". Use "locker", "career", "claim", "believer".
-- No headings, no bullet points, no quotes. One paragraph.
-Prompt version: ${PROMPT_VERSION}.`;
-      const user = `IDENTITY:\n${JSON.stringify({ ...identity, ...factual }, null, 2)}\n\nSOURCES:\n${sourceBlobs}\n\nWrite the bio now.`;
-      const completion = await client.chat.completions.create({
-        model: process.env.OPENAI_MODEL ?? "gpt-4o-mini",
-        max_tokens: 600,
-        temperature: 0.4,
-        messages: [
-          { role: "system", content: sys },
-          { role: "user", content: user },
-        ],
-      });
-      const content = completion.choices[0]?.message?.content?.trim();
-      if (content) bio = content;
-    } catch {
-      // Network or auth failure — keep the deterministic bio. Pipeline
-      // continues; the user gets a usable draft.
-    }
-  }
+  // Bio source preference (founder call): use the Wikipedia lede VERBATIM
+  // when available — that is the short biography at the top of every
+  // player's Wikipedia page (e.g. "Desmond Lamont Bishop (born July 24,
+  // 1984) is an American former professional football player who was a
+  // linebacker in the National Football League…"). It already reads like
+  // human prose, doesn't invent stats, and shows up auto-confirmed.
+  //
+  // Only fall back to the deterministic stat template when Wikipedia
+  // didn't return — that case shows the athlete a stub they can rewrite
+  // on the Review screen rather than a blank field.
+  const wikiBio = results.find((r) => r.source === "wikipedia" && r.ok)
+    ?.facts?.bio_text?.trim();
+  const bio = wikiBio || deterministicBio(identity, factual);
 
   const draft: PipelineDraft = {
     full_name: identity.full_name,
@@ -262,7 +243,12 @@ Prompt version: ${PROMPT_VERSION}.`;
     // cfb_team_id flows from the IdentityForm autocomplete, not from any
     // scraper. Carry it forward unchanged so it lands on the players row.
     cfb_team_id: identity.cfb_team_id ?? null,
-    confirmed: { bio: false, dob: false, height_in: false, weight_lbs: false, games_played: false },
+    // bio is auto-confirmed when it came straight from Wikipedia — the
+    // text is authoritative, not synthesized — so the Review screen
+    // doesn't pester the athlete to re-confirm a paragraph they didn't
+    // write. Numeric stats still default to unconfirmed; the gate() pass
+    // below promotes them to confirmed only for high-trust scrapers.
+    confirmed: { bio: Boolean(wikiBio), dob: false, height_in: false, weight_lbs: false, games_played: false },
     sources: results
       .filter((r) => r.ok && r.urls?.length)
       .flatMap((r) => r.urls!.map((u) => ({ url: u, source: r.source }))),

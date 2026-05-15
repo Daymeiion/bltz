@@ -151,14 +151,40 @@ async function searchAthletes(name: string): Promise<SearchMatch[]> {
   }
 }
 
+function nameTokens(name: string): string[] {
+  return name
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[^a-z\s]/g, " ")
+    .split(/\s+/)
+    .filter((t) => t.length > 0 && !["jr", "sr", "ii", "iii", "iv"].includes(t));
+}
+
 function pickBestMatch(
   candidates: SearchMatch[],
   identity: PlayerIdentityInput,
 ): SearchMatch | null {
+  // Name gate FIRST. ESPN's search is fuzzy ("Desmond Bishop" returns both
+  // "Devin Bishop" and "Desmond Bishop") and the old code's school filter
+  // would happily pick the wrong-named player when their school matched.
+  // Require every input token (first + last name) to appear in the
+  // candidate's displayName tokens. This passes "Patrick Mahomes" against
+  // "Patrick Mahomes II" (candidate is a superset) and "Desmond Bishop"
+  // against "Desmond Bishop" (exact), but rejects "Devin Bishop".
+  const inputTokens = nameTokens(identity.full_name);
+  if (inputTokens.length > 0) {
+    const nameHits = candidates.filter((c) => {
+      const candTokens = new Set(nameTokens(c.displayName));
+      return inputTokens.every((t) => candTokens.has(t));
+    });
+    if (nameHits.length > 0) candidates = nameHits;
+  }
+
   if (candidates.length === 1) return candidates[0];
 
   // Prefer a candidate whose ESPN team/school subtitle matches the
-  // identity's school. Common when two athletes share a name.
+  // identity's school. Common when two same-named athletes both pass the
+  // name gate (e.g. father/son or two college players).
   const school = identity.school?.trim().toLowerCase();
   if (school) {
     const schoolHits = candidates.filter((c) =>
@@ -177,7 +203,8 @@ function pickBestMatch(
   if (leagueHits.length === 1) return leagueHits[0];
   if (leagueHits.length > 1) candidates = leagueHits;
 
-  // Fall back to the first result; ESPN's search ranks by relevance.
+  // Fall back to the first remaining candidate; ESPN's search ranks by
+  // relevance, and at this point we've already filtered by name.
   return candidates[0] ?? null;
 }
 
