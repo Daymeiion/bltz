@@ -10,6 +10,7 @@ import type {
 import { cn } from "@/lib/utils";
 import { BroadcastPanel } from "./BroadcastShell";
 import {
+  ArrowLeft,
   ArrowRight,
   BookOpen,
   Calendar,
@@ -185,6 +186,22 @@ export function MagicMomentLoader({ runId }: Props) {
 
   return (
     <div className="mx-auto max-w-5xl space-y-10">
+      {/* Small back link, top-left. Lets the athlete jump back to the
+          Verify-the-basics form if the sweep latched onto the wrong
+          person (common-name disambiguation, typo in school, etc.).
+          Ghost styling so it doesn't compete with the gold Review CTA
+          that lands below. */}
+      <div>
+        <button
+          type="button"
+          onClick={() => router.push("/onboarding")}
+          className="inline-flex items-center gap-2 font-mono text-xs uppercase tracking-[0.18em] text-white/55 transition-colors hover:text-white"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to verify
+        </button>
+      </div>
+
       {/* The earlier "popping up twice" was actually a stale browser
           bundle showing the old loader page before the new one mounted
           — not a strict-mode animation echo. With the old bundle out
