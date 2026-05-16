@@ -39,7 +39,10 @@ export function LivePreviewIframe({ draft }: Props) {
       ref={ref}
       src="/onboarding/preview"
       title="Live locker preview"
-      className="block h-[60vh] w-full rounded-2xl border border-white/10 bg-black"
+      // No border or rounded corners — the preview should read as the
+      // bare locker page, not a windowed sub-view of the onboarding
+      // flow. Just a flush iframe with the page's own black bg.
+      className="block h-[60vh] w-full bg-black"
     />
   );
 }

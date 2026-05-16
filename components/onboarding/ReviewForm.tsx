@@ -6,14 +6,9 @@ import type { PipelineDraft, ScraperSource } from "@/lib/pipeline/types";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { HeadshotUploader } from "./HeadshotUploader";
 import { SlugInput } from "./SlugInput";
-import { LivePreviewIframe } from "./LivePreviewIframe";
-import { ShieldCheck, AlertTriangle } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { LockerInlinePreview } from "./LockerInlinePreview";
 import { BroadcastPanel, SourceChip } from "./BroadcastShell";
-import { VerificationRail } from "./VerificationRail";
 
 interface Props {
   userId: string;
@@ -74,13 +69,6 @@ export function ReviewForm({ userId, runId, draft, initialSlug, requiresVerifica
 
   function update<K extends keyof FormState>(k: K, v: FormState[K]) {
     setState((s) => ({ ...s, [k]: v }));
-  }
-
-  function toggleConfirm(field: string) {
-    setState((s) => ({
-      ...s,
-      confirmed: { ...s.confirmed, [field]: !s.confirmed[field] },
-    }));
   }
 
   async function onSubmit(ev: React.FormEvent) {
@@ -169,34 +157,31 @@ export function ReviewForm({ userId, runId, draft, initialSlug, requiresVerifica
   );
 
   return (
-    <form onSubmit={onSubmit} className="space-y-10" noValidate>
-      <VerificationRail requiresVerification={requiresVerification} reviewed={Boolean(state.full_name && state.slug)} />
+    <form onSubmit={onSubmit} className="space-y-6" noValidate>
+      {/* Live preview rendered INLINE — no iframe, no fixed height.
+          The hero + locker sections flow with the page so the user
+          scrolls through the whole locker just like a visitor would.
+          The publish-ready/private chip stays as a small floating
+          status above the hero so the editor knows the visibility
+          state of what they're about to ship. */}
+      <div className="flex items-center justify-end gap-3">
+        <SourceChip tone={requiresVerification ? "warn" : "success"}>
+          {requiresVerification ? "Private" : "Publish-ready"}
+        </SourceChip>
+      </div>
+      <LockerInlinePreview
+        draft={previewDraft}
+        onBioChange={(v) => update("bio", v)}
+      />
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_430px]">
+      <div className="space-y-6">
         <div className="space-y-6">
-          <Section title="Headshot">
-            <HeadshotUploader
-              userId={userId}
-              initialUrl={state.headshot_url}
-              onUploaded={(url) => update("headshot_url", url)}
-            />
-          </Section>
-
           <Section title="Locker URL">
             <SlugInput
               value={state.slug}
               onChange={(v) => update("slug", v)}
               onAvailabilityChange={setSlugAvailable}
             />
-          </Section>
-
-          <Section title="Found online" subtitle="These facts came from public sports sources. Edit the fields below if anything looks off.">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <FoundFact label="Birthdate" value={state.dob || "Not found"} />
-              <FoundFact label="Hometown" value={state.hometown || "Not found"} />
-              <FoundFact label="Pro teams" value={draft.pro_teams?.length ? draft.pro_teams.join(", ") : "Not found"} />
-              <FoundFact label="Videos" value={`${draft.youtube_urls.length} found`} />
-            </div>
           </Section>
 
           <Section title="Identity">
@@ -247,76 +232,6 @@ export function ReviewForm({ userId, runId, draft, initialSlug, requiresVerifica
             </Field>
           </Section>
 
-          <Section
-            title="Stats"
-            subtitle="We pulled these from public sources — confirm or edit each row."
-          >
-            <ConfirmRow
-              label="Date of birth"
-              confirmed={!!state.confirmed.dob}
-              onToggle={() => toggleConfirm("dob")}
-            >
-              <Input
-                type="date"
-                value={state.dob}
-                onChange={(e) => update("dob", e.target.value)}
-                className="h-12 rounded border-white/15 bg-black/40 text-white"
-              />
-            </ConfirmRow>
-            <ConfirmRow
-              label="Height (in)"
-              confirmed={!!state.confirmed.height_in}
-              onToggle={() => toggleConfirm("height_in")}
-            >
-              <Input
-                type="number"
-                inputMode="numeric"
-                value={state.height_in}
-                onChange={(e) => update("height_in", e.target.value)}
-                className="h-12 rounded border-white/15 bg-black/40 text-white"
-              />
-            </ConfirmRow>
-            <ConfirmRow
-              label="Weight (lbs)"
-              confirmed={!!state.confirmed.weight_lbs}
-              onToggle={() => toggleConfirm("weight_lbs")}
-            >
-              <Input
-                type="number"
-                inputMode="numeric"
-                value={state.weight_lbs}
-                onChange={(e) => update("weight_lbs", e.target.value)}
-                className="h-12 rounded border-white/15 bg-black/40 text-white"
-              />
-            </ConfirmRow>
-            <ConfirmRow
-              label="Games played"
-              confirmed={!!state.confirmed.games_played}
-              onToggle={() => toggleConfirm("games_played")}
-            >
-              <Input
-                type="number"
-                inputMode="numeric"
-                value={state.games_played}
-                onChange={(e) => update("games_played", e.target.value)}
-                className="h-12 rounded border-white/15 bg-black/40 text-white"
-              />
-            </ConfirmRow>
-          </Section>
-
-          <Section title="Story">
-            <Textarea
-              value={state.bio}
-              onChange={(e) => update("bio", e.target.value)}
-              rows={6}
-              className="rounded border-white/15 bg-black/40 text-white"
-              placeholder="Your career in your voice."
-            />
-            <p className="text-xs text-white/40">
-              {state.bio.length} characters
-            </p>
-          </Section>
-
           {draft.sources?.length ? (
             <Section title="Sources we pulled">
               <ul className="space-y-1 text-sm text-white/70">
@@ -336,18 +251,6 @@ export function ReviewForm({ userId, runId, draft, initialSlug, requiresVerifica
               </ul>
             </Section>
           ) : null}
-        </div>
-
-        <div className="xl:sticky xl:top-8 xl:self-start">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <p className="font-mono text-xs uppercase tracking-[0.2em] text-white/45">
-              Live locker preview
-            </p>
-            <SourceChip tone={requiresVerification ? "warn" : "success"}>
-              {requiresVerification ? "Private" : "Publish-ready"}
-            </SourceChip>
-          </div>
-          <LivePreviewIframe slug={state.slug || "__preview__"} draft={previewDraft} />
         </div>
       </div>
 
@@ -408,59 +311,6 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   return (
     <div className="space-y-1.5">
       <Label className="font-mono text-xs uppercase tracking-[0.14em] text-white/58">{label}</Label>
-      {children}
-    </div>
-  );
-}
-
-function FoundFact({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="border border-white/10 bg-black/24 p-3">
-      <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-white/42">
-        {label}
-      </p>
-      <p className="mt-1 text-sm font-semibold leading-6 text-white/78">{value}</p>
-    </div>
-  );
-}
-
-function ConfirmRow({
-  label,
-  confirmed,
-  onToggle,
-  children,
-}: {
-  label: string;
-  confirmed: boolean;
-  onToggle: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="space-y-1.5">
-      <div className="flex items-center justify-between">
-        <Label className="font-mono text-xs uppercase tracking-[0.14em] text-white/58">{label}</Label>
-        <button
-          type="button"
-          onClick={onToggle}
-          className={cn(
-            "inline-flex min-h-7 items-center gap-1.5 border px-2 py-0.5 text-xs",
-            confirmed
-              ? "border-emerald-400/35 bg-emerald-500/15 text-emerald-300"
-              : "border-[#F5A623]/35 bg-yellow-500/15 text-yellow-300",
-          )}
-          aria-pressed={confirmed}
-        >
-          {confirmed ? (
-            <>
-              <ShieldCheck className="h-3.5 w-3.5" /> Confirmed
-            </>
-          ) : (
-            <>
-              <AlertTriangle className="h-3.5 w-3.5" /> Unconfirmed
-            </>
-          )}
-        </button>
-      </div>
       {children}
     </div>
   );

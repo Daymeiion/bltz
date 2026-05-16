@@ -1,7 +1,18 @@
+"use client";
+
 import type { ReactNode } from "react";
+import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 export function BroadcastShell({ children }: { children: ReactNode }) {
+  // The Live locker preview iframe loads /onboarding/preview, which
+  // inherits this same shell. We don't want the BLTZ brand mark
+  // showing inside the iframe — the preview should look like a
+  // standalone locker page, not the onboarding flow. Same trick we
+  // use in app/client-shell.tsx to hide the global navbar.
+  const pathname = usePathname();
+  const isPreview = pathname?.startsWith("/onboarding/preview") ?? false;
+
   return (
     <div className="min-h-svh overflow-hidden bg-[#0B0E1A] text-white">
       <div className="pointer-events-none fixed inset-0" aria-hidden>
@@ -11,19 +22,20 @@ export function BroadcastShell({ children }: { children: ReactNode }) {
         <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)] bg-[size:96px_96px]" />
       </div>
       <main className="relative mx-auto flex w-full max-w-7xl flex-col px-4 py-6 sm:px-6 md:py-10 lg:px-8">
-        {/* Brand mark sits above the step indicator on every onboarding
-            page. The global navbar is hidden on /onboarding routes
-            (see app/client-shell.tsx) so this is the only BLTZ marker
-            until the locker is published. Plain <img> to skip
-            next/image overhead for an inline SVG. */}
-        <div className="mb-8 flex justify-center pt-2 pb-4">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/bltz-white-logo.svg"
-            alt="BLTZ"
-            className="h-9 w-auto"
-          />
-        </div>
+        {/* BLTZ brand mark — visible on Suit up / Career / Confirm /
+            Go live, but hidden inside the locker preview iframe so the
+            preview reads as a real locker page rather than a nested
+            onboarding view. */}
+        {!isPreview ? (
+          <div className="mb-8 flex justify-center pt-2 pb-4">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/bltz-white-logo.svg"
+              alt="BLTZ"
+              className="h-9 w-auto"
+            />
+          </div>
+        ) : null}
         {children}
       </main>
     </div>

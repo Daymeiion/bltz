@@ -80,20 +80,18 @@ function ReviewContent({
   requiresVerification?: boolean;
 }) {
   return (
-    <div className="space-y-10">
+    <div className="mx-auto max-w-6xl space-y-10">
       <StepIndicator current={3} />
-      <header className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
-        <div>
-          <p className="font-mono text-xs uppercase tracking-[0.22em] text-white/45">
-            Review desk
-          </p>
-          <h1 className="mt-3 font-oswald text-4xl font-bold uppercase leading-[0.95] tracking-normal text-white md:text-5xl">
-            Confirm your <span className="text-[#F5A623]">career</span>
-          </h1>
-        </div>
-        <p className="max-w-2xl text-base leading-7 text-white/68">
-          Edit every line, inspect sources, and sign off on the facts. Claimed lockers
-          remain private until identity verification clears.
+      {/* Header geometry mirrors the Career sweep page header so that
+          when the route changes the title and subline appear to "stay
+          in place" while the new words fade in. Same vertical position,
+          same fonts, same animate-in classes. */}
+      <header className="space-y-3 text-center">
+        <h1 className="font-oswald text-4xl font-bold uppercase leading-[1.05] text-white animate-in fade-in-0 slide-in-from-bottom-1 duration-300 md:text-5xl">
+          Confirm your career
+        </h1>
+        <p className="mx-auto max-w-xl font-mono text-xs uppercase tracking-[0.18em] text-white/55 animate-in fade-in-0 slide-in-from-bottom-1 duration-300 delay-100 fill-mode-backwards">
+          Edit anything that looks off, then publish.
         </p>
       </header>
 
