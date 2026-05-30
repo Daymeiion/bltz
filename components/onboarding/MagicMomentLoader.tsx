@@ -156,11 +156,22 @@ export function MagicMomentLoader({ runId }: Props) {
     });
   }, [events, done]);
 
-  const lastEvent = events.at(-1);
+  // Subline shows live progress, but it must stay founder-facing — never
+  // echo a raw scrape MISS like "nflverse: not available." (developer
+  // speak that leaked onto the athlete's screen). Misses are already
+  // communicated visually by the dimmed icon + no checkmark; the subline
+  // only narrates positive momentum. So we pick the most recent event
+  // that ISN'T a scrape_miss — that's the latest hit ("Found a Wikipedia
+  // bio.") or a phase beat ("Cross-referencing the facts…", "Drafting
+  // your locker bio…"). While only misses have arrived so far, fall back
+  // to a neutral scanning line instead of surfacing the miss text.
+  const lastPositiveEvent = [...events]
+    .reverse()
+    .find((e) => e.phase !== "scrape_miss");
+
   // Headline is the static page name — "Career sweep" — matching the
-  // step indicator above. The subline below carries the live phase
-  // copy that used to cycle through the headline. Only the error path
-  // overrides the title, since users need that signaled prominently.
+  // step indicator above. Only the error path overrides the title,
+  // since users need that signaled prominently.
   const headline =
     done?.status === "error" || done?.status === "timeout"
       ? "We couldn't finish the sweep"
@@ -170,12 +181,10 @@ export function MagicMomentLoader({ runId }: Props) {
     ? done.status === "complete" || done.status === "manual"
       ? "Confirm what's right and we'll publish your locker."
       : done.error ?? "You can still finish your locker manually."
-    : // Before the first SSE event lands, leave the subline empty — the
-      // first icon is already popping in as "scanning", which carries
-      // the loading signal on its own. A "Lining up the sources we
-      // trust" fallback here used to flash for ~100ms during the SSE
-      // handshake and read as a separate transitional screen.
-      lastEvent?.message ?? "";
+    : // Before the first positive event lands, show a neutral scanning
+      // line rather than a raw miss or a blank flash during the SSE
+      // handshake.
+      lastPositiveEvent?.message ?? "Scanning public sources…";
 
   const draft = done?.draft ?? null;
   const hitCount = cards.filter((c) => c.state === "hit").length;
