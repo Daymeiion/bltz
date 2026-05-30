@@ -127,3 +127,13 @@ Design and product debt deferred from /plan-design-review on 2026-04-24.
 ### Fan-side scout economy
 - **What:** Believer Since money mechanic, points, ranks, fan tiers.
 - **Trigger:** Audience density first. Money second. P5 unlock.
+
+## Onboarding pipeline — deferred from /autoplan (2026-05-30)
+Revisit when the app has real onboarding traffic; premature pre-launch.
+- [ ] Parallelize the 5 scrapers (Promise.allSettled). They finish in 1-3s today, so serial is fine until volume exists.
+- [ ] Run reaper for runs stuck in scraping/generating past a deadline. (The SSE-driven durability fix removes most stuck-run cases.)
+- [ ] Unit + integration test suite for scrapers, synthesis numeric gate, team canonicalization, and the Wikipedia DOB/hometown/pro-team parsers. HIGHEST-VALUE deferred item — the Wikipedia regexes are the real long-term silent-failure risk.
+- [ ] Pipeline metrics: terminal-status counts (complete vs manual vs error), per-source hit/miss/unreachable rates, end-to-end duration.
+
+## Launch blocker (separate plan)
+- [ ] Public landing page — app/page.tsx is still the Supabase starter boilerplate. Flagged by both /autoplan reviewers as more launch-critical than pipeline hardening.
