@@ -164,7 +164,7 @@ export function ClaimRecap({ token, player, sources }: Props) {
         <Button
           onClick={accept}
           disabled={accepting}
-          className="h-12 w-full rounded bg-[#2952FF] text-base font-bold text-white hover:bg-[#1f43d8] md:w-auto md:px-10"
+          className="h-12 w-full rounded-md bg-bltz-gold text-base font-bold uppercase tracking-wide text-black shadow-[0_8px_24px_rgba(245,166,35,0.25)] transition-all duration-200 hover:-translate-y-1 hover:bg-bltz-gold/90 hover:shadow-[0_12px_32px_rgba(245,166,35,0.35)] disabled:opacity-50 disabled:hover:translate-y-0 md:w-auto md:px-10"
         >
           {accepting ? "Loading..." : "Claim private review"}
         </Button>

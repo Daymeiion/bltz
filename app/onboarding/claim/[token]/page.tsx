@@ -102,7 +102,7 @@ function ClaimError({ reason }: { reason: "invalid" | "expired" | "missing_playe
       <p className="text-white/80">{map[reason]}</p>
       <a
         href="/onboarding"
-        className="inline-flex min-h-11 items-center justify-center rounded bg-[#2952FF] px-5 py-2 font-bold text-white hover:bg-[#1f43d8]"
+        className="inline-flex min-h-11 items-center justify-center rounded-md bg-bltz-gold px-5 py-2 text-base font-bold uppercase tracking-wide text-black transition-all duration-200 hover:-translate-y-1 hover:bg-bltz-gold/90"
       >
         Start fresh
       </a>

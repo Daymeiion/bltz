@@ -16,14 +16,15 @@ export default async function OnboardingCompletePage({
     <div className="mx-auto w-full max-w-4xl space-y-8">
       <StepIndicator current={4} />
 
+      {/* Header matches the other onboarding steps: centered oswald
+          title with an animate-in fade, a one-line mono subline, and
+          NO eyebrow / NO paragraph. */}
       <header className="space-y-3 text-center">
-        <p className="font-mono text-xs uppercase tracking-[0.2em] text-white/45">Locker setup</p>
-        <h1 className="font-oswald text-4xl font-bold uppercase text-white md:text-5xl">
+        <h1 className="font-oswald text-4xl font-bold uppercase leading-[1.05] text-white animate-in fade-in-0 slide-in-from-bottom-1 duration-300 md:text-5xl">
           Locker setup complete
         </h1>
-        <p className="mx-auto max-w-2xl text-base leading-7 text-white/65">
-          Your locker is built. Head straight to the public locker or go to the dashboard
-          to keep editing.
+        <p className="mx-auto max-w-xl font-mono text-xs uppercase tracking-[0.18em] text-white/55 animate-in fade-in-0 slide-in-from-bottom-1 duration-300 delay-100 fill-mode-backwards">
+          Your locker is live. Share it or keep editing from the dashboard.
         </p>
       </header>
 
@@ -52,16 +53,19 @@ export default async function OnboardingCompletePage({
         </div>
       </BroadcastPanel>
 
+      {/* CTA pair. Primary = gold pill matching every other onboarding
+          step (caps, text-black, hover-raise). Secondary = ghost
+          outline, also all-caps for typographic consistency. */}
       <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
         <Link
           href={`/player/${encodeURIComponent(slug)}`}
-          className="inline-flex min-h-12 items-center justify-center rounded bg-[#2952FF] px-6 font-bold text-white hover:bg-[#1f43d8]"
+          className="inline-flex min-h-12 items-center justify-center rounded-md bg-bltz-gold px-6 text-base font-bold uppercase tracking-wide text-black shadow-[0_8px_24px_rgba(245,166,35,0.25)] transition-all duration-200 hover:-translate-y-1 hover:bg-bltz-gold/90 hover:shadow-[0_12px_32px_rgba(245,166,35,0.35)]"
         >
-          Go to locker
+          Go to my locker
         </Link>
         <Link
           href={`/dashboard?welcome=1&slug=${encodeURIComponent(slug)}`}
-          className="inline-flex min-h-12 items-center justify-center rounded border border-white/20 px-6 font-bold text-white/78 hover:border-white/40"
+          className="inline-flex min-h-12 items-center justify-center rounded-md border border-white/20 px-6 text-base font-bold uppercase tracking-wide text-white/78 transition-colors hover:border-white/40 hover:text-white"
         >
           Go to dashboard
         </Link>

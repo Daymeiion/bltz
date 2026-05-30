@@ -270,7 +270,7 @@ export function ReviewForm({ userId, runId, draft, initialSlug, requiresVerifica
         <Button
           type="submit"
           disabled={submitting}
-          className="h-12 rounded bg-[#2952FF] px-8 text-base font-bold text-white hover:bg-[#1f43d8]"
+          className="h-12 rounded-md bg-bltz-gold px-8 text-base font-bold uppercase tracking-wide text-black shadow-[0_8px_24px_rgba(245,166,35,0.25)] transition-all duration-200 hover:-translate-y-1 hover:bg-bltz-gold/90 hover:shadow-[0_12px_32px_rgba(245,166,35,0.35)] disabled:opacity-50 disabled:hover:translate-y-0"
         >
           {submitting
             ? "Publishing..."
