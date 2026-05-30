@@ -62,7 +62,7 @@ export async function scrapeESPN(
   try {
     const candidates = await searchAthletes(identity.full_name);
     if (candidates.length === 0) {
-      return { source: "espn", ok: false, reason: "not_found" };
+      return { source: "espn", ok: false, reason: "no_match" };
     }
 
     const match = pickBestMatch(candidates, identity);
@@ -91,7 +91,7 @@ export async function scrapeESPN(
       urls: [match.webUrl],
     };
   } catch {
-    return { source: "espn", ok: false, reason: "network" };
+    return { source: "espn", ok: false, reason: "unreachable" };
   }
 }
 

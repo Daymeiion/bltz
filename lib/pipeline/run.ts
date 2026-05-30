@@ -13,9 +13,26 @@
 import { createServiceClient } from "@/lib/supabase/service";
 import { SCRAPERS } from "./scrapers";
 import { synthesize } from "./claude";
-import type { PipelineDraft, PipelineEvent, PlayerIdentityInput, ScraperResult } from "./types";
+import {
+  SOURCE_UNHEALTHY_REASONS,
+  type PipelineDraft,
+  type PipelineEvent,
+  type PlayerIdentityInput,
+  type ScraperResult,
+} from "./types";
 
 const RUN_TIMEOUT_MS = 45_000;
+
+// If a run has been claimed (status scraping/generating) but its started_at is
+// older than this, the claiming connection is presumed dead (tab closed, server
+// reaped) and a fresh connection may re-claim and restart. Set above the worst-
+// case pipeline runtime (~141s: 5 scrapers x 12s cap + 45s synthesis) so a
+// healthy in-flight run is never stolen out from under itself.
+const RECLAIM_STALE_MS = 180_000;
+
+// Roster sources backed by our Supabase cache. When BOTH are unreachable at the
+// same time it's the paused-dependency signature, not a missing athlete.
+const DB_BACKED_SOURCES: ReadonlySet<string> = new Set(["nflverse", "cfbverse"]);
 
 export interface StartArgs {
   userId: string;
@@ -52,17 +69,16 @@ function nowIso(): string {
 function supabaseSink(runId: string): PipelineSink {
   return {
     async emit(event) {
+      // Atomic append via the append_pipeline_event() Postgres function
+      // (migration 20260530000000). The old read-modify-write here
+      // (SELECT events → append in JS → UPDATE) dropped events the moment
+      // two writers overlapped. `events || event` runs under a row lock so
+      // concurrent appends serialize instead of clobbering each other.
       const sb = createServiceClient();
-      const { data: row } = await sb
-        .from("onboarding_pipeline_runs")
-        .select("events")
-        .eq("id", runId)
-        .single();
-      const prev: PipelineEvent[] = Array.isArray(row?.events) ? (row!.events as PipelineEvent[]) : [];
-      await sb
-        .from("onboarding_pipeline_runs")
-        .update({ events: [...prev, event] })
-        .eq("id", runId);
+      await sb.rpc("append_pipeline_event", {
+        p_run_id: runId,
+        p_event: event,
+      });
     },
     async setStatus(status, patch = {}) {
       const sb = createServiceClient();
@@ -75,9 +91,13 @@ function supabaseSink(runId: string): PipelineSink {
 }
 
 /**
- * Public entry point: start a run. Inserts the row, kicks off the work
- * in the background, and returns the runId immediately so the client can
- * subscribe to SSE.
+ * Public entry point: start a run. Inserts a `pending` row and returns the
+ * runId. It does NOT kick off the pipeline — that now happens inside the SSE
+ * route (see `claimAndRun`), driven by the long-lived connection the client
+ * holds open. The old design fired `void executePipeline(...)` here as a
+ * background promise, which Vercel could freeze the moment this response
+ * returned, stranding the run in `scraping` forever. Running the work in the
+ * SSE invocation keeps it alive exactly as long as the client is watching.
  */
 export async function startRun({ userId, identity }: StartArgs): Promise<StartResult> {
   const sb = createServiceClient();
@@ -99,19 +119,52 @@ export async function startRun({ userId, identity }: StartArgs): Promise<StartRe
     .single();
   if (error || !data) throw new Error(error?.message ?? "could not insert run");
 
-  const sink = supabaseSink(data.id);
-  // Fire and forget. We don't await — the API route returns the runId
-  // and the SSE channel takes over from here.
+  return { runId: data.id };
+}
+
+/**
+ * Claim a run and drive it to completion. Called by the SSE route on connect.
+ *
+ * The claim is an atomic compare-and-set: flip `pending` → `scraping` (or
+ * reclaim a `scraping`/`generating` run whose started_at is older than
+ * RECLAIM_STALE_MS, i.e. the previous connection died). Postgres row-locks the
+ * UPDATE, so if two connections race only one matches the WHERE and wins —
+ * exactly-once execution without a queue.
+ *
+ * Returns true if THIS call claimed and started the run; false if another live
+ * connection already owns it (the caller just streams existing events). The
+ * pipeline runs as a background promise inside the SSE invocation; the open
+ * stream keeps the function alive until it reaches a terminal state.
+ */
+export async function claimAndRun(runId: string): Promise<boolean> {
+  const sb = createServiceClient();
+
+  // Atomic CAS via claim_pipeline_run() (migration 20260530000000). Returns the
+  // run identity if THIS call claimed it (pending, or stale reclaim), null if a
+  // live connection already owns it. Doing this in a Postgres function keeps the
+  // compare-and-set on the server under a row lock — testable directly in SQL,
+  // and no fragile PostgREST filter string on the critical durability path.
+  const { data } = await sb.rpc("claim_pipeline_run", {
+    p_run_id: runId,
+    p_reclaim_seconds: Math.floor(RECLAIM_STALE_MS / 1000),
+  });
+
+  if (!data) return false; // already owned by a live connection
+
+  const identity = data as PlayerIdentityInput;
+  const sink = supabaseSink(runId);
   void executePipeline(sink, identity).catch(async (e) => {
     await sink.emit({
       at: nowIso(),
       phase: "error",
       message: `Pipeline failed: ${e?.message ?? "unknown error"}`,
     });
-    await sink.setStatus("manual", { error: e?.message ?? String(e) });
+    await sink.setStatus("manual", {
+      error: e?.message ?? String(e),
+      completed_at: nowIso(),
+    });
   });
-
-  return { runId: data.id };
+  return true;
 }
 
 async function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
@@ -160,6 +213,15 @@ export async function executePipeline(
           message: friendlyHit(source, result),
         });
       } else {
+        // Loud log ONLY when the source itself is unhealthy (down, throttled,
+        // paused dependency) — a `no_match` / `ambiguous` is an expected miss
+        // and stays quiet. This is the observability the paused-Supabase
+        // incident was missing: it failed silently behind a clean "miss".
+        if (result.reason && SOURCE_UNHEALTHY_REASONS.has(result.reason)) {
+          console.warn(
+            `[pipeline] source unhealthy source=${source} reason=${result.reason} athlete=${JSON.stringify(identity.full_name)}`,
+          );
+        }
         await sink.emit({
           at: nowIso(),
           phase: "scrape_miss",
@@ -169,6 +231,9 @@ export async function executePipeline(
       }
     } catch {
       results.push({ source, ok: false, reason: "timeout" });
+      console.warn(
+        `[pipeline] source unhealthy source=${source} reason=timeout athlete=${JSON.stringify(identity.full_name)}`,
+      );
       await sink.emit({
         at: nowIso(),
         phase: "scrape_miss",
@@ -176,6 +241,38 @@ export async function executePipeline(
         message: friendlyMiss(source, "timeout"),
       });
     }
+  }
+
+  // Infra guard. If NOTHING succeeded and every source failed for a source-side
+  // reason (unreachable/timeout/blocked), this is an outage, not a missing
+  // athlete. Fail the run as `error` (retryable) instead of drafting an empty
+  // locker and marking it `manual` — which would wrongly tell the athlete to
+  // type their whole career in by hand when the real problem is our side.
+  const anyHit = results.some((r) => r.ok);
+  const everyFailureIsSourceSide =
+    results.length > 0 &&
+    results.every(
+      (r) => !r.ok && r.reason != null && SOURCE_UNHEALTHY_REASONS.has(r.reason),
+    );
+  const dbBackedDown = results
+    .filter((r) => DB_BACKED_SOURCES.has(r.source))
+    .every((r) => !r.ok && r.reason != null && SOURCE_UNHEALTHY_REASONS.has(r.reason));
+
+  if (!anyHit && everyFailureIsSourceSide) {
+    console.error(
+      `[pipeline] total source outage — all ${results.length} sources unhealthy (dbBackedDown=${dbBackedDown}) for athlete=${JSON.stringify(identity.full_name)}`,
+    );
+    await sink.emit({
+      at: nowIso(),
+      phase: "error",
+      message:
+        "Our data sources are temporarily unavailable. Give it a minute and try the search again.",
+    });
+    await sink.setStatus("error", {
+      error: "all sources unreachable",
+      completed_at: nowIso(),
+    });
+    return;
   }
 
   await sink.emit({
@@ -255,10 +352,14 @@ function friendlyHit(source: string, r: ScraperResult): string {
   return `Source ${source} hit.`;
 }
 
-function friendlyMiss(source: string, reason?: string): string {
-  if (reason === "blocked") return `${source}: blocked, skipping.`;
+function friendlyMiss(source: string, reason?: ScraperResult["reason"]): string {
+  // These messages feed the event log for debugging. The loader UI no longer
+  // surfaces scrape-miss text to the athlete (the dimmed icon carries the
+  // signal), so plain-language phrasing here is for our eyes.
+  if (reason === "blocked") return `${source}: throttled, skipping.`;
   if (reason === "timeout") return `${source}: timed out.`;
-  if (reason === "not_found") return `${source}: nothing matched.`;
+  if (reason === "unreachable") return `${source}: source unavailable.`;
+  if (reason === "no_match") return `${source}: nothing matched.`;
   if (reason === "ambiguous") return `${source}: multiple players share this name — needs school or position to confirm.`;
   return `${source}: not available.`;
 }

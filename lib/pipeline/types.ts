@@ -71,11 +71,31 @@ export interface ScrapedAward {
   evidence_quote?: string;
 }
 
+/**
+ * Why a scraper failed. The distinction that matters: `no_match` /`ambiguous`
+ * are EXPECTED misses (the athlete just isn't in that source) and stay quiet.
+ * `unreachable` / `timeout` / `blocked` mean the source itself is having a
+ * problem (down, throttled, paused dependency) — these get logged loudly and,
+ * when every roster source is `unreachable` at once, fail the run as retryable
+ * rather than telling the athlete to hand-edit. See the paused-Supabase
+ * incident: that must never again look like a clean "athlete not found".
+ */
+export type ScraperFailureReason =
+  | "no_match" // source responded, athlete not in it (expected)
+  | "ambiguous" // multiple matches, need more identity signal (expected)
+  | "unreachable" // network error / 5xx / config missing (source-side problem)
+  | "timeout" // source too slow (source-side problem)
+  | "blocked"; // 429 / explicitly refused (source-side problem)
+
+/** Reasons that indicate the SOURCE is unhealthy, not just a missing athlete. */
+export const SOURCE_UNHEALTHY_REASONS: ReadonlySet<ScraperFailureReason> =
+  new Set(["unreachable", "timeout", "blocked"]);
+
 export interface ScraperResult {
   source: ScraperSource;
   ok: boolean;
-  /** When ok = false: reason ("blocked","timeout","not_found"). */
-  reason?: string;
+  /** When ok = false: why. See ScraperFailureReason. */
+  reason?: ScraperFailureReason;
   /** Free-form facts the scraper extracted. */
   facts?: Partial<{
     full_name: string;

@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import type { PipelineEvent } from "@/lib/pipeline/types";
-import { getTestRun, getTestUser } from "@/lib/onboarding/test-auth";
+import { claimTestRun, getTestRun, getTestUser } from "@/lib/onboarding/test-auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -39,6 +39,11 @@ export async function GET(
         // drives the real scraper + synthesis pipeline against this same
         // map (see lib/onboarding/test-auth.createTestRun), so the loader
         // UI sees the same event timing it would in production.
+        // Claim + drive the pipeline from this connection, mirroring the
+        // production SSE-driven flow. Exactly-once: a second connection just
+        // streams. No-op if already terminal/owned.
+        claimTestRun(runId);
+
         let lastIdx = 0;
         const startedAt = Date.now();
         try {
@@ -116,6 +121,17 @@ export async function GET(
         controller.close();
         return;
       }
+
+      // Claim and drive the pipeline from THIS connection. The pipeline runs
+      // as a background promise inside this SSE invocation; the open stream
+      // keeps the serverless function alive until the run reaches a terminal
+      // state. The claim is exactly-once (CAS), so a second tab just streams.
+      // Awaited so the status flip lands before we start polling.
+      const { claimAndRun } = await import("@/lib/pipeline/run");
+      await claimAndRun(runId).catch(() => {
+        // Claim failure is non-fatal: another connection may own the run, or
+        // it'll be retried on the next reconnect. The poll loop still streams.
+      });
 
       send("ping", { t: Date.now() });
 

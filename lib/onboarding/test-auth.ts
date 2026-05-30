@@ -80,10 +80,17 @@ function inMemorySink(runId: string): PipelineSink {
   };
 }
 
+// Mirror of run.ts RECLAIM_STALE_MS so the test harness exercises the same
+// claim/reclaim semantics as production.
+const RECLAIM_STALE_MS = 180_000;
+
 /**
- * Create a test-mode run. Drives the real scraper + synthesis pipeline against
- * an in-memory store so the loader UI shows the same events and draft a real
- * authenticated user would see — without persisting test data into Supabase.
+ * Create a test-mode run. Inserts a `pending` run and returns it WITHOUT
+ * kicking the pipeline — execution is started by the SSE route via
+ * `claimTestRun`, exactly like production now starts it from the SSE
+ * connection (see lib/pipeline/run.ts claimAndRun). This keeps the test path
+ * faithful to the real durable-execution flow so it's actually verifiable
+ * locally.
  */
 export function createTestRun(identity: PlayerIdentityInput) {
   const id = crypto.randomUUID();
@@ -99,13 +106,35 @@ export function createTestRun(identity: PlayerIdentityInput) {
     ],
   };
   getTestRuns().set(id, run);
+  return run;
+}
 
-  // Fire-and-forget execution. Imported lazily so this module doesn't drag
-  // pipeline code into client bundles that only need the cookie helpers.
+/**
+ * In-memory analogue of run.ts claimAndRun: compare-and-set `pending` →
+ * `scraping` (or reclaim a stale in-flight run), then drive the real pipeline
+ * against the in-memory sink. Returns true if THIS call claimed the run.
+ * Single-threaded JS means the CAS can't truly race, but the status guard
+ * matches production so a second SSE connection just streams.
+ */
+export function claimTestRun(id: string): boolean {
+  const run = getTestRuns().get(id);
+  if (!run) return false;
+
+  const startedAtMs = run.started_at ? Date.parse(run.started_at) : 0;
+  const stale =
+    (run.status === "scraping" || run.status === "generating") &&
+    Date.now() - startedAtMs > RECLAIM_STALE_MS;
+  if (run.status !== "pending" && !stale) return false;
+
+  run.status = "scraping";
+  run.started_at = new Date().toISOString();
+
+  // Imported lazily so this module doesn't drag pipeline code into client
+  // bundles that only need the cookie helpers.
   void (async () => {
     try {
       const { executePipeline } = await import("@/lib/pipeline/run");
-      await executePipeline(inMemorySink(id), identity);
+      await executePipeline(inMemorySink(id), run.identity);
     } catch (e: any) {
       const r = getTestRuns().get(id);
       if (r) {
@@ -120,7 +149,7 @@ export function createTestRun(identity: PlayerIdentityInput) {
     }
   })();
 
-  return run;
+  return true;
 }
 
 export function getTestRun(id: string) {

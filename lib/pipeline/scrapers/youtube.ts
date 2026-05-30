@@ -49,7 +49,7 @@ export async function scrapeYouTube(
     }
     const html = await r.text();
     const ids = extractVideoIds(html);
-    if (!ids.length) return { source: "youtube", ok: false, reason: "not_found" };
+    if (!ids.length) return { source: "youtube", ok: false, reason: "no_match" };
     const youtube_urls = ids.map((id) => `https://www.youtube.com/watch?v=${id}`);
     return {
       source: "youtube",

@@ -47,27 +47,32 @@ export async function scrapeCfbverse(
 ): Promise<ScraperResult> {
   const sbUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const sbKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  // Missing env = can't reach the roster cache (config problem), not a
+  // missing athlete. `unreachable` so the infra guard distinguishes it.
   if (!sbUrl || !sbKey) {
-    return { source: "cfbverse", ok: false, reason: "not_found" };
+    return { source: "cfbverse", ok: false, reason: "unreachable" };
   }
 
   const name = identity.full_name.trim();
-  if (!name) return { source: "cfbverse", ok: false, reason: "not_found" };
+  if (!name) return { source: "cfbverse", ok: false, reason: "no_match" };
 
   try {
-    const candidates = await queryByName(sbUrl, sbKey, name);
-    if (candidates.length === 0) {
-      return { source: "cfbverse", ok: false, reason: "not_found" };
+    const q = await queryByName(sbUrl, sbKey, name);
+    if ("error" in q) {
+      return { source: "cfbverse", ok: false, reason: q.error };
+    }
+    if (q.rows.length === 0) {
+      return { source: "cfbverse", ok: false, reason: "no_match" };
     }
 
-    const match = pickMatch(candidates, identity);
+    const match = pickMatch(q.rows, identity);
     if (!match) {
       return { source: "cfbverse", ok: false, reason: "ambiguous" };
     }
 
     return toResult(match);
   } catch {
-    return { source: "cfbverse", ok: false, reason: "network" };
+    return { source: "cfbverse", ok: false, reason: "unreachable" };
   }
 }
 
@@ -75,22 +80,28 @@ async function queryByName(
   sbUrl: string,
   sbKey: string,
   name: string,
-): Promise<CfbPlayerRow[]> {
+): Promise<{ rows: CfbPlayerRow[] } | { error: ScraperResult["reason"] }> {
   const url =
     `${sbUrl}/rest/v1/cfb_players` +
     `?select=${SELECT_COLS}` +
     `&display_name=ilike.${encodeURIComponent(name)}` +
     `&limit=10`;
 
-  const res = await fetch(url, {
-    headers: {
-      apikey: sbKey,
-      Authorization: `Bearer ${sbKey}`,
-      Accept: "application/json",
-    },
-  });
-  if (!res.ok) throw new Error(`cfbverse query ${res.status}`);
-  return (await res.json()) as CfbPlayerRow[];
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      headers: {
+        apikey: sbKey,
+        Authorization: `Bearer ${sbKey}`,
+        Accept: "application/json",
+      },
+    });
+  } catch {
+    return { error: "unreachable" };
+  }
+  if (res.status === 429) return { error: "blocked" };
+  if (!res.ok) return { error: "unreachable" };
+  return { rows: (await res.json()) as CfbPlayerRow[] };
 }
 
 function pickMatch(

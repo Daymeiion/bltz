@@ -317,7 +317,7 @@ export async function scrapeWikipedia(
 ): Promise<ScraperResult> {
   try {
     const hits = await searchCandidates(identity);
-    if (!hits.length) return { source: "wikipedia", ok: false, reason: "not_found" };
+    if (!hits.length) return { source: "wikipedia", ok: false, reason: "no_match" };
 
     // Walk the search results in relevance order and accept the first
     // one that looks like a real athlete article. Without this loop, a
@@ -333,7 +333,7 @@ export async function scrapeWikipedia(
         break;
       }
     }
-    if (!summary) return { source: "wikipedia", ok: false, reason: "not_found" };
+    if (!summary) return { source: "wikipedia", ok: false, reason: "no_match" };
 
     // Pull a longer excerpt by reading the article HTML for stat extraction.
     const articleUrl = summary.url;
@@ -358,6 +358,6 @@ export async function scrapeWikipedia(
       urls: [summary.url],
     };
   } catch {
-    return { source: "wikipedia", ok: false, reason: "network" };
+    return { source: "wikipedia", ok: false, reason: "unreachable" };
   }
 }

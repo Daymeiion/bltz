@@ -40,27 +40,34 @@ export async function scrapeNflverse(
 ): Promise<ScraperResult> {
   const sbUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const sbKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  // Missing env is a config problem, not a missing athlete — we genuinely
+  // can't reach the roster cache. `unreachable` so the orchestrator's
+  // infra guard can tell this apart from a real "not in the NFL".
   if (!sbUrl || !sbKey) {
-    return { source: "nflverse", ok: false, reason: "not_found" };
+    return { source: "nflverse", ok: false, reason: "unreachable" };
   }
 
   const name = identity.full_name.trim();
-  if (!name) return { source: "nflverse", ok: false, reason: "not_found" };
+  if (!name) return { source: "nflverse", ok: false, reason: "no_match" };
 
   try {
-    const candidates = await queryByName(sbUrl, sbKey, name);
-    if (candidates.length === 0) {
-      return { source: "nflverse", ok: false, reason: "not_found" };
+    const q = await queryByName(sbUrl, sbKey, name);
+    if ("error" in q) {
+      return { source: "nflverse", ok: false, reason: q.error };
+    }
+    if (q.rows.length === 0) {
+      return { source: "nflverse", ok: false, reason: "no_match" };
     }
 
-    const match = pickMatch(candidates, identity);
+    const match = pickMatch(q.rows, identity);
     if (!match) {
       return { source: "nflverse", ok: false, reason: "ambiguous" };
     }
 
     return toResult(match);
   } catch {
-    return { source: "nflverse", ok: false, reason: "network" };
+    // JSON parse or unexpected error after a 2xx — treat as source problem.
+    return { source: "nflverse", ok: false, reason: "unreachable" };
   }
 }
 
@@ -68,7 +75,7 @@ async function queryByName(
   sbUrl: string,
   sbKey: string,
   name: string,
-): Promise<NflPlayerRow[]> {
+): Promise<{ rows: NflPlayerRow[] } | { error: ScraperResult["reason"] }> {
   // ilike with no wildcards = case-insensitive equality. Caps at 5 rows so
   // a wildly common name doesn't blow up the response.
   const url =
@@ -77,15 +84,24 @@ async function queryByName(
     `&display_name=ilike.${encodeURIComponent(name)}` +
     `&limit=5`;
 
-  const res = await fetch(url, {
-    headers: {
-      apikey: sbKey,
-      Authorization: `Bearer ${sbKey}`,
-      Accept: "application/json",
-    },
-  });
-  if (!res.ok) throw new Error(`nflverse query ${res.status}`);
-  return (await res.json()) as NflPlayerRow[];
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      headers: {
+        apikey: sbKey,
+        Authorization: `Bearer ${sbKey}`,
+        Accept: "application/json",
+      },
+    });
+  } catch {
+    // Network-level failure: DNS, connection refused, paused Supabase project.
+    return { error: "unreachable" };
+  }
+  // Status-based classification. A 200 with [] is a real "no match" and is
+  // handled by the caller; these are SOURCE problems.
+  if (res.status === 429) return { error: "blocked" };
+  if (!res.ok) return { error: "unreachable" };
+  return { rows: (await res.json()) as NflPlayerRow[] };
 }
 
 function pickMatch(
