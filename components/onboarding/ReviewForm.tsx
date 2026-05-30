@@ -318,6 +318,10 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 function labelFor(source: ScraperSource): string {
   switch (source) {
+    case "nflverse":
+      return "NFL roster";
+    case "cfbverse":
+      return "College roster";
     case "wikipedia":
       return "Wikipedia";
     case "espn":
@@ -330,5 +334,7 @@ function labelFor(source: ScraperSource): string {
       return "NFL team site";
     case "founder_archive":
       return "BLTZ archive";
+    default:
+      return source;
   }
 }
