@@ -1,23 +1,58 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { VideoCard } from "@/components/ui/VideoCard";
-import Image from "next/image";
-import { MOCK_PLAYERS, MOCK_VIDEOS, MOCK_MEDIA } from "@/lib/mock";
-import VideoYTRow from "@/components/video/VideoYTRow";
-import { MOCK_VIDEOS_YT } from "@/lib/mockVideosYT";
-import PlayerHeader from "@/components/player/PlayerHeader";
-import { WobbleCard } from "@/components/ui/wobble-card";
-import PlayerActionButtons from "@/components/player/PlayerActionButtons";
-import BioModal from "@/components/player/BioModal";
-import VideoGridModal from "@/components/player/VideoGridModal";
-import MobileTabs from "@/components/ui/MobileTabs";
-import MediaCarouselModal from "@/components/player/MediaCarouselModal";
-import MediaMasonryModal from "@/components/player/MediaMasonryModal";
+import { MOCK_PLAYERS } from "@/lib/mock";
+import { LOCKER_CSS } from "./lockerStyles";
+import LockerClient from "./LockerClient";
+import {
+  heroStats,
+  seasonTable,
+  type HeroStat,
+  type SeasonRow,
+  type SeasonTable,
+} from "@/lib/position-stats";
 
 // Mock data is only available in non-production builds. Production never returns
 // mock players, regardless of how `NEXT_PUBLIC_USE_MOCK` is set.
 const useMock =
   process.env.NEXT_PUBLIC_USE_MOCK === "1" && process.env.NODE_ENV !== "production";
+
+const DEFAULT_HEADSHOT = "/images/Headshot.png";
+const DEFAULT_HERO = "/images/media-5.jpg";
+
+// Supplemental styles for the pieces the original mockup didn't have: the
+// in-page YouTube embed and the photo lightbox. Injected alongside LOCKER_CSS.
+const EXTRA_CSS = `
+  .reel-card[data-youtube], .reel-card[data-href] { cursor: pointer; }
+  .video-embed {
+    position: relative; width: 100%; aspect-ratio: 16 / 9;
+    background: #000; border-radius: var(--r-lg); overflow: hidden;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.6);
+  }
+  .video-embed iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+  #lightbox { align-items: center; justify-content: center; padding: 24px; }
+  .lightbox__img {
+    max-width: 92vw; max-height: 86vh; border-radius: var(--r-lg);
+    box-shadow: 0 24px 80px rgba(0,0,0,0.7); object-fit: contain;
+  }
+  .lightbox__close { position: fixed; top: 24px; right: 24px; }
+  .lightbox__nav {
+    position: fixed; top: 50%; transform: translateY(-50%);
+    width: 56px; height: 56px; border-radius: 50%;
+    background: rgba(11,14,26,0.7); border: 1px solid var(--border-strong);
+    color: var(--fg-primary); font-size: 30px; line-height: 1; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; z-index: 101;
+    transition: border-color var(--dur-micro) var(--ease-standard), color var(--dur-micro) var(--ease-standard);
+  }
+  .lightbox__nav:hover { border-color: var(--border-gold); color: var(--accent-gold); }
+  .lightbox__prev { left: 24px; }
+  .lightbox__next { right: 24px; }
+  .photos-masonry .photo { cursor: zoom-in; }
+  @media (max-width: 767px) {
+    .lightbox__nav { width: 44px; height: 44px; font-size: 24px; }
+    .lightbox__prev { left: 12px; }
+    .lightbox__next { right: 12px; }
+  }
+`;
 
 const LEVEL_LABEL: Record<string, string> = {
   hs: "High school",
@@ -26,8 +61,8 @@ const LEVEL_LABEL: Record<string, string> = {
   former: "Former pro",
 };
 
-// 3-letter team codes used by nflverse / NFL.com. Mapped here so the locker
-// can render a clean team name on the verified-roster badge instead of "KC".
+// 3-letter team codes used by nflverse / NFL.com → full franchise name for the
+// pro-career teams line.
 const NFL_TEAM_NAMES: Record<string, string> = {
   ARI: "Arizona Cardinals", ATL: "Atlanta Falcons", BAL: "Baltimore Ravens",
   BUF: "Buffalo Bills", CAR: "Carolina Panthers", CHI: "Chicago Bears",
@@ -47,15 +82,6 @@ function nflTeamName(code: string | null | undefined): string | null {
   return NFL_TEAM_NAMES[code] ?? code;
 }
 
-function formatDob(dob?: string | null) {
-  if (!dob) return "—";
-  const d = new Date(dob);
-  if (isNaN(d.getTime())) return "—";
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  return `${mm}-${dd}-${d.getFullYear()}`;
-}
-
 function calcAge(dob?: string | null) {
   if (!dob) return undefined;
   const d = new Date(dob);
@@ -67,467 +93,908 @@ function calcAge(dob?: string | null) {
   return a;
 }
 
+// HTML-escape every value that originates from the database before it is
+// interpolated into the markup string below. Names, bios, awards and school
+// names are all user/scrape sourced, so this is the XSS boundary for the page.
+function esc(v: unknown): string {
+  if (v === null || v === undefined) return "";
+  return String(v)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+// Escape a URL for use inside a CSS url('...') value. Same idea as esc() but
+// also neutralises the characters that could break out of the url() context.
+function cssUrl(u: string): string {
+  return u.replace(/["'()\\\s]/g, encodeURIComponent);
+}
+
+function firstSentence(text?: string | null): string | null {
+  if (!text) return null;
+  const trimmed = text.trim();
+  if (!trimmed) return null;
+  const match = trimmed.match(/^.*?[.!?](\s|$)/);
+  return (match ? match[0] : trimmed).trim();
+}
+
+// A video the reel can render: youtubeId → plays inline in an embed overlay;
+// href → links out (e.g. a `videos` table row's /watch page).
+type VideoItem = {
+  id: string;
+  title: string;
+  thumb: string | null;
+  youtubeId: string | null;
+  href: string | null;
+};
+
+// Extract the 11-char video id from any common YouTube URL shape.
+function youtubeId(url: string): string | null {
+  const m = url.match(
+    /(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/|v\/))([A-Za-z0-9_-]{11})/,
+  );
+  return m ? m[1] : null;
+}
+
+// `youtube_urls` is a jsonb array on the player row. Turn the raw links into
+// playable reel items with real YouTube thumbnails.
+function youtubeVideoItems(raw: unknown, playerName: string): VideoItem[] {
+  if (!Array.isArray(raw)) return [];
+  const out: VideoItem[] = [];
+  const seen = new Set<string>();
+  for (const entry of raw) {
+    if (typeof entry !== "string") continue;
+    const id = youtubeId(entry);
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    out.push({
+      id: `yt-${id}`,
+      title: `${playerName} — Highlight ${out.length + 1}`,
+      thumb: `https://i.ytimg.com/vi/${id}/hqdefault.jpg`,
+      youtubeId: id,
+      href: null,
+    });
+  }
+  return out;
+}
+
+type Award = {
+  award_name: string;
+  award_short_desc: string | null;
+  year: string | null;
+  level: string | null;
+  team_or_school: string | null;
+};
+
+type LockerView = {
+  slug: string;
+  name: string;
+  position: string | null;
+  school: string | null;
+  schoolAbbr: string | null;
+  jersey: number | null;
+  yearsLabel: string | null;
+  levelLabel: string;
+  level: string;
+  tagline: string;
+  headshotUrl: string;
+  heroVideo: string | null;
+  heroPoster: string;
+  age?: number;
+  // pro career
+  hasPro: boolean;
+  proSeasons: number | null;
+  proYears: string | null;
+  proTeamsLine: string | null;
+  draftLine: string | null;
+  proHonors: Award[];
+  // college
+  hasCollege: boolean;
+  collegeYears: string | null;
+  collegeAward: Award | null;
+  collegeImage: string | null;
+  // collections
+  videos: VideoItem[];
+  photos: string[];
+  // stats — populated from player_season_stats via lib/position-stats. Null/false
+  // when the player has no stat lines yet (the spotlights hide cleanly).
+  hasStats: boolean;
+  statModalSub: string;
+  collegeStatHero: CollegeStatHero | null;
+  proStatNums: HeroStat[] | null;
+  collegeTable: SeasonTable | null;
+  proTable: SeasonTable | null;
+};
+
+type CollegeStatHero = {
+  big: HeroStat;
+  chips: { year: string; num: string; label: string; peak?: boolean }[];
+};
+
+// Single best season for a stat key — drives the peak season chip + caption.
+function peakSeason(rows: SeasonRow[], key: string): { year: number; value: number } | null {
+  let best: { year: number; value: number } | null = null;
+  for (const r of rows) {
+    if (r.season_type !== "REG" && r.season_type !== "ALL") continue;
+    const v = Number(r.stats[key]);
+    if (!Number.isFinite(v)) continue;
+    if (!best || v > best.value) best = { year: r.season, value: v };
+  }
+  return best;
+}
+
+// Turn raw season rows into everything the locker's stat surfaces need.
+function buildStatBlocks(
+  position: string | null,
+  collegeRows: SeasonRow[],
+  proRows: SeasonRow[],
+): {
+  hasStats: boolean;
+  collegeStatHero: CollegeStatHero | null;
+  proStatNums: HeroStat[] | null;
+  collegeTable: SeasonTable | null;
+  proTable: SeasonTable | null;
+} {
+  const collegeHero = heroStats(position, collegeRows);
+  const proHero = heroStats(position, proRows);
+
+  let collegeStatHero: CollegeStatHero | null = null;
+  if (collegeHero) {
+    const big = collegeHero.find((h) => h.value != null) ?? collegeHero[0];
+    const rest = collegeHero.filter((h) => h.key !== big.key);
+    const chips: CollegeStatHero["chips"] = rest.slice(0, 2).map((h) => ({
+      year: "Career",
+      num: h.display,
+      label: h.label,
+    }));
+    const pk = peakSeason(collegeRows, big.key);
+    if (pk) {
+      chips.push({
+        year: `'${String(pk.year).slice(2)} Season`,
+        num: Math.round(pk.value).toLocaleString("en-US"),
+        label: `${big.label} — Peak`,
+        peak: true,
+      });
+    }
+    collegeStatHero = { big, chips };
+  }
+
+  return {
+    hasStats: !!(collegeHero || proHero),
+    collegeStatHero,
+    proStatNums: proHero,
+    collegeTable: seasonTable(position, collegeRows),
+    proTable: seasonTable(position, proRows),
+  };
+}
+
 export default async function PlayerLocker({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
 
-  // -------- MOCK PATH (dev only) --------
+  let view: LockerView;
+
   if (useMock) {
-    const player = MOCK_PLAYERS.find((p: any) => p.slug === slug) ?? MOCK_PLAYERS[0];
-    const mockMeta = (player as any).meta ?? {};
-    const dob = mockMeta.dob ?? "1985-08-07";
-    const heightIn = mockMeta.height_in ?? 71;
-    const weightLbs = mockMeta.weight_lbs ?? 210;
-    const gamesPlayed = mockMeta.games_played ?? 116;
-    const age = calcAge(dob);
-    const dobDisplay = formatDob(dob);
-    const feet = Math.floor((heightIn ?? 0) / 12);
-    const inches = (heightIn ?? 0) % 12;
+    // -------- MOCK PATH (dev only) --------
+    const player = (MOCK_PLAYERS.find((p: any) => p.slug === slug) ?? MOCK_PLAYERS[0]) as any;
+    const meta = player.meta ?? {};
+    const dob = meta.dob ?? "1985-08-21";
+    const heightIn = meta.height_in ?? 72;
+    const weightLbs = meta.weight_lbs ?? 190;
+    // Synthetic CB stat lines so the spotlight + modal render in dev.
+    const mockCollegeRows: SeasonRow[] = [
+      { season: 2003, season_type: "REG", team: "California", level: "college", stats: { interceptions: 2, pass_defended: 9, tackles: 41, def_tds: 0 } },
+      { season: 2004, season_type: "REG", team: "California", level: "college", stats: { interceptions: 1, pass_defended: 7, tackles: 38, def_tds: 0 } },
+      { season: 2005, season_type: "REG", team: "California", level: "college", stats: { interceptions: 3, pass_defended: 12, tackles: 44, def_tds: 1 } },
+      { season: 2006, season_type: "REG", team: "California", level: "college", stats: { interceptions: 8, pass_defended: 17, tackles: 52, def_tds: 1 } },
+    ];
+    const mockProRows: SeasonRow[] = [
+      { season: 2007, season_type: "REG", team: "IND", level: "pro", stats: { interceptions: 1, pass_defended: 6, tackles: 22, def_tds: 0 } },
+      { season: 2008, season_type: "REG", team: "IND", level: "pro", stats: { interceptions: 0, pass_defended: 4, tackles: 18, def_tds: 0 } },
+      { season: 2010, season_type: "REG", team: "SD", level: "pro", stats: { interceptions: 2, pass_defended: 8, tackles: 31, def_tds: 1 } },
+    ];
+    const mockStats = buildStatBlocks("CB", mockCollegeRows, mockProRows);
+    view = {
+      slug,
+      name: player.full_name || player.name || "Unknown Player",
+      position: player.position || "CB",
+      school: "Cal Bears",
+      schoolAbbr: "CAL",
+      jersey: 21,
+      yearsLabel: "2003–2006",
+      levelLabel: LEVEL_LABEL.pro,
+      level: "pro",
+      tagline:
+        player.bio?.trim() ||
+        "Lott Trophy 2006. The career, the film, the plays — all in one place.",
+      headshotUrl: DEFAULT_HEADSHOT,
+      heroVideo: "/videos/demo-reel.mp4",
+      heroPoster: DEFAULT_HERO,
+      age: calcAge(dob),
+      hasPro: true,
+      proSeasons: 5,
+      proYears: "2007–2011",
+      proTeamsLine: "Indianapolis Colts · San Diego Chargers",
+      draftLine: "Drafted 2007 · Round 3, Pick 95 by Indianapolis Colts",
+      proHonors: [
+        { award_name: "Consensus All-American", award_short_desc: null, year: "2006", level: "Pro", team_or_school: null },
+      ],
+      hasCollege: true,
+      collegeYears: "2003–2006",
+      collegeAward: { award_name: "Lott Trophy", award_short_desc: null, year: "2006", level: "College", team_or_school: "Cal" },
+      collegeImage: "/images/media-9.jpg",
+      videos: youtubeVideoItems(
+        [
+          "https://www.youtube.com/watch?v=ScMzIvxBSi4",
+          "https://youtu.be/aqz-KE-bpKQ",
+          "https://www.youtube.com/watch?v=ZbZSe6N_BXs",
+        ],
+        "Demo Player",
+      ),
+      photos: ["/images/media-5.jpg", "/images/media-6.jpg", "/images/media-9.jpg", "/images/media-1.png"],
+      statModalSub: "Demo Player · CB · #21",
+      ...mockStats,
+    };
+    void heightIn; void weightLbs;
+  } else {
+    // -------- LIVE (SUPABASE) PATH --------
+    const supabase = await createClient();
 
-    return (
-      <main className="mx-auto max-w-6xl p-6 relative scrollbar-hide">
-        <div className="pointer-events-none fixed inset-0 -z-10 bg-gray-900/30 backdrop-blur-sm">
-          <div className="absolute top-0 left-0 w-96 h-96 bg-gradient-to-br from-[#FFBB00]/20 to-transparent rounded-full blur-3xl"></div>
-        </div>
-        <div className="relative z-10 grid grid-cols-1 gap-1 lg:grid-cols-4 lg:gap-12">
-          <aside className="space-y-2 lg:col-span-1 lg:sticky lg:top-6 lg:h-[calc(100vh-3rem)] lg:overflow-y-auto scrollbar-hide">
-            <PlayerHeader
-              fullName={(player as any).full_name || (player as any).name || "Unknown Player"}
-              city="Los Angeles, CA"
-              videoSrc="/videos/demo-reel.mp4"
-              videoPoster="/images/Awards/video-thumb.png"
-              badgeUrl="/images/SilverHero1.png"
-              avatarUrl="/images/Headshot.png"
-            />
-          </aside>
-          <section className="lg:col-span-3 scrollbar-hide">
-            <div className="hidden lg:block space-y-6">
-              <div className="relative h-48 w-full rounded-t-md overflow-hidden">
-                <Image src="/images/media-5.jpg" alt="Player highlight" fill className="object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/90" />
-                <PlayerActionButtons playerName={(player as any).full_name || "DEMO PLAYER"} />
-              </div>
-              <div className="space-y-0 -mt-0">
-                <div className="flex justify-between items-center">
-                  <h2 className="text-2xl font-bebas tracking-widest">Bio</h2>
-                </div>
-                <div className="rounded-md border border-white/5 bg-white/5 p-2 h-[165px] max-h-[165px] overflow-hidden">
-                  <div className="grid grid-cols-[1fr_1fr_2fr] gap-1 h-full">
-                    <div className="rounded-md bg-black/20 border border-white/10 p-2 flex items-center justify-center overflow-hidden">
-                      <div className="relative w-full aspect-square max-w-[140px]">
-                        <Image src="/images/Headshot.png" alt="Profile" fill className="object-cover rounded-md" />
-                      </div>
-                    </div>
-                    <div className="flex flex-col gap-1 h-full justify-between">
-                      <div className="rounded-md bg-black/20 border border-white/10 p-1 text-white/90 text-center flex items-center justify-center h-full">
-                        <div className="text-[8px] opacity-80 inline mr-1 font-oswald">DOB: </div>
-                        <div className="text-md font-bebas tracking-wider inline">
-                          {dobDisplay}
-                          {typeof age === "number" && (
-                            <span className="opacity-70 text-[10px] ml-1 font-oswald tracking-wider align-baseline">
-                              (age {age})
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-1">
-                        <div className="rounded-md bg-black/20 border border-white/10 p-1 text-center text-white/90">
-                          <div className="text-[8px] uppercase tracking-wider opacity-70 font-oswald">Height</div>
-                          <div className="text-sm font-bold font-bebas tracking-wider">{feet}&apos;{inches}</div>
-                        </div>
-                        <div className="rounded-md bg-black/20 border border-white/10 p-1 text-center text-white/90">
-                          <div className="text-[8px] uppercase tracking-wider opacity-70 font-oswald">Weight</div>
-                          <div className="text-sm font-bold font-bebas tracking-wider">{weightLbs} lbs</div>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-1">
-                        <div className="rounded-md bg-black/20 border border-white/10 p-1 text-center text-white/90">
-                          <div className="text-[8px] uppercase tracking-wider opacity-70 font-oswald">Games Played</div>
-                          <div className="text-base font-bold leading-[1.25rem] font-bebas tracking-wider">{gamesPlayed}</div>
-                        </div>
-                        <div className="rounded-md bg-black/20 border border-white/10 p-1 text-center text-white/90">
-                          <div className="text-[8px] uppercase tracking-wider opacity-70 font-oswald">Level</div>
-                          <div className="text-base font-bold leading-[1.25rem] font-bebas tracking-wider">Pro</div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex flex-col h-full">
-                      <div className="flex-1 rounded-md p-2 text-white/90 leading-relaxed overflow-hidden">
-                        <p className="text-xxs md:text-xs">
-                          {(player as any).bio || "Mock biography goes here. Replace with Supabase locker data."}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <h2 className="text-2xl font-bebas tracking-widest">Videos</h2>
-                  <VideoGridModal playerName={(player as any).full_name} videos={MOCK_VIDEOS} />
-                </div>
-                <VideoYTRow videos={MOCK_VIDEOS_YT} />
-              </div>
-            </div>
-            <div className="lg:hidden">
-              <MobileTabs playerName={(player as any).full_name || "DEMO PLAYER"} />
-            </div>
-          </section>
-        </div>
-      </main>
+    const { data: player, error: playerError } = await supabase
+      .from("players")
+      .select(
+        `id, full_name, name, slug, profile_image, headshot_url, hometown, video_url,
+         bio, position, level, dob, height_in, weight_lbs, games_played, current_status,
+         gsis_id, cfb_team_id, youtube_urls,
+         nfl_player:nfl_players (
+           headshot_url, latest_team, status, draft_year, draft_round, draft_pick,
+           draft_team, position, position_group, college_name, espn_id, pfr_id,
+           jersey_number, rookie_season, last_season, years_of_experience
+         ),
+         cfb_team:cfb_teams (
+           espn_id, display_name, location, mascot, abbreviation,
+           primary_color, alt_color, logo_url, logo_dark_url
+         )`,
+      )
+      .eq("slug", slug)
+      .eq("visibility", true)
+      .maybeSingle();
+
+    if (playerError && (playerError.message || playerError.code)) return notFound();
+    if (!player) return notFound();
+
+    const p = player as any;
+    const name = p.full_name || p.name || "Unknown Player";
+
+    const { data: locker } = await supabase
+      .from("player_lockers")
+      .select("headline, bio, colors")
+      .eq("player_id", p.id)
+      .maybeSingle();
+
+    const nflPlayer =
+      (Array.isArray(p.nfl_player) ? p.nfl_player[0] : p.nfl_player) ?? null;
+    const cfbTeam =
+      (Array.isArray(p.cfb_team) ? p.cfb_team[0] : p.cfb_team) ?? null;
+
+    // Headshot precedence: athlete-uploaded media → explicit headshot_url →
+    // cached nflverse headshot → legacy profile_image → placeholder.
+    const { data: headshotMedia } = await supabase
+      .from("media")
+      .select("url")
+      .eq("player_id", p.id)
+      .eq("kind", "headshot")
+      .order("display_order", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    const headshotUrl =
+      headshotMedia?.url ||
+      p.headshot_url ||
+      nflPlayer?.headshot_url ||
+      p.profile_image ||
+      DEFAULT_HEADSHOT;
+
+    const { data: vids } = await supabase
+      .from("videos")
+      .select("id,title,thumbnail_url")
+      .eq("player_id", p.id)
+      .eq("visibility", "public")
+      .order("created_at", { ascending: false })
+      .limit(12);
+
+    const { data: photoRows } = await supabase
+      .from("media")
+      .select("url, display_order")
+      .eq("player_id", p.id)
+      .eq("kind", "photo")
+      .order("display_order", { ascending: true })
+      .limit(20);
+
+    // Awards live in their own table keyed by players.id (stored as text).
+    const { data: awardRows } = await supabase
+      .from("awards")
+      .select("award_name, award_short_desc, year, level, team_or_school")
+      .eq("player_id", String(p.id))
+      .order("year", { ascending: false })
+      .limit(40);
+
+    const awards: Award[] = (awardRows ?? []) as Award[];
+    const collegeAwards = awards.filter((a) => (a.level ?? "").toLowerCase() === "college");
+    const proAwards = awards.filter((a) => (a.level ?? "").toLowerCase() === "pro");
+
+    // Season stat lines (from the nflverse/cfbverse stats syncs). Split by level
+    // so the college spotlight and the NFL card each get their own numbers.
+    const { data: statRows } = await supabase
+      .from("player_season_stats")
+      .select("season, season_type, team, level, stats")
+      .eq("player_id", p.id)
+      .order("season", { ascending: true });
+    const collegeRows: SeasonRow[] = ((statRows ?? []) as any[])
+      .filter((r) => r.level === "college")
+      .map((r) => ({ season: r.season, season_type: r.season_type, team: r.team, level: "college", stats: r.stats ?? {} }));
+    const proRows: SeasonRow[] = ((statRows ?? []) as any[])
+      .filter((r) => r.level === "pro")
+      .map((r) => ({ season: r.season, season_type: r.season_type, team: r.team, level: "pro", stats: r.stats ?? {} }));
+
+    const photos = (photoRows ?? []).map((r: any) => r.url).filter(Boolean);
+
+    const school = cfbTeam?.display_name || nflPlayer?.college_name || null;
+    const position = p.position || nflPlayer?.position || nflPlayer?.position_group || null;
+    const jersey = typeof nflPlayer?.jersey_number === "number" ? nflPlayer.jersey_number : null;
+
+    // Years active: derive from nflverse roster seasons when present.
+    const proYears =
+      nflPlayer?.rookie_season
+        ? `${nflPlayer.rookie_season}–${nflPlayer.last_season ?? "present"}`
+        : null;
+    const proSeasons =
+      typeof nflPlayer?.years_of_experience === "number" && nflPlayer.years_of_experience > 0
+        ? nflPlayer.years_of_experience
+        : nflPlayer?.rookie_season && nflPlayer?.last_season
+          ? nflPlayer.last_season - nflPlayer.rookie_season + 1
+          : null;
+
+    const level = (p.level as string) || (nflPlayer ? "pro" : school ? "college" : "pro");
+    const hasPro = level === "pro" || level === "former" || !!nflPlayer;
+    const hasCollege =
+      (level === "college" || level === "pro" || level === "former") && !!school;
+
+    // Pro teams line: draft team + latest team, de-duplicated, full names.
+    const teamCodes = [nflPlayer?.draft_team, nflPlayer?.latest_team].filter(Boolean);
+    const teamNames = Array.from(
+      new Set(teamCodes.map((c: string) => nflTeamName(c)).filter(Boolean) as string[]),
     );
+    const proTeamsLine = teamNames.length ? teamNames.join(" · ") : null;
+
+    const draftLine =
+      nflPlayer?.draft_year
+        ? `Drafted ${nflPlayer.draft_year}` +
+          (nflPlayer.draft_round && nflPlayer.draft_pick
+            ? ` · Round ${nflPlayer.draft_round}, Pick ${nflPlayer.draft_pick}`
+            : "") +
+          (nflPlayer.draft_team ? ` by ${nflTeamName(nflPlayer.draft_team)}` : "")
+        : null;
+
+    // Tagline precedence: editor headline → marquee award + first bio sentence
+    // → first bio sentence → a sensible default.
+    const topAward = collegeAwards[0] || proAwards[0] || awards[0] || null;
+    const bioOpener = firstSentence(locker?.bio || p.bio);
+    const tagline =
+      (locker?.headline as string)?.trim() ||
+      [topAward ? `${topAward.award_name} ${topAward.year ?? ""}.`.trim() : null, bioOpener]
+        .filter(Boolean)
+        .join(" ") ||
+      `${name}'s career — the plays, the seasons, the film. Finally in one place.`;
+
+    const yearsLabel = proYears || (hasCollege ? null : null);
+
+    const statBlocks = buildStatBlocks(position, collegeRows, proRows);
+    const statModalSub = [name, position, jersey != null ? `#${jersey}` : null]
+      .filter(Boolean)
+      .join(" · ");
+
+    view = {
+      slug,
+      name,
+      position,
+      school,
+      schoolAbbr: cfbTeam?.abbreviation || null,
+      jersey,
+      yearsLabel,
+      levelLabel: LEVEL_LABEL[level] ?? "—",
+      level,
+      tagline,
+      headshotUrl,
+      heroVideo: p.video_url || null,
+      heroPoster: photos[0] || headshotUrl || DEFAULT_HERO,
+      age: calcAge(p.dob),
+      hasPro,
+      proSeasons,
+      proYears,
+      proTeamsLine,
+      draftLine,
+      proHonors: proAwards.length ? proAwards : awards,
+      hasCollege,
+      collegeYears: proYears && level !== "pro" ? proYears : null,
+      collegeAward: collegeAwards[0] ?? null,
+      collegeImage: photos[1] || photos[0] || null,
+      // Playable highlights first (the player's saved youtube_urls), then any
+      // project-managed `videos` rows (which link out to their /watch page).
+      videos: [
+        ...youtubeVideoItems((p as any).youtube_urls, name),
+        ...(vids ?? []).map((v: any) => ({
+          id: String(v.id),
+          title: v.title || "Untitled clip",
+          thumb: v.thumbnail_url || null,
+          youtubeId: null,
+          href: `/watch/${v.id}`,
+        })),
+      ],
+      photos,
+      statModalSub,
+      ...statBlocks,
+    };
   }
 
-  // -------- LIVE (SUPABASE) PATH --------
-  const supabase = await createClient();
-
-  // Two FK joins on this row:
-  //   - nfl_player: cached nflverse roster data (set when onboarding matched
-  //     the athlete against NFL.com via gsis_id)
-  //   - cfb_team:   cached ESPN college team (set when the athlete picked
-  //                 their school from the logo-rich autocomplete on the
-  //                 identity form, via cfb_team_id → cfb_teams.espn_id)
-  // PostgREST resolves both automatically. Either or both can be null,
-  // depending on the athlete's level and how they entered their school.
-  const { data: player, error: playerError } = await supabase
-    .from("players")
-    .select(
-      `id, full_name, name, slug, profile_image, headshot_url, hometown, video_url,
-       bio, position, level, dob, height_in, weight_lbs, games_played, current_status,
-       gsis_id, cfb_team_id,
-       nfl_player:nfl_players (
-         headshot_url, latest_team, status, draft_year, draft_round, draft_pick,
-         draft_team, position, position_group, college_name, espn_id, pfr_id
-       ),
-       cfb_team:cfb_teams (
-         espn_id, display_name, location, mascot, abbreviation,
-         primary_color, alt_color, logo_url, logo_dark_url
-       )`,
-    )
-    .eq("slug", slug)
-    .eq("visibility", true)
-    .maybeSingle();
-
-  if (playerError && (playerError.message || playerError.code)) {
-    return notFound();
-  }
-  if (!player) return notFound();
-
-  const playerFullName = (player as any).full_name || (player as any).name || "Unknown Player";
-
-  const { data: locker } = await supabase
-    .from("player_lockers")
-    .select("headline, bio, colors")
-    .eq("player_id", player.id)
-    .maybeSingle();
-
-  const dob = player.dob ?? null;
-  const heightIn = player.height_in ?? null;
-  const weightLbs = player.weight_lbs ?? null;
-  const gamesPlayed = player.games_played ?? null;
-  const age = calcAge(dob);
-  const dobDisplay = formatDob(dob);
-  const feet = heightIn ? Math.floor(heightIn / 12) : null;
-  const inches = heightIn ? heightIn % 12 : null;
-
-  const levelLabel = player.level ? LEVEL_LABEL[player.level] ?? "—" : "—";
-
-  // PostgREST returns one-to-one joins as a single object, but TS infers
-  // an array. Coerce both to the single-object shape the rest of the page uses.
-  const nflPlayer = (Array.isArray((player as any).nfl_player)
-    ? (player as any).nfl_player[0]
-    : (player as any).nfl_player) ?? null;
-  const cfbTeam = (Array.isArray((player as any).cfb_team)
-    ? (player as any).cfb_team[0]
-    : (player as any).cfb_team) ?? null;
-
-  // Headshot precedence: athlete-uploaded media → explicit headshot_url on
-  // the players row → cached nflverse headshot (NFL.com CDN, URL-only, never
-  // rehosted) → legacy profile_image → default placeholder.
-  const { data: headshotMedia } = await supabase
-    .from("media")
-    .select("url")
-    .eq("player_id", player.id)
-    .eq("kind", "headshot")
-    .order("display_order", { ascending: true })
-    .limit(1)
-    .maybeSingle();
-
-  const headshotUrl =
-    headshotMedia?.url ||
-    player.headshot_url ||
-    nflPlayer?.headshot_url ||
-    (player as any).profile_image ||
-    "/images/Headshot.png";
-
-  // Videos (project-managed table, separate from media kind=video).
-  const { data: vids } = await supabase
-    .from("videos")
-    .select("id,title,thumbnail_url")
-    .eq("player_id", player.id)
-    .eq("visibility", "public")
-    .order("created_at", { ascending: false })
-    .limit(12);
-
-  // Photos for the masonry/carousel come from `media` rows tagged photo.
-  // RLS already restricts visibility to published lockers.
-  const { data: photoRows } = await supabase
-    .from("media")
-    .select("id, url, title, credits, width, height")
-    .eq("player_id", player.id)
-    .eq("kind", "photo")
-    .order("display_order", { ascending: true })
-    .limit(20);
-
-  const mediaItems = (photoRows ?? []).map((row) => ({
-    id: row.id,
-    url: row.url,
-    title: row.title ?? "",
-    credits: row.credits ?? "",
-    width: row.width ?? 1200,
-    height: row.height ?? 800,
-  }));
-
-  const heroMedia = mediaItems[0]?.url ?? "/images/media-5.jpg";
-  const city = player.hometown || undefined;
-  const videoSrc = (player as any).video_url || "/videos/demo-reel.mp4";
-  const videoPoster = headshotUrl || "/images/Awards/video-thumb.png";
-
-  const bioCopy =
-    locker?.bio ||
-    player.bio ||
-    `${playerFullName} hasn't written a bio yet. Check back soon for the full story.`;
+  const html = renderLockerHtml(view);
 
   return (
-    <main className="mx-auto max-w-6xl p-2 scrollbar-hide">
-      <div className="grid grid-cols-1 gap-2 lg:grid-cols-4 lg:gap-12">
-        {/* 1/4 column */}
-        <aside className="space-y-2 lg:col-span-1 lg:sticky lg:top-2 lg:h-[calc(100vh-1rem)] lg:overflow-y-auto scrollbar-hide">
-          <PlayerHeader
-            fullName={playerFullName}
-            city={city || "—"}
-            videoSrc={videoSrc}
-            videoPoster={videoPoster}
-            badgeUrl="/images/SilverHero1.png"
-            avatarUrl={headshotUrl}
-          />
-        </aside>
-
-        {/* 3/4 column */}
-        <section className="space-y-2 lg:col-span-3 scrollbar-hide">
-          <div className="relative h-48 w-full rounded-t-md overflow-hidden hidden lg:block">
-            <Image src={heroMedia} alt="Player highlight" fill className="object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/80" />
-            <PlayerActionButtons
-              playerName={playerFullName}
-              playerImage={headshotUrl}
-              playerBadge="/images/SilverHero1.png"
-            />
-          </div>
-
-          {/* Verified NFL roster badge — only renders when the athlete was
-              matched against the cached nflverse roster during onboarding. */}
-          {nflPlayer && (
-            <div className="hidden lg:flex items-center gap-3 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-emerald-200">
-              <svg
-                viewBox="0 0 20 20"
-                aria-hidden="true"
-                className="h-4 w-4 flex-shrink-0 fill-emerald-400"
-              >
-                <path d="M10 0a10 10 0 100 20 10 10 0 000-20zm4.7 7.3l-5.4 5.4a1 1 0 01-1.4 0L5.3 10a1 1 0 111.4-1.4L8 9.9l4.3-4.3a1 1 0 011.4 1.4z" />
-              </svg>
-              <div className="flex-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-oswald uppercase tracking-wider">
-                <span className="font-bold">Verified NFL roster</span>
-                {nflPlayer.latest_team && (
-                  <span className="text-white/90">
-                    {nflTeamName(nflPlayer.latest_team)}
-                  </span>
-                )}
-                {nflPlayer.draft_year && (
-                  <span className="text-white/60">
-                    Drafted {nflPlayer.draft_year}
-                    {nflPlayer.draft_round && nflPlayer.draft_pick
-                      ? ` · Round ${nflPlayer.draft_round}, Pick ${nflPlayer.draft_pick}`
-                      : ""}
-                    {nflPlayer.draft_team
-                      ? ` by ${nflTeamName(nflPlayer.draft_team)}`
-                      : ""}
-                  </span>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Verified college program badge — themed in the school's
-              official primary color so each locker page subtly inherits
-              its program's identity. Logo URL points at ESPN's CDN
-              (whitelisted in next.config.ts). */}
-          {cfbTeam && (
-            <div
-              className="hidden lg:flex items-center gap-3 rounded-md border px-3 py-2"
-              style={{
-                borderColor: `${cfbTeam.primary_color ?? "#666666"}55`,
-                backgroundColor: `${cfbTeam.primary_color ?? "#666666"}1a`,
-                color: cfbTeam.primary_color ?? "#cccccc",
-              }}
-            >
-              {cfbTeam.logo_url ? (
-                <span className="relative h-6 w-6 flex-shrink-0">
-                  <Image
-                    src={cfbTeam.logo_url}
-                    alt={`${cfbTeam.display_name ?? "Team"} logo`}
-                    fill
-                    sizes="24px"
-                    className="object-contain"
-                  />
-                </span>
-              ) : (
-                <svg
-                  viewBox="0 0 20 20"
-                  aria-hidden="true"
-                  className="h-4 w-4 flex-shrink-0 fill-current"
-                >
-                  <path d="M10 0a10 10 0 100 20 10 10 0 000-20zm4.7 7.3l-5.4 5.4a1 1 0 01-1.4 0L5.3 10a1 1 0 111.4-1.4L8 9.9l4.3-4.3a1 1 0 011.4 1.4z" />
-                </svg>
-              )}
-              <div className="flex-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-oswald uppercase tracking-wider">
-                <span className="font-bold text-white">Verified college program</span>
-                <span className="text-white/90">{cfbTeam.display_name}</span>
-                {cfbTeam.mascot && cfbTeam.mascot !== cfbTeam.display_name && (
-                  <span className="text-white/60">{cfbTeam.mascot}</span>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Bio (desktop) */}
-          <div className="space-y-0 hidden lg:block -mt-0">
-            <div className="flex justify-between items-center">
-              <h2 className="text-xl font-bebas tracking-widest">Bio</h2>
-            </div>
-            <div className="rounded-md border border-white/5 bg-white/5 p-2 h-[150px] max-h-[150px] overflow-hidden shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
-              <div className="grid grid-cols-[1fr_1fr_2fr] gap-1 h-full">
-                <div className="rounded-md bg-black/20 border border-white/10 p-2 flex items-center justify-center overflow-hidden">
-                  <div className="relative w-full aspect-square max-w-[140px]">
-                    <Image src={headshotUrl} alt="Profile" fill className="object-cover rounded-md" />
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-1 h-full justify-between">
-                  <div className="rounded-md bg-black/20 border border-white/10 p-1 text-white/90 text-center flex items-center justify-center h-full">
-                    <div className="text-[8px] opacity-80 inline mr-1 font-oswald">DOB: </div>
-                    <div className="text-md font-bebas tracking-wider inline">
-                      {dobDisplay}
-                      {typeof age === "number" && (
-                        <span className="opacity-70 text-[10px] ml-1 font-oswald tracking-wider align-baseline">
-                          (age {age})
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-1">
-                    <div className="rounded-md bg-black/20 border border-white/10 p-1 text-center text-white/90">
-                      <div className="text-[8px] uppercase tracking-wider opacity-70 font-oswald">Height</div>
-                      <div className="text-sm font-bold font-bebas tracking-wider">
-                        {feet != null ? `${feet}'${inches}` : "—"}
-                      </div>
-                    </div>
-                    <div className="rounded-md bg-black/20 border border-white/10 p-1 text-center text-white/90">
-                      <div className="text-[8px] uppercase tracking-wider opacity-70 font-oswald">Weight</div>
-                      <div className="text-sm font-bold font-bebas tracking-wider">
-                        {weightLbs ? `${weightLbs} lbs` : "—"}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-1">
-                    <div className="rounded-md bg-black/20 border border-white/10 p-1 text-center text-white/90">
-                      <div className="text-[8px] uppercase tracking-wider opacity-70 font-oswald">Games Played</div>
-                      <div className="text-base font-bold leading-[1.25rem] font-bebas tracking-wider">
-                        {gamesPlayed ?? "—"}
-                      </div>
-                    </div>
-                    <div className="rounded-md bg-black/20 border border-white/10 p-1 text-center text-white/90">
-                      <div className="text-[8px] uppercase tracking-wider opacity-70 font-oswald">Level</div>
-                      <div className="text-base font-bold leading-[1.25rem] font-bebas tracking-wider">
-                        {levelLabel}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex flex-col h-full min-h-0">
-                  <div
-                    className="flex-1 rounded-md p-2 text-white/90 leading-relaxed overflow-y-auto min-h-0 scrollbar-hide"
-                    style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-                  >
-                    <p className="text-xxs md:text-xs">{bioCopy}</p>
-                  </div>
-                  <div className="mt-2 flex justify-end flex-shrink-0">
-                    <BioModal
-                      bioText={bioCopy}
-                      playerName={playerFullName}
-                      playerLevel={player.position || levelLabel}
-                      playerStatus={player.current_status || "active"}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Videos */}
-          <div className="space-y-3 hidden lg:block">
-            <div className="flex justify-between items-center">
-              <h2 className="text-xl font-bebas tracking-widest">Videos</h2>
-              <VideoGridModal playerName={playerFullName} videos={vids ?? []} />
-            </div>
-            {vids && vids.length > 0 ? (
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                {vids.map((v: any) => (
-                  <VideoCard key={v.id} id={v.id} title={v.title} thumbnail_url={v.thumbnail_url ?? undefined} />
-                ))}
-              </div>
-            ) : (
-              <p className="rounded-md border border-white/10 bg-white/5 p-4 text-sm text-white/60">
-                No videos yet.
-              </p>
-            )}
-          </div>
-
-          {/* Media */}
-          {mediaItems.length > 0 ? (
-            <div className="space-y-3 hidden lg:block">
-              <div className="flex justify-between items-center">
-                <h2 className="text-xl font-bebas tracking-widest">Media</h2>
-                <MediaMasonryModal mediaItems={mediaItems}>
-                  <button className="text-[#FFBB00] hover:text-[#FFBB00]/80 text-sm underline px-4 uppercase cursor-pointer">
-                    SEE ALL
-                  </button>
-                </MediaMasonryModal>
-              </div>
-              <div className="grid grid-cols-3 gap-4">
-                {mediaItems.slice(0, 4).map((item, i) => (
-                  <MediaCarouselModal key={item.id} mediaItems={mediaItems} initialIndex={i}>
-                    <WobbleCard
-                      containerClassName={`h-48 ${i % 3 === 0 ? "col-span-2" : "col-span-1"} rounded-md bg-transparent cursor-pointer`}
-                      className="p-0"
-                    >
-                      <div className="relative rounded-md overflow-hidden w-full h-full">
-                        <Image src={item.url} alt={item.title || "Media"} fill className="object-cover" />
-                        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 to-transparent" />
-                      </div>
-                    </WobbleCard>
-                  </MediaCarouselModal>
-                ))}
-              </div>
-            </div>
-          ) : null}
-
-          {/* Mobile view */}
-          <div className="lg:hidden">
-            <MobileTabs playerName={playerFullName} />
-          </div>
-        </section>
-      </div>
-    </main>
+    <>
+      <style dangerouslySetInnerHTML={{ __html: LOCKER_CSS }} />
+      <style dangerouslySetInnerHTML={{ __html: EXTRA_CSS }} />
+      <div className="bltz-locker" dangerouslySetInnerHTML={{ __html: html }} />
+      <LockerClient
+        slug={view.slug}
+        shareText={`${view.name}${view.position ? ` · ${view.position}` : ""}${
+          view.school ? ` · ${view.school}` : ""
+        }. Career, finally in one place.`}
+      />
+    </>
   );
+}
+
+/* ────────────────────────────────────────────────────────────────────────
+   MARKUP — verbatim port of the canonical locker design (mockups/locker-page.html)
+   with every data slot bound to real scraped values. Sections with no backing
+   data (press, believers, season-by-season stats) are omitted rather than
+   faked. Everything is HTML-escaped via esc() / cssUrl().
+   ──────────────────────────────────────────────────────────────────────── */
+function renderLockerHtml(v: LockerView): string {
+  const THUMB_GRADIENTS = [
+    "linear-gradient(135deg, #1A2340 20%, #0B0E1A)",
+    "linear-gradient(135deg, #1A2A40 20%, #0B0E1A)",
+    "linear-gradient(135deg, #2D0A12 20%, #0B0E1A)",
+    "linear-gradient(135deg, #2A1F0A 20%, #0B0E1A)",
+    "linear-gradient(135deg, #2A1A2A 20%, #0B0E1A)",
+    "linear-gradient(135deg, #1F1F2A 20%, #0B0E1A)",
+    "linear-gradient(135deg, #0F2A0F 20%, #0B0E1A)",
+  ];
+
+  const subParts = [
+    v.position ? esc(v.position) : null,
+    v.school ? esc(v.school) : null,
+    v.jersey != null ? `#${esc(v.jersey)}` : null,
+    v.yearsLabel ? esc(v.yearsLabel) : null,
+  ].filter(Boolean);
+  const subLine = subParts.join('<span class="dot">·</span>');
+
+  const levelTier = v.level === "college" ? "college" : v.level === "hs" ? "hs" : "pro";
+
+  // ---- TOPBAR ----
+  const topbar = `
+  <nav class="topbar" id="topbar" aria-label="Site">
+    <span class="topbar__brand">BLTZ</span>
+    <div class="topbar__search" role="search">
+      <div class="search-input-wrap" id="search-wrap">
+        <svg class="search-icon" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/>
+        </svg>
+        <input class="search-input" id="search-input" type="search" autocomplete="off" placeholder="Search players, schools, teams..." aria-label="Search players" aria-autocomplete="list" aria-controls="search-results">
+        <button class="search-clear" id="search-clear" type="button" aria-label="Clear search">×</button>
+      </div>
+      <div class="search-results" id="search-results" role="listbox" aria-label="Search results"></div>
+    </div>
+    <div class="topbar__right">
+      <button class="btn-icon topbar__search-btn" type="button" id="search-overlay-open" aria-label="Open search">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+      </button>
+      <div class="topbar__athlete" id="topbar-athlete">
+        <span class="avatar" aria-label="${esc(v.name)}"><img src="${esc(v.headshotUrl)}" alt=""></span>
+      </div>
+    </div>
+  </nav>
+
+  <div class="search-overlay" id="search-overlay" role="dialog" aria-label="Search players" hidden>
+    <div class="search-overlay__top">
+      <div class="search-input-wrap" id="search-overlay-wrap">
+        <svg class="search-icon" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+        <input class="search-input" id="search-overlay-input" type="search" autocomplete="off" placeholder="Search players, schools, teams..." aria-label="Search players">
+      </div>
+      <button class="search-overlay__close" type="button" id="search-overlay-close" aria-label="Close search">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="search-results is-open" id="search-overlay-results" role="listbox"></div>
+  </div>`;
+
+  // ---- HERO ----
+  const heroInner = v.heroVideo
+    ? `<video autoplay muted loop playsinline preload="auto" poster="${esc(v.heroPoster)}">
+         <source src="${esc(v.heroVideo)}" type="video/mp4">
+       </video>
+       <div class="poster" style="background-image:url('${cssUrl(v.heroPoster)}')" aria-hidden="true"></div>`
+    : `<div class="poster" style="background-image:url('${cssUrl(v.heroPoster)}')" aria-hidden="true"></div>`;
+
+  const hero = `
+  <header class="hero" role="banner" aria-label="Athlete banner">
+    <div class="hero__bg" id="heroBg" aria-hidden="true">${heroInner}</div>
+  </header>`;
+
+  // ---- PROFILE ----
+  const profile = `
+  <div class="profile">
+    <div class="profile__avatar-wrap reveal">
+      <label class="avatar-edit" for="avatar-upload" title="Upload a new headshot">
+        <span class="avatar avatar--lg" aria-label="${esc(v.name)}">
+          <img id="avatar-img" src="${esc(v.headshotUrl)}" alt="${esc(v.name)} headshot">
+        </span>
+        <span class="avatar-edit__overlay" aria-hidden="true">
+          <svg class="avatar-edit__icon" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z"/>
+            <path d="M14.06 6.19l3.75 3.75 2.12-2.12a1.5 1.5 0 0 0 0-2.12l-1.63-1.63a1.5 1.5 0 0 0-2.12 0L14.06 6.19z"/>
+          </svg>
+          <span class="avatar-edit__label">Edit Photo</span>
+        </span>
+        <input id="avatar-upload" type="file" accept="image/*" aria-label="Upload athlete headshot">
+      </label>
+    </div>
+    <h1 class="profile__name reveal delay-1">${esc(v.name)}</h1>
+    <p class="profile__sub reveal delay-2">${subLine}</p>
+    <p class="profile__tagline reveal delay-3">${esc(v.tagline)}</p>
+    <div class="profile__actions reveal delay-4">
+      <button class="btn-primary claim-only" type="button">Claim This Locker</button>
+      <button class="btn-icon" type="button" id="qr-btn" aria-haspopup="dialog" aria-controls="qr-modal" aria-label="Show QR code">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+          <rect x="3" y="14" width="7" height="7" rx="1"/>
+          <line x1="14" y1="14" x2="14" y2="17"/><line x1="14" y1="20" x2="17" y2="20"/>
+          <line x1="20" y1="14" x2="20" y2="17"/><line x1="17" y1="17" x2="20" y2="17"/><line x1="20" y1="20" x2="20" y2="21"/>
+        </svg>
+      </button>
+      <button class="btn-ghost" type="button" id="share-btn" aria-haspopup="dialog" aria-controls="share-modal">Share</button>
+    </div>
+  </div>`;
+
+  // ---- VIDEOS ----
+  const videosSection =
+    v.videos.length > 0
+      ? `
+    <section class="zone scroll-reveal" aria-labelledby="videos-h" style="padding-top:0;padding-bottom:20px;">
+      <div class="container">
+        <div class="video-row">
+          <h2 id="videos-h" class="visually-hidden">Videos</h2>
+          <div class="video-row__viewport">
+            <button class="video-row__arrow video-row__arrow--prev" type="button" id="reel-prev" aria-label="Previous videos">
+              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
+            <button class="video-row__arrow video-row__arrow--next" type="button" id="reel-next" aria-label="Next videos">
+              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+            <div class="reel locker-stagger" id="reel" role="list">
+              ${v.videos
+                .map((vid, i) => {
+                  const bg = vid.thumb
+                    ? `url('${cssUrl(vid.thumb)}')`
+                    : THUMB_GRADIENTS[i % THUMB_GRADIENTS.length];
+                  const trigger = vid.youtubeId
+                    ? `data-youtube="${esc(vid.youtubeId)}"`
+                    : vid.href
+                      ? `data-href="${esc(vid.href)}"`
+                      : "";
+                  return `
+              <article class="reel-card" tabindex="0" data-tier="${esc(levelTier)}" data-title="${esc(vid.title)}" ${trigger} role="listitem">
+                <div class="reel-card__thumb-wrap">
+                  <div class="reel-card__thumb" style="background-image:${bg};background-size:cover;background-position:center;"></div>
+                  <div class="play-icon" aria-hidden="true"></div>
+                </div>
+                <div class="reel-card__meta">
+                  <h3 class="reel-card__title">${esc(vid.title)}</h3>
+                </div>
+              </article>`;
+                })
+                .join("")}
+              <button class="reel-card--see-all" type="button" id="see-all-btn" aria-haspopup="dialog" aria-controls="videos-modal" role="listitem">
+                <div class="lockup">
+                  <span class="arrow-disc" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="13 6 19 12 13 18"/></svg>
+                  </span>
+                  <span class="label">See All</span>
+                  <span class="count">${v.videos.length} video${v.videos.length === 1 ? "" : "s"}</span>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>`
+      : "";
+
+  // ---- PHOTOS ----
+  const photosSection =
+    v.photos.length > 0
+      ? `
+    <section class="photos-band scroll-reveal" aria-label="Photo gallery">
+      <div class="photos-masonry locker-stagger" id="photos-masonry">
+        ${v.photos
+          .map(
+            (src, i) =>
+              `<figure class="photo" data-index="${i}" data-full="${esc(src)}" role="button" tabindex="0" aria-label="Open photo ${i + 1}"><img src="${esc(src)}" alt="" loading="lazy"></figure>`,
+          )
+          .join("")}
+      </div>
+    </section>`
+      : "";
+
+  // ---- COLLEGE FEATURE ----
+  const collegeImageStyle = v.collegeImage
+    ? ` style="background-image:url('${cssUrl(v.collegeImage)}')"`
+    : "";
+  const collegeOverline = [v.school, v.collegeYears].filter(Boolean).map(esc).join(" · ");
+  const collegePull = v.collegeAward
+    ? `${esc(v.collegeAward.award_name)} ${esc(v.collegeAward.year ?? "")}. The years that started everything.`
+    : "The years that started everything.";
+  const collegeHonorChip = v.collegeAward
+    ? `<div class="see-stats" style="cursor:default;border-color:var(--border-gold);">★ ${esc(
+        v.collegeAward.award_name,
+      )}${v.collegeAward.year ? ` · ${esc(v.collegeAward.year)}` : ""}</div>`
+    : "";
+
+  // The stat spotlight (big career number + caption + season chips) when stat
+  // lines exist; otherwise the marquee-award chip. Either keeps the section real.
+  const collegeStatsInner = v.collegeStatHero
+    ? `
+              <p class="stat-hero__num">${esc(v.collegeStatHero.big.display)}</p>
+              <div class="stat-hero__caption">
+                <h3 class="stat-hero__caption-label">${esc(v.collegeStatHero.big.label)}</h3>
+                <p class="stat-hero__caption-meta">${esc(
+                  [v.school, v.collegeYears].filter(Boolean).join(" · "),
+                )}</p>
+              </div>
+              <div class="stat-hero__seasons" role="list">
+                ${v.collegeStatHero.chips
+                  .map(
+                    (c) => `
+                <div class="season-chip${c.peak ? " is-peak" : ""}" role="listitem">
+                  <p class="season-chip__year">${esc(c.year)}</p>
+                  <p class="season-chip__num">${esc(c.num)}</p>
+                  <p class="season-chip__label">${esc(c.label)}</p>
+                </div>`,
+                  )
+                  .join("")}
+              </div>
+              <button class="see-stats" type="button" aria-haspopup="dialog" aria-controls="stats-modal">See Full Stats</button>`
+    : collegeHonorChip;
+
+  const collegeSection = v.hasCollege
+    ? `
+    <section class="zone scroll-reveal" aria-labelledby="career-h" style="padding:0;">
+      <div class="container">
+        <h2 id="career-h" class="visually-hidden">College Career</h2>
+        <div class="career-feature"${v.collegeStatHero ? "" : ' style="min-height:auto"'}>
+          <header class="career-feature__header">
+            ${collegeOverline ? `<p class="career-feature__overline">${collegeOverline}</p>` : ""}
+            <h3 class="career-feature__headline">College Years</h3>
+            <p class="career-feature__pull">${collegePull}</p>
+          </header>
+          <div class="career-feature__body">
+            <div class="stat-hero career-feature__stats">
+              ${collegeStatsInner}
+            </div>
+            <figure class="career-feature__image image-fade"${collegeImageStyle} role="img" aria-label="${esc(
+              v.name,
+            )} during his college career"></figure>
+          </div>
+        </div>
+      </div>
+    </section>`
+    : "";
+
+  // ---- NFL CAREER CARD ----
+  const proTitle = v.proSeasons ? `${v.proSeasons} NFL Season${v.proSeasons === 1 ? "" : "s"}` : "NFL Career";
+  const proHonorsLine = v.proHonors.length
+    ? v.proHonors
+        .map((a) => `<b>${esc(a.award_name)}</b>${a.year ? ` (${esc(a.year)})` : ""}`)
+        .join(" · ")
+    : "";
+  const proStatsGrid =
+    v.proStatNums && v.proStatNums.some((s) => s.value != null)
+      ? `
+            <div class="nfl-stats" role="list">
+              ${v.proStatNums
+                .map(
+                  (s) => `
+              <div class="nfl-stat" role="listitem">
+                <p class="nfl-stat__num">${esc(s.display)}</p>
+                <p class="nfl-stat__label">${esc(s.label)}</p>
+              </div>`,
+                )
+                .join("")}
+            </div>`
+      : "";
+
+  const proSection = v.hasPro
+    ? `
+    <section class="zone scroll-reveal" aria-labelledby="nfl-h" data-conditional="nfl" style="padding-top:20px;padding-bottom:20px;">
+      <div class="container">
+        <div class="section-head" style="margin-bottom:30px;">
+          <span class="kicker">Pro${v.proYears ? ` · ${esc(v.proYears)}` : ""}</span>
+          <h2 id="nfl-h">NFL Career</h2>
+        </div>
+        <article class="nfl-card">
+          <div class="nfl-card__body">
+            <h3 class="nfl-card__title">${esc(proTitle)}</h3>
+            ${v.proTeamsLine ? `<p class="nfl-card__years">${esc(v.proTeamsLine)}</p>` : ""}
+            ${proStatsGrid}
+            ${v.draftLine ? `<p class="nfl-honors">${esc(v.draftLine)}</p>` : ""}
+            ${proHonorsLine ? `<p class="nfl-honors" style="margin-top:14px;">${proHonorsLine}</p>` : ""}
+            ${v.hasStats ? `<button class="see-stats" type="button" aria-haspopup="dialog" aria-controls="stats-modal" style="margin-top:24px;">See Full Stats</button>` : ""}
+          </div>
+        </article>
+      </div>
+    </section>`
+    : "";
+
+  // ---- CLAIM CTA + FOOTER ----
+  const claim = `
+    <section class="claim-cta scroll-reveal claim-only" aria-labelledby="claim-h">
+      <h2 id="claim-h">This Locker Is Yours</h2>
+      <p>Built free, owned by you. Edit anything, share anywhere. One link. Forever.</p>
+      <button class="btn-primary" type="button">Claim This Locker</button>
+    </section>`;
+
+  const footer = `
+  <footer class="foot" role="contentinfo">
+    <p class="foot__brand">BLTZ</p>
+    <p class="foot__tag">Built by athletes · Owned by the player</p>
+  </footer>`;
+
+  // ---- MODALS (share, qr, videos) ----
+  const modals = `
+  <div class="modal" id="share-modal" role="dialog" aria-modal="true" aria-labelledby="share-modal-title" hidden>
+    <div class="modal__inner share-modal__inner">
+      <div class="share-modal__close-row"><button class="modal__close" type="button" id="share-modal-close" aria-label="Close">×</button></div>
+      <h2 class="share-modal__title" id="share-modal-title">Share This Locker</h2>
+      <div class="share-url-row">
+        <input class="share-url-row__url" type="text" id="share-url-input" readonly value="">
+        <button class="share-url-row__copy" type="button" id="share-copy-btn">Copy</button>
+      </div>
+      <div class="share-grid">
+        <a class="share-target share-target--x" id="share-x" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg><span>X</span></a>
+        <a class="share-target share-target--facebook" id="share-facebook" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg><span>Facebook</span></a>
+        <a class="share-target share-target--linkedin" id="share-linkedin" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.063 2.063 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg><span>LinkedIn</span></a>
+        <a class="share-target share-target--reddit" id="share-reddit" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 0A12 12 0 000 12a12 12 0 0012 12 12 12 0 0012-12A12 12 0 0012 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 01-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 01.042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 014.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 01.14-.197.35.35 0 01.238-.042l2.906.617a1.214 1.214 0 011.108-.701zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.687-.562-1.249-1.25-1.249zm-5.466 3.99a.327.327 0 00-.231.094.33.33 0 000 .463c.842.842 2.484.913 2.961.913.477 0 2.105-.056 2.961-.913a.361.361 0 00.029-.463.33.33 0 00-.464 0c-.547.533-1.684.73-2.512.73-.828 0-1.979-.196-2.512-.73a.326.326 0 00-.232-.095z"/></svg><span>Reddit</span></a>
+        <a class="share-target share-target--whatsapp" id="share-whatsapp" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.945C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884a9.86 9.86 0 001.51 5.26l-.999 3.648 3.978-1.07.001.003z"/></svg><span>WhatsApp</span></a>
+        <a class="share-target share-target--email" id="share-email"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M1.5 4.5h21A1.5 1.5 0 0124 6v12a1.5 1.5 0 01-1.5 1.5h-21A1.5 1.5 0 010 18V6a1.5 1.5 0 011.5-1.5zm.75 1.875v.55l9.75 6.293 9.75-6.293v-.55H2.25zm19.5 1.929l-9.34 6.029a.75.75 0 01-.82 0L2.25 8.305v9.07h19.5v-9.07z"/></svg><span>Email</span></a>
+        <a class="share-target share-target--sms" id="share-sms"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.5C5.925 1.5 1 5.755 1 11c0 2.245.93 4.31 2.485 5.96L2 22.5l5.69-1.494A11.97 11.97 0 0012 20.5c6.075 0 11-4.255 11-9.5S18.075 1.5 12 1.5zm-4.5 8h9v1.5h-9V9.5zm0 3h6V14h-6v-1.5z"/></svg><span>SMS</span></a>
+        <button class="share-target share-target--native" type="button" id="share-native" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 9V5l7 7-7 7v-4.1c-5 0-8.5 1.6-11 5.1 1-5 4-10 11-11z"/></svg><span>More</span></button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="qr-modal" role="dialog" aria-modal="true" aria-labelledby="qr-modal-title" hidden>
+    <div class="modal__inner qr-modal__inner">
+      <div class="modal__head"><h2 class="modal__title" id="qr-modal-title">Share via QR</h2><button class="modal__close" type="button" id="qr-modal-close" aria-label="Close">×</button></div>
+      <div class="qr-canvas-wrap" id="qr-canvas"></div>
+      <p class="qr-url" id="qr-url"></p>
+      <div class="qr-actions"><button type="button" id="qr-copy">Copy Link</button><button type="button" class="solid" id="qr-download">Download QR</button></div>
+    </div>
+  </div>
+
+  <div class="modal" id="videos-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" hidden>
+    <div class="modal__inner">
+      <div class="modal__head"><h2 class="modal__title" id="modal-title">All Videos</h2><button class="modal__close" type="button" id="modal-close" aria-label="Close">×</button></div>
+      <div class="sort-tabs" role="tablist" aria-label="Sort videos by tier">
+        <button class="sort-tab is-active" type="button" role="tab" aria-selected="true" data-tier="all">All</button>
+        <button class="sort-tab" type="button" role="tab" aria-selected="false" data-tier="college">College</button>
+        <button class="sort-tab" type="button" role="tab" aria-selected="false" data-tier="pro">Pro</button>
+        <button class="sort-tab" type="button" role="tab" aria-selected="false" data-tier="hs">High School</button>
+      </div>
+      <div class="modal-grid" id="modal-grid"></div>
+    </div>
+  </div>
+
+  <div class="modal" id="video-modal" role="dialog" aria-modal="true" aria-label="Video player" hidden>
+    <div class="modal__inner" style="max-width:980px;">
+      <div class="share-modal__close-row">
+        <button class="modal__close" type="button" id="video-modal-close" aria-label="Close">×</button>
+      </div>
+      <div class="video-embed" id="video-embed"></div>
+    </div>
+  </div>
+
+  <div class="modal" id="lightbox" role="dialog" aria-modal="true" aria-label="Photo viewer" hidden>
+    <button class="modal__close lightbox__close" type="button" id="lightbox-close" aria-label="Close">×</button>
+    <button class="lightbox__nav lightbox__prev" type="button" id="lightbox-prev" aria-label="Previous photo">‹</button>
+    <img class="lightbox__img" id="lightbox-img" src="" alt="">
+    <button class="lightbox__nav lightbox__next" type="button" id="lightbox-next" aria-label="Next photo">›</button>
+  </div>`;
+
+  // ---- STATS MODAL (only when we actually have season lines) ----
+  const renderTable = (title: string, meta: string, table: SeasonTable | null): string => {
+    if (!table) return "";
+    return `
+    <section class="stats-section">
+      <div class="stats-section__head">
+        <h3 class="stats-section__title">${esc(title)}</h3>
+        ${meta ? `<span class="stats-section__meta">${esc(meta)}</span>` : ""}
+      </div>
+      <table class="stats-table" aria-label="${esc(title)} season-by-season">
+        <thead>
+          <tr><th>Year</th><th class="opt">Team</th>${table.columns
+            .map((c) => `<th class="num">${esc(c)}</th>`)
+            .join("")}</tr>
+        </thead>
+        <tbody>
+          ${table.rows
+            .map(
+              (r) =>
+                `<tr class="${r.isPeak ? "is-peak" : ""}"><td class="year">${esc(
+                  r.season,
+                )}</td><td class="opt">${esc(r.team ?? "")}</td>${r.cells
+                  .map((c) => `<td class="num">${esc(c)}</td>`)
+                  .join("")}</tr>`,
+            )
+            .join("")}
+          <tr class="is-totals"><td>Career</td><td class="opt"></td>${table.totals
+            .map((c) => `<td class="num">${esc(c)}</td>`)
+            .join("")}</tr>
+        </tbody>
+      </table>
+    </section>`;
+  };
+
+  const honorsTable = v.proHonors.length
+    ? `
+    <section class="stats-section">
+      <div class="stats-section__head">
+        <h3 class="stats-section__title">Honors</h3>
+        <span class="stats-section__meta">Career awards</span>
+      </div>
+      <table class="stats-table" aria-label="Career honors">
+        <tbody>
+          ${v.proHonors
+            .map(
+              (a) =>
+                `<tr><td class="year">${esc(a.year ?? "")}</td><td>${esc(a.award_name)}</td></tr>`,
+            )
+            .join("")}
+        </tbody>
+      </table>
+    </section>`
+    : "";
+
+  const statsModal = v.hasStats
+    ? `
+  <div class="modal" id="stats-modal" role="dialog" aria-modal="true" aria-labelledby="stats-modal-title" hidden>
+    <div class="modal__inner">
+      <div class="modal__head">
+        <div class="stats-modal__lockup">
+          <span class="avatar" aria-hidden="true"><img src="${esc(v.headshotUrl)}" alt=""></span>
+          <div>
+            <h2 class="modal__title" id="stats-modal-title">Career Stats</h2>
+            <p class="stats-modal__sub">${esc(v.statModalSub)}</p>
+          </div>
+        </div>
+        <button class="modal__close" type="button" id="stats-modal-close" aria-label="Close">×</button>
+      </div>
+      ${renderTable("College", [v.school, v.collegeYears].filter(Boolean).join(" · "), v.collegeTable)}
+      ${renderTable("NFL", v.proTeamsLine ?? "", v.proTable)}
+      ${honorsTable}
+    </div>
+  </div>`
+    : "";
+
+  return `${topbar}${hero}${profile}<main id="main">${videosSection}${photosSection}${collegeSection}${proSection}${claim}</main>${footer}${modals}${statsModal}`;
 }
