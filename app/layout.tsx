@@ -1,4 +1,4 @@
-import { Geist, Oswald, Roboto_Condensed, Bebas_Neue, Open_Sans } from "next/font/google";
+import { Geist, Oswald, Roboto_Condensed, Bebas_Neue, Open_Sans, Barlow, JetBrains_Mono } from "next/font/google";
 import { ClientShell } from "./client-shell";
 import "./globals.css";
 
@@ -34,6 +34,21 @@ const openSans = Open_Sans({
   variable: "--font-open-sans",
 });
 
+// Player-locker design system: Barlow (display + body) and JetBrains Mono.
+const barlow = Barlow({
+  subsets: ["latin"],
+  weight: ["400", "500", "700", "900"],
+  variable: "--font-barlow",
+  display: "swap",
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  weight: ["500", "700"],
+  variable: "--font-jetbrains-mono",
+  display: "swap",
+});
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -43,7 +58,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${oswald.variable} ${robotoCondensed.variable} ${bebasNeue.variable} ${openSans.variable}`}
+      className={`${geistSans.variable} ${oswald.variable} ${robotoCondensed.variable} ${bebasNeue.variable} ${openSans.variable} ${barlow.variable} ${jetbrainsMono.variable}`}
     >
       <body className="min-h-screen text-white antialiased bg-black">
         <ClientShell>{children}</ClientShell>

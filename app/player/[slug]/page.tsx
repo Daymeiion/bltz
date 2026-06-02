@@ -22,7 +22,24 @@ const DEFAULT_HERO = "/images/media-5.jpg";
 // Supplemental styles for the pieces the original mockup didn't have: the
 // in-page YouTube embed and the photo lightbox. Injected alongside LOCKER_CSS.
 const EXTRA_CSS = `
+  /* Wire the design-system font tokens to the app's self-hosted next/font
+     families so the locker actually renders in Barlow (display + body) and
+     JetBrains Mono — not the system sans-serif fallback. */
+  :root {
+    --font-display: var(--font-barlow), "Barlow", sans-serif;
+    --font-body:    var(--font-barlow), "Barlow", sans-serif;
+    --font-mono:    var(--font-jetbrains-mono), "JetBrains Mono", monospace;
+  }
+
+  /* The root layout paints <body> pure black via Tailwind's bg-black, which
+     overrides the locker's design background. Force the design color so every
+     fade-to-bg-base (feature image, photo band, hero) blends seamlessly. */
+  body { background-color: var(--bg-base) !important; }
+
   .reel-card[data-youtube], .reel-card[data-href] { cursor: pointer; }
+  /* Match the reference card: bold uppercase titles. */
+  .reel-card__title { text-transform: uppercase; letter-spacing: 0.01em; font-weight: 700; }
+  .reel-card__meta { padding-bottom: 10px; }
   .video-embed {
     position: relative; width: 100%; aspect-ratio: 16 / 9;
     background: #000; border-radius: var(--r-lg); overflow: hidden;
@@ -52,7 +69,132 @@ const EXTRA_CSS = `
     .lightbox__prev { left: 12px; }
     .lightbox__next { right: 12px; }
   }
+
+  /* The feature image is split in two: .career-feature__image is the FIXED
+     frame that carries the edge fades (::after); .career-feature__image-inner
+     is the transformable layer that holds the photo and runs the scroll effect.
+     The inner is over-sized (inset:-8%) so scale/parallax never reveal a gap. */
+  .career-feature__image { background-image: none !important; }
+  .career-feature__image-inner {
+    position: absolute;
+    inset: -5%;
+    background-size: cover;
+    background-position: center 35%;
+    will-change: transform, filter;
+    transform: translateZ(0);
+    /* The transform makes this a stacking context; pin it below the ::after fade
+       (which also gets an explicit z-index) so the image never paints over the
+       edge gradients. */
+    z-index: 1;
+  }
+  /* Edge-fade overlay must sit ABOVE the transformed inner image layer. */
+  .career-feature__image::after { z-index: 2; }
+
+  /* College feature image: fade ALL four edges into the background so no hard
+     edge shows. Four directional ramps (left strongest, since the stats sit
+     over it; top + bottom + right all given a solid band so none reads as a
+     hard edge). Corners double up where ramps overlap. (Desktop full-bleed.) */
+  @media (min-width: 1024px) {
+    /* Pull the image in from the viewport's right edge (it normally full-bleeds)
+       so there's a gap on the right and the image sits closer to center. Left
+       edge stays put; width shrinks by the same amount. */
+    .career-feature__image {
+      right: calc(50% - 50vw + 64px);
+      width: calc(60% + (50vw - 50%) - 64px);
+      /* MASK fade (fades the image's own alpha — no overlay, no edge artifact),
+         tuned to read like the old gradient: STRONG left (the stats sit over it),
+         soft top/bottom/right so the image stays mostly visible with clean edges. */
+      -webkit-mask-image:
+        linear-gradient(90deg, transparent 0%, #000 46%, #000 90%, transparent 100%),
+        linear-gradient(180deg, transparent 0%, #000 14%, #000 84%, transparent 100%);
+      -webkit-mask-composite: source-in;
+      mask-image:
+        linear-gradient(90deg, transparent 0%, #000 46%, #000 90%, transparent 100%),
+        linear-gradient(180deg, transparent 0%, #000 14%, #000 84%, transparent 100%);
+      mask-composite: intersect;
+    }
+    /* Overlay disabled on desktop — the mask above handles the edge fade. */
+    .career-feature__image::after { display: none; }
+  }
+
+  /* Tablet + mobile: the side-by-side feature collapses to a stacked, full-width
+     banner (image on top, stats below). Because the photo lives on an absolutely
+     positioned inner layer, the image's flex item has no intrinsic width on the
+     small-screen flex row and would collapse to 0 — so we give it an explicit
+     width + a fluid height, and stack the body as plain blocks. */
+  @media (max-width: 1023px) {
+    .career-feature__body { display: block; }
+    .career-feature__stats { width: 100%; }
+    .career-feature__image {
+      position: relative;
+      display: block;
+      width: auto;
+      right: auto;
+      left: auto;
+      top: auto;
+      bottom: auto;
+      /* Full-bleed to the viewport edges (negative side margins on a block-level
+         width:auto element stretch it past the container padding) so the banner
+         and its edge fades reach the screen edge — no container-padding gap. */
+      margin: 0 calc(50% - 50vw) 28px;
+      min-height: 280px;
+      height: 46vw;
+      max-height: 440px;
+      /* Fade all four edges via an alpha mask (two crossed gradients, intersected
+         so both must be opaque). The image itself becomes transparent at the
+         edges and blends into the page — no overlay, no gap. */
+      -webkit-mask-image:
+        linear-gradient(90deg, transparent 0%, #000 9%, #000 91%, transparent 100%),
+        linear-gradient(180deg, transparent 0%, #000 13%, #000 87%, transparent 100%);
+      -webkit-mask-composite: source-in;
+      mask-image:
+        linear-gradient(90deg, transparent 0%, #000 9%, #000 91%, transparent 100%),
+        linear-gradient(180deg, transparent 0%, #000 13%, #000 87%, transparent 100%);
+      mask-composite: intersect;
+    }
+    /* Small screens: drop the gradient OVERLAY entirely and fade the image's own
+       alpha with a MASK on the frame (see .career-feature__image below). A mask
+       fades the rendered image exactly at the frame bounds — it can't be cut off
+       or leave a few-px gap, and it reveals the page background whatever color. */
+    .career-feature__image::after { display: none; }
+
+    /* On small screens the cards/photos are large relative to the viewport, so
+       the default edge fades are too narrow and partial cards poke out. Widen
+       the video-row edge fades and deepen the photo-band bottom fade so content
+       fully dissolves at the edges. */
+    .video-row__viewport::before,
+    .video-row__viewport::after { width: 30%; max-width: 220px; }
+    /* Tighten the photo-band's side padding so the grid reaches closer to the
+       edges (matching the full-bleed feature) instead of leaving a 50px gap,
+       and deepen the bottom fade so the clipped bottom row dissolves cleanly. */
+    .photos-band { padding-left: 20px; padding-right: 20px; }
+    .photos-band::after { height: 150px; }
+  }
 `;
+
+// Sample photos used to fill the photo grid when a player doesn't have enough
+// of their own yet (founder-supplied images already in /public/images).
+const SAMPLE_PHOTOS = [
+  "/images/siler1.jpg", "/images/siler2.jpg", "/images/siler3.jpg",
+  "/images/siler4.jpg", "/images/siler5.jpg", "/images/siler6.jpeg",
+  "/images/siler7.jpg", "/images/siler8.jpg", "/images/silerhero.jpg",
+  "/images/media-5.jpg", "/images/media-6.jpg", "/images/media-9.jpg",
+  "/images/Media-4.avif",
+];
+
+// Top up the photo list with samples until the grid is full. The masonry caps
+// at 600px and clips with overflow:hidden, so EVERY column needs enough content
+// to reach the cap — otherwise short columns end above the bottom fade and it
+// looks detached. We cycle the sample pool (allowing a few repeats) to guarantee
+// a full, flush grid.
+function fillPhotos(photos: string[], min: number): string[] {
+  const out = [...photos];
+  const pool = SAMPLE_PHOTOS.filter((s) => !photos.includes(s));
+  for (let i = 0; out.length < min && pool.length > 0; i++) {
+    out.push(pool[i % pool.length]);
+  }
+  return out;
+}
 
 const LEVEL_LABEL: Record<string, string> = {
   hs: "High school",
@@ -128,7 +270,20 @@ type VideoItem = {
   thumb: string | null;
   youtubeId: string | null;
   href: string | null;
+  // Card chrome (matches the reel-card design): a tinted corner badge, a
+  // duration pill, and the meta line under the title. Optional — omitted
+  // cleanly when we don't have the data.
+  badge?: { label: string; cls: string } | null;
+  duration?: string | null;
+  meta?: string | null;
 };
+
+// Source/level → corner badge variant (reuses the design's badge--* classes).
+function tierBadge(level: string): { label: string; cls: string } {
+  if (level === "college") return { label: "College", cls: "badge--cal" };
+  if (level === "hs") return { label: "High School", cls: "badge--personal" };
+  return { label: "Pro", cls: "badge--nfl" };
+}
 
 // Extract the 11-char video id from any common YouTube URL shape.
 function youtubeId(url: string): string | null {
@@ -179,6 +334,7 @@ type LockerView = {
   levelLabel: string;
   level: string;
   tagline: string;
+  hometown: string | null;
   headshotUrl: string;
   heroVideo: string | null;
   heroPoster: string;
@@ -282,58 +438,64 @@ export default async function PlayerLocker({ params }: { params: Promise<{ slug:
     const dob = meta.dob ?? "1985-08-21";
     const heightIn = meta.height_in ?? 72;
     const weightLbs = meta.weight_lbs ?? 190;
-    // Synthetic CB stat lines so the spotlight + modal render in dev.
+    // ---- DEMO PLAYER: Brandon Siler (Florida Gators LB / former pro) ----
+    // Identity, teams, draft, awards and NFL career totals are real (Wikipedia /
+    // Pro-Football-Reference: 74 G, 16 GS, 180 tackles, 2 INT, 3 fumble rec).
+    // Per-season splits, sacks and TFL are illustrative demo values.
     const mockCollegeRows: SeasonRow[] = [
-      { season: 2003, season_type: "REG", team: "California", level: "college", stats: { interceptions: 2, pass_defended: 9, tackles: 41, def_tds: 0 } },
-      { season: 2004, season_type: "REG", team: "California", level: "college", stats: { interceptions: 1, pass_defended: 7, tackles: 38, def_tds: 0 } },
-      { season: 2005, season_type: "REG", team: "California", level: "college", stats: { interceptions: 3, pass_defended: 12, tackles: 44, def_tds: 1 } },
-      { season: 2006, season_type: "REG", team: "California", level: "college", stats: { interceptions: 8, pass_defended: 17, tackles: 52, def_tds: 1 } },
+      { season: 2004, season_type: "REG", team: "Florida", level: "college", stats: { tackles: 70, sacks: 1, tfl: 6, forced_fumbles: 1, games: 12 } },
+      { season: 2005, season_type: "REG", team: "Florida", level: "college", stats: { tackles: 96, sacks: 2, tfl: 9, forced_fumbles: 2, interceptions: 1, games: 11 } },
+      { season: 2006, season_type: "REG", team: "Florida", level: "college", stats: { tackles: 84, sacks: 2, tfl: 8, forced_fumbles: 1, interceptions: 1, games: 14 } },
     ];
     const mockProRows: SeasonRow[] = [
-      { season: 2007, season_type: "REG", team: "IND", level: "pro", stats: { interceptions: 1, pass_defended: 6, tackles: 22, def_tds: 0 } },
-      { season: 2008, season_type: "REG", team: "IND", level: "pro", stats: { interceptions: 0, pass_defended: 4, tackles: 18, def_tds: 0 } },
-      { season: 2010, season_type: "REG", team: "SD", level: "pro", stats: { interceptions: 2, pass_defended: 8, tackles: 31, def_tds: 1 } },
+      { season: 2007, season_type: "REG", team: "SD", level: "pro", stats: { tackles: 30, sacks: 0, tfl: 2, games: 14 } },
+      { season: 2008, season_type: "REG", team: "SD", level: "pro", stats: { tackles: 45, sacks: 1, tfl: 3, interceptions: 1, games: 16 } },
+      { season: 2009, season_type: "REG", team: "SD", level: "pro", stats: { tackles: 50, sacks: 1, tfl: 4, interceptions: 1, fumble_rec: 1, games: 16 } },
+      { season: 2010, season_type: "REG", team: "SD", level: "pro", stats: { tackles: 40, sacks: 1, tfl: 2, fumble_rec: 1, games: 14 } },
+      { season: 2011, season_type: "REG", team: "KC", level: "pro", stats: { tackles: 15, sacks: 0, tfl: 1, fumble_rec: 1, games: 14 } },
     ];
-    const mockStats = buildStatBlocks("CB", mockCollegeRows, mockProRows);
+    const mockStats = buildStatBlocks("LB", mockCollegeRows, mockProRows);
     view = {
       slug,
-      name: player.full_name || player.name || "Unknown Player",
-      position: player.position || "CB",
-      school: "Cal Bears",
-      schoolAbbr: "CAL",
-      jersey: 21,
-      yearsLabel: "2003–2006",
-      levelLabel: LEVEL_LABEL.pro,
-      level: "pro",
-      tagline:
-        player.bio?.trim() ||
-        "Lott Trophy 2006. The career, the film, the plays — all in one place.",
-      headshotUrl: DEFAULT_HEADSHOT,
-      heroVideo: "/videos/demo-reel.mp4",
-      heroPoster: DEFAULT_HERO,
+      name: "Brandon Siler",
+      position: "LB",
+      school: "Florida Gators",
+      schoolAbbr: "FLA",
+      jersey: 40,
+      yearsLabel: "2004–2006",
+      levelLabel: LEVEL_LABEL.former,
+      level: "former",
+      tagline: "2006 National Champion. Florida Gator. Former pro.",
+      hometown: "Daytona Beach, FL",
+      headshotUrl: "/images/siler2.jpg",
+      heroVideo: null,
+      heroPoster: "/images/silerhero.jpg",
       age: calcAge(dob),
       hasPro: true,
       proSeasons: 5,
       proYears: "2007–2011",
-      proTeamsLine: "Indianapolis Colts · San Diego Chargers",
-      draftLine: "Drafted 2007 · Round 3, Pick 95 by Indianapolis Colts",
+      proTeamsLine: "San Diego Chargers · Kansas City Chiefs",
+      draftLine: "Drafted 2007 · Round 7, Pick 240 by San Diego Chargers",
       proHonors: [
-        { award_name: "Consensus All-American", award_short_desc: null, year: "2006", level: "Pro", team_or_school: null },
+        { award_name: "Third-Team All-American", award_short_desc: null, year: "2006", level: "College", team_or_school: "Florida" },
+        { award_name: "Second-Team All-SEC", award_short_desc: null, year: "2006", level: "College", team_or_school: "Florida" },
+        { award_name: "SEC Freshman of the Year", award_short_desc: null, year: "2004", level: "College", team_or_school: "Florida" },
       ],
       hasCollege: true,
-      collegeYears: "2003–2006",
-      collegeAward: { award_name: "Lott Trophy", award_short_desc: null, year: "2006", level: "College", team_or_school: "Cal" },
-      collegeImage: "/images/media-9.jpg",
-      videos: youtubeVideoItems(
-        [
-          "https://www.youtube.com/watch?v=ScMzIvxBSi4",
-          "https://youtu.be/aqz-KE-bpKQ",
-          "https://www.youtube.com/watch?v=ZbZSe6N_BXs",
-        ],
-        "Demo Player",
-      ),
-      photos: ["/images/media-5.jpg", "/images/media-6.jpg", "/images/media-9.jpg", "/images/media-1.png"],
-      statModalSub: "Demo Player · CB · #21",
+      collegeYears: "2004–2006",
+      collegeAward: { award_name: "BCS National Champion", award_short_desc: null, year: "2006", level: "College", team_or_school: "Florida" },
+      collegeImage: "/images/siler3.jpg",
+      videos: [
+        { id: "v1", title: "2006 BCS National Championship", thumb: null, youtubeId: "ScMzIvxBSi4", href: null, badge: { label: "College", cls: "badge--cal" }, duration: "3:48", meta: "512,400 views · 2006" },
+        { id: "v2", title: "Gators Defense — Career Top Plays", thumb: null, youtubeId: "aqz-KE-bpKQ", href: null, badge: { label: "Rising", cls: "badge--rising" }, duration: "2:10", meta: "88,210 views · Career" },
+        { id: "v3", title: "NFL Career — The Chargers Years", thumb: null, youtubeId: "ZbZSe6N_BXs", href: null, badge: { label: "Pro", cls: "badge--nfl" }, duration: "4:02", meta: "37,090 views · 2007–11" },
+      ],
+      photos: [
+        "/images/siler1.jpg", "/images/siler2.jpg", "/images/siler3.jpg",
+        "/images/siler4.jpg", "/images/siler5.jpg", "/images/siler6.jpeg",
+        "/images/siler7.jpg", "/images/siler8.jpg", "/images/silerhero.jpg",
+      ],
+      statModalSub: "Brandon Siler · LB · #40",
       ...mockStats,
     };
     void heightIn; void weightLbs;
@@ -506,6 +668,7 @@ export default async function PlayerLocker({ params }: { params: Promise<{ slug:
       levelLabel: LEVEL_LABEL[level] ?? "—",
       level,
       tagline,
+      hometown: p.hometown || null,
       headshotUrl,
       heroVideo: p.video_url || null,
       heroPoster: photos[0] || headshotUrl || DEFAULT_HERO,
@@ -522,16 +685,18 @@ export default async function PlayerLocker({ params }: { params: Promise<{ slug:
       collegeImage: photos[1] || photos[0] || null,
       // Playable highlights first (the player's saved youtube_urls), then any
       // project-managed `videos` rows (which link out to their /watch page).
+      // Each gets a tier badge; duration/views aren't in the data yet so those
+      // card bits are left off rather than faked.
       videos: [
         ...youtubeVideoItems((p as any).youtube_urls, name),
         ...(vids ?? []).map((v: any) => ({
           id: String(v.id),
           title: v.title || "Untitled clip",
           thumb: v.thumbnail_url || null,
-          youtubeId: null,
+          youtubeId: null as string | null,
           href: `/watch/${v.id}`,
         })),
-      ],
+      ].map((vi) => ({ ...vi, badge: tierBadge(level) })),
       photos,
       statModalSub,
       ...statBlocks,
@@ -652,7 +817,11 @@ function renderLockerHtml(v: LockerView): string {
     </div>
     <h1 class="profile__name reveal delay-1">${esc(v.name)}</h1>
     <p class="profile__sub reveal delay-2">${subLine}</p>
-    <p class="profile__tagline reveal delay-3">${esc(v.tagline)}</p>
+    <p class="profile__tagline reveal delay-3"${
+      v.hometown
+        ? ' style="font-style:normal;font-weight:700;text-transform:uppercase;color:var(--fg-primary);letter-spacing:0.08em;"'
+        : ""
+    }>${esc(v.hometown || v.tagline)}</p>
     <div class="profile__actions reveal delay-4">
       <button class="btn-primary claim-only" type="button">Claim This Locker</button>
       <button class="btn-icon" type="button" id="qr-btn" aria-haspopup="dialog" aria-controls="qr-modal" aria-label="Show QR code">
@@ -685,22 +854,39 @@ function renderLockerHtml(v: LockerView): string {
             <div class="reel locker-stagger" id="reel" role="list">
               ${v.videos
                 .map((vid, i) => {
-                  const bg = vid.thumb
-                    ? `url('${cssUrl(vid.thumb)}')`
+                  // Real thumbnail: explicit thumb, else the YouTube poster
+                  // derived from the video id, else the patterned gradient.
+                  const thumbUrl =
+                    vid.thumb ||
+                    (vid.youtubeId ? `https://i.ytimg.com/vi/${vid.youtubeId}/hqdefault.jpg` : null);
+                  const bg = thumbUrl
+                    ? `url('${cssUrl(thumbUrl)}')`
                     : THUMB_GRADIENTS[i % THUMB_GRADIENTS.length];
                   const trigger = vid.youtubeId
                     ? `data-youtube="${esc(vid.youtubeId)}"`
                     : vid.href
                       ? `data-href="${esc(vid.href)}"`
                       : "";
+                  const badge = vid.badge
+                    ? `<span class="badge ${esc(vid.badge.cls)}">${esc(vid.badge.label)}</span>`
+                    : "";
+                  const duration = vid.duration
+                    ? `<span class="duration">${esc(vid.duration)}</span>`
+                    : "";
                   return `
               <article class="reel-card" tabindex="0" data-tier="${esc(levelTier)}" data-title="${esc(vid.title)}" ${trigger} role="listitem">
                 <div class="reel-card__thumb-wrap">
                   <div class="reel-card__thumb" style="background-image:${bg};background-size:cover;background-position:center;"></div>
+                  ${badge}
                   <div class="play-icon" aria-hidden="true"></div>
+                  ${duration}
                 </div>
                 <div class="reel-card__meta">
                   <h3 class="reel-card__title">${esc(vid.title)}</h3>
+                  <p class="reel-card__sub">
+                    <span>${esc(vid.meta ?? "")}</span>
+                    <span class="dots"><i class="gold"></i><i class="blue"></i><i></i></span>
+                  </p>
                 </div>
               </article>`;
                 })
@@ -722,12 +908,15 @@ function renderLockerHtml(v: LockerView): string {
       : "";
 
   // ---- PHOTOS ----
-  const photosSection =
-    v.photos.length > 0
-      ? `
+  // Photo grid: the original locker mockup's masonry "photos band" — a capped,
+  // full-width strip that fades out at the bottom, with hover-lift + image zoom
+  // + mouse-tracking pan (wired in LockerClient). CSS lives in lockerStyles.ts.
+  const photoList = fillPhotos(v.photos, 16);
+  const photosSection = photoList.length
+    ? `
     <section class="photos-band scroll-reveal" aria-label="Photo gallery">
       <div class="photos-masonry locker-stagger" id="photos-masonry">
-        ${v.photos
+        ${photoList
           .map(
             (src, i) =>
               `<figure class="photo" data-index="${i}" data-full="${esc(src)}" role="button" tabindex="0" aria-label="Open photo ${i + 1}"><img src="${esc(src)}" alt="" loading="lazy"></figure>`,
@@ -735,7 +924,7 @@ function renderLockerHtml(v: LockerView): string {
           .join("")}
       </div>
     </section>`
-      : "";
+    : "";
 
   // ---- COLLEGE FEATURE ----
   const collegeImageStyle = v.collegeImage
@@ -789,12 +978,12 @@ function renderLockerHtml(v: LockerView): string {
             <p class="career-feature__pull">${collegePull}</p>
           </header>
           <div class="career-feature__body">
+            <figure class="career-feature__image image-fade" role="img" aria-label="${esc(
+              v.name,
+            )} during his college career"><div class="career-feature__image-inner"${collegeImageStyle}></div></figure>
             <div class="stat-hero career-feature__stats">
               ${collegeStatsInner}
             </div>
-            <figure class="career-feature__image image-fade"${collegeImageStyle} role="img" aria-label="${esc(
-              v.name,
-            )} during his college career"></figure>
           </div>
         </div>
       </div>

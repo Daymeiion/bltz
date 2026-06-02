@@ -52,6 +52,14 @@ export default function LockerClient({
     const heroBg = $("heroBg");
     const hero = document.querySelector(".hero") as HTMLElement | null;
     const topbar = $("topbar");
+    // College feature image — scroll-linked "focus pull": the inner photo layer
+    // zooms slightly + desaturates/dims when off-center, then snaps into vivid,
+    // full-color clarity (with a parallax drift) as it reaches the viewport
+    // center, reversing on scroll-up. The fixed frame keeps the edge fades.
+    const featureFrame = document.querySelector(".career-feature__image") as HTMLElement | null;
+    const featureInner = document.querySelector(
+      ".career-feature__image-inner",
+    ) as HTMLElement | null;
     let ticking = false;
     const onScroll = () => {
       if (ticking) return;
@@ -60,6 +68,26 @@ export default function LockerClient({
         const y = window.scrollY;
         if (heroBg && hero && !reduce && y < hero.offsetHeight) {
           heroBg.style.transform = `translate3d(0, ${y * 0.35}px, 0) scale(${1 + y * 0.0002})`;
+        }
+        if (featureFrame && featureInner && !reduce) {
+          const rect = featureFrame.getBoundingClientRect();
+          const vh = window.innerHeight;
+          if (rect.bottom > -200 && rect.top < vh + 200) {
+            // 0 as it enters from the bottom → 1 as it exits past the top.
+            const progress = Math.max(0, Math.min(1, (vh - rect.top) / (vh + rect.height)));
+            // 1 when the frame is centered in the viewport, 0 at the edges.
+            const centerProx = Math.max(0, 1 - Math.abs(progress - 0.5) * 2);
+            const scale = 1.0 + (1 - centerProx) * 0.08; // 1.0 centered → 1.08 at edges
+            // Drift is proportional to the element's own height (±2.5%) so it
+            // always stays within the inner layer's -5% overflow headroom — even
+            // on a short mobile banner where a fixed px drift would expose an edge.
+            const ty = (progress - 0.5) * rect.height * -0.05;
+            const sat = (0.7 + centerProx * 0.55).toFixed(3); // 0.70 → 1.25
+            const bri = (0.84 + centerProx * 0.2).toFixed(3); // 0.84 → 1.04
+            const con = (0.96 + centerProx * 0.14).toFixed(3); // 0.96 → 1.10
+            featureInner.style.transform = `translate3d(0, ${ty.toFixed(1)}px, 0) scale(${scale.toFixed(3)})`;
+            featureInner.style.filter = `saturate(${sat}) brightness(${bri}) contrast(${con})`;
+          }
         }
         if (topbar) topbar.classList.toggle("is-scrolled", y > 24);
         ticking = false;
