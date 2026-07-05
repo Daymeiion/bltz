@@ -1035,6 +1035,75 @@ function renderLockerHtml(v: LockerView): string {
     </section>`
     : "";
 
+  // ---- PRESS / ARTICLES (DEMO mock data) ----
+  // Placeholder editorial cards — there's no press table yet, so these use
+  // believable mock content tailored to the athlete. Swap for a real `press`
+  // table the same way videos/awards are wired once that data exists.
+  const PRESS_MOCK = [
+    { initials: "PK", author: "Peter King", outlet: "NFL on NBC", img: "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=400&q=80&auto=format&fit=crop", title: `${v.name} and the Art of the Bull Rush`, excerpt: "Sixteen years in, the most relentless edge in football still wins the same way he did as a rookie — one snap, one tackle, one Sunday at a time..." },
+    { initials: "JD", author: "Jeff Duncan", outlet: "The Times-Picayune", img: "https://images.unsplash.com/photo-1607627000458-210e8d2bdb1d?w=400&q=80&auto=format&fit=crop", title: "A Saints Institution, Built One Season at a Time", excerpt: "Two franchises never entered the conversation. From day one in New Orleans, the plan was simple: stay, lead, and never miss a Sunday..." },
+    { initials: "LH", author: "Larry Holder", outlet: "The Athletic", img: "https://images.unsplash.com/photo-1495555687398-3f50d6e79e1e?w=400&q=80&auto=format&fit=crop", title: "From Berkeley to the Bayou: The Long Game", excerpt: "The son of a Pro Bowler, raised in the film room, who turned a first-round pedigree into one of the most durable careers of his era..." },
+    { initials: "JV", author: "Jenny Vrentas", outlet: "The Players' Tribune", img: "https://images.unsplash.com/photo-1577471488278-16eec37ffcc2?w=400&q=80&auto=format&fit=crop", title: "Why He Never Missed a Sunday", excerpt: "\"Availability is the best ability.\" It sounds like a cliché until you watch a man play through sixteen seasons and barely sit a snap..." },
+    { initials: "MT", author: "Mike Triplett", outlet: "ESPN", img: "https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=400&q=80&auto=format&fit=crop", title: "The Sack That Defined a Rivalry", excerpt: "There are signature plays, and then there are the ones that live in a city's memory. This one belongs to the Superdome forever..." },
+    { initials: "NU", author: "Nick Underhill", outlet: "NewOrleans.Football", img: "https://images.unsplash.com/photo-1543326727-cf6c39e8f84c?w=400&q=80&auto=format&fit=crop", title: "The Locker Room Glue Nobody Talks About", excerpt: "The stats tell one story. Ask the rookies who came through his position room and you'll hear a completely different one..." },
+  ];
+  const pressSection = `
+    <section class="zone scroll-reveal press-section" aria-labelledby="press-h" style="padding:40px 0;">
+      <div class="container">
+        <div class="section-head" style="padding:0;margin:0 0 40px;">
+          <span class="kicker">Features · Interviews · Profiles</span>
+          <h2 id="press-h">In The Press</h2>
+        </div>
+        <div class="press-grid locker-stagger">
+          ${PRESS_MOCK.map(
+            (a) => `
+          <a class="press-card" href="#" onclick="return false;">
+            <div class="press-card__image" style="background-image:url('${cssUrl(a.img)}');"></div>
+            <div class="press-card__author">
+              <span class="press-card__avatar">${esc(a.initials)}</span>
+              <span class="press-card__author-name">${esc(a.author)}<small>${esc(a.outlet)}</small></span>
+            </div>
+            <h3 class="press-card__title">${esc(a.title)}</h3>
+            <p class="press-card__excerpt">${esc(a.excerpt)} <span class="press-card__more">Read more</span></p>
+          </a>`,
+          ).join("")}
+        </div>
+      </div>
+    </section>`;
+
+  // ---- BELIEVERS (DEMO mock data) ----
+  // Teammates/followers who back the athlete. Mock until a believers/follows
+  // table is wired — names below are real Cal & Saints teammates for realism.
+  const BELIEVERS_MOCK = [
+    { name: "Aaron Rodgers", jersey: "#8 · CAL", img: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&q=80&auto=format&fit=crop&crop=faces" },
+    { name: "Marshawn Lynch", jersey: "#10 · CAL", img: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=160&q=80&auto=format&fit=crop&crop=faces" },
+    { name: "DeSean Jackson", jersey: "#1 · CAL", img: "https://images.unsplash.com/photo-1463453091185-61582044d556?w=160&q=80&auto=format&fit=crop&crop=faces" },
+    { name: "Keenan Allen", jersey: "#21 · CAL", img: "https://images.unsplash.com/photo-1542178243-bc20204b769f?w=160&q=80&auto=format&fit=crop&crop=faces" },
+    { name: "Justin Forsett", jersey: "#20 · CAL", img: "https://images.unsplash.com/photo-1552058544-f2b08422138a?w=160&q=80&auto=format&fit=crop&crop=faces" },
+    { name: "Marques Colston", jersey: "#12 · NO", img: "https://images.unsplash.com/photo-1521119989659-a83eee488004?w=160&q=80&auto=format&fit=crop&crop=faces" },
+    { name: "Demario Davis", jersey: "#56 · NO", img: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=160&q=80&auto=format&fit=crop&crop=faces" },
+    { name: "Tyson Alualu", jersey: "#92 · CAL", img: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=160&q=80&auto=format&fit=crop&crop=faces" },
+  ];
+  const believersSection = `
+    <section class="zone scroll-reveal" aria-labelledby="believers-h" style="padding-top:0;">
+      <div class="container">
+        <div class="section-head" style="padding-top:0;margin-top:0;margin-bottom:0;">
+          <span class="kicker">Teammates &amp; followers</span>
+          <h2 id="believers-h">Believers</h2>
+        </div>
+        <div class="believers__count-block">
+          <p class="believers__count">${BELIEVERS_MOCK.length}</p>
+          <p class="believers__count-label">Believers Since 2026</p>
+        </div>
+        <ul class="believers__grid">
+          ${BELIEVERS_MOCK.map(
+            (b) => `
+          <li class="believer-card"><span class="avatar"><img src="${esc(b.img)}" alt="" loading="lazy"></span><span class="believer-card__name">${esc(b.name)}</span><span class="believer-card__jersey">${esc(b.jersey)}</span></li>`,
+          ).join("")}
+        </ul>
+      </div>
+    </section>`;
+
   // ---- CLAIM CTA + FOOTER ----
   const claim = `
     <section class="claim-cta scroll-reveal claim-only" aria-labelledby="claim-h">
@@ -1185,5 +1254,5 @@ function renderLockerHtml(v: LockerView): string {
   </div>`
     : "";
 
-  return `${topbar}${hero}${profile}<main id="main">${videosSection}${photosSection}${collegeSection}${proSection}${claim}</main>${footer}${modals}${statsModal}`;
+  return `${topbar}${hero}${profile}<main id="main">${videosSection}${photosSection}${collegeSection}${proSection}${pressSection}${believersSection}${claim}</main>${footer}${modals}${statsModal}`;
 }

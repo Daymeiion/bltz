@@ -52,3 +52,7 @@ Thumbs.db
 bltz
 desktop.ini
 .gstack/
+
+# Local AI skills (uipro / skills CLI installs) — keep local, not in repo
+.agents/
+skills-lock.json

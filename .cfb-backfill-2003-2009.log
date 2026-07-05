@@ -1,0 +1,936 @@
+[dotenv@17.2.3] injecting env (7) from .env.local -- tip: 🛠️  run anywhere with `dotenvx run -- yourcommand`
+Loading FBS + FCS allow-list from CFBD…
+(node:42232) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure by disabling certificate verification.
+(Use `node --trace-warnings ...` to show where the warning was created)
+D1 allow-list: 265 programs (138 FBS + 127 FCS)
+Loading cfb_teams from Supabase…
+Teams to process: 262 (skipped 489 non-D1)
+Seasons: 2003..2009 (7 per team)
+[1/262] Abilene Christian              | players:    0 | total: 0 | calls: 7 | ETA: ~16m   [2/262] Air Force                      | players:  173 | total: 173 | calls: 14 | ETA: ~20m   [3/262] Akron                          | players:  159 | total: 332 | calls: 21 | ETA: ~19m   [4/262] Alabama A&M                    | players:   11 | total: 343 | calls: 28 | ETA: ~18m   [5/262] Alabama                        | players:  160 | total: 503 | calls: 35 | ETA: ~19m   [6/262] Alabama State                  | players:   21 | total: 524 | calls: 42 | ETA: ~18m   [7/262] Alcorn State                   | players:   43 | total: 567 | calls: 49 | ETA: ~18m   [8/262] App State                      | players:   42 | total: 609 | calls: 56 | ETA: ~18m   [9/262] Arizona State                  | players:  166 | total: 775 | calls: 63 | ETA: ~18m   [10/262] Arizona                        | players:  157 | total: 932 | calls: 70 | ETA: ~18m   [11/262] Arkansas                       | players:  167 | total: 1099 | calls: 77 | ETA: ~18m   [12/262] Arkansas State                 | players:  156 | total: 1255 | calls: 84 | ETA: ~18m   [13/262] Arkansas-Pine Bluff            | players:   13 | total: 1268 | calls: 91 | ETA: ~18m   [14/262] Army                           | players:  221 | total: 1489 | calls: 98 | ETA: ~18m   [15/262] Auburn                         | players:  167 | total: 1656 | calls: 105 | ETA: ~18m   [16/262] Austin Peay                    | players:    0 | total: 1656 | calls: 112 | ETA: ~17m   [17/262] Ball State                     | players:  152 | total: 1808 | calls: 119 | ETA: ~17m   [18/262] Baylor                         | players:  180 | total: 1988 | calls: 126 | ETA: ~17m   [19/262] Bethune-Cookman                | players:    0 | total: 1988 | calls: 133 | ETA: ~17m   [20/262] Boise State                    | players:  173 | total: 2161 | calls: 140 | ETA: ~17m   [21/262] Boston College                 | players:  149 | total: 2310 | calls: 147 | ETA: ~17m   [22/262] Bowling Green                  | players:  153 | total: 2463 | calls: 154 | ETA: ~17m   [23/262] Brown                          | players:    0 | total: 2463 | calls: 161 | ETA: ~17m   [24/262] Bryant                         | players:    0 | total: 2463 | calls: 168 | ETA: ~17m   [25/262] Bucknell                       | players:    0 | total: 2463 | calls: 175 | ETA: ~17m   [26/262] Buffalo                        | players:  151 | total: 2614 | calls: 182 | ETA: ~17m   [27/262] Butler                         | players:    0 | total: 2614 | calls: 189 | ETA: ~17m   [28/262] BYU                            | players:  166 | total: 2780 | calls: 196 | ETA: ~17m   [29/262] Cal Poly                       | players:   42 | total: 2822 | calls: 203 | ETA: ~17m   [30/262] California                     | players:  176 | total: 2998 | calls: 210 | ETA: ~16m   [31/262] Campbell                       | players:    0 | total: 2998 | calls: 217 | ETA: ~16m   [32/262] Central Arkansas               | players:   29 | total: 3027 | calls: 224 | ETA: ~16m   [33/262] Central Connecticut            | players:   14 | total: 3041 | calls: 231 | ETA: ~16m   [34/262] Central Michigan               | players:  161 | total: 3202 | calls: 238 | ETA: ~16m   [35/262] Charleston Southern            | players:   36 | total: 3238 | calls: 245 | ETA: ~16m   [36/262] Charlotte                      | players:    0 | total: 3238 | calls: 252 | ETA: ~16m   [37/262] Chattanooga                    | players:   51 | total: 3289 | calls: 259 | ETA: ~16m   [38/262] Cincinnati                     | players:  161 | total: 3450 | calls: 266 | ETA: ~16m   [39/262] Clemson                        | players:  142 | total: 3592 | calls: 273 | ETA: ~16m   [40/262] Coastal Carolina               | players:   32 | total: 3624 | calls: 280 | ETA: ~16m   [41/262] Colgate                        | players:    0 | total: 3624 | calls: 287 | ETA: ~16m   [42/262] Colorado                       | players:  181 | total: 3805 | calls: 294 | ETA: ~16m   [43/262] Colorado State                 | players:  158 | total: 3963 | calls: 301 | ETA: ~16m   [44/262] Columbia                       | players:    0 | total: 3963 | calls: 308 | ETA: ~15m   [45/262] Cornell                        | players:    0 | total: 3963 | calls: 315 | ETA: ~15m   [46/262] Dartmouth                      | players:    0 | total: 3963 | calls: 322 | ETA: ~15m   [47/262] Davidson                       | players:    0 | total: 3963 | calls: 329 | ETA: ~15m   [48/262] Dayton                         | players:    0 | total: 3963 | calls: 336 | ETA: ~15m   [49/262] Delaware                       | players:   31 | total: 3994 | calls: 343 | ETA: ~15m   [50/262] Delaware State                 | players:   32 | total: 4026 | calls: 350 | ETA: ~15m   [51/262] Drake                          | players:    0 | total: 4026 | calls: 357 | ETA: ~15m   [52/262] Duke                           | players:  151 | total: 4177 | calls: 364 | ETA: ~15m   [53/262] Duquesne                       | players:    0 | total: 4177 | calls: 371 | ETA: ~15m   [54/262] East Carolina                  | players:  176 | total: 4353 | calls: 378 | ETA: ~15m   [55/262] East Tennessee State           | players:    0 | total: 4353 | calls: 385 | ETA: ~15m   [56/262] East Texas A&M                 | players:    0 | total: 4353 | calls: 392 | ETA: ~15m   [57/262] Eastern Illinois               | players:   57 | total: 4410 | calls: 399 | ETA: ~15m   [58/262] Eastern Kentucky               | players:   37 | total: 4447 | calls: 406 | ETA: ~14m   [59/262] Eastern Michigan               | players:  144 | total: 4591 | calls: 413 | ETA: ~14m   [60/262] Eastern Washington             | players:   50 | total: 4641 | calls: 420 | ETA: ~14m   [61/262] Elon                           | players:   16 | total: 4657 | calls: 427 | ETA: ~14m   [62/262] Florida A&M                    | players:   43 | total: 4700 | calls: 434 | ETA: ~14m   [63/262] Florida Atlantic               | players:  168 | total: 4868 | calls: 441 | ETA: ~14m   [64/262] Florida                        | players:  175 | total: 5043 | calls: 448 | ETA: ~14m   [65/262] Florida International          | players:  150 | total: 5193 | calls: 455 | ETA: ~14m   [66/262] Florida State                  | players:  184 | total: 5377 | calls: 462 | ETA: ~14m   [67/262] Fordham                        | players:    0 | total: 5377 | calls: 469 | ETA: ~14m   [68/262] Fresno State                   | players:  159 | total: 5536 | calls: 476 | ETA: ~14m   [69/262] Furman                         | players:   38 | total: 5574 | calls: 483 | ETA: ~14m   [70/262] Gardner-Webb                   | players:   30 | total: 5604 | calls: 490 | ETA: ~14m   [71/262] Georgetown                     | players:    0 | total: 5604 | calls: 497 | ETA: ~14m   [72/262] Georgia                        | players:  191 | total: 5795 | calls: 504 | ETA: ~14m   [73/262] Georgia Southern               | players:   47 | total: 5842 | calls: 511 | ETA: ~13m   [74/262] Georgia State                  | players:    0 | total: 5842 | calls: 518 | ETA: ~13m   [75/262] Georgia Tech                   | players:  190 | total: 6032 | calls: 525 | ETA: ~13m   [76/262] Grambling                      | players:   47 | total: 6079 | calls: 532 | ETA: ~13m   [77/262] Hampton                        | players:    0 | total: 6079 | calls: 539 | ETA: ~13m   [78/262] Harvard                        | players:    0 | total: 6079 | calls: 546 | ETA: ~13m   [79/262] Hawai'i                        | players:  186 | total: 6265 | calls: 553 | ETA: ~13m   [80/262] Holy Cross                     | players:    0 | total: 6265 | calls: 560 | ETA: ~13m   [81/262] Houston Christian              | players:    0 | total: 6265 | calls: 567 | ETA: ~13m   [82/262] Houston                        | players:  162 | total: 6427 | calls: 574 | ETA: ~13m   [83/262] Howard                         | players:   33 | total: 6460 | calls: 581 | ETA: ~13m   [84/262] Idaho State                    | players:   39 | total: 6499 | calls: 588 | ETA: ~13m   [85/262] Idaho                          | players:   94 | total: 6593 | calls: 595 | ETA: ~13m   [86/262] Illinois                       | players:  162 | total: 6755 | calls: 602 | ETA: ~13m   [87/262] Illinois State                 | players:   41 | total: 6796 | calls: 609 | ETA: ~12m   [88/262] Incarnate Word                 | players:    0 | total: 6796 | calls: 616 | ETA: ~12m   [89/262] Indiana                        | players:  156 | total: 6952 | calls: 623 | ETA: ~12m   [90/262] Indiana State                  | players:   55 | total: 7007 | calls: 630 | ETA: ~12m   [91/262] Iowa                           | players:  177 | total: 7184 | calls: 637 | ETA: ~12m   [92/262] Iowa State                     | players:  170 | total: 7354 | calls: 644 | ETA: ~12m   [93/262] Jackson State                  | players:   15 | total: 7369 | calls: 651 | ETA: ~12m   [94/262] Jacksonville State             | players:   42 | total: 7411 | calls: 658 | ETA: ~12m   [95/262] James Madison                  | players:   28 | total: 7439 | calls: 665 | ETA: ~12m   [96/262] Kansas                         | players:  157 | total: 7596 | calls: 672 | ETA: ~12m   [97/262] Kansas State                   | players:  199 | total: 7795 | calls: 679 | ETA: ~12m   [98/262] Kennesaw State                 | players:    0 | total: 7795 | calls: 686 | ETA: ~12m   [99/262] Kent State                     | players:  167 | total: 7962 | calls: 693 | ETA: ~12m   [100/262] Kentucky                       | players:  172 | total: 8134 | calls: 700 | ETA: ~12m   [101/262] Lafayette                      | players:    0 | total: 8134 | calls: 707 | ETA: ~11m   [102/262] Lamar                          | players:    0 | total: 8134 | calls: 714 | ETA: ~11m   [103/262] Lehigh                         | players:    0 | total: 8134 | calls: 721 | ETA: ~11m   [104/262] Liberty                        | players:   33 | total: 8167 | calls: 728 | ETA: ~11m   [105/262] Lindenwood                     | players:    0 | total: 8167 | calls: 735 | ETA: ~11m   [106/262] Long Island University         | players:    0 | total: 8167 | calls: 742 | ETA: ~11m   [107/262] Louisiana                      | players:  162 | total: 8329 | calls: 749 | ETA: ~11m   [108/262] Louisiana Tech                 | players:  170 | total: 8499 | calls: 756 | ETA: ~11m   [109/262] Louisville                     | players:  171 | total: 8670 | calls: 763 | ETA: ~11m   [110/262] LSU                            | players:  182 | total: 8852 | calls: 770 | ETA: ~11m   [111/262] Maine                          | players:   41 | total: 8893 | calls: 777 | ETA: ~11m   [112/262] Marist                         | players:    0 | total: 8893 | calls: 784 | ETA: ~11m   [113/262] Marshall                       | players:  167 | total: 9060 | calls: 791 | ETA: ~11m   [114/262] Maryland                       | players:  168 | total: 9228 | calls: 798 | ETA: ~11m   [115/262] Massachusetts                  | players:   38 | total: 9266 | calls: 805 | ETA: ~10m   [116/262] McNeese                        | players:   37 | total: 9303 | calls: 812 | ETA: ~10m   [117/262] Memphis                        | players:  161 | total: 9464 | calls: 819 | ETA: ~10m   [118/262] Mercer                         | players:    0 | total: 9464 | calls: 826 | ETA: ~10m   [119/262] Mercyhurst                     | players:    0 | total: 9464 | calls: 833 | ETA: ~10m   [120/262] Merrimack                      | players:    0 | total: 9464 | calls: 840 | ETA: ~10m   [121/262] Miami (OH)                     | players:  169 | total: 9633 | calls: 847 | ETA: ~10m   [122/262] Miami                          | players:  147 | total: 9780 | calls: 854 | ETA: ~10m   [123/262] Michigan State                 | players:  167 | total: 9947 | calls: 861 | ETA: ~10m   [124/262] Michigan                       | players:  200 | total: 10147 | calls: 868 | ETA: ~10m   [125/262] Middle Tennessee               | players:  158 | total: 10305 | calls: 875 | ETA: ~10m   [126/262] Minnesota                      | players:  157 | total: 10462 | calls: 882 | ETA: ~10m   [127/262] Mississippi State              | players:  169 | total: 10631 | calls: 889 | ETA: ~10m   [128/262] Mississippi Valley State       | players:   10 | total: 10641 | calls: 896 | ETA: ~10m   [129/262] Missouri State                 | players:   45 | total: 10686 | calls: 903 | ETA: ~9m     WARN Missouri 2008: fetch https://api.collegefootballdata.com/roster?team=Missouri&year=2008 -> 429
+  WARN Missouri 2009: fetch https://api.collegefootballdata.com/roster?team=Missouri&year=2009 -> 429
+[130/262] Missouri                       | players:   62 | total: 10748 | calls: 910 | ETA: ~9m     WARN Monmouth 2003: fetch https://api.collegefootballdata.com/roster?team=Monmouth&year=2003 -> 429
+  WARN Monmouth 2004: fetch https://api.collegefootballdata.com/roster?team=Monmouth&year=2004 -> 429
+  WARN Monmouth 2005: fetch https://api.collegefootballdata.com/roster?team=Monmouth&year=2005 -> 429
+  WARN Monmouth 2006: fetch https://api.collegefootballdata.com/roster?team=Monmouth&year=2006 -> 429
+  WARN Monmouth 2007: fetch https://api.collegefootballdata.com/roster?team=Monmouth&year=2007 -> 429
+  WARN Monmouth 2008: fetch https://api.collegefootballdata.com/roster?team=Monmouth&year=2008 -> 429
+  WARN Monmouth 2009: fetch https://api.collegefootballdata.com/roster?team=Monmouth&year=2009 -> 429
+[131/262] Monmouth                       | players:    0 | total: 10748 | calls: 917 | ETA: ~9m     WARN Montana 2003: fetch https://api.collegefootballdata.com/roster?team=Montana&year=2003 -> 429
+  WARN Montana 2004: fetch https://api.collegefootballdata.com/roster?team=Montana&year=2004 -> 429
+  WARN Montana 2005: fetch https://api.collegefootballdata.com/roster?team=Montana&year=2005 -> 429
+  WARN Montana 2006: fetch https://api.collegefootballdata.com/roster?team=Montana&year=2006 -> 429
+  WARN Montana 2007: fetch https://api.collegefootballdata.com/roster?team=Montana&year=2007 -> 429
+  WARN Montana 2008: fetch https://api.collegefootballdata.com/roster?team=Montana&year=2008 -> 429
+  WARN Montana 2009: fetch https://api.collegefootballdata.com/roster?team=Montana&year=2009 -> 429
+[132/262] Montana                        | players:    0 | total: 10748 | calls: 924 | ETA: ~9m     WARN Montana State 2003: fetch https://api.collegefootballdata.com/roster?team=Montana%20State&year=2003 -> 429
+  WARN Montana State 2004: fetch https://api.collegefootballdata.com/roster?team=Montana%20State&year=2004 -> 429
+  WARN Montana State 2005: fetch https://api.collegefootballdata.com/roster?team=Montana%20State&year=2005 -> 429
+  WARN Montana State 2006: fetch https://api.collegefootballdata.com/roster?team=Montana%20State&year=2006 -> 429
+  WARN Montana State 2007: fetch https://api.collegefootballdata.com/roster?team=Montana%20State&year=2007 -> 429
+  WARN Montana State 2008: fetch https://api.collegefootballdata.com/roster?team=Montana%20State&year=2008 -> 429
+  WARN Montana State 2009: fetch https://api.collegefootballdata.com/roster?team=Montana%20State&year=2009 -> 429
+[133/262] Montana State                  | players:    0 | total: 10748 | calls: 931 | ETA: ~9m     WARN Morehead State 2003: fetch https://api.collegefootballdata.com/roster?team=Morehead%20State&year=2003 -> 429
+  WARN Morehead State 2004: fetch https://api.collegefootballdata.com/roster?team=Morehead%20State&year=2004 -> 429
+  WARN Morehead State 2005: fetch https://api.collegefootballdata.com/roster?team=Morehead%20State&year=2005 -> 429
+  WARN Morehead State 2006: fetch https://api.collegefootballdata.com/roster?team=Morehead%20State&year=2006 -> 429
+  WARN Morehead State 2007: fetch https://api.collegefootballdata.com/roster?team=Morehead%20State&year=2007 -> 429
+  WARN Morehead State 2008: fetch https://api.collegefootballdata.com/roster?team=Morehead%20State&year=2008 -> 429
+  WARN Morehead State 2009: fetch https://api.collegefootballdata.com/roster?team=Morehead%20State&year=2009 -> 429
+[134/262] Morehead State                 | players:    0 | total: 10748 | calls: 938 | ETA: ~9m     WARN Morgan State 2003: fetch https://api.collegefootballdata.com/roster?team=Morgan%20State&year=2003 -> 429
+  WARN Morgan State 2004: fetch https://api.collegefootballdata.com/roster?team=Morgan%20State&year=2004 -> 429
+  WARN Morgan State 2005: fetch https://api.collegefootballdata.com/roster?team=Morgan%20State&year=2005 -> 429
+  WARN Morgan State 2006: fetch https://api.collegefootballdata.com/roster?team=Morgan%20State&year=2006 -> 429
+  WARN Morgan State 2007: fetch https://api.collegefootballdata.com/roster?team=Morgan%20State&year=2007 -> 429
+  WARN Morgan State 2008: fetch https://api.collegefootballdata.com/roster?team=Morgan%20State&year=2008 -> 429
+  WARN Morgan State 2009: fetch https://api.collegefootballdata.com/roster?team=Morgan%20State&year=2009 -> 429
+[135/262] Morgan State                   | players:    0 | total: 10748 | calls: 945 | ETA: ~9m     WARN Murray State 2003: fetch https://api.collegefootballdata.com/roster?team=Murray%20State&year=2003 -> 429
+  WARN Murray State 2004: fetch https://api.collegefootballdata.com/roster?team=Murray%20State&year=2004 -> 429
+  WARN Murray State 2005: fetch https://api.collegefootballdata.com/roster?team=Murray%20State&year=2005 -> 429
+  WARN Murray State 2006: fetch https://api.collegefootballdata.com/roster?team=Murray%20State&year=2006 -> 429
+  WARN Murray State 2007: fetch https://api.collegefootballdata.com/roster?team=Murray%20State&year=2007 -> 429
+  WARN Murray State 2008: fetch https://api.collegefootballdata.com/roster?team=Murray%20State&year=2008 -> 429
+  WARN Murray State 2009: fetch https://api.collegefootballdata.com/roster?team=Murray%20State&year=2009 -> 429
+[136/262] Murray State                   | players:    0 | total: 10748 | calls: 952 | ETA: ~9m     WARN Navy 2003: fetch https://api.collegefootballdata.com/roster?team=Navy&year=2003 -> 429
+  WARN Navy 2004: fetch https://api.collegefootballdata.com/roster?team=Navy&year=2004 -> 429
+  WARN Navy 2005: fetch https://api.collegefootballdata.com/roster?team=Navy&year=2005 -> 429
+  WARN Navy 2006: fetch https://api.collegefootballdata.com/roster?team=Navy&year=2006 -> 429
+  WARN Navy 2007: fetch https://api.collegefootballdata.com/roster?team=Navy&year=2007 -> 429
+  WARN Navy 2008: fetch https://api.collegefootballdata.com/roster?team=Navy&year=2008 -> 429
+  WARN Navy 2009: fetch https://api.collegefootballdata.com/roster?team=Navy&year=2009 -> 429
+[137/262] Navy                           | players:    0 | total: 10748 | calls: 959 | ETA: ~9m     WARN NC State 2003: fetch https://api.collegefootballdata.com/roster?team=NC%20State&year=2003 -> 429
+  WARN NC State 2004: fetch https://api.collegefootballdata.com/roster?team=NC%20State&year=2004 -> 429
+  WARN NC State 2005: fetch https://api.collegefootballdata.com/roster?team=NC%20State&year=2005 -> 429
+  WARN NC State 2006: fetch https://api.collegefootballdata.com/roster?team=NC%20State&year=2006 -> 429
+  WARN NC State 2007: fetch https://api.collegefootballdata.com/roster?team=NC%20State&year=2007 -> 429
+  WARN NC State 2008: fetch https://api.collegefootballdata.com/roster?team=NC%20State&year=2008 -> 429
+  WARN NC State 2009: fetch https://api.collegefootballdata.com/roster?team=NC%20State&year=2009 -> 429
+[138/262] NC State                       | players:    0 | total: 10748 | calls: 966 | ETA: ~9m     WARN Nebraska 2003: fetch https://api.collegefootballdata.com/roster?team=Nebraska&year=2003 -> 429
+  WARN Nebraska 2004: fetch https://api.collegefootballdata.com/roster?team=Nebraska&year=2004 -> 429
+  WARN Nebraska 2005: fetch https://api.collegefootballdata.com/roster?team=Nebraska&year=2005 -> 429
+  WARN Nebraska 2006: fetch https://api.collegefootballdata.com/roster?team=Nebraska&year=2006 -> 429
+  WARN Nebraska 2007: fetch https://api.collegefootballdata.com/roster?team=Nebraska&year=2007 -> 429
+  WARN Nebraska 2008: fetch https://api.collegefootballdata.com/roster?team=Nebraska&year=2008 -> 429
+  WARN Nebraska 2009: fetch https://api.collegefootballdata.com/roster?team=Nebraska&year=2009 -> 429
+[139/262] Nebraska                       | players:    0 | total: 10748 | calls: 973 | ETA: ~9m     WARN Nevada 2003: fetch https://api.collegefootballdata.com/roster?team=Nevada&year=2003 -> 429
+  WARN Nevada 2004: fetch https://api.collegefootballdata.com/roster?team=Nevada&year=2004 -> 429
+  WARN Nevada 2005: fetch https://api.collegefootballdata.com/roster?team=Nevada&year=2005 -> 429
+  WARN Nevada 2006: fetch https://api.collegefootballdata.com/roster?team=Nevada&year=2006 -> 429
+  WARN Nevada 2007: fetch https://api.collegefootballdata.com/roster?team=Nevada&year=2007 -> 429
+  WARN Nevada 2008: fetch https://api.collegefootballdata.com/roster?team=Nevada&year=2008 -> 429
+  WARN Nevada 2009: fetch https://api.collegefootballdata.com/roster?team=Nevada&year=2009 -> 429
+[140/262] Nevada                         | players:    0 | total: 10748 | calls: 980 | ETA: ~9m     WARN New Hampshire 2003: fetch https://api.collegefootballdata.com/roster?team=New%20Hampshire&year=2003 -> 429
+  WARN New Hampshire 2004: fetch https://api.collegefootballdata.com/roster?team=New%20Hampshire&year=2004 -> 429
+  WARN New Hampshire 2005: fetch https://api.collegefootballdata.com/roster?team=New%20Hampshire&year=2005 -> 429
+  WARN New Hampshire 2006: fetch https://api.collegefootballdata.com/roster?team=New%20Hampshire&year=2006 -> 429
+  WARN New Hampshire 2007: fetch https://api.collegefootballdata.com/roster?team=New%20Hampshire&year=2007 -> 429
+  WARN New Hampshire 2008: fetch https://api.collegefootballdata.com/roster?team=New%20Hampshire&year=2008 -> 429
+  WARN New Hampshire 2009: fetch https://api.collegefootballdata.com/roster?team=New%20Hampshire&year=2009 -> 429
+[141/262] New Hampshire                  | players:    0 | total: 10748 | calls: 987 | ETA: ~9m     WARN New Haven 2003: fetch https://api.collegefootballdata.com/roster?team=New%20Haven&year=2003 -> 429
+  WARN New Haven 2004: fetch https://api.collegefootballdata.com/roster?team=New%20Haven&year=2004 -> 429
+  WARN New Haven 2005: fetch https://api.collegefootballdata.com/roster?team=New%20Haven&year=2005 -> 429
+  WARN New Haven 2006: fetch https://api.collegefootballdata.com/roster?team=New%20Haven&year=2006 -> 429
+  WARN New Haven 2007: fetch https://api.collegefootballdata.com/roster?team=New%20Haven&year=2007 -> 429
+  WARN New Haven 2008: fetch https://api.collegefootballdata.com/roster?team=New%20Haven&year=2008 -> 429
+  WARN New Haven 2009: fetch https://api.collegefootballdata.com/roster?team=New%20Haven&year=2009 -> 429
+[142/262] New Haven                      | players:    0 | total: 10748 | calls: 994 | ETA: ~9m     WARN New Mexico 2003: fetch https://api.collegefootballdata.com/roster?team=New%20Mexico&year=2003 -> 429
+  WARN New Mexico 2004: fetch https://api.collegefootballdata.com/roster?team=New%20Mexico&year=2004 -> 429
+  WARN New Mexico 2005: fetch https://api.collegefootballdata.com/roster?team=New%20Mexico&year=2005 -> 429
+  WARN New Mexico 2006: fetch https://api.collegefootballdata.com/roster?team=New%20Mexico&year=2006 -> 429
+  WARN New Mexico 2007: fetch https://api.collegefootballdata.com/roster?team=New%20Mexico&year=2007 -> 429
+  WARN New Mexico 2008: fetch https://api.collegefootballdata.com/roster?team=New%20Mexico&year=2008 -> 429
+  WARN New Mexico 2009: fetch https://api.collegefootballdata.com/roster?team=New%20Mexico&year=2009 -> 429
+[143/262] New Mexico                     | players:    0 | total: 10748 | calls: 1001 | ETA: ~8m     WARN New Mexico State 2003: fetch https://api.collegefootballdata.com/roster?team=New%20Mexico%20State&year=2003 -> 429
+  WARN New Mexico State 2004: fetch https://api.collegefootballdata.com/roster?team=New%20Mexico%20State&year=2004 -> 429
+  WARN New Mexico State 2005: fetch https://api.collegefootballdata.com/roster?team=New%20Mexico%20State&year=2005 -> 429
+  WARN New Mexico State 2006: fetch https://api.collegefootballdata.com/roster?team=New%20Mexico%20State&year=2006 -> 429
+  WARN New Mexico State 2007: fetch https://api.collegefootballdata.com/roster?team=New%20Mexico%20State&year=2007 -> 429
+  WARN New Mexico State 2008: fetch https://api.collegefootballdata.com/roster?team=New%20Mexico%20State&year=2008 -> 429
+  WARN New Mexico State 2009: fetch https://api.collegefootballdata.com/roster?team=New%20Mexico%20State&year=2009 -> 429
+[144/262] New Mexico State               | players:    0 | total: 10748 | calls: 1008 | ETA: ~8m     WARN Nicholls 2003: fetch https://api.collegefootballdata.com/roster?team=Nicholls&year=2003 -> 429
+  WARN Nicholls 2004: fetch https://api.collegefootballdata.com/roster?team=Nicholls&year=2004 -> 429
+  WARN Nicholls 2005: fetch https://api.collegefootballdata.com/roster?team=Nicholls&year=2005 -> 429
+  WARN Nicholls 2006: fetch https://api.collegefootballdata.com/roster?team=Nicholls&year=2006 -> 429
+  WARN Nicholls 2007: fetch https://api.collegefootballdata.com/roster?team=Nicholls&year=2007 -> 429
+  WARN Nicholls 2008: fetch https://api.collegefootballdata.com/roster?team=Nicholls&year=2008 -> 429
+  WARN Nicholls 2009: fetch https://api.collegefootballdata.com/roster?team=Nicholls&year=2009 -> 429
+[145/262] Nicholls                       | players:    0 | total: 10748 | calls: 1015 | ETA: ~8m     WARN Norfolk State 2003: fetch https://api.collegefootballdata.com/roster?team=Norfolk%20State&year=2003 -> 429
+  WARN Norfolk State 2004: fetch https://api.collegefootballdata.com/roster?team=Norfolk%20State&year=2004 -> 429
+  WARN Norfolk State 2005: fetch https://api.collegefootballdata.com/roster?team=Norfolk%20State&year=2005 -> 429
+  WARN Norfolk State 2006: fetch https://api.collegefootballdata.com/roster?team=Norfolk%20State&year=2006 -> 429
+  WARN Norfolk State 2007: fetch https://api.collegefootballdata.com/roster?team=Norfolk%20State&year=2007 -> 429
+  WARN Norfolk State 2008: fetch https://api.collegefootballdata.com/roster?team=Norfolk%20State&year=2008 -> 429
+  WARN Norfolk State 2009: fetch https://api.collegefootballdata.com/roster?team=Norfolk%20State&year=2009 -> 429
+[146/262] Norfolk State                  | players:    0 | total: 10748 | calls: 1022 | ETA: ~8m     WARN North Alabama 2003: fetch https://api.collegefootballdata.com/roster?team=North%20Alabama&year=2003 -> 429
+  WARN North Alabama 2004: fetch https://api.collegefootballdata.com/roster?team=North%20Alabama&year=2004 -> 429
+  WARN North Alabama 2005: fetch https://api.collegefootballdata.com/roster?team=North%20Alabama&year=2005 -> 429
+  WARN North Alabama 2006: fetch https://api.collegefootballdata.com/roster?team=North%20Alabama&year=2006 -> 429
+  WARN North Alabama 2007: fetch https://api.collegefootballdata.com/roster?team=North%20Alabama&year=2007 -> 429
+  WARN North Alabama 2008: fetch https://api.collegefootballdata.com/roster?team=North%20Alabama&year=2008 -> 429
+  WARN North Alabama 2009: fetch https://api.collegefootballdata.com/roster?team=North%20Alabama&year=2009 -> 429
+[147/262] North Alabama                  | players:    0 | total: 10748 | calls: 1029 | ETA: ~8m     WARN North Carolina A&T 2003: fetch https://api.collegefootballdata.com/roster?team=North%20Carolina%20A%26T&year=2003 -> 429
+  WARN North Carolina A&T 2004: fetch https://api.collegefootballdata.com/roster?team=North%20Carolina%20A%26T&year=2004 -> 429
+  WARN North Carolina A&T 2005: fetch https://api.collegefootballdata.com/roster?team=North%20Carolina%20A%26T&year=2005 -> 429
+  WARN North Carolina A&T 2006: fetch https://api.collegefootballdata.com/roster?team=North%20Carolina%20A%26T&year=2006 -> 429
+  WARN North Carolina A&T 2007: fetch https://api.collegefootballdata.com/roster?team=North%20Carolina%20A%26T&year=2007 -> 429
+  WARN North Carolina A&T 2008: fetch https://api.collegefootballdata.com/roster?team=North%20Carolina%20A%26T&year=2008 -> 429
+  WARN North Carolina A&T 2009: fetch https://api.collegefootballdata.com/roster?team=North%20Carolina%20A%26T&year=2009 -> 429
+[148/262] North Carolina A&T             | players:    0 | total: 10748 | calls: 1036 | ETA: ~8m     WARN North Carolina Central 2003: fetch https://api.collegefootballdata.com/roster?team=North%20Carolina%20Central&year=2003 -> 429
+  WARN North Carolina Central 2004: fetch https://api.collegefootballdata.com/roster?team=North%20Carolina%20Central&year=2004 -> 429
+  WARN North Carolina Central 2005: fetch https://api.collegefootballdata.com/roster?team=North%20Carolina%20Central&year=2005 -> 429
+  WARN North Carolina Central 2006: fetch https://api.collegefootballdata.com/roster?team=North%20Carolina%20Central&year=2006 -> 429
+  WARN North Carolina Central 2007: fetch https://api.collegefootballdata.com/roster?team=North%20Carolina%20Central&year=2007 -> 429
+  WARN North Carolina Central 2008: fetch https://api.collegefootballdata.com/roster?team=North%20Carolina%20Central&year=2008 -> 429
+  WARN North Carolina Central 2009: fetch https://api.collegefootballdata.com/roster?team=North%20Carolina%20Central&year=2009 -> 429
+[149/262] North Carolina Central         | players:    0 | total: 10748 | calls: 1043 | ETA: ~8m     WARN North Carolina 2003: fetch https://api.collegefootballdata.com/roster?team=North%20Carolina&year=2003 -> 429
+  WARN North Carolina 2004: fetch https://api.collegefootballdata.com/roster?team=North%20Carolina&year=2004 -> 429
+  WARN North Carolina 2005: fetch https://api.collegefootballdata.com/roster?team=North%20Carolina&year=2005 -> 429
+  WARN North Carolina 2006: fetch https://api.collegefootballdata.com/roster?team=North%20Carolina&year=2006 -> 429
+  WARN North Carolina 2007: fetch https://api.collegefootballdata.com/roster?team=North%20Carolina&year=2007 -> 429
+  WARN North Carolina 2008: fetch https://api.collegefootballdata.com/roster?team=North%20Carolina&year=2008 -> 429
+  WARN North Carolina 2009: fetch https://api.collegefootballdata.com/roster?team=North%20Carolina&year=2009 -> 429
+[150/262] North Carolina                 | players:    0 | total: 10748 | calls: 1050 | ETA: ~8m     WARN North Dakota 2003: fetch https://api.collegefootballdata.com/roster?team=North%20Dakota&year=2003 -> 429
+  WARN North Dakota 2004: fetch https://api.collegefootballdata.com/roster?team=North%20Dakota&year=2004 -> 429
+  WARN North Dakota 2005: fetch https://api.collegefootballdata.com/roster?team=North%20Dakota&year=2005 -> 429
+  WARN North Dakota 2006: fetch https://api.collegefootballdata.com/roster?team=North%20Dakota&year=2006 -> 429
+  WARN North Dakota 2007: fetch https://api.collegefootballdata.com/roster?team=North%20Dakota&year=2007 -> 429
+  WARN North Dakota 2008: fetch https://api.collegefootballdata.com/roster?team=North%20Dakota&year=2008 -> 429
+  WARN North Dakota 2009: fetch https://api.collegefootballdata.com/roster?team=North%20Dakota&year=2009 -> 429
+[151/262] North Dakota                   | players:    0 | total: 10748 | calls: 1057 | ETA: ~8m     WARN North Dakota State 2003: fetch https://api.collegefootballdata.com/roster?team=North%20Dakota%20State&year=2003 -> 429
+  WARN North Dakota State 2004: fetch https://api.collegefootballdata.com/roster?team=North%20Dakota%20State&year=2004 -> 429
+  WARN North Dakota State 2005: fetch https://api.collegefootballdata.com/roster?team=North%20Dakota%20State&year=2005 -> 429
+  WARN North Dakota State 2006: fetch https://api.collegefootballdata.com/roster?team=North%20Dakota%20State&year=2006 -> 429
+  WARN North Dakota State 2007: fetch https://api.collegefootballdata.com/roster?team=North%20Dakota%20State&year=2007 -> 429
+  WARN North Dakota State 2008: fetch https://api.collegefootballdata.com/roster?team=North%20Dakota%20State&year=2008 -> 429
+  WARN North Dakota State 2009: fetch https://api.collegefootballdata.com/roster?team=North%20Dakota%20State&year=2009 -> 429
+[152/262] North Dakota State             | players:    0 | total: 10748 | calls: 1064 | ETA: ~8m     WARN North Texas 2003: fetch https://api.collegefootballdata.com/roster?team=North%20Texas&year=2003 -> 429
+  WARN North Texas 2004: fetch https://api.collegefootballdata.com/roster?team=North%20Texas&year=2004 -> 429
+  WARN North Texas 2005: fetch https://api.collegefootballdata.com/roster?team=North%20Texas&year=2005 -> 429
+  WARN North Texas 2006: fetch https://api.collegefootballdata.com/roster?team=North%20Texas&year=2006 -> 429
+  WARN North Texas 2007: fetch https://api.collegefootballdata.com/roster?team=North%20Texas&year=2007 -> 429
+  WARN North Texas 2008: fetch https://api.collegefootballdata.com/roster?team=North%20Texas&year=2008 -> 429
+  WARN North Texas 2009: fetch https://api.collegefootballdata.com/roster?team=North%20Texas&year=2009 -> 429
+[153/262] North Texas                    | players:    0 | total: 10748 | calls: 1071 | ETA: ~8m     WARN Northern Arizona 2003: fetch https://api.collegefootballdata.com/roster?team=Northern%20Arizona&year=2003 -> 429
+  WARN Northern Arizona 2004: fetch https://api.collegefootballdata.com/roster?team=Northern%20Arizona&year=2004 -> 429
+  WARN Northern Arizona 2005: fetch https://api.collegefootballdata.com/roster?team=Northern%20Arizona&year=2005 -> 429
+  WARN Northern Arizona 2006: fetch https://api.collegefootballdata.com/roster?team=Northern%20Arizona&year=2006 -> 429
+  WARN Northern Arizona 2007: fetch https://api.collegefootballdata.com/roster?team=Northern%20Arizona&year=2007 -> 429
+  WARN Northern Arizona 2008: fetch https://api.collegefootballdata.com/roster?team=Northern%20Arizona&year=2008 -> 429
+  WARN Northern Arizona 2009: fetch https://api.collegefootballdata.com/roster?team=Northern%20Arizona&year=2009 -> 429
+[154/262] Northern Arizona               | players:    0 | total: 10748 | calls: 1078 | ETA: ~8m     WARN Northern Colorado 2003: fetch https://api.collegefootballdata.com/roster?team=Northern%20Colorado&year=2003 -> 429
+  WARN Northern Colorado 2004: fetch https://api.collegefootballdata.com/roster?team=Northern%20Colorado&year=2004 -> 429
+  WARN Northern Colorado 2005: fetch https://api.collegefootballdata.com/roster?team=Northern%20Colorado&year=2005 -> 429
+  WARN Northern Colorado 2006: fetch https://api.collegefootballdata.com/roster?team=Northern%20Colorado&year=2006 -> 429
+  WARN Northern Colorado 2007: fetch https://api.collegefootballdata.com/roster?team=Northern%20Colorado&year=2007 -> 429
+  WARN Northern Colorado 2008: fetch https://api.collegefootballdata.com/roster?team=Northern%20Colorado&year=2008 -> 429
+  WARN Northern Colorado 2009: fetch https://api.collegefootballdata.com/roster?team=Northern%20Colorado&year=2009 -> 429
+[155/262] Northern Colorado              | players:    0 | total: 10748 | calls: 1085 | ETA: ~8m     WARN Northern Illinois 2003: fetch https://api.collegefootballdata.com/roster?team=Northern%20Illinois&year=2003 -> 429
+  WARN Northern Illinois 2004: fetch https://api.collegefootballdata.com/roster?team=Northern%20Illinois&year=2004 -> 429
+  WARN Northern Illinois 2005: fetch https://api.collegefootballdata.com/roster?team=Northern%20Illinois&year=2005 -> 429
+  WARN Northern Illinois 2006: fetch https://api.collegefootballdata.com/roster?team=Northern%20Illinois&year=2006 -> 429
+  WARN Northern Illinois 2007: fetch https://api.collegefootballdata.com/roster?team=Northern%20Illinois&year=2007 -> 429
+  WARN Northern Illinois 2008: fetch https://api.collegefootballdata.com/roster?team=Northern%20Illinois&year=2008 -> 429
+  WARN Northern Illinois 2009: fetch https://api.collegefootballdata.com/roster?team=Northern%20Illinois&year=2009 -> 429
+[156/262] Northern Illinois              | players:    0 | total: 10748 | calls: 1092 | ETA: ~8m     WARN Northern Iowa 2003: fetch https://api.collegefootballdata.com/roster?team=Northern%20Iowa&year=2003 -> 429
+  WARN Northern Iowa 2004: fetch https://api.collegefootballdata.com/roster?team=Northern%20Iowa&year=2004 -> 429
+  WARN Northern Iowa 2005: fetch https://api.collegefootballdata.com/roster?team=Northern%20Iowa&year=2005 -> 429
+  WARN Northern Iowa 2006: fetch https://api.collegefootballdata.com/roster?team=Northern%20Iowa&year=2006 -> 429
+  WARN Northern Iowa 2007: fetch https://api.collegefootballdata.com/roster?team=Northern%20Iowa&year=2007 -> 429
+  WARN Northern Iowa 2008: fetch https://api.collegefootballdata.com/roster?team=Northern%20Iowa&year=2008 -> 429
+  WARN Northern Iowa 2009: fetch https://api.collegefootballdata.com/roster?team=Northern%20Iowa&year=2009 -> 429
+[157/262] Northern Iowa                  | players:    0 | total: 10748 | calls: 1099 | ETA: ~7m     WARN Northwestern State 2003: fetch https://api.collegefootballdata.com/roster?team=Northwestern%20State&year=2003 -> 429
+  WARN Northwestern State 2004: fetch https://api.collegefootballdata.com/roster?team=Northwestern%20State&year=2004 -> 429
+  WARN Northwestern State 2005: fetch https://api.collegefootballdata.com/roster?team=Northwestern%20State&year=2005 -> 429
+  WARN Northwestern State 2006: fetch https://api.collegefootballdata.com/roster?team=Northwestern%20State&year=2006 -> 429
+  WARN Northwestern State 2007: fetch https://api.collegefootballdata.com/roster?team=Northwestern%20State&year=2007 -> 429
+  WARN Northwestern State 2008: fetch https://api.collegefootballdata.com/roster?team=Northwestern%20State&year=2008 -> 429
+  WARN Northwestern State 2009: fetch https://api.collegefootballdata.com/roster?team=Northwestern%20State&year=2009 -> 429
+[158/262] Northwestern State             | players:    0 | total: 10748 | calls: 1106 | ETA: ~7m     WARN Northwestern 2003: fetch https://api.collegefootballdata.com/roster?team=Northwestern&year=2003 -> 429
+  WARN Northwestern 2004: fetch https://api.collegefootballdata.com/roster?team=Northwestern&year=2004 -> 429
+  WARN Northwestern 2005: fetch https://api.collegefootballdata.com/roster?team=Northwestern&year=2005 -> 429
+  WARN Northwestern 2006: fetch https://api.collegefootballdata.com/roster?team=Northwestern&year=2006 -> 429
+  WARN Northwestern 2007: fetch https://api.collegefootballdata.com/roster?team=Northwestern&year=2007 -> 429
+  WARN Northwestern 2008: fetch https://api.collegefootballdata.com/roster?team=Northwestern&year=2008 -> 429
+  WARN Northwestern 2009: fetch https://api.collegefootballdata.com/roster?team=Northwestern&year=2009 -> 429
+[159/262] Northwestern                   | players:    0 | total: 10748 | calls: 1113 | ETA: ~7m     WARN Notre Dame 2003: fetch https://api.collegefootballdata.com/roster?team=Notre%20Dame&year=2003 -> 429
+  WARN Notre Dame 2004: fetch https://api.collegefootballdata.com/roster?team=Notre%20Dame&year=2004 -> 429
+  WARN Notre Dame 2005: fetch https://api.collegefootballdata.com/roster?team=Notre%20Dame&year=2005 -> 429
+  WARN Notre Dame 2006: fetch https://api.collegefootballdata.com/roster?team=Notre%20Dame&year=2006 -> 429
+  WARN Notre Dame 2007: fetch https://api.collegefootballdata.com/roster?team=Notre%20Dame&year=2007 -> 429
+  WARN Notre Dame 2008: fetch https://api.collegefootballdata.com/roster?team=Notre%20Dame&year=2008 -> 429
+  WARN Notre Dame 2009: fetch https://api.collegefootballdata.com/roster?team=Notre%20Dame&year=2009 -> 429
+[160/262] Notre Dame                     | players:    0 | total: 10748 | calls: 1120 | ETA: ~7m     WARN Ohio 2003: fetch https://api.collegefootballdata.com/roster?team=Ohio&year=2003 -> 429
+  WARN Ohio 2004: fetch https://api.collegefootballdata.com/roster?team=Ohio&year=2004 -> 429
+  WARN Ohio 2005: fetch https://api.collegefootballdata.com/roster?team=Ohio&year=2005 -> 429
+  WARN Ohio 2006: fetch https://api.collegefootballdata.com/roster?team=Ohio&year=2006 -> 429
+  WARN Ohio 2007: fetch https://api.collegefootballdata.com/roster?team=Ohio&year=2007 -> 429
+  WARN Ohio 2008: fetch https://api.collegefootballdata.com/roster?team=Ohio&year=2008 -> 429
+  WARN Ohio 2009: fetch https://api.collegefootballdata.com/roster?team=Ohio&year=2009 -> 429
+[161/262] Ohio                           | players:    0 | total: 10748 | calls: 1127 | ETA: ~7m     WARN Ohio State 2003: fetch https://api.collegefootballdata.com/roster?team=Ohio%20State&year=2003 -> 429
+  WARN Ohio State 2004: fetch https://api.collegefootballdata.com/roster?team=Ohio%20State&year=2004 -> 429
+  WARN Ohio State 2005: fetch https://api.collegefootballdata.com/roster?team=Ohio%20State&year=2005 -> 429
+  WARN Ohio State 2006: fetch https://api.collegefootballdata.com/roster?team=Ohio%20State&year=2006 -> 429
+  WARN Ohio State 2007: fetch https://api.collegefootballdata.com/roster?team=Ohio%20State&year=2007 -> 429
+  WARN Ohio State 2008: fetch https://api.collegefootballdata.com/roster?team=Ohio%20State&year=2008 -> 429
+  WARN Ohio State 2009: fetch https://api.collegefootballdata.com/roster?team=Ohio%20State&year=2009 -> 429
+[162/262] Ohio State                     | players:    0 | total: 10748 | calls: 1134 | ETA: ~7m     WARN Oklahoma 2003: fetch https://api.collegefootballdata.com/roster?team=Oklahoma&year=2003 -> 429
+  WARN Oklahoma 2004: fetch https://api.collegefootballdata.com/roster?team=Oklahoma&year=2004 -> 429
+  WARN Oklahoma 2005: fetch https://api.collegefootballdata.com/roster?team=Oklahoma&year=2005 -> 429
+  WARN Oklahoma 2006: fetch https://api.collegefootballdata.com/roster?team=Oklahoma&year=2006 -> 429
+  WARN Oklahoma 2007: fetch https://api.collegefootballdata.com/roster?team=Oklahoma&year=2007 -> 429
+  WARN Oklahoma 2008: fetch https://api.collegefootballdata.com/roster?team=Oklahoma&year=2008 -> 429
+  WARN Oklahoma 2009: fetch https://api.collegefootballdata.com/roster?team=Oklahoma&year=2009 -> 429
+[163/262] Oklahoma                       | players:    0 | total: 10748 | calls: 1141 | ETA: ~7m     WARN Oklahoma State 2003: fetch https://api.collegefootballdata.com/roster?team=Oklahoma%20State&year=2003 -> 429
+  WARN Oklahoma State 2004: fetch https://api.collegefootballdata.com/roster?team=Oklahoma%20State&year=2004 -> 429
+  WARN Oklahoma State 2005: fetch https://api.collegefootballdata.com/roster?team=Oklahoma%20State&year=2005 -> 429
+  WARN Oklahoma State 2006: fetch https://api.collegefootballdata.com/roster?team=Oklahoma%20State&year=2006 -> 429
+  WARN Oklahoma State 2007: fetch https://api.collegefootballdata.com/roster?team=Oklahoma%20State&year=2007 -> 429
+  WARN Oklahoma State 2008: fetch https://api.collegefootballdata.com/roster?team=Oklahoma%20State&year=2008 -> 429
+  WARN Oklahoma State 2009: fetch https://api.collegefootballdata.com/roster?team=Oklahoma%20State&year=2009 -> 429
+[164/262] Oklahoma State                 | players:    0 | total: 10748 | calls: 1148 | ETA: ~7m     WARN Old Dominion 2003: fetch https://api.collegefootballdata.com/roster?team=Old%20Dominion&year=2003 -> 429
+  WARN Old Dominion 2004: fetch https://api.collegefootballdata.com/roster?team=Old%20Dominion&year=2004 -> 429
+  WARN Old Dominion 2005: fetch https://api.collegefootballdata.com/roster?team=Old%20Dominion&year=2005 -> 429
+  WARN Old Dominion 2006: fetch https://api.collegefootballdata.com/roster?team=Old%20Dominion&year=2006 -> 429
+  WARN Old Dominion 2007: fetch https://api.collegefootballdata.com/roster?team=Old%20Dominion&year=2007 -> 429
+  WARN Old Dominion 2008: fetch https://api.collegefootballdata.com/roster?team=Old%20Dominion&year=2008 -> 429
+  WARN Old Dominion 2009: fetch https://api.collegefootballdata.com/roster?team=Old%20Dominion&year=2009 -> 429
+[165/262] Old Dominion                   | players:    0 | total: 10748 | calls: 1155 | ETA: ~7m     WARN Ole Miss 2003: fetch https://api.collegefootballdata.com/roster?team=Ole%20Miss&year=2003 -> 429
+  WARN Ole Miss 2004: fetch https://api.collegefootballdata.com/roster?team=Ole%20Miss&year=2004 -> 429
+  WARN Ole Miss 2005: fetch https://api.collegefootballdata.com/roster?team=Ole%20Miss&year=2005 -> 429
+  WARN Ole Miss 2006: fetch https://api.collegefootballdata.com/roster?team=Ole%20Miss&year=2006 -> 429
+  WARN Ole Miss 2007: fetch https://api.collegefootballdata.com/roster?team=Ole%20Miss&year=2007 -> 429
+  WARN Ole Miss 2008: fetch https://api.collegefootballdata.com/roster?team=Ole%20Miss&year=2008 -> 429
+  WARN Ole Miss 2009: fetch https://api.collegefootballdata.com/roster?team=Ole%20Miss&year=2009 -> 429
+[166/262] Ole Miss                       | players:    0 | total: 10748 | calls: 1162 | ETA: ~7m     WARN Oregon 2003: fetch https://api.collegefootballdata.com/roster?team=Oregon&year=2003 -> 429
+  WARN Oregon 2004: fetch https://api.collegefootballdata.com/roster?team=Oregon&year=2004 -> 429
+  WARN Oregon 2005: fetch https://api.collegefootballdata.com/roster?team=Oregon&year=2005 -> 429
+  WARN Oregon 2006: fetch https://api.collegefootballdata.com/roster?team=Oregon&year=2006 -> 429
+  WARN Oregon 2007: fetch https://api.collegefootballdata.com/roster?team=Oregon&year=2007 -> 429
+  WARN Oregon 2008: fetch https://api.collegefootballdata.com/roster?team=Oregon&year=2008 -> 429
+  WARN Oregon 2009: fetch https://api.collegefootballdata.com/roster?team=Oregon&year=2009 -> 429
+[167/262] Oregon                         | players:    0 | total: 10748 | calls: 1169 | ETA: ~7m     WARN Oregon State 2003: fetch https://api.collegefootballdata.com/roster?team=Oregon%20State&year=2003 -> 429
+  WARN Oregon State 2004: fetch https://api.collegefootballdata.com/roster?team=Oregon%20State&year=2004 -> 429
+  WARN Oregon State 2005: fetch https://api.collegefootballdata.com/roster?team=Oregon%20State&year=2005 -> 429
+  WARN Oregon State 2006: fetch https://api.collegefootballdata.com/roster?team=Oregon%20State&year=2006 -> 429
+  WARN Oregon State 2007: fetch https://api.collegefootballdata.com/roster?team=Oregon%20State&year=2007 -> 429
+  WARN Oregon State 2008: fetch https://api.collegefootballdata.com/roster?team=Oregon%20State&year=2008 -> 429
+  WARN Oregon State 2009: fetch https://api.collegefootballdata.com/roster?team=Oregon%20State&year=2009 -> 429
+[168/262] Oregon State                   | players:    0 | total: 10748 | calls: 1176 | ETA: ~7m     WARN Penn State 2003: fetch https://api.collegefootballdata.com/roster?team=Penn%20State&year=2003 -> 429
+  WARN Penn State 2004: fetch https://api.collegefootballdata.com/roster?team=Penn%20State&year=2004 -> 429
+  WARN Penn State 2005: fetch https://api.collegefootballdata.com/roster?team=Penn%20State&year=2005 -> 429
+  WARN Penn State 2006: fetch https://api.collegefootballdata.com/roster?team=Penn%20State&year=2006 -> 429
+  WARN Penn State 2007: fetch https://api.collegefootballdata.com/roster?team=Penn%20State&year=2007 -> 429
+  WARN Penn State 2008: fetch https://api.collegefootballdata.com/roster?team=Penn%20State&year=2008 -> 429
+  WARN Penn State 2009: fetch https://api.collegefootballdata.com/roster?team=Penn%20State&year=2009 -> 429
+[169/262] Penn State                     | players:    0 | total: 10748 | calls: 1183 | ETA: ~7m     WARN Pennsylvania 2003: fetch https://api.collegefootballdata.com/roster?team=Pennsylvania&year=2003 -> 429
+  WARN Pennsylvania 2004: fetch https://api.collegefootballdata.com/roster?team=Pennsylvania&year=2004 -> 429
+  WARN Pennsylvania 2005: fetch https://api.collegefootballdata.com/roster?team=Pennsylvania&year=2005 -> 429
+  WARN Pennsylvania 2006: fetch https://api.collegefootballdata.com/roster?team=Pennsylvania&year=2006 -> 429
+  WARN Pennsylvania 2007: fetch https://api.collegefootballdata.com/roster?team=Pennsylvania&year=2007 -> 429
+  WARN Pennsylvania 2008: fetch https://api.collegefootballdata.com/roster?team=Pennsylvania&year=2008 -> 429
+  WARN Pennsylvania 2009: fetch https://api.collegefootballdata.com/roster?team=Pennsylvania&year=2009 -> 429
+[170/262] Pennsylvania                   | players:    0 | total: 10748 | calls: 1190 | ETA: ~7m     WARN Pittsburgh 2003: fetch https://api.collegefootballdata.com/roster?team=Pittsburgh&year=2003 -> 429
+  WARN Pittsburgh 2004: fetch https://api.collegefootballdata.com/roster?team=Pittsburgh&year=2004 -> 429
+  WARN Pittsburgh 2005: fetch https://api.collegefootballdata.com/roster?team=Pittsburgh&year=2005 -> 429
+  WARN Pittsburgh 2006: fetch https://api.collegefootballdata.com/roster?team=Pittsburgh&year=2006 -> 429
+  WARN Pittsburgh 2007: fetch https://api.collegefootballdata.com/roster?team=Pittsburgh&year=2007 -> 429
+  WARN Pittsburgh 2008: fetch https://api.collegefootballdata.com/roster?team=Pittsburgh&year=2008 -> 429
+  WARN Pittsburgh 2009: fetch https://api.collegefootballdata.com/roster?team=Pittsburgh&year=2009 -> 429
+[171/262] Pittsburgh                     | players:    0 | total: 10748 | calls: 1197 | ETA: ~6m     WARN Portland State 2003: fetch https://api.collegefootballdata.com/roster?team=Portland%20State&year=2003 -> 429
+  WARN Portland State 2004: fetch https://api.collegefootballdata.com/roster?team=Portland%20State&year=2004 -> 429
+  WARN Portland State 2005: fetch https://api.collegefootballdata.com/roster?team=Portland%20State&year=2005 -> 429
+  WARN Portland State 2006: fetch https://api.collegefootballdata.com/roster?team=Portland%20State&year=2006 -> 429
+  WARN Portland State 2007: fetch https://api.collegefootballdata.com/roster?team=Portland%20State&year=2007 -> 429
+  WARN Portland State 2008: fetch https://api.collegefootballdata.com/roster?team=Portland%20State&year=2008 -> 429
+  WARN Portland State 2009: fetch https://api.collegefootballdata.com/roster?team=Portland%20State&year=2009 -> 429
+[172/262] Portland State                 | players:    0 | total: 10748 | calls: 1204 | ETA: ~6m     WARN Prairie View A&M 2003: fetch https://api.collegefootballdata.com/roster?team=Prairie%20View%20A%26M&year=2003 -> 429
+  WARN Prairie View A&M 2004: fetch https://api.collegefootballdata.com/roster?team=Prairie%20View%20A%26M&year=2004 -> 429
+  WARN Prairie View A&M 2005: fetch https://api.collegefootballdata.com/roster?team=Prairie%20View%20A%26M&year=2005 -> 429
+  WARN Prairie View A&M 2006: fetch https://api.collegefootballdata.com/roster?team=Prairie%20View%20A%26M&year=2006 -> 429
+  WARN Prairie View A&M 2007: fetch https://api.collegefootballdata.com/roster?team=Prairie%20View%20A%26M&year=2007 -> 429
+  WARN Prairie View A&M 2008: fetch https://api.collegefootballdata.com/roster?team=Prairie%20View%20A%26M&year=2008 -> 429
+  WARN Prairie View A&M 2009: fetch https://api.collegefootballdata.com/roster?team=Prairie%20View%20A%26M&year=2009 -> 429
+[173/262] Prairie View A&M               | players:    0 | total: 10748 | calls: 1211 | ETA: ~6m     WARN Presbyterian 2003: fetch https://api.collegefootballdata.com/roster?team=Presbyterian&year=2003 -> 429
+  WARN Presbyterian 2004: fetch https://api.collegefootballdata.com/roster?team=Presbyterian&year=2004 -> 429
+  WARN Presbyterian 2005: fetch https://api.collegefootballdata.com/roster?team=Presbyterian&year=2005 -> 429
+  WARN Presbyterian 2006: fetch https://api.collegefootballdata.com/roster?team=Presbyterian&year=2006 -> 429
+  WARN Presbyterian 2007: fetch https://api.collegefootballdata.com/roster?team=Presbyterian&year=2007 -> 429
+  WARN Presbyterian 2008: fetch https://api.collegefootballdata.com/roster?team=Presbyterian&year=2008 -> 429
+  WARN Presbyterian 2009: fetch https://api.collegefootballdata.com/roster?team=Presbyterian&year=2009 -> 429
+[174/262] Presbyterian                   | players:    0 | total: 10748 | calls: 1218 | ETA: ~6m     WARN Princeton 2003: fetch https://api.collegefootballdata.com/roster?team=Princeton&year=2003 -> 429
+  WARN Princeton 2004: fetch https://api.collegefootballdata.com/roster?team=Princeton&year=2004 -> 429
+  WARN Princeton 2005: fetch https://api.collegefootballdata.com/roster?team=Princeton&year=2005 -> 429
+  WARN Princeton 2006: fetch https://api.collegefootballdata.com/roster?team=Princeton&year=2006 -> 429
+  WARN Princeton 2007: fetch https://api.collegefootballdata.com/roster?team=Princeton&year=2007 -> 429
+  WARN Princeton 2008: fetch https://api.collegefootballdata.com/roster?team=Princeton&year=2008 -> 429
+  WARN Princeton 2009: fetch https://api.collegefootballdata.com/roster?team=Princeton&year=2009 -> 429
+[175/262] Princeton                      | players:    0 | total: 10748 | calls: 1225 | ETA: ~6m     WARN Purdue 2003: fetch https://api.collegefootballdata.com/roster?team=Purdue&year=2003 -> 429
+  WARN Purdue 2004: fetch https://api.collegefootballdata.com/roster?team=Purdue&year=2004 -> 429
+  WARN Purdue 2005: fetch https://api.collegefootballdata.com/roster?team=Purdue&year=2005 -> 429
+  WARN Purdue 2006: fetch https://api.collegefootballdata.com/roster?team=Purdue&year=2006 -> 429
+  WARN Purdue 2007: fetch https://api.collegefootballdata.com/roster?team=Purdue&year=2007 -> 429
+  WARN Purdue 2008: fetch https://api.collegefootballdata.com/roster?team=Purdue&year=2008 -> 429
+  WARN Purdue 2009: fetch https://api.collegefootballdata.com/roster?team=Purdue&year=2009 -> 429
+[176/262] Purdue                         | players:    0 | total: 10748 | calls: 1232 | ETA: ~6m     WARN Rhode Island 2003: fetch https://api.collegefootballdata.com/roster?team=Rhode%20Island&year=2003 -> 429
+  WARN Rhode Island 2004: fetch https://api.collegefootballdata.com/roster?team=Rhode%20Island&year=2004 -> 429
+  WARN Rhode Island 2005: fetch https://api.collegefootballdata.com/roster?team=Rhode%20Island&year=2005 -> 429
+  WARN Rhode Island 2006: fetch https://api.collegefootballdata.com/roster?team=Rhode%20Island&year=2006 -> 429
+  WARN Rhode Island 2007: fetch https://api.collegefootballdata.com/roster?team=Rhode%20Island&year=2007 -> 429
+  WARN Rhode Island 2008: fetch https://api.collegefootballdata.com/roster?team=Rhode%20Island&year=2008 -> 429
+  WARN Rhode Island 2009: fetch https://api.collegefootballdata.com/roster?team=Rhode%20Island&year=2009 -> 429
+[177/262] Rhode Island                   | players:    0 | total: 10748 | calls: 1239 | ETA: ~6m     WARN Rice 2003: fetch https://api.collegefootballdata.com/roster?team=Rice&year=2003 -> 429
+  WARN Rice 2004: fetch https://api.collegefootballdata.com/roster?team=Rice&year=2004 -> 429
+  WARN Rice 2005: fetch https://api.collegefootballdata.com/roster?team=Rice&year=2005 -> 429
+  WARN Rice 2006: fetch https://api.collegefootballdata.com/roster?team=Rice&year=2006 -> 429
+  WARN Rice 2007: fetch https://api.collegefootballdata.com/roster?team=Rice&year=2007 -> 429
+  WARN Rice 2008: fetch https://api.collegefootballdata.com/roster?team=Rice&year=2008 -> 429
+  WARN Rice 2009: fetch https://api.collegefootballdata.com/roster?team=Rice&year=2009 -> 429
+[178/262] Rice                           | players:    0 | total: 10748 | calls: 1246 | ETA: ~6m     WARN Richmond 2003: fetch https://api.collegefootballdata.com/roster?team=Richmond&year=2003 -> 429
+  WARN Richmond 2004: fetch https://api.collegefootballdata.com/roster?team=Richmond&year=2004 -> 429
+  WARN Richmond 2005: fetch https://api.collegefootballdata.com/roster?team=Richmond&year=2005 -> 429
+  WARN Richmond 2006: fetch https://api.collegefootballdata.com/roster?team=Richmond&year=2006 -> 429
+  WARN Richmond 2007: fetch https://api.collegefootballdata.com/roster?team=Richmond&year=2007 -> 429
+  WARN Richmond 2008: fetch https://api.collegefootballdata.com/roster?team=Richmond&year=2008 -> 429
+  WARN Richmond 2009: fetch https://api.collegefootballdata.com/roster?team=Richmond&year=2009 -> 429
+[179/262] Richmond                       | players:    0 | total: 10748 | calls: 1253 | ETA: ~6m     WARN Robert Morris 2003: fetch https://api.collegefootballdata.com/roster?team=Robert%20Morris&year=2003 -> 429
+  WARN Robert Morris 2004: fetch https://api.collegefootballdata.com/roster?team=Robert%20Morris&year=2004 -> 429
+  WARN Robert Morris 2005: fetch https://api.collegefootballdata.com/roster?team=Robert%20Morris&year=2005 -> 429
+  WARN Robert Morris 2006: fetch https://api.collegefootballdata.com/roster?team=Robert%20Morris&year=2006 -> 429
+  WARN Robert Morris 2007: fetch https://api.collegefootballdata.com/roster?team=Robert%20Morris&year=2007 -> 429
+  WARN Robert Morris 2008: fetch https://api.collegefootballdata.com/roster?team=Robert%20Morris&year=2008 -> 429
+  WARN Robert Morris 2009: fetch https://api.collegefootballdata.com/roster?team=Robert%20Morris&year=2009 -> 429
+[180/262] Robert Morris                  | players:    0 | total: 10748 | calls: 1260 | ETA: ~6m     WARN Rutgers 2003: fetch https://api.collegefootballdata.com/roster?team=Rutgers&year=2003 -> 429
+  WARN Rutgers 2004: fetch https://api.collegefootballdata.com/roster?team=Rutgers&year=2004 -> 429
+  WARN Rutgers 2005: fetch https://api.collegefootballdata.com/roster?team=Rutgers&year=2005 -> 429
+  WARN Rutgers 2006: fetch https://api.collegefootballdata.com/roster?team=Rutgers&year=2006 -> 429
+  WARN Rutgers 2007: fetch https://api.collegefootballdata.com/roster?team=Rutgers&year=2007 -> 429
+  WARN Rutgers 2008: fetch https://api.collegefootballdata.com/roster?team=Rutgers&year=2008 -> 429
+  WARN Rutgers 2009: fetch https://api.collegefootballdata.com/roster?team=Rutgers&year=2009 -> 429
+[181/262] Rutgers                        | players:    0 | total: 10748 | calls: 1267 | ETA: ~6m     WARN Sacramento State 2003: fetch https://api.collegefootballdata.com/roster?team=Sacramento%20State&year=2003 -> 429
+  WARN Sacramento State 2004: fetch https://api.collegefootballdata.com/roster?team=Sacramento%20State&year=2004 -> 429
+  WARN Sacramento State 2005: fetch https://api.collegefootballdata.com/roster?team=Sacramento%20State&year=2005 -> 429
+  WARN Sacramento State 2006: fetch https://api.collegefootballdata.com/roster?team=Sacramento%20State&year=2006 -> 429
+  WARN Sacramento State 2007: fetch https://api.collegefootballdata.com/roster?team=Sacramento%20State&year=2007 -> 429
+  WARN Sacramento State 2008: fetch https://api.collegefootballdata.com/roster?team=Sacramento%20State&year=2008 -> 429
+  WARN Sacramento State 2009: fetch https://api.collegefootballdata.com/roster?team=Sacramento%20State&year=2009 -> 429
+[182/262] Sacramento State               | players:    0 | total: 10748 | calls: 1274 | ETA: ~6m     WARN Sacred Heart 2003: fetch https://api.collegefootballdata.com/roster?team=Sacred%20Heart&year=2003 -> 429
+  WARN Sacred Heart 2004: fetch https://api.collegefootballdata.com/roster?team=Sacred%20Heart&year=2004 -> 429
+  WARN Sacred Heart 2005: fetch https://api.collegefootballdata.com/roster?team=Sacred%20Heart&year=2005 -> 429
+  WARN Sacred Heart 2006: fetch https://api.collegefootballdata.com/roster?team=Sacred%20Heart&year=2006 -> 429
+  WARN Sacred Heart 2007: fetch https://api.collegefootballdata.com/roster?team=Sacred%20Heart&year=2007 -> 429
+  WARN Sacred Heart 2008: fetch https://api.collegefootballdata.com/roster?team=Sacred%20Heart&year=2008 -> 429
+  WARN Sacred Heart 2009: fetch https://api.collegefootballdata.com/roster?team=Sacred%20Heart&year=2009 -> 429
+[183/262] Sacred Heart                   | players:    0 | total: 10748 | calls: 1281 | ETA: ~6m     WARN Sam Houston 2003: fetch https://api.collegefootballdata.com/roster?team=Sam%20Houston&year=2003 -> 429
+  WARN Sam Houston 2004: fetch https://api.collegefootballdata.com/roster?team=Sam%20Houston&year=2004 -> 429
+  WARN Sam Houston 2005: fetch https://api.collegefootballdata.com/roster?team=Sam%20Houston&year=2005 -> 429
+  WARN Sam Houston 2006: fetch https://api.collegefootballdata.com/roster?team=Sam%20Houston&year=2006 -> 429
+  WARN Sam Houston 2007: fetch https://api.collegefootballdata.com/roster?team=Sam%20Houston&year=2007 -> 429
+  WARN Sam Houston 2008: fetch https://api.collegefootballdata.com/roster?team=Sam%20Houston&year=2008 -> 429
+  WARN Sam Houston 2009: fetch https://api.collegefootballdata.com/roster?team=Sam%20Houston&year=2009 -> 429
+[184/262] Sam Houston                    | players:    0 | total: 10748 | calls: 1288 | ETA: ~6m     WARN Samford 2003: fetch https://api.collegefootballdata.com/roster?team=Samford&year=2003 -> 429
+  WARN Samford 2004: fetch https://api.collegefootballdata.com/roster?team=Samford&year=2004 -> 429
+  WARN Samford 2005: fetch https://api.collegefootballdata.com/roster?team=Samford&year=2005 -> 429
+  WARN Samford 2006: fetch https://api.collegefootballdata.com/roster?team=Samford&year=2006 -> 429
+  WARN Samford 2007: fetch https://api.collegefootballdata.com/roster?team=Samford&year=2007 -> 429
+  WARN Samford 2008: fetch https://api.collegefootballdata.com/roster?team=Samford&year=2008 -> 429
+  WARN Samford 2009: fetch https://api.collegefootballdata.com/roster?team=Samford&year=2009 -> 429
+[185/262] Samford                        | players:    0 | total: 10748 | calls: 1295 | ETA: ~5m     WARN San Diego State 2003: fetch https://api.collegefootballdata.com/roster?team=San%20Diego%20State&year=2003 -> 429
+  WARN San Diego State 2004: fetch https://api.collegefootballdata.com/roster?team=San%20Diego%20State&year=2004 -> 429
+  WARN San Diego State 2005: fetch https://api.collegefootballdata.com/roster?team=San%20Diego%20State&year=2005 -> 429
+  WARN San Diego State 2006: fetch https://api.collegefootballdata.com/roster?team=San%20Diego%20State&year=2006 -> 429
+  WARN San Diego State 2007: fetch https://api.collegefootballdata.com/roster?team=San%20Diego%20State&year=2007 -> 429
+  WARN San Diego State 2008: fetch https://api.collegefootballdata.com/roster?team=San%20Diego%20State&year=2008 -> 429
+  WARN San Diego State 2009: fetch https://api.collegefootballdata.com/roster?team=San%20Diego%20State&year=2009 -> 429
+[186/262] San Diego State                | players:    0 | total: 10748 | calls: 1302 | ETA: ~5m     WARN San Diego 2003: fetch https://api.collegefootballdata.com/roster?team=San%20Diego&year=2003 -> 429
+  WARN San Diego 2004: fetch https://api.collegefootballdata.com/roster?team=San%20Diego&year=2004 -> 429
+  WARN San Diego 2005: fetch https://api.collegefootballdata.com/roster?team=San%20Diego&year=2005 -> 429
+  WARN San Diego 2006: fetch https://api.collegefootballdata.com/roster?team=San%20Diego&year=2006 -> 429
+  WARN San Diego 2007: fetch https://api.collegefootballdata.com/roster?team=San%20Diego&year=2007 -> 429
+  WARN San Diego 2008: fetch https://api.collegefootballdata.com/roster?team=San%20Diego&year=2008 -> 429
+  WARN San Diego 2009: fetch https://api.collegefootballdata.com/roster?team=San%20Diego&year=2009 -> 429
+[187/262] San Diego                      | players:    0 | total: 10748 | calls: 1309 | ETA: ~5m     WARN San José State 2003: fetch https://api.collegefootballdata.com/roster?team=San%20Jos%C3%A9%20State&year=2003 -> 429
+  WARN San José State 2004: fetch https://api.collegefootballdata.com/roster?team=San%20Jos%C3%A9%20State&year=2004 -> 429
+  WARN San José State 2005: fetch https://api.collegefootballdata.com/roster?team=San%20Jos%C3%A9%20State&year=2005 -> 429
+  WARN San José State 2006: fetch https://api.collegefootballdata.com/roster?team=San%20Jos%C3%A9%20State&year=2006 -> 429
+  WARN San José State 2007: fetch https://api.collegefootballdata.com/roster?team=San%20Jos%C3%A9%20State&year=2007 -> 429
+  WARN San José State 2008: fetch https://api.collegefootballdata.com/roster?team=San%20Jos%C3%A9%20State&year=2008 -> 429
+  WARN San José State 2009: fetch https://api.collegefootballdata.com/roster?team=San%20Jos%C3%A9%20State&year=2009 -> 429
+[188/262] San José State                 | players:    0 | total: 10748 | calls: 1316 | ETA: ~5m     WARN SE Louisiana 2003: fetch https://api.collegefootballdata.com/roster?team=SE%20Louisiana&year=2003 -> 429
+  WARN SE Louisiana 2004: fetch https://api.collegefootballdata.com/roster?team=SE%20Louisiana&year=2004 -> 429
+  WARN SE Louisiana 2005: fetch https://api.collegefootballdata.com/roster?team=SE%20Louisiana&year=2005 -> 429
+  WARN SE Louisiana 2006: fetch https://api.collegefootballdata.com/roster?team=SE%20Louisiana&year=2006 -> 429
+  WARN SE Louisiana 2007: fetch https://api.collegefootballdata.com/roster?team=SE%20Louisiana&year=2007 -> 429
+  WARN SE Louisiana 2008: fetch https://api.collegefootballdata.com/roster?team=SE%20Louisiana&year=2008 -> 429
+  WARN SE Louisiana 2009: fetch https://api.collegefootballdata.com/roster?team=SE%20Louisiana&year=2009 -> 429
+[189/262] SE Louisiana                   | players:    0 | total: 10748 | calls: 1323 | ETA: ~5m     WARN SMU 2003: fetch https://api.collegefootballdata.com/roster?team=SMU&year=2003 -> 429
+  WARN SMU 2004: fetch https://api.collegefootballdata.com/roster?team=SMU&year=2004 -> 429
+  WARN SMU 2005: fetch https://api.collegefootballdata.com/roster?team=SMU&year=2005 -> 429
+  WARN SMU 2006: fetch https://api.collegefootballdata.com/roster?team=SMU&year=2006 -> 429
+  WARN SMU 2007: fetch https://api.collegefootballdata.com/roster?team=SMU&year=2007 -> 429
+  WARN SMU 2008: fetch https://api.collegefootballdata.com/roster?team=SMU&year=2008 -> 429
+  WARN SMU 2009: fetch https://api.collegefootballdata.com/roster?team=SMU&year=2009 -> 429
+[190/262] SMU                            | players:    0 | total: 10748 | calls: 1330 | ETA: ~5m     WARN South Alabama 2003: fetch https://api.collegefootballdata.com/roster?team=South%20Alabama&year=2003 -> 429
+  WARN South Alabama 2004: fetch https://api.collegefootballdata.com/roster?team=South%20Alabama&year=2004 -> 429
+  WARN South Alabama 2005: fetch https://api.collegefootballdata.com/roster?team=South%20Alabama&year=2005 -> 429
+  WARN South Alabama 2006: fetch https://api.collegefootballdata.com/roster?team=South%20Alabama&year=2006 -> 429
+  WARN South Alabama 2007: fetch https://api.collegefootballdata.com/roster?team=South%20Alabama&year=2007 -> 429
+  WARN South Alabama 2008: fetch https://api.collegefootballdata.com/roster?team=South%20Alabama&year=2008 -> 429
+  WARN South Alabama 2009: fetch https://api.collegefootballdata.com/roster?team=South%20Alabama&year=2009 -> 429
+[191/262] South Alabama                  | players:    0 | total: 10748 | calls: 1337 | ETA: ~5m     WARN South Carolina 2003: fetch https://api.collegefootballdata.com/roster?team=South%20Carolina&year=2003 -> 429
+  WARN South Carolina 2004: fetch https://api.collegefootballdata.com/roster?team=South%20Carolina&year=2004 -> 429
+  WARN South Carolina 2005: fetch https://api.collegefootballdata.com/roster?team=South%20Carolina&year=2005 -> 429
+  WARN South Carolina 2006: fetch https://api.collegefootballdata.com/roster?team=South%20Carolina&year=2006 -> 429
+  WARN South Carolina 2007: fetch https://api.collegefootballdata.com/roster?team=South%20Carolina&year=2007 -> 429
+  WARN South Carolina 2008: fetch https://api.collegefootballdata.com/roster?team=South%20Carolina&year=2008 -> 429
+  WARN South Carolina 2009: fetch https://api.collegefootballdata.com/roster?team=South%20Carolina&year=2009 -> 429
+[192/262] South Carolina                 | players:    0 | total: 10748 | calls: 1344 | ETA: ~5m     WARN South Carolina State 2003: fetch https://api.collegefootballdata.com/roster?team=South%20Carolina%20State&year=2003 -> 429
+  WARN South Carolina State 2004: fetch https://api.collegefootballdata.com/roster?team=South%20Carolina%20State&year=2004 -> 429
+  WARN South Carolina State 2005: fetch https://api.collegefootballdata.com/roster?team=South%20Carolina%20State&year=2005 -> 429
+  WARN South Carolina State 2006: fetch https://api.collegefootballdata.com/roster?team=South%20Carolina%20State&year=2006 -> 429
+  WARN South Carolina State 2007: fetch https://api.collegefootballdata.com/roster?team=South%20Carolina%20State&year=2007 -> 429
+  WARN South Carolina State 2008: fetch https://api.collegefootballdata.com/roster?team=South%20Carolina%20State&year=2008 -> 429
+  WARN South Carolina State 2009: fetch https://api.collegefootballdata.com/roster?team=South%20Carolina%20State&year=2009 -> 429
+[193/262] South Carolina State           | players:    0 | total: 10748 | calls: 1351 | ETA: ~5m     WARN South Dakota 2003: fetch https://api.collegefootballdata.com/roster?team=South%20Dakota&year=2003 -> 429
+  WARN South Dakota 2004: fetch https://api.collegefootballdata.com/roster?team=South%20Dakota&year=2004 -> 429
+  WARN South Dakota 2005: fetch https://api.collegefootballdata.com/roster?team=South%20Dakota&year=2005 -> 429
+  WARN South Dakota 2006: fetch https://api.collegefootballdata.com/roster?team=South%20Dakota&year=2006 -> 429
+  WARN South Dakota 2007: fetch https://api.collegefootballdata.com/roster?team=South%20Dakota&year=2007 -> 429
+  WARN South Dakota 2008: fetch https://api.collegefootballdata.com/roster?team=South%20Dakota&year=2008 -> 429
+  WARN South Dakota 2009: fetch https://api.collegefootballdata.com/roster?team=South%20Dakota&year=2009 -> 429
+[194/262] South Dakota                   | players:    0 | total: 10748 | calls: 1358 | ETA: ~5m     WARN South Dakota State 2003: fetch https://api.collegefootballdata.com/roster?team=South%20Dakota%20State&year=2003 -> 429
+  WARN South Dakota State 2004: fetch https://api.collegefootballdata.com/roster?team=South%20Dakota%20State&year=2004 -> 429
+  WARN South Dakota State 2005: fetch https://api.collegefootballdata.com/roster?team=South%20Dakota%20State&year=2005 -> 429
+  WARN South Dakota State 2006: fetch https://api.collegefootballdata.com/roster?team=South%20Dakota%20State&year=2006 -> 429
+  WARN South Dakota State 2007: fetch https://api.collegefootballdata.com/roster?team=South%20Dakota%20State&year=2007 -> 429
+  WARN South Dakota State 2008: fetch https://api.collegefootballdata.com/roster?team=South%20Dakota%20State&year=2008 -> 429
+  WARN South Dakota State 2009: fetch https://api.collegefootballdata.com/roster?team=South%20Dakota%20State&year=2009 -> 429
+[195/262] South Dakota State             | players:    0 | total: 10748 | calls: 1365 | ETA: ~5m     WARN South Florida 2003: fetch https://api.collegefootballdata.com/roster?team=South%20Florida&year=2003 -> 429
+  WARN South Florida 2004: fetch https://api.collegefootballdata.com/roster?team=South%20Florida&year=2004 -> 429
+  WARN South Florida 2005: fetch https://api.collegefootballdata.com/roster?team=South%20Florida&year=2005 -> 429
+  WARN South Florida 2006: fetch https://api.collegefootballdata.com/roster?team=South%20Florida&year=2006 -> 429
+  WARN South Florida 2007: fetch https://api.collegefootballdata.com/roster?team=South%20Florida&year=2007 -> 429
+  WARN South Florida 2008: fetch https://api.collegefootballdata.com/roster?team=South%20Florida&year=2008 -> 429
+  WARN South Florida 2009: fetch https://api.collegefootballdata.com/roster?team=South%20Florida&year=2009 -> 429
+[196/262] South Florida                  | players:    0 | total: 10748 | calls: 1372 | ETA: ~5m     WARN Southeast Missouri State 2003: fetch https://api.collegefootballdata.com/roster?team=Southeast%20Missouri%20State&year=2003 -> 429
+  WARN Southeast Missouri State 2004: fetch https://api.collegefootballdata.com/roster?team=Southeast%20Missouri%20State&year=2004 -> 429
+  WARN Southeast Missouri State 2005: fetch https://api.collegefootballdata.com/roster?team=Southeast%20Missouri%20State&year=2005 -> 429
+  WARN Southeast Missouri State 2006: fetch https://api.collegefootballdata.com/roster?team=Southeast%20Missouri%20State&year=2006 -> 429
+  WARN Southeast Missouri State 2007: fetch https://api.collegefootballdata.com/roster?team=Southeast%20Missouri%20State&year=2007 -> 429
+  WARN Southeast Missouri State 2008: fetch https://api.collegefootballdata.com/roster?team=Southeast%20Missouri%20State&year=2008 -> 429
+  WARN Southeast Missouri State 2009: fetch https://api.collegefootballdata.com/roster?team=Southeast%20Missouri%20State&year=2009 -> 429
+[197/262] Southeast Missouri State       | players:    0 | total: 10748 | calls: 1379 | ETA: ~5m     WARN Southern Illinois 2003: fetch https://api.collegefootballdata.com/roster?team=Southern%20Illinois&year=2003 -> 429
+  WARN Southern Illinois 2004: fetch https://api.collegefootballdata.com/roster?team=Southern%20Illinois&year=2004 -> 429
+  WARN Southern Illinois 2005: fetch https://api.collegefootballdata.com/roster?team=Southern%20Illinois&year=2005 -> 429
+  WARN Southern Illinois 2006: fetch https://api.collegefootballdata.com/roster?team=Southern%20Illinois&year=2006 -> 429
+  WARN Southern Illinois 2007: fetch https://api.collegefootballdata.com/roster?team=Southern%20Illinois&year=2007 -> 429
+  WARN Southern Illinois 2008: fetch https://api.collegefootballdata.com/roster?team=Southern%20Illinois&year=2008 -> 429
+  WARN Southern Illinois 2009: fetch https://api.collegefootballdata.com/roster?team=Southern%20Illinois&year=2009 -> 429
+[198/262] Southern Illinois              | players:    0 | total: 10748 | calls: 1386 | ETA: ~5m     WARN Southern 2003: fetch https://api.collegefootballdata.com/roster?team=Southern&year=2003 -> 429
+  WARN Southern 2004: fetch https://api.collegefootballdata.com/roster?team=Southern&year=2004 -> 429
+  WARN Southern 2005: fetch https://api.collegefootballdata.com/roster?team=Southern&year=2005 -> 429
+  WARN Southern 2006: fetch https://api.collegefootballdata.com/roster?team=Southern&year=2006 -> 429
+  WARN Southern 2007: fetch https://api.collegefootballdata.com/roster?team=Southern&year=2007 -> 429
+  WARN Southern 2008: fetch https://api.collegefootballdata.com/roster?team=Southern&year=2008 -> 429
+  WARN Southern 2009: fetch https://api.collegefootballdata.com/roster?team=Southern&year=2009 -> 429
+[199/262] Southern                       | players:    0 | total: 10748 | calls: 1393 | ETA: ~4m     WARN Southern Miss 2003: fetch https://api.collegefootballdata.com/roster?team=Southern%20Miss&year=2003 -> 429
+  WARN Southern Miss 2004: fetch https://api.collegefootballdata.com/roster?team=Southern%20Miss&year=2004 -> 429
+  WARN Southern Miss 2005: fetch https://api.collegefootballdata.com/roster?team=Southern%20Miss&year=2005 -> 429
+  WARN Southern Miss 2006: fetch https://api.collegefootballdata.com/roster?team=Southern%20Miss&year=2006 -> 429
+  WARN Southern Miss 2007: fetch https://api.collegefootballdata.com/roster?team=Southern%20Miss&year=2007 -> 429
+  WARN Southern Miss 2008: fetch https://api.collegefootballdata.com/roster?team=Southern%20Miss&year=2008 -> 429
+  WARN Southern Miss 2009: fetch https://api.collegefootballdata.com/roster?team=Southern%20Miss&year=2009 -> 429
+[200/262] Southern Miss                  | players:    0 | total: 10748 | calls: 1400 | ETA: ~4m     WARN Southern Utah 2003: fetch https://api.collegefootballdata.com/roster?team=Southern%20Utah&year=2003 -> 429
+  WARN Southern Utah 2004: fetch https://api.collegefootballdata.com/roster?team=Southern%20Utah&year=2004 -> 429
+  WARN Southern Utah 2005: fetch https://api.collegefootballdata.com/roster?team=Southern%20Utah&year=2005 -> 429
+  WARN Southern Utah 2006: fetch https://api.collegefootballdata.com/roster?team=Southern%20Utah&year=2006 -> 429
+  WARN Southern Utah 2007: fetch https://api.collegefootballdata.com/roster?team=Southern%20Utah&year=2007 -> 429
+  WARN Southern Utah 2008: fetch https://api.collegefootballdata.com/roster?team=Southern%20Utah&year=2008 -> 429
+  WARN Southern Utah 2009: fetch https://api.collegefootballdata.com/roster?team=Southern%20Utah&year=2009 -> 429
+[201/262] Southern Utah                  | players:    0 | total: 10748 | calls: 1407 | ETA: ~4m     WARN Stanford 2003: fetch https://api.collegefootballdata.com/roster?team=Stanford&year=2003 -> 429
+  WARN Stanford 2004: fetch https://api.collegefootballdata.com/roster?team=Stanford&year=2004 -> 429
+  WARN Stanford 2005: fetch https://api.collegefootballdata.com/roster?team=Stanford&year=2005 -> 429
+  WARN Stanford 2006: fetch https://api.collegefootballdata.com/roster?team=Stanford&year=2006 -> 429
+  WARN Stanford 2007: fetch https://api.collegefootballdata.com/roster?team=Stanford&year=2007 -> 429
+  WARN Stanford 2008: fetch https://api.collegefootballdata.com/roster?team=Stanford&year=2008 -> 429
+  WARN Stanford 2009: fetch https://api.collegefootballdata.com/roster?team=Stanford&year=2009 -> 429
+[202/262] Stanford                       | players:    0 | total: 10748 | calls: 1414 | ETA: ~4m     WARN Stephen F. Austin 2003: fetch https://api.collegefootballdata.com/roster?team=Stephen%20F.%20Austin&year=2003 -> 429
+  WARN Stephen F. Austin 2004: fetch https://api.collegefootballdata.com/roster?team=Stephen%20F.%20Austin&year=2004 -> 429
+  WARN Stephen F. Austin 2005: fetch https://api.collegefootballdata.com/roster?team=Stephen%20F.%20Austin&year=2005 -> 429
+  WARN Stephen F. Austin 2006: fetch https://api.collegefootballdata.com/roster?team=Stephen%20F.%20Austin&year=2006 -> 429
+  WARN Stephen F. Austin 2007: fetch https://api.collegefootballdata.com/roster?team=Stephen%20F.%20Austin&year=2007 -> 429
+  WARN Stephen F. Austin 2008: fetch https://api.collegefootballdata.com/roster?team=Stephen%20F.%20Austin&year=2008 -> 429
+  WARN Stephen F. Austin 2009: fetch https://api.collegefootballdata.com/roster?team=Stephen%20F.%20Austin&year=2009 -> 429
+[203/262] Stephen F. Austin              | players:    0 | total: 10748 | calls: 1421 | ETA: ~4m     WARN Stetson 2003: fetch https://api.collegefootballdata.com/roster?team=Stetson&year=2003 -> 429
+  WARN Stetson 2004: fetch https://api.collegefootballdata.com/roster?team=Stetson&year=2004 -> 429
+  WARN Stetson 2005: fetch https://api.collegefootballdata.com/roster?team=Stetson&year=2005 -> 429
+  WARN Stetson 2006: fetch https://api.collegefootballdata.com/roster?team=Stetson&year=2006 -> 429
+  WARN Stetson 2007: fetch https://api.collegefootballdata.com/roster?team=Stetson&year=2007 -> 429
+  WARN Stetson 2008: fetch https://api.collegefootballdata.com/roster?team=Stetson&year=2008 -> 429
+  WARN Stetson 2009: fetch https://api.collegefootballdata.com/roster?team=Stetson&year=2009 -> 429
+[204/262] Stetson                        | players:    0 | total: 10748 | calls: 1428 | ETA: ~4m     WARN Stonehill 2003: fetch https://api.collegefootballdata.com/roster?team=Stonehill&year=2003 -> 429
+  WARN Stonehill 2004: fetch https://api.collegefootballdata.com/roster?team=Stonehill&year=2004 -> 429
+  WARN Stonehill 2005: fetch https://api.collegefootballdata.com/roster?team=Stonehill&year=2005 -> 429
+  WARN Stonehill 2006: fetch https://api.collegefootballdata.com/roster?team=Stonehill&year=2006 -> 429
+  WARN Stonehill 2007: fetch https://api.collegefootballdata.com/roster?team=Stonehill&year=2007 -> 429
+  WARN Stonehill 2008: fetch https://api.collegefootballdata.com/roster?team=Stonehill&year=2008 -> 429
+  WARN Stonehill 2009: fetch https://api.collegefootballdata.com/roster?team=Stonehill&year=2009 -> 429
+[205/262] Stonehill                      | players:    0 | total: 10748 | calls: 1435 | ETA: ~4m     WARN Stony Brook 2003: fetch https://api.collegefootballdata.com/roster?team=Stony%20Brook&year=2003 -> 429
+  WARN Stony Brook 2004: fetch https://api.collegefootballdata.com/roster?team=Stony%20Brook&year=2004 -> 429
+  WARN Stony Brook 2005: fetch https://api.collegefootballdata.com/roster?team=Stony%20Brook&year=2005 -> 429
+  WARN Stony Brook 2006: fetch https://api.collegefootballdata.com/roster?team=Stony%20Brook&year=2006 -> 429
+  WARN Stony Brook 2007: fetch https://api.collegefootballdata.com/roster?team=Stony%20Brook&year=2007 -> 429
+  WARN Stony Brook 2008: fetch https://api.collegefootballdata.com/roster?team=Stony%20Brook&year=2008 -> 429
+  WARN Stony Brook 2009: fetch https://api.collegefootballdata.com/roster?team=Stony%20Brook&year=2009 -> 429
+[206/262] Stony Brook                    | players:    0 | total: 10748 | calls: 1442 | ETA: ~4m     WARN Syracuse 2003: fetch https://api.collegefootballdata.com/roster?team=Syracuse&year=2003 -> 429
+  WARN Syracuse 2004: fetch https://api.collegefootballdata.com/roster?team=Syracuse&year=2004 -> 429
+  WARN Syracuse 2005: fetch https://api.collegefootballdata.com/roster?team=Syracuse&year=2005 -> 429
+  WARN Syracuse 2006: fetch https://api.collegefootballdata.com/roster?team=Syracuse&year=2006 -> 429
+  WARN Syracuse 2007: fetch https://api.collegefootballdata.com/roster?team=Syracuse&year=2007 -> 429
+  WARN Syracuse 2008: fetch https://api.collegefootballdata.com/roster?team=Syracuse&year=2008 -> 429
+  WARN Syracuse 2009: fetch https://api.collegefootballdata.com/roster?team=Syracuse&year=2009 -> 429
+[207/262] Syracuse                       | players:    0 | total: 10748 | calls: 1449 | ETA: ~4m     WARN Tarleton State 2003: fetch https://api.collegefootballdata.com/roster?team=Tarleton%20State&year=2003 -> 429
+  WARN Tarleton State 2004: fetch https://api.collegefootballdata.com/roster?team=Tarleton%20State&year=2004 -> 429
+  WARN Tarleton State 2005: fetch https://api.collegefootballdata.com/roster?team=Tarleton%20State&year=2005 -> 429
+  WARN Tarleton State 2006: fetch https://api.collegefootballdata.com/roster?team=Tarleton%20State&year=2006 -> 429
+  WARN Tarleton State 2007: fetch https://api.collegefootballdata.com/roster?team=Tarleton%20State&year=2007 -> 429
+  WARN Tarleton State 2008: fetch https://api.collegefootballdata.com/roster?team=Tarleton%20State&year=2008 -> 429
+  WARN Tarleton State 2009: fetch https://api.collegefootballdata.com/roster?team=Tarleton%20State&year=2009 -> 429
+[208/262] Tarleton State                 | players:    0 | total: 10748 | calls: 1456 | ETA: ~4m     WARN TCU 2003: fetch https://api.collegefootballdata.com/roster?team=TCU&year=2003 -> 429
+  WARN TCU 2004: fetch https://api.collegefootballdata.com/roster?team=TCU&year=2004 -> 429
+  WARN TCU 2005: fetch https://api.collegefootballdata.com/roster?team=TCU&year=2005 -> 429
+  WARN TCU 2006: fetch https://api.collegefootballdata.com/roster?team=TCU&year=2006 -> 429
+  WARN TCU 2007: fetch https://api.collegefootballdata.com/roster?team=TCU&year=2007 -> 429
+  WARN TCU 2008: fetch https://api.collegefootballdata.com/roster?team=TCU&year=2008 -> 429
+  WARN TCU 2009: fetch https://api.collegefootballdata.com/roster?team=TCU&year=2009 -> 429
+[209/262] TCU                            | players:    0 | total: 10748 | calls: 1463 | ETA: ~4m     WARN Temple 2003: fetch https://api.collegefootballdata.com/roster?team=Temple&year=2003 -> 429
+  WARN Temple 2004: fetch https://api.collegefootballdata.com/roster?team=Temple&year=2004 -> 429
+  WARN Temple 2005: fetch https://api.collegefootballdata.com/roster?team=Temple&year=2005 -> 429
+  WARN Temple 2006: fetch https://api.collegefootballdata.com/roster?team=Temple&year=2006 -> 429
+  WARN Temple 2007: fetch https://api.collegefootballdata.com/roster?team=Temple&year=2007 -> 429
+  WARN Temple 2008: fetch https://api.collegefootballdata.com/roster?team=Temple&year=2008 -> 429
+  WARN Temple 2009: fetch https://api.collegefootballdata.com/roster?team=Temple&year=2009 -> 429
+[210/262] Temple                         | players:    0 | total: 10748 | calls: 1470 | ETA: ~4m     WARN Tennessee State 2003: fetch https://api.collegefootballdata.com/roster?team=Tennessee%20State&year=2003 -> 429
+  WARN Tennessee State 2004: fetch https://api.collegefootballdata.com/roster?team=Tennessee%20State&year=2004 -> 429
+  WARN Tennessee State 2005: fetch https://api.collegefootballdata.com/roster?team=Tennessee%20State&year=2005 -> 429
+  WARN Tennessee State 2006: fetch https://api.collegefootballdata.com/roster?team=Tennessee%20State&year=2006 -> 429
+  WARN Tennessee State 2007: fetch https://api.collegefootballdata.com/roster?team=Tennessee%20State&year=2007 -> 429
+  WARN Tennessee State 2008: fetch https://api.collegefootballdata.com/roster?team=Tennessee%20State&year=2008 -> 429
+  WARN Tennessee State 2009: fetch https://api.collegefootballdata.com/roster?team=Tennessee%20State&year=2009 -> 429
+[211/262] Tennessee State                | players:    0 | total: 10748 | calls: 1477 | ETA: ~4m     WARN Tennessee Tech 2003: fetch https://api.collegefootballdata.com/roster?team=Tennessee%20Tech&year=2003 -> 429
+  WARN Tennessee Tech 2004: fetch https://api.collegefootballdata.com/roster?team=Tennessee%20Tech&year=2004 -> 429
+  WARN Tennessee Tech 2005: fetch https://api.collegefootballdata.com/roster?team=Tennessee%20Tech&year=2005 -> 429
+  WARN Tennessee Tech 2006: fetch https://api.collegefootballdata.com/roster?team=Tennessee%20Tech&year=2006 -> 429
+  WARN Tennessee Tech 2007: fetch https://api.collegefootballdata.com/roster?team=Tennessee%20Tech&year=2007 -> 429
+  WARN Tennessee Tech 2008: fetch https://api.collegefootballdata.com/roster?team=Tennessee%20Tech&year=2008 -> 429
+  WARN Tennessee Tech 2009: fetch https://api.collegefootballdata.com/roster?team=Tennessee%20Tech&year=2009 -> 429
+[212/262] Tennessee Tech                 | players:    0 | total: 10748 | calls: 1484 | ETA: ~4m     WARN Tennessee 2003: fetch https://api.collegefootballdata.com/roster?team=Tennessee&year=2003 -> 429
+  WARN Tennessee 2004: fetch https://api.collegefootballdata.com/roster?team=Tennessee&year=2004 -> 429
+  WARN Tennessee 2005: fetch https://api.collegefootballdata.com/roster?team=Tennessee&year=2005 -> 429
+  WARN Tennessee 2006: fetch https://api.collegefootballdata.com/roster?team=Tennessee&year=2006 -> 429
+  WARN Tennessee 2007: fetch https://api.collegefootballdata.com/roster?team=Tennessee&year=2007 -> 429
+  WARN Tennessee 2008: fetch https://api.collegefootballdata.com/roster?team=Tennessee&year=2008 -> 429
+  WARN Tennessee 2009: fetch https://api.collegefootballdata.com/roster?team=Tennessee&year=2009 -> 429
+[213/262] Tennessee                      | players:    0 | total: 10748 | calls: 1491 | ETA: ~3m     WARN Texas A&M 2003: fetch https://api.collegefootballdata.com/roster?team=Texas%20A%26M&year=2003 -> 429
+  WARN Texas A&M 2004: fetch https://api.collegefootballdata.com/roster?team=Texas%20A%26M&year=2004 -> 429
+  WARN Texas A&M 2005: fetch https://api.collegefootballdata.com/roster?team=Texas%20A%26M&year=2005 -> 429
+  WARN Texas A&M 2006: fetch https://api.collegefootballdata.com/roster?team=Texas%20A%26M&year=2006 -> 429
+  WARN Texas A&M 2007: fetch https://api.collegefootballdata.com/roster?team=Texas%20A%26M&year=2007 -> 429
+  WARN Texas A&M 2008: fetch https://api.collegefootballdata.com/roster?team=Texas%20A%26M&year=2008 -> 429
+  WARN Texas A&M 2009: fetch https://api.collegefootballdata.com/roster?team=Texas%20A%26M&year=2009 -> 429
+[214/262] Texas A&M                      | players:    0 | total: 10748 | calls: 1498 | ETA: ~3m     WARN Texas 2003: fetch https://api.collegefootballdata.com/roster?team=Texas&year=2003 -> 429
+  WARN Texas 2004: fetch https://api.collegefootballdata.com/roster?team=Texas&year=2004 -> 429
+  WARN Texas 2005: fetch https://api.collegefootballdata.com/roster?team=Texas&year=2005 -> 429
+  WARN Texas 2006: fetch https://api.collegefootballdata.com/roster?team=Texas&year=2006 -> 429
+  WARN Texas 2007: fetch https://api.collegefootballdata.com/roster?team=Texas&year=2007 -> 429
+  WARN Texas 2008: fetch https://api.collegefootballdata.com/roster?team=Texas&year=2008 -> 429
+  WARN Texas 2009: fetch https://api.collegefootballdata.com/roster?team=Texas&year=2009 -> 429
+[215/262] Texas                          | players:    0 | total: 10748 | calls: 1505 | ETA: ~3m     WARN Texas Southern 2003: fetch https://api.collegefootballdata.com/roster?team=Texas%20Southern&year=2003 -> 429
+  WARN Texas Southern 2004: fetch https://api.collegefootballdata.com/roster?team=Texas%20Southern&year=2004 -> 429
+  WARN Texas Southern 2005: fetch https://api.collegefootballdata.com/roster?team=Texas%20Southern&year=2005 -> 429
+  WARN Texas Southern 2006: fetch https://api.collegefootballdata.com/roster?team=Texas%20Southern&year=2006 -> 429
+  WARN Texas Southern 2007: fetch https://api.collegefootballdata.com/roster?team=Texas%20Southern&year=2007 -> 429
+  WARN Texas Southern 2008: fetch https://api.collegefootballdata.com/roster?team=Texas%20Southern&year=2008 -> 429
+  WARN Texas Southern 2009: fetch https://api.collegefootballdata.com/roster?team=Texas%20Southern&year=2009 -> 429
+[216/262] Texas Southern                 | players:    0 | total: 10748 | calls: 1512 | ETA: ~3m     WARN Texas State 2003: fetch https://api.collegefootballdata.com/roster?team=Texas%20State&year=2003 -> 429
+  WARN Texas State 2004: fetch https://api.collegefootballdata.com/roster?team=Texas%20State&year=2004 -> 429
+  WARN Texas State 2005: fetch https://api.collegefootballdata.com/roster?team=Texas%20State&year=2005 -> 429
+  WARN Texas State 2006: fetch https://api.collegefootballdata.com/roster?team=Texas%20State&year=2006 -> 429
+  WARN Texas State 2007: fetch https://api.collegefootballdata.com/roster?team=Texas%20State&year=2007 -> 429
+  WARN Texas State 2008: fetch https://api.collegefootballdata.com/roster?team=Texas%20State&year=2008 -> 429
+  WARN Texas State 2009: fetch https://api.collegefootballdata.com/roster?team=Texas%20State&year=2009 -> 429
+[217/262] Texas State                    | players:    0 | total: 10748 | calls: 1519 | ETA: ~3m     WARN Texas Tech 2003: fetch https://api.collegefootballdata.com/roster?team=Texas%20Tech&year=2003 -> 429
+  WARN Texas Tech 2004: fetch https://api.collegefootballdata.com/roster?team=Texas%20Tech&year=2004 -> 429
+  WARN Texas Tech 2005: fetch https://api.collegefootballdata.com/roster?team=Texas%20Tech&year=2005 -> 429
+  WARN Texas Tech 2006: fetch https://api.collegefootballdata.com/roster?team=Texas%20Tech&year=2006 -> 429
+  WARN Texas Tech 2007: fetch https://api.collegefootballdata.com/roster?team=Texas%20Tech&year=2007 -> 429
+  WARN Texas Tech 2008: fetch https://api.collegefootballdata.com/roster?team=Texas%20Tech&year=2008 -> 429
+  WARN Texas Tech 2009: fetch https://api.collegefootballdata.com/roster?team=Texas%20Tech&year=2009 -> 429
+[218/262] Texas Tech                     | players:    0 | total: 10748 | calls: 1526 | ETA: ~3m     WARN The Citadel 2003: fetch https://api.collegefootballdata.com/roster?team=The%20Citadel&year=2003 -> 429
+  WARN The Citadel 2004: fetch https://api.collegefootballdata.com/roster?team=The%20Citadel&year=2004 -> 429
+  WARN The Citadel 2005: fetch https://api.collegefootballdata.com/roster?team=The%20Citadel&year=2005 -> 429
+  WARN The Citadel 2006: fetch https://api.collegefootballdata.com/roster?team=The%20Citadel&year=2006 -> 429
+  WARN The Citadel 2007: fetch https://api.collegefootballdata.com/roster?team=The%20Citadel&year=2007 -> 429
+  WARN The Citadel 2008: fetch https://api.collegefootballdata.com/roster?team=The%20Citadel&year=2008 -> 429
+  WARN The Citadel 2009: fetch https://api.collegefootballdata.com/roster?team=The%20Citadel&year=2009 -> 429
+[219/262] The Citadel                    | players:    0 | total: 10748 | calls: 1533 | ETA: ~3m     WARN Toledo 2003: fetch https://api.collegefootballdata.com/roster?team=Toledo&year=2003 -> 429
+  WARN Toledo 2004: fetch https://api.collegefootballdata.com/roster?team=Toledo&year=2004 -> 429
+  WARN Toledo 2005: fetch https://api.collegefootballdata.com/roster?team=Toledo&year=2005 -> 429
+  WARN Toledo 2006: fetch https://api.collegefootballdata.com/roster?team=Toledo&year=2006 -> 429
+  WARN Toledo 2007: fetch https://api.collegefootballdata.com/roster?team=Toledo&year=2007 -> 429
+  WARN Toledo 2008: fetch https://api.collegefootballdata.com/roster?team=Toledo&year=2008 -> 429
+  WARN Toledo 2009: fetch https://api.collegefootballdata.com/roster?team=Toledo&year=2009 -> 429
+[220/262] Toledo                         | players:    0 | total: 10748 | calls: 1540 | ETA: ~3m     WARN Towson 2003: fetch https://api.collegefootballdata.com/roster?team=Towson&year=2003 -> 429
+  WARN Towson 2004: fetch https://api.collegefootballdata.com/roster?team=Towson&year=2004 -> 429
+  WARN Towson 2005: fetch https://api.collegefootballdata.com/roster?team=Towson&year=2005 -> 429
+  WARN Towson 2006: fetch https://api.collegefootballdata.com/roster?team=Towson&year=2006 -> 429
+  WARN Towson 2007: fetch https://api.collegefootballdata.com/roster?team=Towson&year=2007 -> 429
+  WARN Towson 2008: fetch https://api.collegefootballdata.com/roster?team=Towson&year=2008 -> 429
+  WARN Towson 2009: fetch https://api.collegefootballdata.com/roster?team=Towson&year=2009 -> 429
+[221/262] Towson                         | players:    0 | total: 10748 | calls: 1547 | ETA: ~3m     WARN Troy 2003: fetch https://api.collegefootballdata.com/roster?team=Troy&year=2003 -> 429
+  WARN Troy 2004: fetch https://api.collegefootballdata.com/roster?team=Troy&year=2004 -> 429
+  WARN Troy 2005: fetch https://api.collegefootballdata.com/roster?team=Troy&year=2005 -> 429
+  WARN Troy 2006: fetch https://api.collegefootballdata.com/roster?team=Troy&year=2006 -> 429
+  WARN Troy 2007: fetch https://api.collegefootballdata.com/roster?team=Troy&year=2007 -> 429
+  WARN Troy 2008: fetch https://api.collegefootballdata.com/roster?team=Troy&year=2008 -> 429
+  WARN Troy 2009: fetch https://api.collegefootballdata.com/roster?team=Troy&year=2009 -> 429
+[222/262] Troy                           | players:    0 | total: 10748 | calls: 1554 | ETA: ~3m     WARN Tulane 2003: fetch https://api.collegefootballdata.com/roster?team=Tulane&year=2003 -> 429
+  WARN Tulane 2004: fetch https://api.collegefootballdata.com/roster?team=Tulane&year=2004 -> 429
+  WARN Tulane 2005: fetch https://api.collegefootballdata.com/roster?team=Tulane&year=2005 -> 429
+  WARN Tulane 2006: fetch https://api.collegefootballdata.com/roster?team=Tulane&year=2006 -> 429
+  WARN Tulane 2007: fetch https://api.collegefootballdata.com/roster?team=Tulane&year=2007 -> 429
+  WARN Tulane 2008: fetch https://api.collegefootballdata.com/roster?team=Tulane&year=2008 -> 429
+  WARN Tulane 2009: fetch https://api.collegefootballdata.com/roster?team=Tulane&year=2009 -> 429
+[223/262] Tulane                         | players:    0 | total: 10748 | calls: 1561 | ETA: ~3m     WARN Tulsa 2003: fetch https://api.collegefootballdata.com/roster?team=Tulsa&year=2003 -> 429
+  WARN Tulsa 2004: fetch https://api.collegefootballdata.com/roster?team=Tulsa&year=2004 -> 429
+  WARN Tulsa 2005: fetch https://api.collegefootballdata.com/roster?team=Tulsa&year=2005 -> 429
+  WARN Tulsa 2006: fetch https://api.collegefootballdata.com/roster?team=Tulsa&year=2006 -> 429
+  WARN Tulsa 2007: fetch https://api.collegefootballdata.com/roster?team=Tulsa&year=2007 -> 429
+  WARN Tulsa 2008: fetch https://api.collegefootballdata.com/roster?team=Tulsa&year=2008 -> 429
+  WARN Tulsa 2009: fetch https://api.collegefootballdata.com/roster?team=Tulsa&year=2009 -> 429
+[224/262] Tulsa                          | players:    0 | total: 10748 | calls: 1568 | ETA: ~3m     WARN UAB 2003: fetch https://api.collegefootballdata.com/roster?team=UAB&year=2003 -> 429
+  WARN UAB 2004: fetch https://api.collegefootballdata.com/roster?team=UAB&year=2004 -> 429
+  WARN UAB 2005: fetch https://api.collegefootballdata.com/roster?team=UAB&year=2005 -> 429
+  WARN UAB 2006: fetch https://api.collegefootballdata.com/roster?team=UAB&year=2006 -> 429
+  WARN UAB 2007: fetch https://api.collegefootballdata.com/roster?team=UAB&year=2007 -> 429
+  WARN UAB 2008: fetch https://api.collegefootballdata.com/roster?team=UAB&year=2008 -> 429
+  WARN UAB 2009: fetch https://api.collegefootballdata.com/roster?team=UAB&year=2009 -> 429
+[225/262] UAB                            | players:    0 | total: 10748 | calls: 1575 | ETA: ~3m     WARN UAlbany 2003: fetch https://api.collegefootballdata.com/roster?team=UAlbany&year=2003 -> 429
+  WARN UAlbany 2004: fetch https://api.collegefootballdata.com/roster?team=UAlbany&year=2004 -> 429
+  WARN UAlbany 2005: fetch https://api.collegefootballdata.com/roster?team=UAlbany&year=2005 -> 429
+  WARN UAlbany 2006: fetch https://api.collegefootballdata.com/roster?team=UAlbany&year=2006 -> 429
+  WARN UAlbany 2007: fetch https://api.collegefootballdata.com/roster?team=UAlbany&year=2007 -> 429
+  WARN UAlbany 2008: fetch https://api.collegefootballdata.com/roster?team=UAlbany&year=2008 -> 429
+  WARN UAlbany 2009: fetch https://api.collegefootballdata.com/roster?team=UAlbany&year=2009 -> 429
+[226/262] UAlbany                        | players:    0 | total: 10748 | calls: 1582 | ETA: ~3m     WARN UC Davis 2003: fetch https://api.collegefootballdata.com/roster?team=UC%20Davis&year=2003 -> 429
+  WARN UC Davis 2004: fetch https://api.collegefootballdata.com/roster?team=UC%20Davis&year=2004 -> 429
+  WARN UC Davis 2005: fetch https://api.collegefootballdata.com/roster?team=UC%20Davis&year=2005 -> 429
+  WARN UC Davis 2006: fetch https://api.collegefootballdata.com/roster?team=UC%20Davis&year=2006 -> 429
+  WARN UC Davis 2007: fetch https://api.collegefootballdata.com/roster?team=UC%20Davis&year=2007 -> 429
+  WARN UC Davis 2008: fetch https://api.collegefootballdata.com/roster?team=UC%20Davis&year=2008 -> 429
+  WARN UC Davis 2009: fetch https://api.collegefootballdata.com/roster?team=UC%20Davis&year=2009 -> 429
+[227/262] UC Davis                       | players:    0 | total: 10748 | calls: 1589 | ETA: ~2m     WARN UCF 2003: fetch https://api.collegefootballdata.com/roster?team=UCF&year=2003 -> 429
+  WARN UCF 2004: fetch https://api.collegefootballdata.com/roster?team=UCF&year=2004 -> 429
+  WARN UCF 2005: fetch https://api.collegefootballdata.com/roster?team=UCF&year=2005 -> 429
+  WARN UCF 2006: fetch https://api.collegefootballdata.com/roster?team=UCF&year=2006 -> 429
+  WARN UCF 2007: fetch https://api.collegefootballdata.com/roster?team=UCF&year=2007 -> 429
+  WARN UCF 2008: fetch https://api.collegefootballdata.com/roster?team=UCF&year=2008 -> 429
+  WARN UCF 2009: fetch https://api.collegefootballdata.com/roster?team=UCF&year=2009 -> 429
+[228/262] UCF                            | players:    0 | total: 10748 | calls: 1596 | ETA: ~2m     WARN UCLA 2003: fetch https://api.collegefootballdata.com/roster?team=UCLA&year=2003 -> 429
+  WARN UCLA 2004: fetch https://api.collegefootballdata.com/roster?team=UCLA&year=2004 -> 429
+  WARN UCLA 2005: fetch https://api.collegefootballdata.com/roster?team=UCLA&year=2005 -> 429
+  WARN UCLA 2006: fetch https://api.collegefootballdata.com/roster?team=UCLA&year=2006 -> 429
+  WARN UCLA 2007: fetch https://api.collegefootballdata.com/roster?team=UCLA&year=2007 -> 429
+  WARN UCLA 2008: fetch https://api.collegefootballdata.com/roster?team=UCLA&year=2008 -> 429
+  WARN UCLA 2009: fetch https://api.collegefootballdata.com/roster?team=UCLA&year=2009 -> 429
+[229/262] UCLA                           | players:    0 | total: 10748 | calls: 1603 | ETA: ~2m     WARN UConn 2003: fetch https://api.collegefootballdata.com/roster?team=UConn&year=2003 -> 429
+  WARN UConn 2004: fetch https://api.collegefootballdata.com/roster?team=UConn&year=2004 -> 429
+  WARN UConn 2005: fetch https://api.collegefootballdata.com/roster?team=UConn&year=2005 -> 429
+  WARN UConn 2006: fetch https://api.collegefootballdata.com/roster?team=UConn&year=2006 -> 429
+  WARN UConn 2007: fetch https://api.collegefootballdata.com/roster?team=UConn&year=2007 -> 429
+  WARN UConn 2008: fetch https://api.collegefootballdata.com/roster?team=UConn&year=2008 -> 429
+  WARN UConn 2009: fetch https://api.collegefootballdata.com/roster?team=UConn&year=2009 -> 429
+[230/262] UConn                          | players:    0 | total: 10748 | calls: 1610 | ETA: ~2m     WARN UL Monroe 2003: fetch https://api.collegefootballdata.com/roster?team=UL%20Monroe&year=2003 -> 429
+  WARN UL Monroe 2004: fetch https://api.collegefootballdata.com/roster?team=UL%20Monroe&year=2004 -> 429
+  WARN UL Monroe 2005: fetch https://api.collegefootballdata.com/roster?team=UL%20Monroe&year=2005 -> 429
+  WARN UL Monroe 2006: fetch https://api.collegefootballdata.com/roster?team=UL%20Monroe&year=2006 -> 429
+  WARN UL Monroe 2007: fetch https://api.collegefootballdata.com/roster?team=UL%20Monroe&year=2007 -> 429
+  WARN UL Monroe 2008: fetch https://api.collegefootballdata.com/roster?team=UL%20Monroe&year=2008 -> 429
+  WARN UL Monroe 2009: fetch https://api.collegefootballdata.com/roster?team=UL%20Monroe&year=2009 -> 429
+[231/262] UL Monroe                      | players:    0 | total: 10748 | calls: 1617 | ETA: ~2m     WARN UNLV 2003: fetch https://api.collegefootballdata.com/roster?team=UNLV&year=2003 -> 429
+  WARN UNLV 2004: fetch https://api.collegefootballdata.com/roster?team=UNLV&year=2004 -> 429
+  WARN UNLV 2005: fetch https://api.collegefootballdata.com/roster?team=UNLV&year=2005 -> 429
+  WARN UNLV 2006: fetch https://api.collegefootballdata.com/roster?team=UNLV&year=2006 -> 429
+  WARN UNLV 2007: fetch https://api.collegefootballdata.com/roster?team=UNLV&year=2007 -> 429
+  WARN UNLV 2008: fetch https://api.collegefootballdata.com/roster?team=UNLV&year=2008 -> 429
+  WARN UNLV 2009: fetch https://api.collegefootballdata.com/roster?team=UNLV&year=2009 -> 429
+[232/262] UNLV                           | players:    0 | total: 10748 | calls: 1624 | ETA: ~2m     WARN USC 2003: fetch https://api.collegefootballdata.com/roster?team=USC&year=2003 -> 429
+  WARN USC 2004: fetch https://api.collegefootballdata.com/roster?team=USC&year=2004 -> 429
+  WARN USC 2005: fetch https://api.collegefootballdata.com/roster?team=USC&year=2005 -> 429
+  WARN USC 2006: fetch https://api.collegefootballdata.com/roster?team=USC&year=2006 -> 429
+  WARN USC 2007: fetch https://api.collegefootballdata.com/roster?team=USC&year=2007 -> 429
+  WARN USC 2008: fetch https://api.collegefootballdata.com/roster?team=USC&year=2008 -> 429
+  WARN USC 2009: fetch https://api.collegefootballdata.com/roster?team=USC&year=2009 -> 429
+[233/262] USC                            | players:    0 | total: 10748 | calls: 1631 | ETA: ~2m     WARN UT Martin 2003: fetch https://api.collegefootballdata.com/roster?team=UT%20Martin&year=2003 -> 429
+  WARN UT Martin 2004: fetch https://api.collegefootballdata.com/roster?team=UT%20Martin&year=2004 -> 429
+  WARN UT Martin 2005: fetch https://api.collegefootballdata.com/roster?team=UT%20Martin&year=2005 -> 429
+  WARN UT Martin 2006: fetch https://api.collegefootballdata.com/roster?team=UT%20Martin&year=2006 -> 429
+  WARN UT Martin 2007: fetch https://api.collegefootballdata.com/roster?team=UT%20Martin&year=2007 -> 429
+  WARN UT Martin 2008: fetch https://api.collegefootballdata.com/roster?team=UT%20Martin&year=2008 -> 429
+  WARN UT Martin 2009: fetch https://api.collegefootballdata.com/roster?team=UT%20Martin&year=2009 -> 429
+[234/262] UT Martin                      | players:    0 | total: 10748 | calls: 1638 | ETA: ~2m     WARN Utah State 2003: fetch https://api.collegefootballdata.com/roster?team=Utah%20State&year=2003 -> 429
+  WARN Utah State 2004: fetch https://api.collegefootballdata.com/roster?team=Utah%20State&year=2004 -> 429
+  WARN Utah State 2005: fetch https://api.collegefootballdata.com/roster?team=Utah%20State&year=2005 -> 429
+  WARN Utah State 2006: fetch https://api.collegefootballdata.com/roster?team=Utah%20State&year=2006 -> 429
+  WARN Utah State 2007: fetch https://api.collegefootballdata.com/roster?team=Utah%20State&year=2007 -> 429
+  WARN Utah State 2008: fetch https://api.collegefootballdata.com/roster?team=Utah%20State&year=2008 -> 429
+  WARN Utah State 2009: fetch https://api.collegefootballdata.com/roster?team=Utah%20State&year=2009 -> 429
+[235/262] Utah State                     | players:    0 | total: 10748 | calls: 1645 | ETA: ~2m     WARN Utah Tech 2003: fetch https://api.collegefootballdata.com/roster?team=Utah%20Tech&year=2003 -> 429
+  WARN Utah Tech 2004: fetch https://api.collegefootballdata.com/roster?team=Utah%20Tech&year=2004 -> 429
+  WARN Utah Tech 2005: fetch https://api.collegefootballdata.com/roster?team=Utah%20Tech&year=2005 -> 429
+  WARN Utah Tech 2006: fetch https://api.collegefootballdata.com/roster?team=Utah%20Tech&year=2006 -> 429
+  WARN Utah Tech 2007: fetch https://api.collegefootballdata.com/roster?team=Utah%20Tech&year=2007 -> 429
+  WARN Utah Tech 2008: fetch https://api.collegefootballdata.com/roster?team=Utah%20Tech&year=2008 -> 429
+  WARN Utah Tech 2009: fetch https://api.collegefootballdata.com/roster?team=Utah%20Tech&year=2009 -> 429
+[236/262] Utah Tech                      | players:    0 | total: 10748 | calls: 1652 | ETA: ~2m     WARN Utah 2003: fetch https://api.collegefootballdata.com/roster?team=Utah&year=2003 -> 429
+  WARN Utah 2004: fetch https://api.collegefootballdata.com/roster?team=Utah&year=2004 -> 429
+  WARN Utah 2005: fetch https://api.collegefootballdata.com/roster?team=Utah&year=2005 -> 429
+  WARN Utah 2006: fetch https://api.collegefootballdata.com/roster?team=Utah&year=2006 -> 429
+  WARN Utah 2007: fetch https://api.collegefootballdata.com/roster?team=Utah&year=2007 -> 429
+  WARN Utah 2008: fetch https://api.collegefootballdata.com/roster?team=Utah&year=2008 -> 429
+  WARN Utah 2009: fetch https://api.collegefootballdata.com/roster?team=Utah&year=2009 -> 429
+[237/262] Utah                           | players:    0 | total: 10748 | calls: 1659 | ETA: ~2m     WARN UTEP 2003: fetch https://api.collegefootballdata.com/roster?team=UTEP&year=2003 -> 429
+  WARN UTEP 2004: fetch https://api.collegefootballdata.com/roster?team=UTEP&year=2004 -> 429
+  WARN UTEP 2005: fetch https://api.collegefootballdata.com/roster?team=UTEP&year=2005 -> 429
+  WARN UTEP 2006: fetch https://api.collegefootballdata.com/roster?team=UTEP&year=2006 -> 429
+  WARN UTEP 2007: fetch https://api.collegefootballdata.com/roster?team=UTEP&year=2007 -> 429
+  WARN UTEP 2008: fetch https://api.collegefootballdata.com/roster?team=UTEP&year=2008 -> 429
+  WARN UTEP 2009: fetch https://api.collegefootballdata.com/roster?team=UTEP&year=2009 -> 429
+[238/262] UTEP                           | players:    0 | total: 10748 | calls: 1666 | ETA: ~2m     WARN UTSA 2003: fetch https://api.collegefootballdata.com/roster?team=UTSA&year=2003 -> 429
+  WARN UTSA 2004: fetch https://api.collegefootballdata.com/roster?team=UTSA&year=2004 -> 429
+  WARN UTSA 2005: fetch https://api.collegefootballdata.com/roster?team=UTSA&year=2005 -> 429
+  WARN UTSA 2006: fetch https://api.collegefootballdata.com/roster?team=UTSA&year=2006 -> 429
+  WARN UTSA 2007: fetch https://api.collegefootballdata.com/roster?team=UTSA&year=2007 -> 429
+  WARN UTSA 2008: fetch https://api.collegefootballdata.com/roster?team=UTSA&year=2008 -> 429
+  WARN UTSA 2009: fetch https://api.collegefootballdata.com/roster?team=UTSA&year=2009 -> 429
+[239/262] UTSA                           | players:    0 | total: 10748 | calls: 1673 | ETA: ~2m     WARN Valparaiso 2003: fetch https://api.collegefootballdata.com/roster?team=Valparaiso&year=2003 -> 429
+  WARN Valparaiso 2004: fetch https://api.collegefootballdata.com/roster?team=Valparaiso&year=2004 -> 429
+  WARN Valparaiso 2005: fetch https://api.collegefootballdata.com/roster?team=Valparaiso&year=2005 -> 429
+  WARN Valparaiso 2006: fetch https://api.collegefootballdata.com/roster?team=Valparaiso&year=2006 -> 429
+  WARN Valparaiso 2007: fetch https://api.collegefootballdata.com/roster?team=Valparaiso&year=2007 -> 429
+  WARN Valparaiso 2008: fetch https://api.collegefootballdata.com/roster?team=Valparaiso&year=2008 -> 429
+  WARN Valparaiso 2009: fetch https://api.collegefootballdata.com/roster?team=Valparaiso&year=2009 -> 429
+[240/262] Valparaiso                     | players:    0 | total: 10748 | calls: 1680 | ETA: ~2m     WARN Vanderbilt 2003: fetch https://api.collegefootballdata.com/roster?team=Vanderbilt&year=2003 -> 429
+  WARN Vanderbilt 2004: fetch https://api.collegefootballdata.com/roster?team=Vanderbilt&year=2004 -> 429
+  WARN Vanderbilt 2005: fetch https://api.collegefootballdata.com/roster?team=Vanderbilt&year=2005 -> 429
+  WARN Vanderbilt 2006: fetch https://api.collegefootballdata.com/roster?team=Vanderbilt&year=2006 -> 429
+  WARN Vanderbilt 2007: fetch https://api.collegefootballdata.com/roster?team=Vanderbilt&year=2007 -> 429
+  WARN Vanderbilt 2008: fetch https://api.collegefootballdata.com/roster?team=Vanderbilt&year=2008 -> 429
+  WARN Vanderbilt 2009: fetch https://api.collegefootballdata.com/roster?team=Vanderbilt&year=2009 -> 429
+[241/262] Vanderbilt                     | players:    0 | total: 10748 | calls: 1687 | ETA: ~1m     WARN Villanova 2003: fetch https://api.collegefootballdata.com/roster?team=Villanova&year=2003 -> 429
+  WARN Villanova 2004: fetch https://api.collegefootballdata.com/roster?team=Villanova&year=2004 -> 429
+  WARN Villanova 2005: fetch https://api.collegefootballdata.com/roster?team=Villanova&year=2005 -> 429
+  WARN Villanova 2006: fetch https://api.collegefootballdata.com/roster?team=Villanova&year=2006 -> 429
+  WARN Villanova 2007: fetch https://api.collegefootballdata.com/roster?team=Villanova&year=2007 -> 429
+  WARN Villanova 2008: fetch https://api.collegefootballdata.com/roster?team=Villanova&year=2008 -> 429
+  WARN Villanova 2009: fetch https://api.collegefootballdata.com/roster?team=Villanova&year=2009 -> 429
+[242/262] Villanova                      | players:    0 | total: 10748 | calls: 1694 | ETA: ~1m     WARN Virginia 2003: fetch https://api.collegefootballdata.com/roster?team=Virginia&year=2003 -> 429
+  WARN Virginia 2004: fetch https://api.collegefootballdata.com/roster?team=Virginia&year=2004 -> 429
+  WARN Virginia 2005: fetch https://api.collegefootballdata.com/roster?team=Virginia&year=2005 -> 429
+  WARN Virginia 2006: fetch https://api.collegefootballdata.com/roster?team=Virginia&year=2006 -> 429
+  WARN Virginia 2007: fetch https://api.collegefootballdata.com/roster?team=Virginia&year=2007 -> 429
+  WARN Virginia 2008: fetch https://api.collegefootballdata.com/roster?team=Virginia&year=2008 -> 429
+  WARN Virginia 2009: fetch https://api.collegefootballdata.com/roster?team=Virginia&year=2009 -> 429
+[243/262] Virginia                       | players:    0 | total: 10748 | calls: 1701 | ETA: ~1m     WARN Virginia Tech 2003: fetch https://api.collegefootballdata.com/roster?team=Virginia%20Tech&year=2003 -> 429
+  WARN Virginia Tech 2004: fetch https://api.collegefootballdata.com/roster?team=Virginia%20Tech&year=2004 -> 429
+  WARN Virginia Tech 2005: fetch https://api.collegefootballdata.com/roster?team=Virginia%20Tech&year=2005 -> 429
+  WARN Virginia Tech 2006: fetch https://api.collegefootballdata.com/roster?team=Virginia%20Tech&year=2006 -> 429
+  WARN Virginia Tech 2007: fetch https://api.collegefootballdata.com/roster?team=Virginia%20Tech&year=2007 -> 429
+  WARN Virginia Tech 2008: fetch https://api.collegefootballdata.com/roster?team=Virginia%20Tech&year=2008 -> 429
+  WARN Virginia Tech 2009: fetch https://api.collegefootballdata.com/roster?team=Virginia%20Tech&year=2009 -> 429
+[244/262] Virginia Tech                  | players:    0 | total: 10748 | calls: 1708 | ETA: ~1m     WARN VMI 2003: fetch https://api.collegefootballdata.com/roster?team=VMI&year=2003 -> 429
+  WARN VMI 2004: fetch https://api.collegefootballdata.com/roster?team=VMI&year=2004 -> 429
+  WARN VMI 2005: fetch https://api.collegefootballdata.com/roster?team=VMI&year=2005 -> 429
+  WARN VMI 2006: fetch https://api.collegefootballdata.com/roster?team=VMI&year=2006 -> 429
+  WARN VMI 2007: fetch https://api.collegefootballdata.com/roster?team=VMI&year=2007 -> 429
+  WARN VMI 2008: fetch https://api.collegefootballdata.com/roster?team=VMI&year=2008 -> 429
+  WARN VMI 2009: fetch https://api.collegefootballdata.com/roster?team=VMI&year=2009 -> 429
+[245/262] VMI                            | players:    0 | total: 10748 | calls: 1715 | ETA: ~1m     WARN Wagner 2003: fetch https://api.collegefootballdata.com/roster?team=Wagner&year=2003 -> 429
+  WARN Wagner 2004: fetch https://api.collegefootballdata.com/roster?team=Wagner&year=2004 -> 429
+  WARN Wagner 2005: fetch https://api.collegefootballdata.com/roster?team=Wagner&year=2005 -> 429
+  WARN Wagner 2006: fetch https://api.collegefootballdata.com/roster?team=Wagner&year=2006 -> 429
+  WARN Wagner 2007: fetch https://api.collegefootballdata.com/roster?team=Wagner&year=2007 -> 429
+  WARN Wagner 2008: fetch https://api.collegefootballdata.com/roster?team=Wagner&year=2008 -> 429
+  WARN Wagner 2009: fetch https://api.collegefootballdata.com/roster?team=Wagner&year=2009 -> 429
+[246/262] Wagner                         | players:    0 | total: 10748 | calls: 1722 | ETA: ~1m     WARN Wake Forest 2003: fetch https://api.collegefootballdata.com/roster?team=Wake%20Forest&year=2003 -> 429
+  WARN Wake Forest 2004: fetch https://api.collegefootballdata.com/roster?team=Wake%20Forest&year=2004 -> 429
+  WARN Wake Forest 2005: fetch https://api.collegefootballdata.com/roster?team=Wake%20Forest&year=2005 -> 429
+  WARN Wake Forest 2006: fetch https://api.collegefootballdata.com/roster?team=Wake%20Forest&year=2006 -> 429
+  WARN Wake Forest 2007: fetch https://api.collegefootballdata.com/roster?team=Wake%20Forest&year=2007 -> 429
+  WARN Wake Forest 2008: fetch https://api.collegefootballdata.com/roster?team=Wake%20Forest&year=2008 -> 429
+  WARN Wake Forest 2009: fetch https://api.collegefootballdata.com/roster?team=Wake%20Forest&year=2009 -> 429
+[247/262] Wake Forest                    | players:    0 | total: 10748 | calls: 1729 | ETA: ~1m     WARN Washington 2003: fetch https://api.collegefootballdata.com/roster?team=Washington&year=2003 -> 429
+  WARN Washington 2004: fetch https://api.collegefootballdata.com/roster?team=Washington&year=2004 -> 429
+  WARN Washington 2005: fetch https://api.collegefootballdata.com/roster?team=Washington&year=2005 -> 429
+  WARN Washington 2006: fetch https://api.collegefootballdata.com/roster?team=Washington&year=2006 -> 429
+  WARN Washington 2007: fetch https://api.collegefootballdata.com/roster?team=Washington&year=2007 -> 429
+  WARN Washington 2008: fetch https://api.collegefootballdata.com/roster?team=Washington&year=2008 -> 429
+  WARN Washington 2009: fetch https://api.collegefootballdata.com/roster?team=Washington&year=2009 -> 429
+[248/262] Washington                     | players:    0 | total: 10748 | calls: 1736 | ETA: ~1m     WARN Washington State 2003: fetch https://api.collegefootballdata.com/roster?team=Washington%20State&year=2003 -> 429
+  WARN Washington State 2004: fetch https://api.collegefootballdata.com/roster?team=Washington%20State&year=2004 -> 429
+  WARN Washington State 2005: fetch https://api.collegefootballdata.com/roster?team=Washington%20State&year=2005 -> 429
+  WARN Washington State 2006: fetch https://api.collegefootballdata.com/roster?team=Washington%20State&year=2006 -> 429
+  WARN Washington State 2007: fetch https://api.collegefootballdata.com/roster?team=Washington%20State&year=2007 -> 429
+  WARN Washington State 2008: fetch https://api.collegefootballdata.com/roster?team=Washington%20State&year=2008 -> 429
+  WARN Washington State 2009: fetch https://api.collegefootballdata.com/roster?team=Washington%20State&year=2009 -> 429
+[249/262] Washington State               | players:    0 | total: 10748 | calls: 1743 | ETA: ~1m     WARN Weber State 2003: fetch https://api.collegefootballdata.com/roster?team=Weber%20State&year=2003 -> 429
+  WARN Weber State 2004: fetch https://api.collegefootballdata.com/roster?team=Weber%20State&year=2004 -> 429
+  WARN Weber State 2005: fetch https://api.collegefootballdata.com/roster?team=Weber%20State&year=2005 -> 429
+  WARN Weber State 2006: fetch https://api.collegefootballdata.com/roster?team=Weber%20State&year=2006 -> 429
+  WARN Weber State 2007: fetch https://api.collegefootballdata.com/roster?team=Weber%20State&year=2007 -> 429
+  WARN Weber State 2008: fetch https://api.collegefootballdata.com/roster?team=Weber%20State&year=2008 -> 429
+  WARN Weber State 2009: fetch https://api.collegefootballdata.com/roster?team=Weber%20State&year=2009 -> 429
+[250/262] Weber State                    | players:    0 | total: 10748 | calls: 1750 | ETA: ~1m     WARN West Georgia 2003: fetch https://api.collegefootballdata.com/roster?team=West%20Georgia&year=2003 -> 429
+  WARN West Georgia 2004: fetch https://api.collegefootballdata.com/roster?team=West%20Georgia&year=2004 -> 429
+  WARN West Georgia 2005: fetch https://api.collegefootballdata.com/roster?team=West%20Georgia&year=2005 -> 429
+  WARN West Georgia 2006: fetch https://api.collegefootballdata.com/roster?team=West%20Georgia&year=2006 -> 429
+  WARN West Georgia 2007: fetch https://api.collegefootballdata.com/roster?team=West%20Georgia&year=2007 -> 429
+  WARN West Georgia 2008: fetch https://api.collegefootballdata.com/roster?team=West%20Georgia&year=2008 -> 429
+  WARN West Georgia 2009: fetch https://api.collegefootballdata.com/roster?team=West%20Georgia&year=2009 -> 429
+[251/262] West Georgia                   | players:    0 | total: 10748 | calls: 1757 | ETA: ~1m     WARN West Virginia 2003: fetch https://api.collegefootballdata.com/roster?team=West%20Virginia&year=2003 -> 429
+  WARN West Virginia 2004: fetch https://api.collegefootballdata.com/roster?team=West%20Virginia&year=2004 -> 429
+  WARN West Virginia 2005: fetch https://api.collegefootballdata.com/roster?team=West%20Virginia&year=2005 -> 429
+  WARN West Virginia 2006: fetch https://api.collegefootballdata.com/roster?team=West%20Virginia&year=2006 -> 429
+  WARN West Virginia 2007: fetch https://api.collegefootballdata.com/roster?team=West%20Virginia&year=2007 -> 429
+  WARN West Virginia 2008: fetch https://api.collegefootballdata.com/roster?team=West%20Virginia&year=2008 -> 429
+  WARN West Virginia 2009: fetch https://api.collegefootballdata.com/roster?team=West%20Virginia&year=2009 -> 429
+[252/262] West Virginia                  | players:    0 | total: 10748 | calls: 1764 | ETA: ~1m     WARN Western Carolina 2003: fetch https://api.collegefootballdata.com/roster?team=Western%20Carolina&year=2003 -> 429
+  WARN Western Carolina 2004: fetch https://api.collegefootballdata.com/roster?team=Western%20Carolina&year=2004 -> 429
+  WARN Western Carolina 2005: fetch https://api.collegefootballdata.com/roster?team=Western%20Carolina&year=2005 -> 429
+  WARN Western Carolina 2006: fetch https://api.collegefootballdata.com/roster?team=Western%20Carolina&year=2006 -> 429
+  WARN Western Carolina 2007: fetch https://api.collegefootballdata.com/roster?team=Western%20Carolina&year=2007 -> 429
+  WARN Western Carolina 2008: fetch https://api.collegefootballdata.com/roster?team=Western%20Carolina&year=2008 -> 429
+  WARN Western Carolina 2009: fetch https://api.collegefootballdata.com/roster?team=Western%20Carolina&year=2009 -> 429
+[253/262] Western Carolina               | players:    0 | total: 10748 | calls: 1771 | ETA: ~1m     WARN Western Illinois 2003: fetch https://api.collegefootballdata.com/roster?team=Western%20Illinois&year=2003 -> 429
+  WARN Western Illinois 2004: fetch https://api.collegefootballdata.com/roster?team=Western%20Illinois&year=2004 -> 429
+  WARN Western Illinois 2005: fetch https://api.collegefootballdata.com/roster?team=Western%20Illinois&year=2005 -> 429
+  WARN Western Illinois 2006: fetch https://api.collegefootballdata.com/roster?team=Western%20Illinois&year=2006 -> 429
+  WARN Western Illinois 2007: fetch https://api.collegefootballdata.com/roster?team=Western%20Illinois&year=2007 -> 429
+  WARN Western Illinois 2008: fetch https://api.collegefootballdata.com/roster?team=Western%20Illinois&year=2008 -> 429
+  WARN Western Illinois 2009: fetch https://api.collegefootballdata.com/roster?team=Western%20Illinois&year=2009 -> 429
+[254/262] Western Illinois               | players:    0 | total: 10748 | calls: 1778 | ETA: ~1m     WARN Western Kentucky 2003: fetch https://api.collegefootballdata.com/roster?team=Western%20Kentucky&year=2003 -> 429
+  WARN Western Kentucky 2004: fetch https://api.collegefootballdata.com/roster?team=Western%20Kentucky&year=2004 -> 429
+  WARN Western Kentucky 2005: fetch https://api.collegefootballdata.com/roster?team=Western%20Kentucky&year=2005 -> 429
+  WARN Western Kentucky 2006: fetch https://api.collegefootballdata.com/roster?team=Western%20Kentucky&year=2006 -> 429
+  WARN Western Kentucky 2007: fetch https://api.collegefootballdata.com/roster?team=Western%20Kentucky&year=2007 -> 429
+  WARN Western Kentucky 2008: fetch https://api.collegefootballdata.com/roster?team=Western%20Kentucky&year=2008 -> 429
+  WARN Western Kentucky 2009: fetch https://api.collegefootballdata.com/roster?team=Western%20Kentucky&year=2009 -> 429
+[255/262] Western Kentucky               | players:    0 | total: 10748 | calls: 1785 | ETA: ~0m     WARN Western Michigan 2003: fetch https://api.collegefootballdata.com/roster?team=Western%20Michigan&year=2003 -> 429
+  WARN Western Michigan 2004: fetch https://api.collegefootballdata.com/roster?team=Western%20Michigan&year=2004 -> 429
+  WARN Western Michigan 2005: fetch https://api.collegefootballdata.com/roster?team=Western%20Michigan&year=2005 -> 429
+  WARN Western Michigan 2006: fetch https://api.collegefootballdata.com/roster?team=Western%20Michigan&year=2006 -> 429
+  WARN Western Michigan 2007: fetch https://api.collegefootballdata.com/roster?team=Western%20Michigan&year=2007 -> 429
+  WARN Western Michigan 2008: fetch https://api.collegefootballdata.com/roster?team=Western%20Michigan&year=2008 -> 429
+  WARN Western Michigan 2009: fetch https://api.collegefootballdata.com/roster?team=Western%20Michigan&year=2009 -> 429
+[256/262] Western Michigan               | players:    0 | total: 10748 | calls: 1792 | ETA: ~0m     WARN William & Mary 2003: fetch https://api.collegefootballdata.com/roster?team=William%20%26%20Mary&year=2003 -> 429
+  WARN William & Mary 2004: fetch https://api.collegefootballdata.com/roster?team=William%20%26%20Mary&year=2004 -> 429
+  WARN William & Mary 2005: fetch https://api.collegefootballdata.com/roster?team=William%20%26%20Mary&year=2005 -> 429
+  WARN William & Mary 2006: fetch https://api.collegefootballdata.com/roster?team=William%20%26%20Mary&year=2006 -> 429
+  WARN William & Mary 2007: fetch https://api.collegefootballdata.com/roster?team=William%20%26%20Mary&year=2007 -> 429
+  WARN William & Mary 2008: fetch https://api.collegefootballdata.com/roster?team=William%20%26%20Mary&year=2008 -> 429
+  WARN William & Mary 2009: fetch https://api.collegefootballdata.com/roster?team=William%20%26%20Mary&year=2009 -> 429
+[257/262] William & Mary                 | players:    0 | total: 10748 | calls: 1799 | ETA: ~0m     WARN Wisconsin 2003: fetch https://api.collegefootballdata.com/roster?team=Wisconsin&year=2003 -> 429
+  WARN Wisconsin 2004: fetch https://api.collegefootballdata.com/roster?team=Wisconsin&year=2004 -> 429
+  WARN Wisconsin 2005: fetch https://api.collegefootballdata.com/roster?team=Wisconsin&year=2005 -> 429
+  WARN Wisconsin 2006: fetch https://api.collegefootballdata.com/roster?team=Wisconsin&year=2006 -> 429
+  WARN Wisconsin 2007: fetch https://api.collegefootballdata.com/roster?team=Wisconsin&year=2007 -> 429
+  WARN Wisconsin 2008: fetch https://api.collegefootballdata.com/roster?team=Wisconsin&year=2008 -> 429
+  WARN Wisconsin 2009: fetch https://api.collegefootballdata.com/roster?team=Wisconsin&year=2009 -> 429
+[258/262] Wisconsin                      | players:    0 | total: 10748 | calls: 1806 | ETA: ~0m     WARN Wofford 2003: fetch https://api.collegefootballdata.com/roster?team=Wofford&year=2003 -> 429
+  WARN Wofford 2004: fetch https://api.collegefootballdata.com/roster?team=Wofford&year=2004 -> 429
+  WARN Wofford 2005: fetch https://api.collegefootballdata.com/roster?team=Wofford&year=2005 -> 429
+  WARN Wofford 2006: fetch https://api.collegefootballdata.com/roster?team=Wofford&year=2006 -> 429
+  WARN Wofford 2007: fetch https://api.collegefootballdata.com/roster?team=Wofford&year=2007 -> 429
+  WARN Wofford 2008: fetch https://api.collegefootballdata.com/roster?team=Wofford&year=2008 -> 429
+  WARN Wofford 2009: fetch https://api.collegefootballdata.com/roster?team=Wofford&year=2009 -> 429
+[259/262] Wofford                        | players:    0 | total: 10748 | calls: 1813 | ETA: ~0m     WARN Wyoming 2003: fetch https://api.collegefootballdata.com/roster?team=Wyoming&year=2003 -> 429
+  WARN Wyoming 2004: fetch https://api.collegefootballdata.com/roster?team=Wyoming&year=2004 -> 429
+  WARN Wyoming 2005: fetch https://api.collegefootballdata.com/roster?team=Wyoming&year=2005 -> 429
+  WARN Wyoming 2006: fetch https://api.collegefootballdata.com/roster?team=Wyoming&year=2006 -> 429
+  WARN Wyoming 2007: fetch https://api.collegefootballdata.com/roster?team=Wyoming&year=2007 -> 429
+  WARN Wyoming 2008: fetch https://api.collegefootballdata.com/roster?team=Wyoming&year=2008 -> 429
+  WARN Wyoming 2009: fetch https://api.collegefootballdata.com/roster?team=Wyoming&year=2009 -> 429
+[260/262] Wyoming                        | players:    0 | total: 10748 | calls: 1820 | ETA: ~0m     WARN Yale 2003: fetch https://api.collegefootballdata.com/roster?team=Yale&year=2003 -> 429
+  WARN Yale 2004: fetch https://api.collegefootballdata.com/roster?team=Yale&year=2004 -> 429
+  WARN Yale 2005: fetch https://api.collegefootballdata.com/roster?team=Yale&year=2005 -> 429
+  WARN Yale 2006: fetch https://api.collegefootballdata.com/roster?team=Yale&year=2006 -> 429
+  WARN Yale 2007: fetch https://api.collegefootballdata.com/roster?team=Yale&year=2007 -> 429
+  WARN Yale 2008: fetch https://api.collegefootballdata.com/roster?team=Yale&year=2008 -> 429
+  WARN Yale 2009: fetch https://api.collegefootballdata.com/roster?team=Yale&year=2009 -> 429
+[261/262] Yale                           | players:    0 | total: 10748 | calls: 1827 | ETA: ~0m     WARN Youngstown State 2003: fetch https://api.collegefootballdata.com/roster?team=Youngstown%20State&year=2003 -> 429
+  WARN Youngstown State 2004: fetch https://api.collegefootballdata.com/roster?team=Youngstown%20State&year=2004 -> 429
+  WARN Youngstown State 2005: fetch https://api.collegefootballdata.com/roster?team=Youngstown%20State&year=2005 -> 429
+  WARN Youngstown State 2006: fetch https://api.collegefootballdata.com/roster?team=Youngstown%20State&year=2006 -> 429
+  WARN Youngstown State 2007: fetch https://api.collegefootballdata.com/roster?team=Youngstown%20State&year=2007 -> 429
+  WARN Youngstown State 2008: fetch https://api.collegefootballdata.com/roster?team=Youngstown%20State&year=2008 -> 429
+  WARN Youngstown State 2009: fetch https://api.collegefootballdata.com/roster?team=Youngstown%20State&year=2009 -> 429
+[262/262] Youngstown State               | players:    0 | total: 10748 | calls: 1834 | ETA: ~0m   
+DONE. 10748 player upserts across 262 teams (1834 API calls) in 18.7m.

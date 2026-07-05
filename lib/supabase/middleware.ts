@@ -30,6 +30,7 @@ const CLAIM_INTENT_COOKIE = "bltz_claim_intent";
 export function isPublicPath(pathname: string): boolean {
   if (pathname === "/" || pathname === "/favicon.ico") return true;
   if (pathname.startsWith("/player/")) return true; // public locker pages
+  if (pathname === "/demo" || pathname.startsWith("/demo/")) return true; // public demo locker
   return PUBLIC_PATH_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }
 

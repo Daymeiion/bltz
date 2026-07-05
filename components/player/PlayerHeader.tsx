@@ -6,6 +6,9 @@ import { Card } from "@/components/ui/card";
 import ShareModal from "./ShareModal";
 import { Heart } from "lucide-react";
 
+type StatItem = { title: string; subtitle: string };
+type ImageItem = { src: string; abbr: string };
+
 type Props = {
   fullName: string;
   city?: string;
@@ -16,7 +19,39 @@ type Props = {
   isFavorite?: boolean;
   onToggleFavorite?: () => void;
   onShare?: () => void;
+  // Optional content overrides. All default to the existing hardcoded values
+  // so live locker pages render unchanged; the demo locker passes tailored,
+  // internally-consistent values.
+  stats?: StatItem[];       // 3-up stat row (fans / position / class)
+  helmets?: ImageItem[];    // teams the player has played for
+  awards?: ImageItem[];     // achievement icons
+  quote?: string;           // pull-quote shown under the awards row
 };
+
+const DEFAULT_STATS: StatItem[] = [
+  { title: "11.9k", subtitle: "fans" },
+  { title: "OLB", subtitle: "position" },
+  { title: "2026", subtitle: "class" },
+];
+
+const DEFAULT_HELMETS: ImageItem[] = [
+  { src: '/images/49ers-sm-helmet.png', abbr: '49ers' },
+  { src: '/images/Broncos-sm-helmet.png', abbr: 'Broncos' },
+  { src: '/images/Bucs-sm-helmet.png', abbr: 'Bucs' },
+  { src: '/images/Commanders-sm-helmet.png', abbr: 'Commanders' },
+  { src: '/images/Jags-sm-helmet.png', abbr: 'Jags' },
+  { src: '/images/Lions-sm-helmet.png', abbr: 'Lions' },
+  { src: '/images/Oilers-sm-helmert.png', abbr: 'Oilers' },
+  { src: '/images/Texans-sm-helmet.png', abbr: 'Texans' },
+];
+
+const DEFAULT_AWARDS: ImageItem[] = Array.from({ length: 8 }).map((_, i) => ({
+  src: '/images/SilverHero1.png',
+  abbr: `Award ${i + 1}`,
+}));
+
+const DEFAULT_QUOTE =
+  "Hard work beats talent when talent doesn't work hard. Every game is an opportunity to prove yourself.";
 
 export default function PlayerHeader({
   fullName,
@@ -28,6 +63,10 @@ export default function PlayerHeader({
   isFavorite = false,
   onToggleFavorite,
   onShare,
+  stats = DEFAULT_STATS,
+  helmets = DEFAULT_HELMETS,
+  awards = DEFAULT_AWARDS,
+  quote = DEFAULT_QUOTE,
 }: Props) {
   const [fav, setFav] = useState(isFavorite);
   const [showShareModal, setShowShareModal] = useState(false);
@@ -144,16 +183,7 @@ export default function PlayerHeader({
      <div className="mt-4 p-0">
       <div className="flex gap-4 overflow-x-auto pb-0 pt-1 lg:overflow-x-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}>
         {/* Helmet images - teams the player has played for */}
-        {[
-          { src: '/images/49ers-sm-helmet.png', abbr: '49ers' },
-          { src: '/images/Broncos-sm-helmet.png', abbr: 'Broncos' },
-          { src: '/images/Bucs-sm-helmet.png', abbr: 'Bucs' },
-          { src: '/images/Commanders-sm-helmet.png', abbr: 'Commanders' },
-          { src: '/images/Jags-sm-helmet.png', abbr: 'Jags' },
-          { src: '/images/Lions-sm-helmet.png', abbr: 'Lions' },
-          { src: '/images/Oilers-sm-helmert.png', abbr: 'Oilers' },
-          { src: '/images/Texans-sm-helmet.png', abbr: 'Texans' },
-        ].map((item, index) => (
+        {helmets.map((item, index) => (
           <div key={index} className="flex flex-col items-center min-w-0 shrink-0">
             <div className="relative w-14 h-14 mb-2">
               <Image 
@@ -176,7 +206,7 @@ export default function PlayerHeader({
       <div className="w-full px-0
      pb-1 flex justify-center">
           <div className="grid grid-cols-3 gap-0 w-full max-w-lg mx-auto divide-x divide-white/20 items-stretch">
-        {[{ title: "11.9k", subtitle: "fans" }, { title: "OLB", subtitle: "position" }, { title: "2026", subtitle: "class" }].map((item, idx) => (
+        {stats.map((item, idx) => (
            <div key={idx} className="w-full overflow-hidden h-full">
             <div className="w-full px-0
            py-1 h-full">
@@ -195,16 +225,7 @@ export default function PlayerHeader({
     <div className="mt-4 py-2">
       <div className="flex gap-4 overflow-x-auto pb-0 lg:overflow-x-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}>
         {/* Award images - player achievements */}
-        {[
-          { src: '/images/SilverHero1.png', abbr: 'Award 1' },
-          { src: '/images/SilverHero1.png', abbr: 'Award 2' },
-          { src: '/images/SilverHero1.png', abbr: 'Award 3' },
-          { src: '/images/SilverHero1.png', abbr: 'Award 4' },
-          { src: '/images/SilverHero1.png', abbr: 'Award 5' },
-          { src: '/images/SilverHero1.png', abbr: 'Award 6' },
-          { src: '/images/SilverHero1.png', abbr: 'Award 7' },
-          { src: '/images/SilverHero1.png', abbr: 'Award 8' },
-        ].map((item, index) => (
+        {awards.map((item, index) => (
           <div key={index} className="flex flex-col items-center min-w-0 shrink-0">
             <div className="relative w-14 h-14 mb-2">
               <Image 
@@ -223,7 +244,7 @@ export default function PlayerHeader({
     <div className="hidden lg:block rounded-md border border-white/10 bg-white/5 py-2 px-2">
       <blockquote className="text-center">
         <p className="text-md italic mb-4 leading-relaxed" style={{ fontFamily: 'Oswald, sans-serif' }}>
-          "Hard work beats talent when talent doesn't work hard. Every game is an opportunity to prove yourself."
+          &ldquo;{quote}&rdquo;
         </p>
         <footer className="text-sm opacity-70" style={{ fontFamily: 'Oswald, sans-serif' }}>
           — {displayName}
