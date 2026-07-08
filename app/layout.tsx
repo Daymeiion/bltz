@@ -45,6 +45,17 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${geistSans.variable} ${oswald.variable} ${robotoCondensed.variable} ${bebasNeue.variable} ${openSans.variable}`}
     >
+      <head>
+        {/* Locker design type system — Barlow (body), Barlow Condensed
+            (display), JetBrains Mono (data). Referenced by literal family
+            name in app/player/[slug]/LockerView.tsx inline styles. */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;0,900;1,700&family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;0,700;1,500&display=swap"
+          rel="stylesheet"
+        />
+      </head>
       <body className="min-h-screen text-white antialiased bg-black">
         <ClientShell>{children}</ClientShell>
       </body>
