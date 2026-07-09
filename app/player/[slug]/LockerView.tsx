@@ -68,7 +68,9 @@ type NowPlayingTrack = {
 const GRAD_FIELD = "linear-gradient(135deg,#0A1A6E,#131829)";
 
 const mono = "'JetBrains Mono',ui-monospace,monospace";
-const disp = "'Barlow Condensed','Oswald',Impact,sans-serif";
+// Display font — Barlow at heavy weight (700-900), not the condensed cut:
+// condensed's tight tracking made characters overlap at display sizes.
+const disp = "'Barlow','Oswald',Impact,sans-serif";
 const body = "'Barlow','Inter',system-ui,sans-serif";
 
 export default function LockerView({ data }: { data: LockerData }) {
@@ -160,6 +162,10 @@ export default function LockerView({ data }: { data: LockerData }) {
   const poolAt = (i: number) => imgPool.length ? imgPool[i % imgPool.length] : null;
 
   const schoolAbbr = data.school?.abbr || "SCHOOL";
+
+  // Hero name shrinks to fit long full names on one line instead of wrapping.
+  const nameLen = data.fullName.length;
+  const heroNameSize = nameLen > 22 ? 22 : nameLen > 18 ? 26 : nameLen > 14 ? 30 : 36;
 
   // ---- pill helpers ----
   const pillStyle = (active: boolean): React.CSSProperties =>
@@ -425,7 +431,7 @@ export default function LockerView({ data }: { data: LockerData }) {
 
               {/* name block */}
               <div style={{ position: "absolute", bottom: 18, left: 0, right: 0, zIndex: 5, textAlign: "center", padding: "0 16px" }}>
-                <h1 style={{ fontFamily: disp, fontWeight: 900, fontSize: 36, lineHeight: ".86", letterSpacing: "-.03em", textTransform: "uppercase", color: "#fff", margin: 0 }}>{data.fullName}</h1>
+                <h1 style={{ fontFamily: disp, fontWeight: 900, fontSize: heroNameSize, lineHeight: ".9", letterSpacing: "-.005em", textTransform: "uppercase", color: "#fff", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{data.fullName}</h1>
                 <div style={{ fontFamily: mono, fontSize: 14, letterSpacing: ".14em", color: "#F5A623", margin: "8px 0 14px", fontWeight: 700 }}>{data.hometown}</div>
                 <div style={{ display: "flex", gap: 8, alignItems: "center", width: "100%" }}>
                   <RotatingPill items={data.schools} fallback={{ label: "SCHOOL", color: "#1A3DCC" }} />

@@ -46,13 +46,15 @@ export default function RootLayout({
       className={`${geistSans.variable} ${oswald.variable} ${robotoCondensed.variable} ${bebasNeue.variable} ${openSans.variable}`}
     >
       <head>
-        {/* Locker design type system — Barlow (body), Barlow Condensed
-            (display), JetBrains Mono (data). Referenced by literal family
-            name in app/player/[slug]/LockerView.tsx inline styles. */}
+        {/* Locker design type system — Barlow (body + heavy-weight display),
+            JetBrains Mono (data). Referenced by literal family name in
+            app/player/[slug]/LockerView.tsx inline styles. Barlow Condensed
+            was dropped: its tight tracking overlapped characters at display
+            sizes — Barlow at 700-900 covers display use instead. */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;0,900;1,700&family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;0,700;1,500&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;0,700;1,500&display=swap"
           rel="stylesheet"
         />
       </head>
