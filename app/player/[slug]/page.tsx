@@ -15,6 +15,35 @@ const LEVEL_LABEL: Record<string, string> = {
   former: "Former pro",
 };
 
+const PUBLIC_LOCKER_PHOTO_PROVENANCE = new Set([
+  "athlete_uploaded",
+  "founder_archive",
+  "cal_archive",
+]);
+
+type LockerPhotoRow = {
+  id: string;
+  url: string | null;
+  title: string | null;
+  credits: string | null;
+  source_url?: string | null;
+  provenance?: string | null;
+};
+
+function canRenderLockerPhoto(photo: LockerPhotoRow): boolean {
+  if (!photo.url) return false;
+  if (photo.provenance === "fan_uploaded") return false;
+  if (photo.provenance && PUBLIC_LOCKER_PHOTO_PROVENANCE.has(photo.provenance)) return true;
+  return Boolean(photo.credits && photo.source_url);
+}
+
+function photoLicenseLabel(photo: LockerPhotoRow): string {
+  if (photo.provenance === "athlete_uploaded") return "ATHLETE UPLOAD";
+  if (photo.provenance === "cal_archive") return "TEAM ARCHIVE";
+  if (photo.provenance === "founder_archive") return "BLTZ CLEARED";
+  return photo.source_url ? "SOURCE VERIFIED" : "LICENSED";
+}
+
 // 3-letter team codes used by nflverse / NFL.com.
 const NFL_TEAM_NAMES: Record<string, string> = {
   ARI: "Arizona Cardinals", ATL: "Atlanta Falcons", BAL: "Baltimore Ravens",
@@ -141,7 +170,7 @@ export default async function PlayerLocker({ params }: { params: Promise<{ slug:
     .from("players")
     .select(
       `id, full_name, name, slug, profile_image, headshot_url, hometown, video_url,
-       bio, position, level, dob, height_in, weight_lbs, games_played, current_status,
+       bio, position, level, school, dob, height_in, weight_lbs, games_played, current_status,
        gsis_id, cfb_team_id,
        nfl_player:nfl_players (
          headshot_url, latest_team, status, draft_year, draft_round, draft_pick,
@@ -206,11 +235,14 @@ export default async function PlayerLocker({ params }: { params: Promise<{ slug:
   // Gameday photos come from `media` rows tagged photo.
   const { data: photoRows } = await supabase
     .from("media")
-    .select("id, url, title, credits, width, height")
+    .select("id, url, title, credits, source_url, provenance, width, height")
     .eq("player_id", player.id)
     .eq("kind", "photo")
     .order("display_order", { ascending: true })
     .limit(20);
+
+  const lockerPhotos = ((photoRows ?? []) as LockerPhotoRow[])
+    .filter(canRenderLockerPhoto);
 
   // Awards (scraped) — powers the BIO tab award cards.
   const { data: awardRows } = await supabase
@@ -230,6 +262,12 @@ export default async function PlayerLocker({ params }: { params: Promise<{ slug:
     `${playerFullName} hasn't written their story yet. Check back soon.`;
 
   const jersey = nflPlayer?.jersey_number ? `#${nflPlayer.jersey_number}` : "";
+  const schoolName =
+    player.school ||
+    cfbTeam?.display_name ||
+    nflPlayer?.college_name ||
+    nflTeamName(nflPlayer?.latest_team) ||
+    "—";
 
   // Rotating college pill — one entry today (we store a single cfb_team), but
   // shaped as a list so multi-school careers slot in once that data exists.
@@ -268,7 +306,7 @@ export default async function PlayerLocker({ params }: { params: Promise<{ slug:
     dobDisplay: formatDob(dob),
     age,
     gamesPlayed: player.games_played ?? null,
-    highSchool: "—",
+    highSchool: schoolName,
     classOf: nflPlayer?.draft_year ? String(nflPlayer.draft_year) : "—",
     school: cfbTeam
       ? {
@@ -298,10 +336,14 @@ export default async function PlayerLocker({ params }: { params: Promise<{ slug:
       title: (v.title || "HIGHLIGHT").toUpperCase(),
       thumb: v.thumbnail_url ?? null,
     })),
-    photos: (photoRows ?? []).map((p: any) => ({
+    photos: lockerPhotos.map((p) => ({
       id: String(p.id),
-      url: p.url,
+      url: p.url ?? "",
       title: (p.title || "").toUpperCase(),
+      credits: p.credits ?? null,
+      sourceUrl: p.source_url ?? null,
+      provenance: p.provenance ?? null,
+      licenseLabel: photoLicenseLabel(p),
     })),
   };
 

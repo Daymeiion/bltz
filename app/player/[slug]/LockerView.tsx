@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // ---------------------------------------------------------------------------
 // LockerView — fan-facing athlete locker, ported from the standalone design.
@@ -51,7 +52,15 @@ export type LockerData = {
   proTeams: { label: string; color: string; logo: string | null }[];
   awards: { year: string; label: string }[];
   videos: { id: string; title: string; thumb: string | null }[];
-  photos: { id: string; url: string; title: string }[];
+  photos: {
+    id: string;
+    url: string;
+    title: string;
+    credits: string | null;
+    sourceUrl: string | null;
+    provenance: string | null;
+    licenseLabel: string;
+  }[];
 };
 
 // Shape returned by GET /api/spotify/now-playing when a track is live.
@@ -66,6 +75,8 @@ type NowPlayingTrack = {
 };
 
 const GRAD_FIELD = "linear-gradient(135deg,#0A1A6E,#131829)";
+const lockerAccent = "#FFB940";
+const HEADSHOT_FALLBACK = "/images/black-headshot-fallback.svg";
 
 const mono = "'JetBrains Mono',ui-monospace,monospace";
 // Display font — Barlow at heavy weight (700-900), not the condensed cut:
@@ -173,12 +184,6 @@ export default function LockerView({ data }: { data: LockerData }) {
       ? { flex: "none", padding: "8px 15px", borderRadius: 9999, border: "1px solid #fff", background: "#fff", color: "#0B0E1A", fontFamily: mono, fontWeight: 700, fontSize: 10, letterSpacing: ".12em", textTransform: "uppercase", cursor: "pointer", whiteSpace: "nowrap" }
       : { flex: "none", padding: "8px 15px", borderRadius: 9999, border: "1px solid #1E2640", background: "rgba(255,255,255,.05)", color: "rgba(255,255,255,.5)", fontFamily: mono, fontWeight: 600, fontSize: 10, letterSpacing: ".12em", textTransform: "uppercase", cursor: "pointer", whiteSpace: "nowrap" };
 
-  const tabStyle = (active: boolean): React.CSSProperties => ({
-    flex: 1, padding: "13px 0 15px", background: "none", border: "none", cursor: "pointer",
-    fontFamily: disp, fontWeight: active ? 800 : 700, fontSize: 17, letterSpacing: ".04em",
-    textTransform: "uppercase", color: active ? "#fff" : "rgba(255,255,255,.4)", transition: "color .25s",
-  });
-
   // ---- HIGHLIGHT VIDEOS (real title + thumb; SAMPLE tag/dur/views/when) ----
   const sampleMeta = [
     { tag: "RISING", dur: "0:47", views: "842K", when: "WEEK 6" },
@@ -186,10 +191,27 @@ export default function LockerView({ data }: { data: LockerData }) {
     { tag: "RISING", dur: "1:12", views: "377K", when: "WEEK 8" },
     { tag: "REEL", dur: "3:04", views: "1.2M", when: "SEASON" },
   ];
-  const videos = (data.videos.length
-    ? data.videos
-    : [{ id: "s0", title: "SEASON HIGHLIGHTS", thumb: null }]
-  ).map((v, i) => ({ ...v, ...sampleMeta[i % sampleMeta.length], img: v.thumb || poolAt(i) }));
+  const realVideos = data.videos.map((v, i) => ({
+    ...v,
+    ...sampleMeta[i % sampleMeta.length],
+    img: v.thumb || poolAt(i),
+    isPlaceholder: false,
+  }));
+  const placeholderTitles = ["SEASON HIGHLIGHTS", "GAME DAY CUT", "TOP PLAYS", "FULL SEASON REEL"];
+  const videos = [
+    ...realVideos,
+    ...Array.from({ length: Math.max(0, 4 - realVideos.length) }, (_, i) => ({
+      id: `placeholder-${i}`,
+      title: placeholderTitles[(realVideos.length + i) % placeholderTitles.length],
+      thumb: null,
+      tag: "UP NEXT",
+      dur: "--:--",
+      views: "—",
+      when: "COMING SOON",
+      img: poolAt(realVideos.length + i),
+      isPlaceholder: true,
+    })),
+  ];
 
   // ---- BIO cards ----
   // Real: height + weight. SAMPLE: 40-yard, wingspan, vertical, bench.
@@ -204,6 +226,14 @@ export default function LockerView({ data }: { data: LockerData }) {
     cat: "measurables", isStat: true, value, label,
     style: { flex: "none", width: 128, scrollSnapAlign: "start", borderRadius: 16, border: "1px solid #1E2640", background: "#131829" } as React.CSSProperties,
   }));
+  const combineMetrics = [
+    { label: "40-YARD", value: "4.42", unit: "SEC", tone: lockerAccent },
+    { label: "10-YARD SPLIT", value: "1.52", unit: "SEC", tone: "#7DD3FC" },
+    { label: "VERTICAL", value: "38.5", unit: "IN", tone: "#A7F3D0" },
+    { label: "BROAD JUMP", value: "10'8", unit: "FT", tone: "#FDE68A" },
+    { label: "3-CONE", value: "6.82", unit: "SEC", tone: "#C4B5FD" },
+    { label: "BENCH", value: "19", unit: "REPS", tone: "#FCA5A5" },
+  ];
 
   const story = [{
     cat: "story", isStory: true, text: data.bio,
@@ -224,9 +254,9 @@ export default function LockerView({ data }: { data: LockerData }) {
     style: { flex: "none", width: 164, scrollSnapAlign: "start", borderRadius: 16, border: "1px solid #1E2640", background: "linear-gradient(160deg,#1a2035,#131829)" } as React.CSSProperties,
   }));
 
-  const allBio = [...measure, ...story, ...awards];
+  const allBio = [...measure, ...story];
   const bioCards = bioSort === "all" ? allBio : allBio.filter((c) => c.cat === bioSort);
-  const bioPills = [["all", "ALL"], ["measurables", "MEASURABLES"], ["story", "STORY"], ["awards", "AWARDS"]]
+  const bioPills = [["all", "ALL"], ["measurables", "MEASURABLES"], ["story", "STORY"]]
     .map(([key, label]) => ({ key, label, active: bioSort === key }));
 
   // ---- MEDIA cards (visuals use real photos; SAMPLE article/podcast copy) ----
@@ -275,8 +305,22 @@ export default function LockerView({ data }: { data: LockerData }) {
     resColor: (res as string)[0] === "W" ? "#00D68F" : "#FF3D5A",
     rowStyle: { display: "grid", gridTemplateColumns: "150px repeat(5,1fr)", alignItems: "center", padding: "13px 14px", borderRadius: 10, background: i % 2 ? "transparent" : "rgba(255,255,255,.03)" } as React.CSSProperties,
   }));
-  const statsPills = [["season", "2024"], ["career", "CAREER"], ["timeline", "TIMELINE"], ["log", "GAME LOG"]]
+  const statsPills = [["season", "2024"], ["career", "CAREER"], ["awards", "AWARDS"], ["timeline", "TIMELINE"], ["log", "GAME LOG"]]
     .map(([key, label]) => ({ key, label, active: statsSort === key }));
+
+  const displayBio =
+    data.bio && !data.bio.includes("hasn't written their story yet")
+      ? data.bio
+      : `${data.fullName} is building a verified BLTZ Player Locker with profile data, school and team history, measurable details, and approved media.`;
+  const displayHometown = data.hometown !== "—" ? data.hometown : "LOS ANGELES, CA";
+  const displayStory =
+    data.bio && !data.bio.includes("hasn't written their story yet")
+      ? `Early Life: ${data.bio}\n\nCollege: BLTZ will expand this section with scraped school history, roster context, awards, and career milestones from verified sources.\n\nProfessional: Pro team, draft, media, and post-college details will appear here when available from organization/team data.`
+      : `Early Life: ${data.fullName} grew up in ${displayHometown.toLowerCase()} and developed the foundation that shaped their athletic path.\n\nCollege: School history, roster details, awards, and major performances will be assembled from signup data, scraped sources, and team or school records.\n\nProfessional: Draft notes, pro affiliations, media coverage, and career milestones will populate here as verified organization and league data becomes available.`;
+  const displayDob = data.dobDisplay !== "—" ? `${data.dobDisplay}${data.age ? ` (${data.age})` : ""}` : "01-01-2005 (21)";
+  const displayJersey = data.jersey || "#7";
+  const displayPosition = data.position || "ATH";
+  const displayHighSchool = data.highSchool !== "—" ? data.highSchool : "BLTZ ACADEMY";
 
   const tabIdx = { bio: 0, media: 1, stats: 2 }[tab];
   const earnedFmt = "$" + (stats.earned || 0).toLocaleString("en-US");
@@ -293,7 +337,7 @@ export default function LockerView({ data }: { data: LockerData }) {
         <div style={{
           position: "absolute", top: 0, left: 0, right: 0, zIndex: 30,
           display: "flex", alignItems: "center", justifyContent: "space-between",
-          padding: "12px 16px", background: "rgba(11,14,26,.9)", backdropFilter: "blur(20px)",
+          padding: "12px 18px", background: "rgba(11,14,26,.9)", backdropFilter: "blur(20px)",
           borderBottom: "1px solid #1E2640",
           transform: scrolled ? "translateY(0)" : "translateY(-110%)",
           opacity: scrolled ? 1 : 0, transition: "transform .4s cubic-bezier(.16,1,.3,1),opacity .3s",
@@ -319,7 +363,7 @@ export default function LockerView({ data }: { data: LockerData }) {
         <div className="scr" ref={screenRef} style={{ position: "absolute", inset: 0, overflowY: "auto", overflowX: "hidden" }}>
 
           {/* ===== TOP BAR (outside the hero container) ===== */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px 12px", position: "relative", zIndex: 6 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 18px 12px", position: "relative", zIndex: 6 }}>
             <img src={data.logoSrc} alt="BLTZ" style={{ height: 30, width: "auto", display: "block" }} />
             <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
               <button aria-label="Search" style={{ background: "none", border: "none", padding: 0, cursor: "pointer", display: "flex", alignItems: "center" }}>
@@ -332,7 +376,7 @@ export default function LockerView({ data }: { data: LockerData }) {
           </div>
 
           {/* ===== HERO ===== */}
-          <section style={{ padding: "0 12px" }}>
+          <section style={{ padding: "0 18px" }}>
             <div style={{ position: "relative", height: 600, borderRadius: 24, overflow: "hidden", background: "linear-gradient(180deg,#161B30 0%,#10142404 55%,#0B0E1A 100%)" }}>
               {/* video / photo-reel background */}
               <div style={{ position: "absolute", inset: 0 }}>
@@ -446,16 +490,20 @@ export default function LockerView({ data }: { data: LockerData }) {
           </section>
 
           {/* ===== HIGHLIGHT REELS ===== */}
-          <section style={{ padding: "22px 0 4px" }}>
-            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", padding: "0 18px", marginBottom: 10 }}>
+          <section style={{ padding: "22px 18px 4px" }}>
+            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 10 }}>
               <h2 style={{ fontFamily: disp, fontWeight: 700, fontSize: 24, lineHeight: 1, letterSpacing: "-.02em", textTransform: "uppercase", color: "#fff", margin: 0 }}>HIGHLIGHT REELS</h2>
-              <button style={{ width: 34, height: 34, borderRadius: 9999, border: "1px solid #1E2640", background: "rgba(255,255,255,.05)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none" }}>
+              <a
+                href={`/player/${data.slug}/videos`}
+                aria-label="View all videos"
+                style={{ width: 34, height: 34, borderRadius: 9999, border: "1px solid #1E2640", background: "rgba(255,255,255,.05)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none", textDecoration: "none" }}
+              >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFB940" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
-              </button>
+              </a>
             </div>
-            <div className="hs" style={{ display: "flex", gap: 12, overflowX: "auto", padding: "4px 18px 8px", scrollSnapType: "x mandatory" }}>
+            <div className="hs" style={{ display: "flex", gap: 12, overflowX: "auto", padding: "4px 0 8px", scrollSnapType: "x mandatory" }}>
               {videos.map((v, i) => (
-                <div key={v.id + i} style={{ flex: "none", width: 262, scrollSnapAlign: "start", cursor: "pointer" }}>
+                <div key={v.id + i} style={{ flex: "none", width: 262, scrollSnapAlign: "start", cursor: v.isPlaceholder ? "default" : "pointer" }}>
                   <div style={{ position: "relative", height: 150, borderRadius: 14, overflow: "hidden", border: "1px solid #1E2640", background: GRAD_FIELD }}>
                     {v.img ? <img src={v.img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", opacity: .92 }} /> : null}
                     <div style={{ position: "absolute", inset: 0, background: "linear-gradient(0deg, #05070F, rgba(5,7,15,.05) 55%)" }} />
@@ -479,98 +527,195 @@ export default function LockerView({ data }: { data: LockerData }) {
             </div>
           </section>
 
-          {/* ===== GAMEDAY PHOTOS ===== */}
-          {data.photos.length > 0 && (
-            <section style={{ padding: "20px 18px 8px" }}>
-              <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 14 }}>
-                <h2 style={{ fontFamily: disp, fontWeight: 700, fontSize: 24, lineHeight: 1, letterSpacing: "-.02em", textTransform: "uppercase", color: "#fff", margin: 0 }}>GAMEDAY PHOTOS</h2>
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gridAutoRows: 104, gap: 8 }}>
-                <div style={{ gridColumn: "1/3", gridRow: "1/3", borderRadius: 14, overflow: "hidden", position: "relative", border: "1px solid #1E2640" }}>
-                  <img src={data.photos[0].url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          {/* ===== PHOTOS ===== */}
+          <section style={{ padding: "20px 18px 8px" }}>
+            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 14 }}>
+              <h1 style={{ fontFamily: disp, fontWeight: 700, fontSize: 24, lineHeight: 1, letterSpacing: "-.02em", textTransform: "uppercase", color: "#fff", margin: 0 }}>PHOTOS</h1>
+              <a
+                href={`/player/${data.slug}/photos`}
+                aria-label="View all photos"
+                style={{ width: 34, height: 34, borderRadius: 9999, border: "1px solid #1E2640", background: "rgba(255,255,255,.05)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none", textDecoration: "none" }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFB940" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+              </a>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gridAutoRows: 104, gap: 8 }}>
+              <div style={{ gridColumn: "1/3", gridRow: "1/3", borderRadius: 14, overflow: "hidden", position: "relative", border: "1px solid #1E2640", background: GRAD_FIELD }}>
+                {data.photos[0] ? (
+                  <>
+                    <img src={data.photos[0].url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                   <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top,rgba(5,7,15,.7),transparent 50%)" }} />
-                  {data.photos[0].title ? <div style={{ position: "absolute", left: 12, bottom: 11, fontFamily: disp, fontWeight: 700, fontSize: 16, textTransform: "uppercase", color: "#fff", letterSpacing: ".02em", textShadow: "0 2px 8px rgba(0,0,0,.6)" }}>{data.photos[0].title}</div> : null}
-                </div>
-                {[1, 2, 3].map((idx, k) => data.photos[idx] ? (
-                  <div key={idx} style={{ gridColumn: k === 2 ? "1/2" : "3/4", gridRow: k === 0 ? "1/2" : k === 1 ? "2/3" : "3/4", borderRadius: 14, overflow: "hidden", border: "1px solid #1E2640" }}>
-                    <img src={data.photos[idx].url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  <div style={{ position: "absolute", top: 10, left: 10, padding: "4px 8px", borderRadius: 9999, background: "rgba(11,14,26,.72)", border: "1px solid rgba(255,255,255,.14)", backdropFilter: "blur(6px)", fontFamily: mono, fontSize: 8.5, letterSpacing: ".14em", color: "#FFB940" }}>{data.photos[0].licenseLabel}</div>
+                  <div style={{ position: "absolute", left: 12, right: 12, bottom: 11 }}>
+                    {data.photos[0].title ? <div style={{ fontFamily: disp, fontWeight: 700, fontSize: 16, textTransform: "uppercase", color: "#fff", letterSpacing: ".02em", textShadow: "0 2px 8px rgba(0,0,0,.6)", lineHeight: ".95" }}>{data.photos[0].title}</div> : null}
+                    {data.photos[0].credits ? <div style={{ fontFamily: mono, fontSize: 8.5, letterSpacing: ".1em", color: "rgba(255,255,255,.62)", marginTop: 6, textTransform: "uppercase" }}>{data.photos[0].credits}</div> : null}
                   </div>
-                ) : null)}
-                <div style={{ gridColumn: "2/4", gridRow: "3/4", borderRadius: 14, overflow: "hidden", position: "relative", border: "1px solid #1E2640", background: GRAD_FIELD }}>
-                  {data.photos[4] ? <img src={data.photos[4].url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", opacity: .9 }} /> : null}
-                  <div style={{ position: "absolute", inset: 0, background: "linear-gradient(120deg,rgba(10,26,110,.5),transparent)" }} />
-                  {data.photos.length > 5 ? <div style={{ position: "absolute", right: 12, bottom: 11, fontFamily: mono, fontSize: 10, letterSpacing: ".14em", color: "#fff" }}>+{data.photos.length - 5} MORE</div> : null}
-                </div>
+                  </>
+                ) : (
+                  <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: 14, background: "linear-gradient(145deg,rgba(19,24,41,.95),rgba(10,26,110,.62))" }}>
+                    <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: ".16em", color: "#FFB940", marginBottom: 8 }}>LICENSE CHECK</div>
+                    <div style={{ fontFamily: disp, fontWeight: 800, fontSize: 21, lineHeight: ".92", textTransform: "uppercase", color: "#fff" }}>Awaiting Approved Photos</div>
+                  </div>
+                )}
               </div>
-            </section>
-          )}
+              {[1, 2, 3].map((idx, k) => (
+                <div key={idx} style={{ gridColumn: k === 2 ? "1/2" : "3/4", gridRow: k === 0 ? "1/2" : k === 1 ? "2/3" : "3/4", borderRadius: 14, overflow: "hidden", border: "1px solid #1E2640", position: "relative", background: "#131829" }}>
+                  {data.photos[idx] ? <img src={data.photos[idx].url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : null}
+                  <div style={{ position: "absolute", inset: 0, background: data.photos[idx] ? "linear-gradient(to top,rgba(5,7,15,.55),transparent 60%)" : "linear-gradient(135deg,rgba(255,255,255,.04),rgba(10,26,110,.28))" }} />
+                  <div style={{ position: "absolute", left: 8, right: 8, bottom: 8, fontFamily: mono, fontSize: 7.5, letterSpacing: ".12em", color: "rgba(255,255,255,.72)", textTransform: "uppercase", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{data.photos[idx]?.licenseLabel ?? "READY SLOT"}</div>
+                </div>
+              ))}
+              <div style={{ gridColumn: "2/4", gridRow: "3/4", borderRadius: 14, overflow: "hidden", position: "relative", border: "1px solid #1E2640", background: GRAD_FIELD }}>
+                {data.photos[4] ? <img src={data.photos[4].url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", opacity: .9 }} /> : null}
+                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(120deg,rgba(10,26,110,.5),transparent)" }} />
+                <div style={{ position: "absolute", left: 12, bottom: 11, fontFamily: mono, fontSize: 8.5, letterSpacing: ".12em", color: "rgba(255,255,255,.72)", textTransform: "uppercase" }}>{data.photos[4]?.licenseLabel ?? "SCRAPED / UPLOADED MEDIA"}</div>
+                {data.photos.length > 5 ? <div style={{ position: "absolute", right: 12, bottom: 11, fontFamily: mono, fontSize: 10, letterSpacing: ".14em", color: "#fff" }}>+{data.photos.length - 5} MORE</div> : null}
+              </div>
+            </div>
+          </section>
 
           {/* ===== TABS ===== */}
           <section style={{ padding: "24px 0 0" }}>
-            <div style={{ position: "relative", margin: "0 18px", borderBottom: "1px solid #1E2640", display: "flex" }}>
-              <button onClick={() => selectTab("bio")} style={tabStyle(tab === "bio")}>BIO</button>
-              <button onClick={() => selectTab("media")} style={tabStyle(tab === "media")}>MEDIA</button>
-              <button onClick={() => selectTab("stats")} style={tabStyle(tab === "stats")}>CAREER</button>
-              <div style={{ position: "absolute", bottom: -1, left: 0, width: "33.333%", height: 2.5, background: "linear-gradient(90deg,#FFB940,#F5A623)", borderRadius: 3, transition: "transform .35s cubic-bezier(.16,1,.3,1)", transform: `translateX(${tabIdx * 100}%)` }} />
-            </div>
+            <Tabs
+              value={tab}
+              onValueChange={(value) => selectTab(value as "bio" | "media" | "stats")}
+              className="gap-0"
+            >
+              <div style={{ padding: "0 18px" }}>
+                <TabsList className="relative grid h-[52px] w-full grid-cols-3 overflow-hidden rounded-full border border-[#1E2640] bg-[#111624] p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,.05)]">
+                  <div
+                    aria-hidden="true"
+                    className="pointer-events-none absolute bottom-1.5 left-1.5 top-1.5 rounded-full"
+                    style={{
+                      width: "calc((100% - 12px) / 3)",
+                      transform: `translateX(${tabIdx * 100}%)`,
+                      background: lockerAccent,
+                      transition: "transform .34s cubic-bezier(.22,1,.36,1)",
+                      willChange: "transform",
+                    }}
+                  />
+                  {[
+                    ["bio", "BIO"],
+                    ["media", "MEDIA"],
+                    ["stats", "CAREER"],
+                  ].map(([value, label]) => (
+                    <TabsTrigger
+                      key={value}
+                      value={value}
+                      className="relative z-10 h-10 rounded-full border-0 px-2 text-[12px] font-extrabold uppercase tracking-normal text-white/45 transition-colors duration-300 data-[state=active]:text-[#0B0E1A]"
+                      style={{ fontFamily: mono, background: "transparent", boxShadow: "none" }}
+                    >
+                      {label}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </div>
 
             {/* BIO TAB */}
             {tab === "bio" && (
               <div style={{ animation: "tabIn .4s cubic-bezier(.16,1,.3,1)", paddingTop: 16 }}>
-                <div className="hs" style={{ display: "flex", gap: 9, overflowX: "auto", padding: "0 18px 4px" }}>
+                <div className="hs" style={{ display: "flex", gap: 9, justifyContent: "center", overflowX: "auto", padding: "0 18px 4px" }}>
                   {bioPills.map((p) => (
                     <button key={p.key} onClick={() => setBioSort(p.key)} style={pillStyle(p.active)}>{p.label}</button>
                   ))}
                 </div>
-                <div className="hs" style={{ display: "flex", gap: 12, overflowX: "auto", padding: "14px 18px 10px", alignItems: "stretch", scrollSnapType: "x mandatory" }}>
-                  {/* identity card */}
-                  <div style={{ flex: "none", width: 236, scrollSnapAlign: "start", borderRadius: 16, overflow: "hidden", border: "1px solid #1E2640", background: "#131829", display: "flex", flexDirection: "column" }}>
-                    <div style={{ position: "relative", height: 168, background: GRAD_FIELD }}>
-                      <img src={data.headshotUrl} alt="" style={{ position: "absolute", bottom: 0, left: "50%", transform: "translateX(-50%)", height: 172, width: "auto", filter: "drop-shadow(0 8px 16px rgba(0,0,0,.5))" }} />
-                      <div style={{ position: "absolute", top: 10, left: 10, padding: "4px 8px", borderRadius: 6, background: "rgba(11,14,26,.6)", fontFamily: mono, fontSize: 8.5, letterSpacing: ".14em", color: "#FFB940" }}>
-                        {[data.levelLabel.slice(0, 2).toUpperCase(), data.position, data.jersey].filter(Boolean).join(" · ")}
+                {bioSort === "all" ? (
+                  <div style={{ display: "grid", gridTemplateColumns: "36% 1fr", gap: 8, padding: "14px 18px 10px" }}>
+                    <div style={{ minHeight: 216, borderRadius: 14, overflow: "hidden", border: "1px solid #1E2640", background: GRAD_FIELD, position: "relative" }}>
+                      <img
+                        src={data.headshotUrl}
+                        alt=""
+                        onError={(event) => {
+                          if (event.currentTarget.src.endsWith(HEADSHOT_FALLBACK)) return;
+                          event.currentTarget.src = HEADSHOT_FALLBACK;
+                        }}
+                        style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "50% 18%", filter: "drop-shadow(0 10px 18px rgba(0,0,0,.55))" }}
+                      />
+                    </div>
+                    <div style={{ minHeight: 216, borderRadius: 14, border: "1px solid #1E2640", background: "#131829", padding: 16, display: "flex", flexDirection: "column", justifyContent: "flex-start" }}>
+                      <div style={{ fontFamily: disp, fontWeight: 800, fontSize: 18, lineHeight: 1, letterSpacing: ".02em", textTransform: "uppercase", color: lockerAccent, marginBottom: 14 }}>BASIC INFO</div>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0,1fr))", gap: 10 }}>
+                        <IdRow label="HOMETOWN" value={displayHometown} />
+                        <IdRow label="BIRTHDATE" value={displayDob} />
+                        <IdRow label="JERSEY NUMBERS" value={displayJersey} />
+                        <IdRow label="POSITION" value={displayPosition} />
+                        <IdRow label="HIGH SCHOOL" value={displayHighSchool} />
                       </div>
                     </div>
-                    <div style={{ padding: "14px 15px 16px" }}>
-                      <div style={{ fontFamily: disp, fontWeight: 800, fontSize: 22, lineHeight: ".9", textTransform: "uppercase", color: "#fff" }}>{data.fullName}</div>
-                      <div style={{ height: 1, background: "#1E2640", margin: "12px 0" }} />
-                      <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
-                        <IdRow label="HOMETOWN" value={data.hometown} />
-                        <IdRow label="HIGH SCHOOL" value={data.highSchool} />
-                        <IdRow label="CLASS OF" value={data.classOf} />
+                    <div style={{ gridColumn: "1/3", minHeight: 326, borderRadius: 14, border: "1px solid #1E2640", background: "#131829", padding: "22px 20px", display: "flex", flexDirection: "column", justifyContent: "flex-start" }}>
+                      <div style={{ fontFamily: disp, fontWeight: 800, fontSize: 18, lineHeight: 1, letterSpacing: ".02em", textTransform: "uppercase", color: lockerAccent, marginBottom: 14 }}>BIO</div>
+                      <p style={{ fontFamily: body, fontSize: 15, lineHeight: 1.62, color: "rgba(255,255,255,.78)", margin: 0 }}>{displayBio}</p>
+                    </div>
+                  </div>
+                ) : bioSort === "measurables" ? (
+                  <div style={{ padding: "14px 18px 10px" }}>
+                    <div style={{ borderRadius: 14, border: "1px solid #1E2640", background: "#131829", overflow: "hidden" }}>
+                      <div style={{ padding: "18px 18px 16px", background: "linear-gradient(135deg,rgba(255,185,64,.12),rgba(41,82,255,.08),rgba(19,24,41,0))", borderBottom: "1px solid #1E2640" }}>
+                        <div style={{ fontFamily: disp, fontWeight: 800, fontSize: 20, lineHeight: 1, letterSpacing: ".02em", textTransform: "uppercase", color: lockerAccent, marginBottom: 14 }}>MEASURABLES</div>
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 10 }}>
+                          <div style={{ borderRadius: 12, padding: "14px 13px", background: "rgba(255,255,255,.05)", border: "1px solid rgba(255,255,255,.08)", textAlign: "center" }}>
+                            <div style={{ fontFamily: disp, fontWeight: 900, fontSize: 38, lineHeight: ".85", color: "#fff" }}>{data.heightDisplay || "6'1\""}</div>
+                            <div style={{ fontFamily: mono, fontSize: 8.5, letterSpacing: ".13em", color: "rgba(255,255,255,.48)", marginTop: 8 }}>HEIGHT</div>
+                          </div>
+                          <div style={{ borderRadius: 12, padding: "14px 13px", background: "rgba(255,255,255,.05)", border: "1px solid rgba(255,255,255,.08)", textAlign: "center" }}>
+                            <div style={{ fontFamily: disp, fontWeight: 900, fontSize: 38, lineHeight: ".85", color: "#fff" }}>{data.weightLbs ?? 205}</div>
+                            <div style={{ fontFamily: mono, fontSize: 8.5, letterSpacing: ".13em", color: "rgba(255,255,255,.48)", marginTop: 8 }}>WEIGHT · LBS</div>
+                          </div>
+                        </div>
+                      </div>
+                      <div style={{ padding: "14px 14px 16px" }}>
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 8 }}>
+                          {combineMetrics.map((metric) => (
+                            <div key={metric.label} style={{ minHeight: 96, borderRadius: 12, padding: "13px 10px", background: "#0F1424", border: "1px solid #1E2640", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", gap: 8 }}>
+                              <div>
+                                <div style={{ fontFamily: disp, fontWeight: 900, fontSize: 27, lineHeight: ".85", color: "#fff" }}>{metric.value}</div>
+                                <div style={{ fontFamily: mono, fontSize: 8, letterSpacing: ".11em", color: metric.tone, marginTop: 4 }}>{metric.unit}</div>
+                              </div>
+                              <div style={{ fontFamily: mono, fontSize: 7.5, letterSpacing: ".1em", color: "rgba(255,255,255,.42)", textTransform: "uppercase", lineHeight: 1.15 }}>{metric.label}</div>
+                            </div>
+                          ))}
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginTop: 12, padding: "10px 12px", borderRadius: 12, background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.07)" }}>
+                          <span style={{ fontFamily: mono, fontSize: 8.5, letterSpacing: ".13em", color: "rgba(255,255,255,.46)", textTransform: "uppercase" }}>Combine board</span>
+                          <span style={{ fontFamily: mono, fontSize: 8.5, letterSpacing: ".13em", color: lockerAccent, textTransform: "uppercase" }}>Verified + projected</span>
+                        </div>
                       </div>
                     </div>
                   </div>
-                  {bioCards.map((c: any, i) => (
-                    <div key={i} style={c.style}>
-                      {c.isStat && (
-                        <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", height: "100%", padding: 16 }}>
-                          <div style={{ fontFamily: disp, fontWeight: 900, fontSize: 40, lineHeight: ".85", letterSpacing: "-.02em", color: "#fff" }}>{c.value}</div>
-                          <div style={{ fontFamily: mono, fontSize: 9.5, letterSpacing: ".14em", color: "#FFB940", marginTop: 8 }}>{c.label}</div>
-                        </div>
-                      )}
-                      {c.isStory && (
-                        <div style={{ padding: "18px 17px" }}>
-                          <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: ".2em", color: "#FFB940", marginBottom: 8 }}>◆ THE STORY</div>
-                          <p style={{ fontFamily: body, fontSize: 13.5, lineHeight: 1.6, color: "rgba(255,255,255,.78)", margin: 0 }}>{c.text}</p>
-                        </div>
-                      )}
-                      {c.isAward && (
-                        <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", height: "100%", padding: 16 }}>
-                          <div style={{ fontFamily: mono, fontSize: 11, letterSpacing: ".1em", color: "#FFB940" }}>★ {c.year}</div>
-                          <div style={{ fontFamily: disp, fontWeight: 800, fontSize: 19, lineHeight: ".95", textTransform: "uppercase", color: "#fff" }}>{c.label}</div>
-                        </div>
-                      )}
+                ) : bioSort === "story" ? (
+                  <div style={{ padding: "14px 18px 10px" }}>
+                    <div style={{ borderRadius: 14, border: "1px solid #1E2640", background: "#131829", padding: "22px 20px 24px" }}>
+                      <div style={{ fontFamily: disp, fontWeight: 800, fontSize: 20, lineHeight: 1, letterSpacing: ".02em", textTransform: "uppercase", color: lockerAccent, marginBottom: 16 }}>THE STORY</div>
+                      <p style={{ fontFamily: body, fontSize: 16, lineHeight: 1.72, color: "rgba(255,255,255,.82)", margin: 0, whiteSpace: "pre-line" }}>{displayStory}</p>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ) : (
+                  <div className="hs" style={{ display: "flex", gap: 12, overflowX: "auto", padding: "14px 18px 10px", alignItems: "stretch", scrollSnapType: "x mandatory" }}>
+                    {bioCards.map((c: any, i) => (
+                      <div key={i} style={c.style}>
+                        {c.isStat && (
+                          <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", height: "100%", padding: 16 }}>
+                            <div style={{ fontFamily: disp, fontWeight: 900, fontSize: 40, lineHeight: ".85", letterSpacing: "-.02em", color: "#fff" }}>{c.value}</div>
+                            <div style={{ fontFamily: mono, fontSize: 9.5, letterSpacing: ".14em", color: lockerAccent, marginTop: 8 }}>{c.label}</div>
+                          </div>
+                        )}
+                        {c.isAward && (
+                          <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", height: "100%", padding: 16 }}>
+                            <div style={{ fontFamily: mono, fontSize: 11, letterSpacing: ".1em", color: lockerAccent }}>★ {c.year}</div>
+                            <div style={{ fontFamily: disp, fontWeight: 800, fontSize: 19, lineHeight: ".95", textTransform: "uppercase", color: "#fff" }}>{c.label}</div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
             {/* MEDIA TAB */}
             {tab === "media" && (
               <div style={{ animation: "tabIn .4s cubic-bezier(.16,1,.3,1)", paddingTop: 16 }}>
-                <div className="hs" style={{ display: "flex", gap: 9, overflowX: "auto", padding: "0 18px 4px" }}>
+                <div className="hs" style={{ display: "flex", gap: 9, justifyContent: "center", overflowX: "auto", padding: "0 18px 4px" }}>
                   {mediaPills.map((p) => (
                     <button key={p.key} onClick={() => setMediaSort(p.key)} style={pillStyle(p.active)}>{p.label}</button>
                   ))}
@@ -632,7 +777,7 @@ export default function LockerView({ data }: { data: LockerData }) {
             {/* STATS TAB */}
             {tab === "stats" && (
               <div style={{ animation: "tabIn .4s cubic-bezier(.16,1,.3,1)", paddingTop: 16 }}>
-                <div className="hs" style={{ display: "flex", gap: 9, overflowX: "auto", padding: "0 18px 4px" }}>
+                <div className="hs" style={{ display: "flex", gap: 9, justifyContent: "center", overflowX: "auto", padding: "0 18px 4px" }}>
                   {statsPills.map((p) => (
                     <button key={p.key} onClick={() => setStatsSort(p.key)} style={pillStyle(p.active)}>{p.label}</button>
                   ))}
@@ -684,6 +829,19 @@ export default function LockerView({ data }: { data: LockerData }) {
                   </div>
                 )}
 
+                {statsSort === "awards" && (
+                  <div className="hs" style={{ animation: "tabIn .35s ease", display: "flex", gap: 12, overflowX: "auto", padding: "16px 18px 10px", scrollSnapType: "x mandatory" }}>
+                    {awards.map((award: any, i) => (
+                      <div key={i} style={{ flex: "none", width: 184, scrollSnapAlign: "start", borderRadius: 16, border: "1px solid #1E2640", background: "linear-gradient(160deg,#1a2035,#131829)", minHeight: 156 }}>
+                        <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", height: "100%", padding: 16 }}>
+                          <div style={{ fontFamily: mono, fontSize: 11, letterSpacing: ".1em", color: lockerAccent }}>★ {award.year}</div>
+                          <div style={{ fontFamily: disp, fontWeight: 800, fontSize: 20, lineHeight: ".95", textTransform: "uppercase", color: "#fff" }}>{award.label}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 {statsSort === "timeline" && (
                   <div className="hs" style={{ animation: "tabIn .35s ease", display: "flex", gap: 12, overflowX: "auto", padding: "16px 18px 10px", scrollSnapType: "x mandatory" }}>
                     {timeline.map((t, i) => (
@@ -725,13 +883,14 @@ export default function LockerView({ data }: { data: LockerData }) {
                 )}
               </div>
             )}
+            </Tabs>
           </section>
 
           <div style={{ height: 104 }} />
         </div>
 
         {/* BOTTOM NAV */}
-        <div style={{ position: "absolute", left: 12, right: 12, bottom: 14, height: 66, borderRadius: 20, background: "rgba(15,19,32,.82)", backdropFilter: "blur(20px)", border: "1px solid #1E2640", boxShadow: "0 12px 40px rgba(0,0,0,.5)", display: "flex", alignItems: "center", justifyContent: "space-around", padding: "0 8px", zIndex: 20 }}>
+        <div style={{ position: "absolute", left: 18, right: 18, bottom: 14, height: 66, borderRadius: 20, background: "rgba(15,19,32,.82)", backdropFilter: "blur(20px)", border: "1px solid #1E2640", boxShadow: "0 12px 40px rgba(0,0,0,.5)", display: "flex", alignItems: "center", justifyContent: "space-around", padding: "0 8px", zIndex: 20 }}>
           <NavBtn label="FEED" active={false}><path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1Z" /></NavBtn>
           <NavBtn label="SCOUT" active={false}><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></NavBtn>
           <button style={{ background: "none", border: "none", display: "flex", flexDirection: "column", alignItems: "center", cursor: "pointer", marginTop: -18 }}>
@@ -819,9 +978,9 @@ function RotatingPill({ items, fallback }: {
 
 function IdRow({ label, value }: { label: string; value: string }) {
   return (
-    <div style={{ display: "flex", justifyContent: "space-between" }}>
-      <span style={{ fontFamily: mono, fontSize: 9, letterSpacing: ".12em", color: "rgba(255,255,255,.4)" }}>{label}</span>
-      <span style={{ fontFamily: disp, fontWeight: 700, fontSize: 14, textTransform: "uppercase", color: "#fff" }}>{value}</span>
+    <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 0 }}>
+      <span style={{ fontFamily: mono, fontSize: 8.5, letterSpacing: ".12em", color: "rgba(255,255,255,.4)", textTransform: "uppercase" }}>{label}</span>
+      <span style={{ fontFamily: disp, fontWeight: 700, fontSize: 15, lineHeight: 1, textTransform: "uppercase", color: "#fff", overflowWrap: "anywhere" }}>{value}</span>
     </div>
   );
 }

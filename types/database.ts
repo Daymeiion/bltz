@@ -71,6 +71,37 @@ export interface VideoView {
   created_at: string | null;
 }
 
+export type MediaProvenance =
+  | "founder_archive"
+  | "cal_archive"
+  | "athlete_uploaded"
+  | "fan_uploaded";
+
+export type MediaKind = "photo" | "headshot" | "video" | "document";
+export type MediaLicenseStatus = "pending" | "approved" | "rejected" | "needs_review";
+
+export interface Media {
+  id: string;
+  player_id: string;
+  url: string;
+  title: string | null;
+  credits: string | null;
+  width: number | null;
+  height: number | null;
+  display_order: number | null;
+  provenance: MediaProvenance;
+  kind: MediaKind;
+  source_url: string | null;
+  license_status: MediaLicenseStatus | null;
+  license_kind: string | null;
+  rights_holder: string | null;
+  usage_terms: string | null;
+  public_locker_approved: boolean | null;
+  license_checked_at: string | null;
+  license_checked_by: string | null;
+  created_at: string | null;
+}
+
 export interface PlayerTeammate {
   id: string;
   player_id: string;
@@ -135,6 +166,11 @@ export interface Database {
         Row: VideoView;
         Insert: Omit<VideoView, "id" | "created_at"> & { id?: number };
         Update: Partial<Omit<VideoView, "id" | "created_at">>;
+      };
+      media: {
+        Row: Media;
+        Insert: Omit<Media, "id" | "created_at"> & { id?: string };
+        Update: Partial<Omit<Media, "id" | "created_at">>;
       };
     };
   };

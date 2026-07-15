@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 420" role="img" aria-label="Headshot fallback">
+  <rect width="320" height="420" fill="#05070f"/>
+  <circle cx="160" cy="132" r="66" fill="#111827"/>
+  <path d="M52 420c8-102 48-164 108-164s100 62 108 164H52Z" fill="#111827"/>
+  <path d="M88 420c8-70 34-112 72-112s64 42 72 112H88Z" fill="#0b0e1a"/>
+  <rect x="1" y="1" width="318" height="418" rx="24" fill="none" stroke="#1e2640" stroke-width="2"/>
+</svg>
