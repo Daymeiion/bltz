@@ -172,11 +172,11 @@ begin
     on conflict do nothing;
   end loop;
 
-  insert into profiles (id, role, player_id, full_name, updated_at)
+  insert into profiles (id, role, player_id, display_name, updated_at)
   values (p_user_id, 'player', v_player_id, p_player->>'full_name', v_now)
   on conflict (id) do update
     set role = excluded.role, player_id = excluded.player_id,
-        full_name = excluded.full_name, updated_at = excluded.updated_at;
+        display_name = excluded.display_name, updated_at = excluded.updated_at;
 
   if p_claim_token is not null then
     update claim_tokens

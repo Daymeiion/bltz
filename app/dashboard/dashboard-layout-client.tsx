@@ -94,7 +94,7 @@ export default function DashboardLayoutClient({
           <div className="mt-0">
             <SidebarLink
               link={{
-                label: profile.full_name || profile.email || "User",
+                label: profile.display_name || profile.email || "User",
                 href: "/dashboard",
                 icon: (
                   <Image

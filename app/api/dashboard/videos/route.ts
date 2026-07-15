@@ -61,17 +61,36 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
+    const supabase = await createClient();
+    const { data: player } = await supabase
+      .from('players')
+      .select('id')
+      .eq('user_id', profile.id)
+      .maybeSingle();
+    const playerId = player?.id || profile.player_id;
+
+    if (!playerId) {
+      return NextResponse.json({ error: "Player profile required" }, { status: 403 });
+    }
+
+    if (typeof body.title !== 'string' || body.title.trim().length === 0) {
+      return NextResponse.json({ error: "Title is required" }, { status: 400 });
+    }
+
+    const visibility = ['public', 'unlisted', 'private'].includes(body.visibility)
+      ? body.visibility
+      : 'private';
     
     const video = await createVideo({
-      player_id: body.player_id,
-      owner_user_id: body.owner_user_id,
-      title: body.title,
+      player_id: playerId,
+      owner_user_id: profile.id,
+      title: body.title.trim(),
       description: body.description,
       thumbnail_url: body.thumbnail_url,
       playback_url: body.playback_url,
       duration_seconds: body.duration_seconds,
       tags: body.tags,
-      visibility: body.visibility,
+      visibility,
     });
 
     return NextResponse.json({ video });

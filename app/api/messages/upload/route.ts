@@ -30,6 +30,31 @@ export async function POST(request: NextRequest) {
     if (!file) {
       return NextResponse.json({ error: "No image file provided" }, { status: 400 });
     }
+    if (!messageId) {
+      return NextResponse.json({ error: "Message ID is required" }, { status: 400 });
+    }
+
+    const supabase = await createClient();
+    const { data: message, error: messageError } = await supabase
+      .from('messages')
+      .select('id, sender_id, recipient_id')
+      .eq('id', messageId)
+      .maybeSingle();
+
+    if (messageError) {
+      console.error("Error checking message access:", messageError);
+      return NextResponse.json({ error: "Failed to verify message access" }, { status: 500 });
+    }
+    if (!message) {
+      return NextResponse.json({ error: "Message not found" }, { status: 404 });
+    }
+    if (
+      profile.role !== 'admin' &&
+      message.sender_id !== profile.id &&
+      message.recipient_id !== profile.id
+    ) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
     // Validate file type
     if (!ALLOWED_MIME_TYPES.includes(file.type)) {
@@ -90,14 +115,12 @@ export async function POST(request: NextRequest) {
     // Generate unique filename
     const timestamp = Date.now();
     const randomString = Math.random().toString(36).substring(2, 15);
-    const fileName = `message-${timestamp}-${randomString}.jpg`;
-    const thumbnailName = `thumb-${timestamp}-${randomString}.jpg`;
+    const fileName = `${messageId}/${profile.id}/message-${timestamp}-${randomString}.jpg`;
+    const thumbnailName = `${messageId}/${profile.id}/thumb-${timestamp}-${randomString}.jpg`;
 
     // Upload to Supabase Storage
-    const supabase = await createClient();
-    
     // Upload main image
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    const { data: _uploadData, error: uploadError } = await supabase.storage
       .from('message-images')
       .upload(fileName, compressedBuffer, {
         contentType: 'image/jpeg',
@@ -116,7 +139,7 @@ export async function POST(request: NextRequest) {
       .toBuffer();
 
     // Upload thumbnail
-    const { data: thumbData, error: thumbError } = await supabase.storage
+    const { data: _thumbData, error: thumbError } = await supabase.storage
       .from('message-images')
       .upload(thumbnailName, thumbnailBuffer, {
         contentType: 'image/jpeg',

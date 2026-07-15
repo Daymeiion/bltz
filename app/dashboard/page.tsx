@@ -76,7 +76,7 @@ export default async function DashboardPage({
   ]);
 
   const firstName =
-    (profile.full_name?.split(" ")[0] ??
+    (profile.display_name?.split(" ")[0] ??
       player?.full_name?.split(" ")[0] ??
       "Player");
 

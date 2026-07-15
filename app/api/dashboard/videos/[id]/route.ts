@@ -1,6 +1,27 @@
 import { NextResponse } from "next/server";
-import { getCurrentUserProfile } from "@/lib/rbac";
+import { getCurrentUserProfile, type UserProfile } from "@/lib/rbac";
 import { updateVideo, deleteVideo, getVideoById } from "@/lib/queries/videos";
+import { createClient } from "@/lib/supabase/server";
+
+type OwnedVideo = {
+  owner_user_id: string | null;
+  player_id: string | null;
+};
+
+async function canManageVideo(profile: UserProfile, video: OwnedVideo): Promise<boolean> {
+  if (profile.role === 'admin' || video.owner_user_id === profile.id) return true;
+  if (profile.player_id && video.player_id === profile.player_id) return true;
+  if (!video.player_id) return false;
+
+  const supabase = await createClient();
+  const { data: player } = await supabase
+    .from('players')
+    .select('id')
+    .eq('id', video.player_id)
+    .eq('user_id', profile.id)
+    .maybeSingle();
+  return Boolean(player);
+}
 
 // GET - Fetch a single video
 export async function GET(
@@ -19,6 +40,9 @@ export async function GET(
 
     if (!video) {
       return NextResponse.json({ error: "Video not found" }, { status: 404 });
+    }
+    if (!(await canManageVideo(profile, video))) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     return NextResponse.json({ video });
@@ -44,6 +68,14 @@ export async function PUT(
     }
 
     const { id } = await params;
+    const existingVideo = await getVideoById(id);
+    if (!existingVideo) {
+      return NextResponse.json({ error: "Video not found" }, { status: 404 });
+    }
+    if (!(await canManageVideo(profile, existingVideo))) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     const body = await request.json();
     
     const video = await updateVideo(id, {
@@ -79,6 +111,14 @@ export async function DELETE(
     }
 
     const { id } = await params;
+    const existingVideo = await getVideoById(id);
+    if (!existingVideo) {
+      return NextResponse.json({ error: "Video not found" }, { status: 404 });
+    }
+    if (!(await canManageVideo(profile, existingVideo))) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     await deleteVideo(id);
 
     return NextResponse.json({ success: true });

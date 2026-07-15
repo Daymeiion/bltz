@@ -11,10 +11,11 @@ export async function POST(request: Request) {
   try {
     const profile = await getCurrentUserProfile();
     
-    // Only admins or system should be able to trigger this
-    // You can add admin check here
     if (!profile) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (profile.role !== 'admin') {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const body = await request.json();
@@ -84,7 +85,7 @@ export async function POST(request: Request) {
 /**
  * Get revenue breakdown for a player
  */
-export async function GET(request: Request) {
+export async function GET(_request: Request) {
   try {
     const profile = await getCurrentUserProfile();
     

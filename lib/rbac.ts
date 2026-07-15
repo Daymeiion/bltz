@@ -1,15 +1,19 @@
 import { createClient } from "@/lib/supabase/server";
+import { USER_ROLES, type UserRole } from "@/types/database";
 
-export type UserRole = "player" | "fan" | "admin" | "publisher";
+export type { UserRole } from "@/types/database";
 
 export interface UserProfile {
   id: string;
   email: string | null;
   role: UserRole;
-  username?: string | null;
-  full_name?: string | null;
-  avatar_url?: string | null;
-  player_id?: string | null;
+  display_name: string | null;
+  avatar_url: string | null;
+  player_id: string | null;
+}
+
+function isUserRole(role: string | null): role is UserRole {
+  return role !== null && USER_ROLES.some((candidate) => candidate === role);
 }
 
 /**
@@ -26,11 +30,13 @@ export async function getCurrentUserProfile(): Promise<UserProfile | null> {
   }
 
   // Fetch user profile from profiles table
-  let { data: profile, error: profileError } = await supabase
+  const { data: existingProfile, error: profileError } = await supabase
     .from("profiles")
-    .select("*")
+    .select("id, email, display_name, avatar_url, role, player_id")
     .eq("id", user.id)
     .single();
+
+  let profile = existingProfile;
 
   if (profileError || !profile) {
     // If profile doesn't exist, create one
@@ -38,12 +44,12 @@ export async function getCurrentUserProfile(): Promise<UserProfile | null> {
       .from("profiles")
       .insert({
         id: user.id,
-        username: user.email?.split('@')[0] || `user_${user.id.slice(0, 8)}`,
-        full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
-        role: "fan" as UserRole, // Default role
+        email: user.email ?? null,
+        display_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
+        role: "fan",
         avatar_url: user.user_metadata?.avatar_url || null
       })
-      .select()
+      .select("id, email, display_name, avatar_url, role, player_id")
       .single();
 
     if (createError || !newProfile) {
@@ -52,7 +58,10 @@ export async function getCurrentUserProfile(): Promise<UserProfile | null> {
       return {
         id: user.id,
         email: user.email || null,
-        role: "fan" as UserRole,
+        role: "fan",
+        display_name: user.user_metadata?.full_name ?? null,
+        avatar_url: user.user_metadata?.avatar_url ?? null,
+        player_id: null,
       };
     }
 
@@ -62,9 +71,8 @@ export async function getCurrentUserProfile(): Promise<UserProfile | null> {
   return {
     id: profile.id,
     email: profile.email || user.email || null,
-    role: profile.role as UserRole,
-    username: profile.username,
-    full_name: profile.full_name,
+    role: isUserRole(profile.role) ? profile.role : "fan",
+    display_name: profile.display_name,
     avatar_url: profile.avatar_url,
     player_id: profile.player_id,
   };

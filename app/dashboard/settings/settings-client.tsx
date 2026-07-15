@@ -49,10 +49,54 @@ export default function SettingsClient({ user }: SettingsClientProps) {
     tiktok: ""
   });
 
+  // Spotify connection state
+  const [spotify, setSpotify] = useState<{
+    configured: boolean;
+    connected: boolean;
+    displayName: string | null;
+  } | null>(null);
+  const [spotifyBusy, setSpotifyBusy] = useState(false);
+
 
   useEffect(() => {
     loadSettings();
+    loadSpotifyStatus();
   }, []);
+
+  // Surface the OAuth result from the callback redirect (?spotify=connected|error).
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const result = params.get("spotify");
+    if (!result) return;
+    if (result === "connected") toast.success("Spotify connected!");
+    else if (result === "no_player") toast.error("Finish setting up your athlete profile first.");
+    else if (result === "error") toast.error(`Couldn't connect Spotify (${params.get("reason") ?? "unknown"}).`);
+    // Clean the query string so a refresh doesn't re-toast.
+    window.history.replaceState({}, "", window.location.pathname);
+  }, []);
+
+  const loadSpotifyStatus = async () => {
+    try {
+      const res = await fetch("/api/spotify/status");
+      if (res.ok) setSpotify(await res.json());
+    } catch {
+      /* non-fatal */
+    }
+  };
+
+  const disconnectSpotify = async () => {
+    setSpotifyBusy(true);
+    try {
+      const res = await fetch("/api/spotify/disconnect", { method: "POST" });
+      if (!res.ok) throw new Error();
+      toast.success("Spotify disconnected");
+      loadSpotifyStatus();
+    } catch {
+      toast.error("Failed to disconnect Spotify");
+    } finally {
+      setSpotifyBusy(false);
+    }
+  };
 
   const loadSettings = async () => {
     try {
@@ -200,6 +244,43 @@ export default function SettingsClient({ user }: SettingsClientProps) {
                 />
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Spotify "Now Playing" */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="#1DB954" aria-hidden><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.586 14.424a.622.622 0 0 1-.857.207c-2.348-1.435-5.304-1.76-8.785-.964a.622.622 0 1 1-.277-1.215c3.809-.871 7.077-.496 9.712 1.115a.623.623 0 0 1 .207.857zm1.223-2.722a.78.78 0 0 1-1.072.257c-2.687-1.652-6.785-2.131-9.965-1.166a.779.779 0 1 1-.452-1.491c3.632-1.102 8.147-.568 11.234 1.329a.78.78 0 0 1 .255 1.071zm.105-2.835C14.692 8.95 9.375 8.775 6.297 9.71a.935.935 0 1 1-.542-1.79c3.532-1.072 9.404-.865 13.115 1.338a.936.936 0 0 1-.954 1.61z" /></svg>
+              Spotify
+            </CardTitle>
+            <CardDescription>
+              Link your Spotify so fans see what you&apos;re listening to, live on your locker.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {spotify && !spotify.configured ? (
+              <p className="text-sm text-muted-foreground">
+                Spotify isn&apos;t configured on this deployment yet.
+              </p>
+            ) : spotify?.connected ? (
+              <div className="flex items-center justify-between gap-4 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-[#1DB954] text-black hover:bg-[#1DB954]">Connected</Badge>
+                  {spotify.displayName ? (
+                    <span className="text-sm text-muted-foreground">as {spotify.displayName}</span>
+                  ) : null}
+                </div>
+                <Button variant="outline" onClick={disconnectSpotify} disabled={spotifyBusy}>
+                  {spotifyBusy ? <IconLoader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                  Disconnect
+                </Button>
+              </div>
+            ) : (
+              <Button asChild className="bg-[#1DB954] text-black hover:bg-[#1aa34a]">
+                <a href="/api/spotify/connect">Connect Spotify</a>
+              </Button>
+            )}
           </CardContent>
         </Card>
 

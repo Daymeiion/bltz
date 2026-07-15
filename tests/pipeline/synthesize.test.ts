@@ -49,7 +49,7 @@ describe("synthesize (no API key — deterministic path)", () => {
     expect(draft.height_in).toBe(71);
     expect(draft.weight_lbs).toBe(187);
     expect(draft.games_played).toBe(14);
-    expect(draft.bio).toMatch(/Daymeion Hughes/);
+    expect(draft.bio).toBe("Hughes is a former Cal cornerback.");
     expect(draft.awards).toHaveLength(1);
     expect(draft.sources?.length).toBeGreaterThanOrEqual(2);
   });

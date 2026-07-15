@@ -58,7 +58,7 @@ describe("scrapeYouTube", () => {
     const result = await scrapeYouTube(identity);
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.reason).toBe("not_found");
+    expect(result.reason).toBe("no_match");
   });
 });
 
@@ -113,7 +113,7 @@ describe("scrapeESPN", () => {
     const result = await scrapeESPN(identity);
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.reason).toBe("not_found");
+    expect(result.reason).toBe("no_match");
   });
 
   it("hits a college player and pulls structured facts (Joe Ayoob regression)", async () => {
@@ -260,6 +260,7 @@ describe("scrapeWikipedia", () => {
     };
     const summary = {
       extract: "Daymeion Hughes is a former American football cornerback.",
+      description: "American football cornerback",
       content_urls: { desktop: { page: "https://en.wikipedia.org/wiki/Daymeion_Hughes" } },
       thumbnail: { source: "https://upload.wikimedia.org/daymeion.jpg" },
     };
@@ -272,9 +273,14 @@ describe("scrapeWikipedia", () => {
     let call = 0;
     globalThis.fetch = vi.fn(async () => {
       call++;
-      return new Response(call === 1 ? JSON.stringify(search) : call === 2 ? JSON.stringify(summary) : article, {
+      const body = call <= 2
+        ? JSON.stringify(search)
+        : call === 3
+          ? JSON.stringify(summary)
+          : article;
+      return new Response(body, {
         status: 200,
-        headers: { "content-type": call < 3 ? "application/json" : "text/html" },
+        headers: { "content-type": call < 4 ? "application/json" : "text/html" },
       });
     }) as unknown as typeof fetch;
 
@@ -299,6 +305,7 @@ describe("scrapeWikipedia", () => {
     };
     const summary = {
       extract: "Patrick Mahomes is an American football quarterback.",
+      description: "American football quarterback",
       content_urls: { desktop: { page: "https://en.wikipedia.org/wiki/Patrick_Mahomes" } },
     };
     const article = `<html>
@@ -328,6 +335,7 @@ describe("scrapeWikipedia", () => {
     };
     const summary = {
       extract: "Generic Player is a footballer.",
+      description: "Football player",
       content_urls: { desktop: { page: "https://en.wikipedia.org/wiki/Generic" } },
     };
     const article = `<html>
@@ -494,7 +502,7 @@ describe("scrapeNflverse", () => {
     const result = await scrapeNflverse({ full_name: "Nobody Real" });
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.reason).toBe("not_found");
+    expect(result.reason).toBe("no_match");
   });
 
   it("returns not_found gracefully when env vars are missing", async () => {
@@ -503,6 +511,6 @@ describe("scrapeNflverse", () => {
     const result = await scrapeNflverse({ full_name: "Patrick Mahomes" });
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.reason).toBe("not_found");
+    expect(result.reason).toBe("unreachable");
   });
 });

@@ -260,7 +260,7 @@ begin
     id,
     role,
     player_id,
-    full_name,
+    display_name,
     updated_at
   )
   values (
@@ -273,7 +273,7 @@ begin
   on conflict (id) do update
     set role = excluded.role,
         player_id = excluded.player_id,
-        full_name = excluded.full_name,
+        display_name = excluded.display_name,
         updated_at = excluded.updated_at;
 
   if p_claim_token is not null then
