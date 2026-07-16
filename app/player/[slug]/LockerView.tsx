@@ -214,25 +214,32 @@ export default function LockerView({ data }: { data: LockerData }) {
   ];
 
   // ---- BIO cards ----
-  // Real: height + weight. SAMPLE: 40-yard, wingspan, vertical, bench.
+  const hasKnownText = (value?: string | null) => {
+    const normalized = value?.trim();
+    return Boolean(normalized && normalized !== "—");
+  };
+  const unknownText = "Unknown";
+  const pendingMetric = "TBD";
+
+  // Real: height + weight. Fallbacks are intentionally marked pending until verified data exists.
   const measure = [
-    [data.heightDisplay || "—", "HEIGHT"],
-    [data.weightLbs ? String(data.weightLbs) : "—", "WEIGHT · LBS"],
-    ["4.42s", "40-YARD"],
-    ["74″", "WINGSPAN"],
-    ["38.5″", "VERTICAL"],
-    ["19", "BENCH · REPS"],
+    [data.heightDisplay || pendingMetric, "HEIGHT"],
+    [data.weightLbs ? String(data.weightLbs) : pendingMetric, "WEIGHT · LBS"],
+    [pendingMetric, "40-YARD"],
+    [pendingMetric, "WINGSPAN"],
+    [pendingMetric, "VERTICAL"],
+    [pendingMetric, "BENCH · REPS"],
   ].map(([value, label]) => ({
     cat: "measurables", isStat: true, value, label,
     style: { flex: "none", width: 128, scrollSnapAlign: "start", borderRadius: 16, border: "1px solid #1E2640", background: "#131829" } as React.CSSProperties,
   }));
   const combineMetrics = [
-    { label: "40-YARD", value: "4.42", unit: "SEC", tone: lockerAccent },
-    { label: "10-YARD SPLIT", value: "1.52", unit: "SEC", tone: "#7DD3FC" },
-    { label: "VERTICAL", value: "38.5", unit: "IN", tone: "#A7F3D0" },
-    { label: "BROAD JUMP", value: "10'8", unit: "FT", tone: "#FDE68A" },
-    { label: "3-CONE", value: "6.82", unit: "SEC", tone: "#C4B5FD" },
-    { label: "BENCH", value: "19", unit: "REPS", tone: "#FCA5A5" },
+    { label: "40-YARD", value: pendingMetric, unit: "PENDING", tone: lockerAccent },
+    { label: "10-YARD SPLIT", value: pendingMetric, unit: "PENDING", tone: "#7DD3FC" },
+    { label: "VERTICAL", value: pendingMetric, unit: "PENDING", tone: "#A7F3D0" },
+    { label: "BROAD JUMP", value: pendingMetric, unit: "PENDING", tone: "#FDE68A" },
+    { label: "3-CONE", value: pendingMetric, unit: "PENDING", tone: "#C4B5FD" },
+    { label: "BENCH", value: pendingMetric, unit: "PENDING", tone: "#FCA5A5" },
   ];
 
   const story = [{
@@ -308,19 +315,20 @@ export default function LockerView({ data }: { data: LockerData }) {
   const statsPills = [["season", "2024"], ["career", "CAREER"], ["awards", "AWARDS"], ["timeline", "TIMELINE"], ["log", "GAME LOG"]]
     .map(([key, label]) => ({ key, label, active: statsSort === key }));
 
+  const hasBio = hasKnownText(data.bio) && !data.bio.includes("hasn't written their story yet");
   const displayBio =
-    data.bio && !data.bio.includes("hasn't written their story yet")
+    hasBio
       ? data.bio
-      : `${data.fullName} is building a verified BLTZ Player Locker with profile data, school and team history, measurable details, and approved media.`;
-  const displayHometown = data.hometown !== "—" ? data.hometown : "LOS ANGELES, CA";
+      : "Bio has not been added yet. BLTZ will show an athlete-written summary or a verified profile snippet once signup, scraped source, school, or team data is available.";
+  const displayHometown = hasKnownText(data.hometown) ? data.hometown : unknownText;
   const displayStory =
-    data.bio && !data.bio.includes("hasn't written their story yet")
+    hasBio
       ? `Early Life: ${data.bio}\n\nCollege: BLTZ will expand this section with scraped school history, roster context, awards, and career milestones from verified sources.\n\nProfessional: Pro team, draft, media, and post-college details will appear here when available from organization/team data.`
-      : `Early Life: ${data.fullName} grew up in ${displayHometown.toLowerCase()} and developed the foundation that shaped their athletic path.\n\nCollege: School history, roster details, awards, and major performances will be assembled from signup data, scraped sources, and team or school records.\n\nProfessional: Draft notes, pro affiliations, media coverage, and career milestones will populate here as verified organization and league data becomes available.`;
-  const displayDob = data.dobDisplay !== "—" ? `${data.dobDisplay}${data.age ? ` (${data.age})` : ""}` : "01-01-2005 (21)";
-  const displayJersey = data.jersey || "#7";
-  const displayPosition = data.position || "ATH";
-  const displayHighSchool = data.highSchool !== "—" ? data.highSchool : "BLTZ ACADEMY";
+      : `Early Life: Verified early-life details have not been added yet.\n\nCollege: School history, roster context, awards, and major performances will appear here once signup, scraped source, school, or team data is available.\n\nProfessional: Draft notes, pro affiliations, media coverage, and career milestones will populate here as verified organization and league data becomes available.`;
+  const displayDob = hasKnownText(data.dobDisplay) ? `${data.dobDisplay}${data.age ? ` (${data.age})` : ""}` : unknownText;
+  const displayJersey = hasKnownText(data.jersey) ? data.jersey : unknownText;
+  const displayPosition = hasKnownText(data.position) ? data.position : unknownText;
+  const displayHighSchool = hasKnownText(data.highSchool) ? data.highSchool : unknownText;
 
   const tabIdx = { bio: 0, media: 1, stats: 2 }[tab];
   const earnedFmt = "$" + (stats.earned || 0).toLocaleString("en-US");
@@ -620,8 +628,8 @@ export default function LockerView({ data }: { data: LockerData }) {
                   ))}
                 </div>
                 {bioSort === "all" ? (
-                  <div style={{ display: "grid", gridTemplateColumns: "36% 1fr", gap: 8, padding: "14px 18px 10px" }}>
-                    <div style={{ minHeight: 216, borderRadius: 14, overflow: "hidden", border: "1px solid #1E2640", background: GRAD_FIELD, position: "relative" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "42% 1fr", gap: 8, alignItems: "start", padding: "14px 18px 10px" }}>
+                    <div style={{ height: 216, borderRadius: 14, overflow: "hidden", border: "1px solid #1E2640", background: GRAD_FIELD, position: "relative" }}>
                       <img
                         src={data.headshotUrl}
                         alt=""
@@ -629,7 +637,7 @@ export default function LockerView({ data }: { data: LockerData }) {
                           if (event.currentTarget.src.endsWith(HEADSHOT_FALLBACK)) return;
                           event.currentTarget.src = HEADSHOT_FALLBACK;
                         }}
-                        style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "50% 18%", filter: "drop-shadow(0 10px 18px rgba(0,0,0,.55))" }}
+                        style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "50% 12%", filter: "drop-shadow(0 10px 18px rgba(0,0,0,.55))" }}
                       />
                     </div>
                     <div style={{ minHeight: 216, borderRadius: 14, border: "1px solid #1E2640", background: "#131829", padding: 16, display: "flex", flexDirection: "column", justifyContent: "flex-start" }}>
@@ -654,11 +662,11 @@ export default function LockerView({ data }: { data: LockerData }) {
                         <div style={{ fontFamily: disp, fontWeight: 800, fontSize: 20, lineHeight: 1, letterSpacing: ".02em", textTransform: "uppercase", color: lockerAccent, marginBottom: 14 }}>MEASURABLES</div>
                         <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 10 }}>
                           <div style={{ borderRadius: 12, padding: "14px 13px", background: "rgba(255,255,255,.05)", border: "1px solid rgba(255,255,255,.08)", textAlign: "center" }}>
-                            <div style={{ fontFamily: disp, fontWeight: 900, fontSize: 38, lineHeight: ".85", color: "#fff" }}>{data.heightDisplay || "6'1\""}</div>
+                            <div style={{ fontFamily: disp, fontWeight: 900, fontSize: 38, lineHeight: ".85", color: "#fff" }}>{data.heightDisplay || pendingMetric}</div>
                             <div style={{ fontFamily: mono, fontSize: 8.5, letterSpacing: ".13em", color: "rgba(255,255,255,.48)", marginTop: 8 }}>HEIGHT</div>
                           </div>
                           <div style={{ borderRadius: 12, padding: "14px 13px", background: "rgba(255,255,255,.05)", border: "1px solid rgba(255,255,255,.08)", textAlign: "center" }}>
-                            <div style={{ fontFamily: disp, fontWeight: 900, fontSize: 38, lineHeight: ".85", color: "#fff" }}>{data.weightLbs ?? 205}</div>
+                            <div style={{ fontFamily: disp, fontWeight: 900, fontSize: 38, lineHeight: ".85", color: "#fff" }}>{data.weightLbs ?? pendingMetric}</div>
                             <div style={{ fontFamily: mono, fontSize: 8.5, letterSpacing: ".13em", color: "rgba(255,255,255,.48)", marginTop: 8 }}>WEIGHT · LBS</div>
                           </div>
                         </div>
@@ -677,7 +685,7 @@ export default function LockerView({ data }: { data: LockerData }) {
                         </div>
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginTop: 12, padding: "10px 12px", borderRadius: 12, background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.07)" }}>
                           <span style={{ fontFamily: mono, fontSize: 8.5, letterSpacing: ".13em", color: "rgba(255,255,255,.46)", textTransform: "uppercase" }}>Combine board</span>
-                          <span style={{ fontFamily: mono, fontSize: 8.5, letterSpacing: ".13em", color: lockerAccent, textTransform: "uppercase" }}>Verified + projected</span>
+                          <span style={{ fontFamily: mono, fontSize: 8.5, letterSpacing: ".13em", color: lockerAccent, textTransform: "uppercase" }}>Awaiting verified data</span>
                         </div>
                       </div>
                     </div>
