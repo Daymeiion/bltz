@@ -75,10 +75,29 @@ export type MediaProvenance =
   | "founder_archive"
   | "cal_archive"
   | "athlete_uploaded"
-  | "fan_uploaded";
+  | "fan_uploaded"
+  | "scraped_candidate";
 
 export type MediaKind = "photo" | "headshot" | "video" | "document";
 export type MediaLicenseStatus = "pending" | "approved" | "rejected" | "needs_review";
+export type MediaLicenseRequestStatus =
+  | "not_started"
+  | "queued"
+  | "sent"
+  | "responded"
+  | "approved"
+  | "denied"
+  | "error";
+export type MediaCompetitionLevel = "hs" | "cfb" | "pro";
+export type MediaContentContext =
+  | "game"
+  | "practice"
+  | "media_day"
+  | "community"
+  | "training"
+  | "lifestyle"
+  | "interview"
+  | "off_field";
 
 export interface Media {
   id: string;
@@ -99,6 +118,14 @@ export interface Media {
   public_locker_approved: boolean | null;
   license_checked_at: string | null;
   license_checked_by: string | null;
+  license_request_status: MediaLicenseRequestStatus;
+  license_request_sent_at: string | null;
+  license_request_recipient_email: string | null;
+  license_request_recipient_name: string | null;
+  license_request_last_error: string | null;
+  license_requested_by: string | null;
+  competition_level: MediaCompetitionLevel | null;
+  content_context: MediaContentContext | null;
   created_at: string | null;
 }
 

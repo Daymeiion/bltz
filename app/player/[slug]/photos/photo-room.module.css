@@ -1,0 +1,426 @@
+.page {
+  --photo-accent: #ffbb00;
+  min-height: 100vh;
+  background: #05070e;
+  color: #fff;
+  font-family: "Barlow", sans-serif;
+}
+
+.shell {
+  width: min(100%, 1180px);
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 0 18px 48px;
+  background: linear-gradient(180deg, #070a45 0, #05070e 110px, #05070e 100%);
+}
+
+.header {
+  height: 64px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand {
+  width: 38px;
+  height: 39px;
+  display: block;
+}
+
+.brand img { width: 100%; height: 100%; object-fit: contain; }
+
+.headerActions { display: flex; align-items: center; gap: 9px; }
+
+.iconButton {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: var(--photo-accent);
+  cursor: pointer;
+}
+
+.iconButton svg { width: 26px; height: 26px; stroke-width: 2.4; }
+
+.avatar {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.2);
+  border-radius: 50%;
+  background: #d7d8dc;
+}
+
+.avatar img { object-fit: cover; object-position: top center; }
+
+.featured {
+  position: sticky;
+  top: -14svh;
+  z-index: 1;
+  scroll-margin-top: 8px;
+}
+
+.featuredMedia {
+  position: relative;
+  height: 60svh;
+  min-height: 360px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 8px;
+  background: #11131c;
+}
+
+.featuredMedia::before {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  border: .75px solid #3c4049;
+  border-radius: inherit;
+  content: "";
+  pointer-events: none;
+}
+
+.heroImage {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transform: scale(1.04);
+  transition: opacity 900ms ease, transform 3800ms ease;
+}
+
+.heroImageActive {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.featuredFallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 28px;
+  background: radial-gradient(circle at 50% 18%, #4d4d5c 0, #292a32 42%, #08090d 100%);
+  text-align: center;
+}
+
+.featuredFallback strong { font-size: 18px; text-transform: uppercase; }
+.featuredFallback span { max-width: 280px; color: rgba(255,255,255,.58); font-size: 13px; }
+.featuredMediaEmpty .scrollShade { display: none; }
+
+.scrollShade {
+  position: absolute;
+  z-index: 5;
+  inset: -2px;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(0,0,0,0) 0%,
+      rgba(0,0,0,.24) 24%,
+      rgba(0,0,0,.76) 52%,
+      rgba(0,0,0,.96) 72%,
+      rgba(0,0,0,1) 100%
+    );
+  transition: opacity 120ms linear;
+}
+
+.sourceBadge {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 2;
+  padding: 7px 10px;
+  border: 1px solid rgba(255,255,255,.22);
+  border-radius: 999px;
+  background: rgba(5,7,14,.72);
+  color: #fff;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .08em;
+}
+
+.featuredInfo {
+  position: absolute;
+  z-index: 2;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  padding-right: 48px;
+}
+
+.featuredAvatar { width: 28px; height: 28px; border-radius: 50%; background: #f3f4f6; }
+.featuredInfo span:last-child { min-width: 0; display: flex; flex-direction: column; }
+.featuredInfo strong { overflow: hidden; font-size: 15px; line-height: 1.05; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
+.featuredInfo small { margin-top: 3px; overflow: hidden; color: var(--photo-accent); font-family: "JetBrains Mono", monospace; font-size: 9px; line-height: 1.25; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
+
+.slideshowPlayButton {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  z-index: 6;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255,255,255,.22);
+  border-radius: 50%;
+  background: rgba(5,7,14,.72);
+  color: var(--photo-accent);
+  cursor: pointer;
+}
+
+.slideshowPlayButton svg {
+  width: 17px;
+  height: 17px;
+  margin-left: 2px;
+}
+
+.slideshowPlayButton:focus-visible {
+  outline: 2px solid var(--photo-accent);
+  outline-offset: 3px;
+}
+
+.gridStack {
+  position: relative;
+  z-index: 3;
+  margin-top: 0;
+  padding-top: 12px;
+  transform: translate3d(0, calc(var(--gallery-progress, 0) * -30svh), 0);
+  transition: transform 80ms linear;
+  will-change: transform;
+}
+
+.library {
+  position: relative;
+  transform: translateZ(0);
+}
+
+.sectionHeading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 4px 8px;
+}
+
+.sectionHeading h1 { margin: 0; font-family: "Barlow", sans-serif; font-size: 22px; font-weight: 800; line-height: 1; }
+.sectionHeading span { color: var(--photo-accent); font-family: "JetBrains Mono", monospace; font-size: 10px; font-weight: 700; }
+
+.filterPills {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 4px 2px 14px;
+  scrollbar-width: none;
+}
+
+.filterPills::-webkit-scrollbar { display: none; }
+
+.filterPill,
+.filterPillActive {
+  height: 33px;
+  flex: none;
+  padding: 0 13px;
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 999px;
+  background: rgba(18,23,39,.82);
+  color: rgba(255,255,255,.64);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  cursor: pointer;
+}
+
+.filterPillActive {
+  border-color: rgba(255,187,0,.72);
+  background: var(--photo-accent);
+  color: #05070e;
+}
+
+.filterPill:disabled,
+.filterPillActive:disabled {
+  border-color: rgba(255,255,255,.08);
+  background: rgba(18,23,39,.34);
+  color: rgba(255,255,255,.24);
+  cursor: not-allowed;
+}
+
+.bentoViewport {
+  max-height: min(36svh, 520px);
+  overflow: hidden;
+  overscroll-behavior: auto;
+  scrollbar-width: none;
+  touch-action: pan-x pan-y;
+  -webkit-overflow-scrolling: touch;
+}
+
+.bentoViewportUnlocked {
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.bentoViewport::-webkit-scrollbar { display: none; width: 0; height: 0; background: transparent; }
+.bentoViewport::-webkit-scrollbar-track { background: transparent; }
+.bentoViewport::-webkit-scrollbar-thumb { background: transparent; }
+.bentoViewport::-webkit-scrollbar-button { display: none; width: 0; height: 0; background: transparent; }
+.bentoViewport::-webkit-scrollbar-corner { background: transparent; }
+
+.bentoGrid {
+  width: max(100%, 620px);
+  display: grid;
+  grid-auto-flow: dense;
+  grid-template-columns: repeat(4, minmax(145px, 1fr));
+  gap: 0;
+}
+
+.photoTile {
+  position: relative;
+  min-height: 168px;
+  display: block;
+  overflow: hidden;
+  border: 0;
+  background: #101624;
+  color: #fff;
+  cursor: pointer;
+}
+
+.photoTileLarge { grid-row: span 2; min-height: 336px; }
+.photoTileWide { grid-column: span 2; min-height: 192px; }
+
+.photoTile img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  transition: transform 420ms ease, filter 420ms ease;
+}
+
+.photoTile:focus-visible { outline: 2px solid var(--photo-accent); outline-offset: -2px; }
+.photoTile:hover img { transform: scale(1.035); filter: saturate(1.08); }
+
+.tileShade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0,0,0,.82), transparent 58%);
+  pointer-events: none;
+}
+
+.tileMeta {
+  position: absolute;
+  left: 9px;
+  right: 9px;
+  bottom: 9px;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  text-align: left;
+}
+
+.tileMeta strong { overflow: hidden; font-size: 11px; line-height: 1.05; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
+.tileMeta small { margin-top: 5px; overflow: hidden; color: rgba(255,255,255,.62); font-family: "JetBrains Mono", monospace; font-size: 7px; line-height: 1.2; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
+
+.photoTilePlaceholder {
+  min-height: 168px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 5px;
+  padding: 12px;
+  background:
+    linear-gradient(to top, rgba(0,0,0,.72), transparent 62%),
+    linear-gradient(135deg, rgba(255,255,255,.04), rgba(28,51,116,.38));
+  color: #fff;
+}
+
+.photoTilePlaceholder strong {
+  font-size: 11px;
+  line-height: 1.05;
+  text-transform: uppercase;
+}
+
+.photoTilePlaceholder span {
+  color: rgba(255,255,255,.58);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 7px;
+  line-height: 1.25;
+  text-transform: uppercase;
+}
+
+.emptyState {
+  min-height: 280px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 30px;
+  background: #0b0e18;
+  text-align: center;
+}
+
+.emptyState strong { font-size: 18px; text-transform: uppercase; }
+.emptyState span { max-width: 310px; color: rgba(255,255,255,.58); font-size: 13px; }
+
+.searchOverlay { position: fixed; z-index: 50; inset: 0; display: grid; align-items: start; justify-items: center; padding: 76px 18px 18px; }
+.searchBackdrop { position: absolute; inset: 0; border: 0; background: rgba(0,0,0,.78); backdrop-filter: blur(5px); }
+.searchPanel { position: relative; width: min(100%, 520px); padding: 16px; border: 1px solid #252c42; border-radius: 8px; background: #0b0e18; }
+.searchTitle { display: flex; align-items: center; justify-content: space-between; font-size: 16px; }
+.searchTitle button { width: 25px; height: 28px; display: grid; place-items: center; border: 0; background: transparent; color: #fff; cursor: pointer; }
+.searchTitle button svg { width: 19px; }
+.searchForm { height: 48px; display: flex; align-items: center; gap: 10px; margin-top: 13px; padding: 0 13px; border: 1px solid #30374c; background: #111522; }
+.searchForm svg { width: 19px; flex: none; color: var(--photo-accent); }
+.searchForm input { min-width: 0; flex: 1; border: 0; outline: 0; background: transparent; color: #fff; font-size: 15px; }
+.searchForm input::placeholder { color: rgba(255,255,255,.42); }
+.searchResults { display: flex; max-height: 310px; flex-direction: column; overflow-y: auto; }
+.searchResults > a { display: grid; grid-template-columns: 34px minmax(0,1fr); align-items: center; gap: 10px; padding: 10px 4px; border-bottom: 1px solid rgba(255,255,255,.08); color: #fff; text-decoration: none; }
+.resultAvatar { position: relative; width: 34px; height: 34px; display: grid; place-items: center; overflow: hidden; border-radius: 50%; background: #171c2b; color: var(--photo-accent); font-weight: 800; }
+.resultAvatar img { object-fit: cover; }
+.searchResults > a > span:last-child { min-width: 0; display: flex; flex-direction: column; }
+.searchResults strong { overflow: hidden; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+.searchResults small { margin-top: 2px; color: rgba(255,255,255,.46); font-family: "JetBrains Mono", monospace; font-size: 8px; text-transform: uppercase; }
+.searchMessage { padding: 22px 4px 8px; color: rgba(255,255,255,.52); font-family: "JetBrains Mono", monospace; font-size: 10px; text-align: center; }
+
+@media (min-width: 720px) {
+  .shell { padding-inline: 28px; background: linear-gradient(180deg, #070a45 0, #05070e 140px, #05070e 100%); }
+  .header { height: 78px; }
+  .featuredMedia {
+    height: 60svh;
+    min-height: 430px;
+  }
+  .sourceBadge { top: 20px; left: 20px; }
+  .featuredInfo { left: 22px; right: 22px; bottom: 18px; }
+  .gridStack { margin-top: 0; padding-top: 16px; }
+  .sectionHeading h1 { font-size: 28px; }
+  .sectionHeading span { font-size: 11px; }
+  .bentoViewport { max-height: min(58svh, 760px); }
+  .bentoGrid { width: max(100%, 980px); grid-template-columns: repeat(4, minmax(220px, 1fr)); }
+  .photoTile { min-height: 210px; }
+  .photoTileLarge { grid-column: span 2; grid-row: span 2; min-height: 420px; }
+  .photoTileWide { grid-column: span 2; min-height: 210px; }
+  .photoTilePlaceholder { min-height: 210px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .heroImage,
+  .photoTile img,
+  .scrollShade {
+    transition: none;
+  }
+}

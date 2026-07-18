@@ -15,12 +15,6 @@ const LEVEL_LABEL: Record<string, string> = {
   former: "Former pro",
 };
 
-const PUBLIC_LOCKER_PHOTO_PROVENANCE = new Set([
-  "athlete_uploaded",
-  "founder_archive",
-  "cal_archive",
-]);
-
 type LockerPhotoRow = {
   id: string;
   url: string | null;
@@ -28,19 +22,20 @@ type LockerPhotoRow = {
   credits: string | null;
   source_url?: string | null;
   provenance?: string | null;
+  license_status?: string | null;
+  public_locker_approved?: boolean | null;
 };
 
 function canRenderLockerPhoto(photo: LockerPhotoRow): boolean {
   if (!photo.url) return false;
-  if (photo.provenance === "fan_uploaded") return false;
-  if (photo.provenance && PUBLIC_LOCKER_PHOTO_PROVENANCE.has(photo.provenance)) return true;
-  return Boolean(photo.credits && photo.source_url);
+  return photo.public_locker_approved === true && photo.license_status === "approved";
 }
 
 function photoLicenseLabel(photo: LockerPhotoRow): string {
   if (photo.provenance === "athlete_uploaded") return "ATHLETE UPLOAD";
   if (photo.provenance === "cal_archive") return "TEAM ARCHIVE";
   if (photo.provenance === "founder_archive") return "BLTZ CLEARED";
+  if (photo.provenance === "scraped_candidate") return "RIGHTS CLEARED";
   return photo.source_url ? "SOURCE VERIFIED" : "LICENSED";
 }
 
@@ -235,7 +230,7 @@ export default async function PlayerLocker({ params }: { params: Promise<{ slug:
   // Gameday photos come from `media` rows tagged photo.
   const { data: photoRows } = await supabase
     .from("media")
-    .select("id, url, title, credits, source_url, provenance, width, height")
+    .select("id, url, title, credits, source_url, provenance, license_status, public_locker_approved, width, height")
     .eq("player_id", player.id)
     .eq("kind", "photo")
     .order("display_order", { ascending: true })
