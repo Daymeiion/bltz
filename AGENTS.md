@@ -292,7 +292,7 @@ Preferred direction:
 - Deep navy and black surfaces
 - Gold accent `#ffbb00`
 - Strong blue secondary accents
-- Oswald or Barlow Condensed for display headings
+- Barlow sime-Condensed for display headings
 - Roboto Condensed or the current body font
 - JetBrains Mono for metadata where appropriate
 - Strong hierarchy
