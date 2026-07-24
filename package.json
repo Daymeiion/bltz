@@ -71,6 +71,7 @@
     "sharp": "^0.34.4",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.3.1",
+    "three": "^0.185.1",
     "vaul": "^1.1.2",
     "zod": "^4.1.8"
   },
@@ -80,6 +81,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/three": "^0.185.1",
     "@types/xlsx": "^0.0.35",
     "@vitest/ui": "^4.1.5",
     "autoprefixer": "^10.4.20",

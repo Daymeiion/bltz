@@ -12,6 +12,7 @@ export function ClientShell({ children }: Readonly<{ children: React.ReactNode }
   // user is anywhere under /onboarding or /player.
   const pathname = usePathname();
   const hideNavbar =
+    pathname === "/" ||
     (pathname?.startsWith("/onboarding") ?? false) ||
     (pathname?.startsWith("/player") ?? false);
 

@@ -98,6 +98,8 @@ export type MediaContentContext =
   | "lifestyle"
   | "interview"
   | "off_field";
+export type WaitlistPlayingLevel = "hs" | "cfb" | "pro" | "former";
+export type WaitlistStatus = "new" | "contacted" | "invited" | "claimed" | "archived";
 
 export interface Media {
   id: string;
@@ -135,6 +137,21 @@ export interface PlayerTeammate {
   teammate_player_id: string;
   games_played_together: number | null;
   last_played_together: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LandingWaitlistLead {
+  id: string;
+  email: string;
+  full_name: string | null;
+  sport: string | null;
+  school: string | null;
+  playing_level: WaitlistPlayingLevel | null;
+  current_content_gap: string | null;
+  newsletter_opt_in: boolean;
+  source: string;
+  status: WaitlistStatus;
   created_at: string;
   updated_at: string;
 }
@@ -198,6 +215,15 @@ export interface Database {
         Row: Media;
         Insert: Omit<Media, "id" | "created_at"> & { id?: string };
         Update: Partial<Omit<Media, "id" | "created_at">>;
+      };
+      landing_waitlist: {
+        Row: LandingWaitlistLead;
+        Insert: Omit<LandingWaitlistLead, "id" | "created_at" | "updated_at" | "status" | "source"> & {
+          id?: string;
+          source?: string;
+          status?: WaitlistStatus;
+        };
+        Update: Partial<Omit<LandingWaitlistLead, "id" | "created_at" | "updated_at">>;
       };
     };
   };
