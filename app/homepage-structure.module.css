@@ -2,7 +2,11 @@
   min-height: 100vh;
   overflow-x: clip;
   color: hsl(var(--bltz-white));
-  background: hsl(var(--bltz-black));
+  background:
+    radial-gradient(circle at 18% 29%, rgba(5, 20, 83, 0.48), transparent 24%),
+    radial-gradient(circle at 74% 54%, rgba(8, 35, 126, 0.44), transparent 28%),
+    radial-gradient(circle at 26% 82%, rgba(5, 24, 88, 0.4), transparent 25%),
+    linear-gradient(180deg, #020305 0%, #050817 24%, #02040a 46%, #070b1c 68%, #020305 100%);
   font-family: "Barlow", var(--font-rc), sans-serif;
 }
 
@@ -187,9 +191,7 @@
   align-items: flex-end;
   justify-content: center;
   padding: 120px clamp(20px, 6vw, 96px) 7vh;
-  background:
-    radial-gradient(circle at 72% 38%, rgba(3, 17, 107, 0.82), transparent 48%),
-    linear-gradient(112deg, #020305 0%, #040617 52%, #03085a 100%);
+  background: radial-gradient(circle at 92% 7%, rgba(5, 22, 118, 0.8) 0%, rgba(3, 14, 76, 0.48) 16%, transparent 35%);
 }
 
 .hero::after {
@@ -198,7 +200,7 @@
   inset: 0;
   content: "";
   pointer-events: none;
-  background: linear-gradient(180deg, transparent 28%, rgba(0, 0, 0, 0.62) 55%, rgba(0, 0, 0, 0.94) 75%, #000 100%);
+  background: linear-gradient(180deg, transparent 28%, rgba(0, 0, 0, 0.62) 55%, rgba(0, 0, 0, 0.9) 72%, rgba(2, 3, 8, 0.46) 88%, transparent 100%);
 }
 
 .heroPortrait {
@@ -236,7 +238,7 @@
 .heroContent {
   position: absolute;
   z-index: 2;
-  top: 469px;
+  top: 435px;
   left: 50%;
   width: min(860px, 100%);
   max-width: none;
@@ -271,7 +273,7 @@
 .hero h1 {
   max-width: none;
   margin: 0 0 8px;
-  color: hsl(var(--bltz-gold));
+  color: hsl(var(--bltz-white));
   font-family: "Barlow Condensed", "Barlow", var(--font-rc), sans-serif;
   font-size: clamp(46px, 5vw, 72px);
   font-weight: 900;
@@ -282,11 +284,19 @@
 .hero p {
   max-width: 760px;
   margin: 0 auto;
-  color: #f5f5f5;
+  color: hsl(var(--bltz-gold));
   font-family: "JetBrains Mono", monospace;
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 21px;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 26px;
+}
+
+.storyHeadline p,
+.lockerRevealTitle p,
+.sectionCopy p,
+.waitlistCopy p {
+  font-family: "JetBrains Mono", monospace;
+  font-weight: 700;
 }
 
 .heroConversion {
@@ -295,7 +305,7 @@
   align-items: center;
   justify-content: center;
   gap: 14px;
-  margin-top: 28px;
+  margin-top: 34px;
 }
 
 .heroForm {
@@ -319,6 +329,7 @@
   color: #15171b;
   background: #e9e9ea;
   outline: none;
+  text-align: center;
 }
 
 .heroForm input:focus {
@@ -453,18 +464,18 @@
 .magnetJourney {
   --journey-progress: 0;
   --collect-progress: 0;
+  --story-headline-opacity: 0;
+  --locker-progress: 0;
+  --locker-title-progress: 0;
   position: relative;
-  background:
-    radial-gradient(circle at 68% 22%, rgba(8, 28, 99, 0.42), transparent 25%),
-    radial-gradient(circle at 50% 70%, rgba(10, 33, 126, 0.46), transparent 30%),
-    linear-gradient(145deg, #020306 0%, #070b18 46%, #020306 100%);
-  border-bottom: 1px solid hsl(var(--border) / 0.65);
+  height: 240svh;
+  background: transparent;
 }
 
 .magnetPhase {
   position: relative;
   z-index: 2;
-  height: 180svh;
+  height: 100%;
 }
 
 .magnetSticky {
@@ -482,7 +493,7 @@
   pointer-events: none;
   background:
     radial-gradient(circle at 50% 34%, rgba(8, 28, 99, 0.28), transparent 42%),
-    linear-gradient(180deg, transparent 70%, rgba(0, 0, 0, 0.72) 100%);
+    linear-gradient(180deg, transparent 56%, rgba(0, 0, 0, 0.64) 76%, rgba(2, 3, 8, 0.34) 90%, transparent 100%);
 }
 
 .magnetStage {
@@ -490,6 +501,37 @@
   z-index: 2;
   inset: 0;
   perspective: 1200px;
+}
+
+.storyHeadline {
+  position: absolute;
+  z-index: 3;
+  top: calc(43% + 50px);
+  left: 50%;
+  width: min(820px, calc(100vw - 64px));
+  opacity: var(--story-headline-opacity);
+  pointer-events: none;
+  text-align: center;
+  transform:
+    translate(-50%, calc(-50% + ((1 - var(--story-headline-opacity)) * 12px)));
+  will-change: opacity, transform;
+}
+
+.storyHeadline h2 {
+  margin: 0;
+  color: #f7f8fb;
+  font-family: "Barlow Condensed", "Barlow", var(--font-rc), sans-serif;
+  font-size: clamp(44px, 5.4vw, 68px);
+  font-weight: 800;
+  line-height: 1.04;
+}
+
+.storyHeadline p {
+  max-width: 660px;
+  margin: 20px auto 0;
+  color: hsl(var(--bltz-gold));
+  font-size: 18px;
+  line-height: 1.55;
 }
 
 .cardFlight {
@@ -549,14 +591,6 @@
   overflow: visible;
   padding: 8px;
   color: #f8f8f8;
-  animation: cardAmbientFloat 5.8s ease-in-out infinite alternate;
-}
-
-.cardFlight2 .storyCard,
-.cardFlight4 .storyCard {
-  animation-delay: -2.2s;
-  animation-duration: 6.7s;
-  animation-direction: alternate-reverse;
 }
 
 .cardFooter {
@@ -702,19 +736,8 @@
   --icon-edge: #3b4659;
 }
 
-@keyframes cardAmbientFloat {
-  from {
-    transform: translate3d(0, -4px, 0) rotate(-2.2deg);
-  }
-
-  to {
-    transform: translate3d(0, 5px, 0) rotate(2.2deg);
-  }
-}
-
 @keyframes cardMagnetFlight {
-  0%,
-  8% {
+  0% {
     opacity: 1;
     transform:
       translate(calc(-50% + var(--card-x)), calc(-50% + var(--card-y)))
@@ -724,20 +747,27 @@
 
   72% {
     opacity: 0.96;
-    transform: translate(-50%, 3vh) rotate(0) scale(0.22);
+    transform: translate(-50%, 14vh) rotate(0) scale(0.22);
   }
 
   100% {
     opacity: 0;
-    transform: translate(-50%, 3vh) rotate(0) scale(0.02);
+    transform: translate(-50%, 14vh) rotate(0) scale(0.02);
   }
 }
 
 .lockerRevealSection {
-  position: relative;
+  position: absolute;
   z-index: 3;
-  margin-top: -138svh;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(24px, 4vh, 42px);
   overflow: clip;
+  padding: 76px 32px 12px;
+  pointer-events: none;
 }
 
 .lockerRevealTitle {
@@ -745,6 +775,9 @@
   z-index: 3;
   width: min(900px, calc(100vw - 40px));
   margin: 0 auto;
+  opacity: var(--locker-title-progress);
+  text-align: center;
+  transform: translateY(calc((1 - var(--locker-title-progress)) * 28px));
 }
 
 .lockerRevealTitle .sectionMarker {
@@ -762,17 +795,77 @@
 .lockerRevealTitle p {
   max-width: 660px;
   margin: 20px auto 0;
-  color: hsl(var(--muted-foreground));
-  font-size: 17px;
+  color: hsl(var(--bltz-gold));
+  font-size: 18px;
   line-height: 1.55;
 }
 
-.lockerScrollContainer {
-  margin-top: 0;
+.lockerScrollCard {
+  width: min(1024px, calc(100vw - 80px));
+  height: min(58svh, 620px);
+  flex: none;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  padding: 14px;
+  background: #080a10;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 30px;
+  box-shadow: 0 32px 90px rgba(0, 0, 0, 0.62);
+  transform:
+    perspective(1000px)
+    translateY(calc(
+      ((1 - var(--locker-progress)) * var(--locker-entry-offset, 48vh)) - 10px +
+      (var(--locker-progress) * 10px)
+    ))
+    rotateX(calc((1 - var(--locker-progress)) * 20deg))
+    scale(calc(0.82 + (var(--locker-progress) * 0.18)));
+  transform-origin: center bottom;
+  transform-style: preserve-3d;
+  will-change: transform;
 }
 
-.lockerScrollCard {
+.lockerScrollCard::after {
+  position: absolute;
+  z-index: 8;
+  inset: -2px;
+  content: "";
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    rgba(6, 14, 42, 0) 0%,
+    rgba(6, 14, 42, 0.12) 28%,
+    rgba(4, 9, 25, 0.74) 72%,
+    rgba(2, 4, 11, 0.98) 100%
+  );
+  border-radius: inherit;
+  opacity: calc(1 - (var(--locker-progress) * 0.82));
+  transform: translateY(calc(var(--locker-progress) * 88%));
+  will-change: opacity, transform;
+}
+
+.realLockerPreview {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
   overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+  background:
+    radial-gradient(circle at 50% 24%, rgba(41, 82, 255, 0.3), transparent 44%),
+    #0a1023;
+}
+
+.realLockerShell,
+.realLockerViewport {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.realLockerShell {
+  max-width: 575px;
 }
 
 .lockerDevice {
@@ -1055,15 +1148,26 @@
   display: grid;
   align-items: center;
   padding: 96px clamp(20px, 7vw, 112px);
-  background: linear-gradient(145deg, hsl(var(--bltz-black)) 0%, #101216 58%, #090a0c 100%);
-  border-bottom: 1px solid hsl(var(--border) / 0.65);
+  background: transparent;
+}
+
+.contentSection[id="media"] {
+  align-items: start;
+  padding-top: 8px;
+}
+
+.contentSection[id="media"] .sectionInner {
+  row-gap: 24px;
 }
 
 .contentSection:nth-of-type(odd) {
-  background: linear-gradient(215deg, #080a0d 0%, hsl(var(--bltz-navy)) 52%, #101114 100%);
+  background: transparent;
 }
 
 .sectionInner {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 16px;
@@ -1087,9 +1191,15 @@
 .waitlistCopy p {
   max-width: 560px;
   margin: 22px 0 0;
-  color: hsl(var(--muted-foreground));
-  font-size: 17px;
+  color: hsl(var(--bltz-gold));
+  font-size: 18px;
   line-height: 1.6;
+}
+
+.sectionCopy {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .sectionStage {
@@ -1097,8 +1207,94 @@
   width: min(980px, 100%);
   min-height: 44svh;
   margin-bottom: 24px;
-  border-block: 1px solid hsl(var(--border) / 0.68);
-  background: linear-gradient(135deg, hsl(var(--card) / 0.45), transparent 68%);
+  border: 0;
+  background: transparent;
+}
+
+.integrationStage {
+  order: -1;
+  width: 100vw;
+  min-height: 0;
+  display: grid;
+  align-items: center;
+  margin-bottom: 0;
+  overflow: hidden;
+  border: 0;
+  background: transparent;
+}
+
+.integrationRail {
+  width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: none;
+  cursor: grab;
+  outline: none;
+  touch-action: pan-x;
+}
+
+.integrationRail:active {
+  cursor: grabbing;
+}
+
+.integrationRail:focus-visible {
+  box-shadow: inset 0 0 0 2px hsl(var(--bltz-gold));
+}
+
+.integrationRail::-webkit-scrollbar {
+  display: none;
+}
+
+.integrationTrack {
+  width: max-content;
+  display: flex;
+}
+
+.integrationGroup {
+  display: flex;
+  gap: clamp(12px, 1.5vw, 22px);
+  padding: 8px 0 8px clamp(20px, 5vw, 76px);
+}
+
+.integrationItem {
+  width: clamp(142px, 15vw, 196px);
+  flex: 0 0 auto;
+  display: grid;
+  justify-items: center;
+}
+
+.integrationLogo {
+  width: 100%;
+  aspect-ratio: 1.2;
+  display: grid;
+  place-items: center;
+  overflow: visible;
+  color: #f7f8fb;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.integrationLogo img {
+  width: clamp(64px, 7vw, 92px);
+  height: clamp(64px, 7vw, 92px);
+  object-fit: contain;
+  filter: drop-shadow(0 14px 14px rgba(0, 0, 0, 0.46));
+  transform: none;
+}
+
+.integrationLogo3d img {
+  filter:
+    drop-shadow(0 2px 0 rgba(255, 255, 255, 0.16))
+    drop-shadow(0 16px 13px rgba(0, 0, 0, 0.58));
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .integrationRail {
+    scroll-behavior: auto;
+  }
 }
 
 .sectionCopy p {
@@ -1107,8 +1303,7 @@
 
 .waitlistSection {
   padding: 110px clamp(20px, 7vw, 112px);
-  background: linear-gradient(135deg, #090a0c 0%, hsl(var(--bltz-navy)) 55%, #111216 100%);
-  border-bottom: 1px solid hsl(var(--border) / 0.7);
+  background: transparent;
 }
 
 .waitlistFrame {
@@ -1220,14 +1415,152 @@
   justify-content: space-between;
   padding: 32px clamp(20px, 7vw, 112px);
   color: hsl(var(--muted-foreground));
-  background: hsl(var(--bltz-black));
+  background: transparent;
   font-family: "JetBrains Mono", monospace;
   font-size: 10px;
 }
 
-@media (max-width: 760px) {
+@media (min-width: 1025px) {
+  .hero {
+    background: radial-gradient(circle at 92% 7%, rgba(5, 22, 118, 0.8) 0%, rgba(3, 14, 76, 0.48) 20%, transparent 46%);
+  }
+}
+
+@media (min-width: 761px) and (max-width: 1024px) {
   .header {
-    inset-inline: 16px;
+    inset-inline: 24px;
+    height: 84px;
+    padding-inline: 0;
+  }
+
+  .brandMark {
+    width: 50px;
+    height: 52px;
+  }
+
+  .audienceNav a,
+  .headerActions a {
+    min-height: 32px;
+    padding-inline: 12px;
+    font-size: 13px;
+  }
+
+  .hero {
+    padding-inline: clamp(40px, 6vw, 64px);
+  }
+
+  .heroContent {
+    width: calc(100% - clamp(80px, 12vw, 128px));
+  }
+
+  .hero h1 {
+    font-size: 52px;
+  }
+
+  .hero p {
+    max-width: 650px;
+    font-size: 16px;
+    line-height: 23px;
+  }
+
+  .cardFlight {
+    width: 112px;
+  }
+
+  .appIconTile {
+    width: 80px;
+  }
+
+  .appIconSymbol svg {
+    width: 31px;
+    height: 31px;
+  }
+
+  .cardFooter {
+    margin-top: 14px;
+  }
+
+  .cardFooter strong {
+    font-size: 14px;
+  }
+
+  .storyHeadline {
+    width: calc(100vw - 80px);
+  }
+
+  .storyHeadline h2,
+  .lockerRevealTitle h2 {
+    font-size: 54px;
+  }
+
+  .storyHeadline p,
+  .lockerRevealTitle p {
+    max-width: 600px;
+    font-size: 16px;
+  }
+
+  .sectionCopy p,
+  .waitlistCopy p {
+    font-size: 16px;
+  }
+
+  .lockerRevealSection {
+    padding-inline: 48px;
+  }
+
+  .contentSection {
+    padding: 88px 48px;
+  }
+
+  .sectionInner {
+    grid-template-columns: calc(100vw - 96px);
+  }
+
+  .sectionCopy h2,
+  .waitlistCopy h2 {
+    font-size: 54px;
+  }
+
+  .sectionStage {
+    min-height: 36svh;
+  }
+
+  .integrationStage {
+    min-height: 0;
+  }
+
+  .integrationGroup {
+    gap: 40px;
+    padding-left: 40px;
+  }
+
+  .integrationItem {
+    width: 100px;
+  }
+
+  .integrationLogo img {
+    width: 58px;
+    height: 58px;
+  }
+
+  .waitlistSection {
+    padding: 88px 48px;
+  }
+}
+
+@media (min-width: 761px) and (max-width: 900px) {
+  .headerActions .secondaryAction {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .page {
+    --mobile-gutter: 18px;
+  }
+
+  .header {
+    inset-inline: var(--mobile-gutter);
     height: 74px;
     padding-inline: 0;
   }
@@ -1247,44 +1580,47 @@
   }
 
   .hero {
-    min-height: max(100svh, 790px);
-    padding: 92px 22px 8vh;
+    min-height: 100svh;
+    padding: 82px var(--mobile-gutter) var(--mobile-gutter);
   }
 
   .hero::after {
-    background: linear-gradient(180deg, transparent 23%, rgba(0, 0, 0, 0.58) 47%, rgba(0, 0, 0, 0.94) 69%, #000 89%);
+    background: linear-gradient(180deg, transparent 23%, rgba(0, 0, 0, 0.58) 47%, rgba(0, 0, 0, 0.9) 67%, rgba(2, 3, 8, 0.48) 86%, transparent 100%);
   }
 
   .heroPortrait {
-    inset: 123px -22vw auto;
-    height: 300px;
+    inset: 112px -18vw auto;
+    height: 286px;
   }
 
   .heroEyebrow {
-    top: 96px;
+    top: 88px;
   }
 
   .heroContent {
     position: absolute;
-    top: 413px;
+    top: 395px;
     left: 50%;
-    width: min(430px, calc(100% - 44px));
+    width: min(430px, calc(100% - var(--mobile-gutter) - var(--mobile-gutter)));
     align-self: auto;
     transform: translateX(-50%);
   }
 
   .hero h1 {
-    font-size: clamp(42px, 13vw, 58px);
+    font-size: 44px;
+    line-height: 0.96;
   }
 
   .hero p {
     max-width: 350px;
+    font-size: 15px;
+    line-height: 22px;
   }
 
   .heroConversion {
     display: grid;
-    gap: 16px;
-    margin-top: 22px;
+    gap: 12px;
+    margin-top: 24px;
   }
 
   .heroForm {
@@ -1294,7 +1630,7 @@
 
   .heroForm input,
   .heroForm button {
-    min-height: 48px;
+    min-height: 44px;
   }
 
   .athleteStack {
@@ -1302,61 +1638,91 @@
     padding-right: 0;
   }
 
+  .athleteAvatar {
+    width: 34px;
+    height: 34px;
+  }
+
+  .scrollCue {
+    bottom: 8px;
+    gap: 6px;
+  }
+
+  .scrollCue::after {
+    height: 30px;
+  }
+
   .magnetPhase {
-    height: 190svh;
+    height: 100%;
   }
 
   .magnetSticky {
-    min-height: 720px;
+    min-height: 100svh;
   }
 
   .magnetSticky::before {
-    background:
-      linear-gradient(180deg, rgba(0, 0, 0, 0.82) 0%, transparent 44%, rgba(0, 0, 0, 0.68) 100%);
+    background: linear-gradient(180deg, transparent 0%, transparent 42%, rgba(0, 0, 0, 0.6) 70%, rgba(2, 3, 8, 0.32) 88%, transparent 100%);
   }
 
   .cardFlight {
     top: 24%;
     left: 50%;
-    width: clamp(112px, 29vw, 132px);
+    width: 98px;
   }
 
   .cardFlight1 {
-    --card-x: -32vw;
-    --card-y: -11vh;
+    --card-x: -29vw;
+    --card-y: -9.5vh;
   }
 
   .cardFlight2 {
     --card-x: 0vw;
-    --card-y: -12vh;
+    --card-y: -10vh;
   }
 
   .cardFlight3 {
-    --card-x: 32vw;
-    --card-y: -11vh;
+    --card-x: 29vw;
+    --card-y: -9.5vh;
   }
 
   .cardFlight4 {
-    --card-x: -17vw;
-    --card-y: 11vh;
+    --card-x: -15vw;
+    --card-y: 9.5vh;
   }
 
   .cardFlight5 {
-    --card-x: 17vw;
-    --card-y: 12vh;
+    --card-x: 15vw;
+    --card-y: 10vh;
+  }
+
+  .storyHeadline {
+    top: 58%;
+    width: calc(100vw - var(--mobile-gutter) - var(--mobile-gutter));
+  }
+
+  .storyHeadline h2 {
+    font-size: 36px;
+    line-height: 1.04;
+  }
+
+  .storyHeadline p {
+    max-width: 380px;
+    margin-top: 12px;
+    font-size: 15px;
+    line-height: 1.5;
   }
 
   .storyCard {
-    min-height: 144px;
-    padding: 6px;
+    min-height: 124px;
+    padding: 4px;
   }
 
   .appIconTile {
-    width: 88px;
+    width: 72px;
   }
 
   .appIconFace {
-    border-radius: 18px;
+    border-radius: 15px;
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.24),
       inset 8px 0 18px rgba(255, 255, 255, 0.025),
@@ -1366,54 +1732,92 @@
   }
 
   .appIconSymbol svg {
-    width: 35px;
-    height: 35px;
+    width: 28px;
+    height: 28px;
   }
 
   .cardFooter strong {
-    font-size: 13px;
+    font-size: 11px;
   }
 
   .cardFooter {
-    margin-top: 16px;
+    margin-top: 10px;
   }
 
   .lockerRevealTitle {
-    width: calc(100vw - 36px);
+    width: calc(100vw - var(--mobile-gutter) - var(--mobile-gutter));
   }
 
   .lockerRevealTitle h2 {
-    font-size: clamp(38px, 11vw, 52px);
+    font-size: 36px;
   }
 
   .lockerRevealTitle p {
     max-width: 380px;
-    margin-top: 14px;
-    font-size: 14px;
-    line-height: 1.45;
+    margin-top: 12px;
+    font-size: 15px;
+    line-height: 1.5;
   }
 
   .lockerScrollContainer {
-    height: 64rem !important;
-    padding-inline: 12px !important;
+    padding-inline: 12px;
   }
 
   .lockerRevealSection {
-    margin-top: -138svh;
+    gap: 22px;
+    padding: 68px 12px 8px;
   }
 
   .lockerScrollCard {
-    height: 36rem !important;
-    max-width: none !important;
+    width: min(292px, 76vw);
+    height: min(58svh, 560px);
     display: flex;
     align-items: center;
     justify-content: center;
     overflow: visible;
-    padding: 0 !important;
-    background: transparent !important;
-    border: 0 !important;
-    border-radius: 0 !important;
-    box-shadow: none !important;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .realLockerPreview {
+    overflow: visible;
+    background: transparent;
+  }
+
+  .realLockerShell {
+    position: relative;
+    width: min(292px, 76vw);
+    height: 100%;
+    padding: 8px;
+    overflow: hidden;
+    background: linear-gradient(145deg, #343741, #090a0f 62%);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 43px;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.35),
+      0 36px 70px rgba(0, 0, 0, 0.66);
+  }
+
+  .realLockerShell::before {
+    content: "";
+    position: absolute;
+    z-index: 4;
+    top: 14px;
+    left: 50%;
+    width: 92px;
+    height: 23px;
+    border-radius: 999px;
+    background: #000;
+    transform: translateX(-50%);
+    pointer-events: none;
+  }
+
+  .realLockerViewport {
+    height: 100%;
+    border-radius: 34px;
   }
 
   .lockerDevice {
@@ -1486,13 +1890,57 @@
     grid-template-columns: 1fr;
   }
 
+  .sectionInner {
+    grid-template-columns: calc(100vw - var(--mobile-gutter) - var(--mobile-gutter));
+  }
+
   .contentSection {
     min-height: auto;
-    padding-block: 80px;
+    padding: 64px var(--mobile-gutter);
   }
 
   .sectionStage {
-    min-height: 38svh;
+    min-height: 30svh;
+  }
+
+  .sectionCopy h2,
+  .waitlistCopy h2 {
+    font-size: 36px;
+  }
+
+  .sectionCopy p,
+  .waitlistCopy p {
+    margin-top: 16px;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+
+  .integrationStage {
+    min-height: 0;
+    margin-bottom: 0;
+  }
+
+  .integrationGroup {
+    gap: var(--mobile-gutter);
+    padding: 6px 0 6px var(--mobile-gutter);
+  }
+
+  .integrationItem {
+    width: 96px;
+  }
+
+  .integrationLogo img {
+    width: 50px;
+    height: 50px;
+  }
+
+  .waitlistSection {
+    padding: 72px var(--mobile-gutter);
+  }
+
+  .form {
+    gap: 14px;
+    padding: 18px;
   }
 
   .waitlistCopy {
@@ -1500,7 +1948,144 @@
   }
 
   .footer {
+    min-height: 120px;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-end;
     gap: 24px;
+    padding: 28px var(--mobile-gutter);
+  }
+}
+
+@media (max-width: 760px) and (max-height: 740px) {
+  .header {
+    height: 62px;
+  }
+
+  .brandMark {
+    width: 38px;
+    height: 40px;
+  }
+
+  .headerClaim {
+    min-width: 88px;
+    min-height: 32px;
+  }
+
+  .hero {
+    min-height: 100svh;
+    padding: 64px var(--mobile-gutter) 12px;
+  }
+
+  .heroEyebrow {
+    top: 68px;
+    min-width: 164px;
+    font-size: 10px;
+  }
+
+  .heroPortrait {
+    inset: 84px -14vw auto;
+    height: 220px;
+  }
+
+  .heroContent {
+    top: 298px;
+    width: calc(100% - var(--mobile-gutter) - var(--mobile-gutter));
+  }
+
+  .hero h1 {
+    margin-bottom: 6px;
+    font-size: 38px;
+  }
+
+  .hero p {
+    max-width: 330px;
+    font-size: 13px;
+    line-height: 18px;
+  }
+
+  .storyHeadline p,
+  .lockerRevealTitle p,
+  .sectionCopy p,
+  .waitlistCopy p {
+    font-size: 13px;
+  }
+
+  .heroConversion {
+    gap: 8px;
+    margin-top: 18px;
+  }
+
+  .heroForm {
+    gap: 7px;
+  }
+
+  .heroForm input,
+  .heroForm button {
+    min-height: 40px;
+  }
+
+  .heroForm button {
+    font-size: 13px;
+  }
+
+  .athleteAvatar {
+    width: 30px;
+    height: 30px;
+  }
+
+  .scrollCue {
+    bottom: 6px;
+    font-size: 8px;
+  }
+
+  .scrollCue::after {
+    height: 24px;
+  }
+
+  .magnetSticky {
+    min-height: 100svh;
+  }
+}
+
+@media (max-width: 350px) and (max-height: 650px) {
+  .lockerScrollCard {
+    --locker-entry-offset: 55vh;
+  }
+
+  .heroPortrait {
+    top: 78px;
+    height: 196px;
+  }
+
+  .heroContent {
+    top: 264px;
+  }
+
+  .hero h1 {
+    font-size: 34px;
+  }
+
+  .hero p {
+    font-size: 12px;
+    line-height: 17px;
+  }
+
+  .storyHeadline p,
+  .lockerRevealTitle p,
+  .sectionCopy p,
+  .waitlistCopy p {
+    font-size: 12px;
+  }
+
+  .heroForm input,
+  .heroForm button {
+    min-height: 36px;
+  }
+
+  .athleteAvatar {
+    width: 26px;
+    height: 26px;
   }
 }
 

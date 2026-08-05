@@ -88,8 +88,17 @@ const disp = "'Barlow','Oswald',Impact,sans-serif";
 const body = "'Barlow','Inter',system-ui,sans-serif";
 
 type LockerViewerMode = "public" | "athlete";
+type LockerPresentation = "page" | "embedded";
 
-export default function LockerView({ data, viewerMode = "public" }: { data: LockerData; viewerMode?: LockerViewerMode }) {
+export default function LockerView({
+  data,
+  viewerMode = "public",
+  presentation = "page",
+}: {
+  data: LockerData;
+  viewerMode?: LockerViewerMode;
+  presentation?: LockerPresentation;
+}) {
   const [tab, setTab] = useState<"bio" | "media" | "stats">("bio");
   const [bioSort, setBioSort] = useState("all");
   const [mediaSort, setMediaSort] = useState("articles");
@@ -125,6 +134,7 @@ export default function LockerView({ data, viewerMode = "public" }: { data: Lock
   const shortVideoRefs = useRef<(HTMLVideoElement | null)[]>([]);
   const [heroPlaying, setHeroPlaying] = useState(true);
   const showAthleteNav = viewerMode === "athlete";
+  const isEmbedded = presentation === "embedded";
 
   const openSiteSearch = () => {
     setSearchOpen(true);
@@ -196,7 +206,7 @@ export default function LockerView({ data, viewerMode = "public" }: { data: Lock
   // when nothing is playing or Spotify isn't connected.
   const [nowPlaying, setNowPlaying] = useState<NowPlayingTrack | null>(null);
   useEffect(() => {
-    if (!data.slug) return;
+    if (isEmbedded || !data.slug) return;
     let alive = true;
     const load = async () => {
       try {
@@ -215,7 +225,7 @@ export default function LockerView({ data, viewerMode = "public" }: { data: Lock
     load();
     const id = setInterval(load, 30_000); // refresh every 30s
     return () => { alive = false; clearInterval(id); };
-  }, [data.slug]);
+  }, [data.slug, isEmbedded]);
 
   // SAMPLE — no stats pipeline yet; these are the counter targets.
   const targets = { tackles: 58, int: 6, pbu: 14, ff: 2, dtd: 2, solo: 41, earned: 14208, views: 842000 };
@@ -527,9 +537,9 @@ export default function LockerView({ data, viewerMode = "public" }: { data: Lock
   const reelBase: React.CSSProperties = { position: "absolute", inset: 0, backgroundSize: "cover", backgroundPosition: "center", animation: "heroFade 18s ease-in-out infinite" };
 
   return (
-    <div style={{ minHeight: "100dvh", background: "#05070F", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: body }}>
+    <div style={{ minHeight: isEmbedded ? "100%" : "100dvh", height: isEmbedded ? "100%" : undefined, width: "100%", overflow: isEmbedded ? "hidden" : undefined, background: "#05070F", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: body }}>
       <style>{styleSheet}</style>
-      <div className="bltz-frame">
+      <div className={`bltz-frame${isEmbedded ? " bltz-frame-embedded" : ""}`}>
 
         {/* STICKY MINI HEADER */}
         <div style={{
@@ -1473,6 +1483,7 @@ const styleSheet = `
 .bltz-frame{position:relative;width:390px;height:844px;background:#0B0E1A;overflow:hidden;box-shadow:0 30px 90px rgba(0,0,0,.6);border-radius:0}
 @media (min-width:640px){.bltz-frame{border-radius:28px}}
 @media (max-width:640px){.bltz-frame{width:100vw;height:100dvh;box-shadow:none}}
+.bltz-frame.bltz-frame-embedded{width:100%;max-width:575px;height:100%;border-radius:18px;box-shadow:none}
 .scr::-webkit-scrollbar,.hs::-webkit-scrollbar{display:none;width:0;height:0}
 .scr,.hs{scrollbar-width:none;-ms-overflow-style:none}
 .media-inner-scroll{scrollbar-width:none;-ms-overflow-style:none}
