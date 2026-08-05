@@ -1291,9 +1291,127 @@
   transform: none;
 }
 
+.revenueAccordion {
+  width: min(980px, 100%);
+  height: min(62svh, 620px);
+  display: flex;
+  gap: 8px;
+}
+
+.revenuePanel {
+  position: relative;
+  min-width: 62px;
+  flex: 0.7 1 0;
+  overflow: hidden;
+  padding: 0;
+  color: #fff;
+  background: #080b15;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 6px;
+  cursor: pointer;
+  isolation: isolate;
+  text-align: left;
+  transition:
+    flex-grow 640ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 240ms ease;
+}
+
+.revenuePanelActive {
+  flex-grow: 5;
+  border-color: rgba(255, 187, 0, 0.55);
+}
+
+.revenuePanel:focus-visible {
+  outline: 2px solid hsl(var(--bltz-gold));
+  outline-offset: 3px;
+}
+
+.revenuePanelImage {
+  z-index: -2;
+  object-fit: cover;
+  transform: scale(1.035);
+  transition: transform 700ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.revenuePanelActive .revenuePanelImage {
+  transform: scale(1);
+}
+
+.revenuePanelShade {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(2, 3, 7, 0.02) 22%,
+    rgba(2, 3, 7, 0.28) 54%,
+    rgba(2, 3, 7, 0.92) 100%
+  );
+}
+
+.revenuePanelCopy {
+  position: absolute;
+  right: 20px;
+  bottom: 22px;
+  left: 20px;
+  display: grid;
+  gap: 8px;
+}
+
+.revenuePanelCopy strong {
+  font-family: "Barlow Condensed", "Barlow", var(--font-rc), sans-serif;
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.revenuePanelCopy span {
+  max-width: 440px;
+  color: #f2c54b;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.5;
+  opacity: 0;
+  transform: translateY(8px);
+  transition:
+    opacity 220ms ease,
+    transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.revenuePanelActive .revenuePanelCopy span {
+  opacity: 1;
+  transform: translateY(0);
+  transition-delay: 170ms;
+}
+
+.revenuePanel:not(.revenuePanelActive) .revenuePanelCopy {
+  right: auto;
+  bottom: 20px;
+  left: 50%;
+  width: max-content;
+  transform: translateX(-50%);
+}
+
+.revenuePanel:not(.revenuePanelActive) .revenuePanelCopy strong {
+  font-size: 17px;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+}
+
+.revenuePanel:not(.revenuePanelActive) .revenuePanelCopy span {
+  display: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .integrationRail {
     scroll-behavior: auto;
+  }
+
+  .revenuePanel,
+  .revenuePanelImage,
+  .revenuePanelCopy span {
+    transition: none;
   }
 }
 
@@ -1423,6 +1541,18 @@
 @media (min-width: 1025px) {
   .hero {
     background: radial-gradient(circle at 92% 7%, rgba(5, 22, 118, 0.8) 0%, rgba(3, 14, 76, 0.48) 20%, transparent 46%);
+  }
+
+  .contentSection[id="ownership"] .sectionInner {
+    grid-template-columns: minmax(250px, 0.72fr) minmax(0, 1.55fr);
+    gap: clamp(44px, 6vw, 96px);
+    align-items: center;
+    justify-items: stretch;
+    text-align: left;
+  }
+
+  .contentSection[id="ownership"] .sectionCopy p {
+    margin-inline: 0;
   }
 }
 
@@ -1932,6 +2062,51 @@
   .integrationLogo img {
     width: 50px;
     height: 50px;
+  }
+
+  .contentSection[id="ownership"] {
+    padding-top: 72px;
+  }
+
+  .revenueAccordion {
+    height: 560px;
+    flex-direction: column;
+    gap: 7px;
+  }
+
+  .revenuePanel {
+    width: 100%;
+    min-width: 0;
+    min-height: 58px;
+    flex: 0.7 1 0;
+    transition: flex-grow 560ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .revenuePanelActive {
+    flex-grow: 4.6;
+  }
+
+  .revenuePanelCopy,
+  .revenuePanel:not(.revenuePanelActive) .revenuePanelCopy {
+    right: 16px;
+    bottom: 14px;
+    left: 16px;
+    width: auto;
+    transform: none;
+  }
+
+  .revenuePanel:not(.revenuePanelActive) .revenuePanelCopy strong {
+    font-size: 16px;
+    writing-mode: horizontal-tb;
+    transform: none;
+  }
+
+  .revenuePanelCopy strong {
+    font-size: 22px;
+  }
+
+  .revenuePanelCopy span {
+    font-size: 11px;
   }
 
   .waitlistSection {

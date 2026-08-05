@@ -119,6 +119,39 @@ const integrationChannels = [
   },
 ] as const;
 
+const revenuePartners = [
+  {
+    title: "Athletes",
+    body: "Turn the attention around your career into durable, trackable value.",
+    image: "/images/landing/cal-generated.png",
+    position: "center 28%",
+  },
+  {
+    title: "Teammates",
+    body: "Recognize the players who helped create the moment and share its reach.",
+    image: "/images/media-9.jpg",
+    position: "56% center",
+  },
+  {
+    title: "Universities",
+    body: "Create new value from the history, audience, and media of the program.",
+    image: "/images/media-6.jpg",
+    position: "68% center",
+  },
+  {
+    title: "Organizations",
+    body: "Connect approved content, measurable performance, and participation in one system.",
+    image: "/images/media-5.jpg",
+    position: "54% center",
+  },
+  {
+    title: "Rights holders",
+    body: "Preserve ownership context while creating transparent paths to participation.",
+    image: "/images/Headshot.png",
+    position: "center 18%",
+  },
+] as const;
+
 const landingLockerData: LockerData = {
   slug: "landing-preview",
   fullName: "Jordan Carter",
@@ -173,6 +206,44 @@ const landingLockerData: LockerData = {
     { id: "landing-photo-3", url: "/images/media-5.jpg", title: "Built for the Moment", credits: "Athlete Upload", sourceUrl: null, provenance: "athlete_uploaded", licenseLabel: "ATHLETE UPLOAD" },
   ],
 };
+
+function RevenueAccordion() {
+  const [activePanel, setActivePanel] = useState(0);
+
+  return (
+    <div className={styles.revenueAccordion} aria-label="Revenue sharing participants">
+      {revenuePartners.map((partner, index) => {
+        const isActive = index === activePanel;
+
+        return (
+          <button
+            className={`${styles.revenuePanel} ${isActive ? styles.revenuePanelActive : ""}`}
+            key={partner.title}
+            type="button"
+            aria-expanded={isActive}
+            onClick={() => setActivePanel(index)}
+            onFocus={() => setActivePanel(index)}
+            onMouseEnter={() => setActivePanel(index)}
+          >
+            <Image
+              className={styles.revenuePanelImage}
+              src={partner.image}
+              alt=""
+              fill
+              sizes="(min-width: 1025px) 38vw, (min-width: 761px) 70vw, 92vw"
+              style={{ objectPosition: partner.position }}
+            />
+            <span className={styles.revenuePanelShade} aria-hidden="true" />
+            <span className={styles.revenuePanelCopy}>
+              <strong>{partner.title}</strong>
+              <span>{partner.body}</span>
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 function LockerProductScreen() {
   return (
@@ -600,6 +671,8 @@ export function LandingJourney() {
             </div>
             {section.id === "media" ? (
               <IntegrationRail />
+            ) : section.id === "ownership" ? (
+              <RevenueAccordion />
             ) : (
               <div className={styles.sectionStage} aria-hidden="true" />
             )}
