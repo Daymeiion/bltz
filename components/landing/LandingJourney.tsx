@@ -21,14 +21,14 @@ import styles from "@/app/homepage-structure.module.css";
 
 const sections = [
   {
+    id: "ownership",
+    title: "Share the value your story creates.",
+    body: "Build transparent revenue with teammates, universities, organizations, and rights holders.",
+  },
+  {
     id: "media",
     title: "Connect every channel.",
     body: "Grow your legacy by connecting your music playlist and social media content to your player locker.",
-  },
-  {
-    id: "ownership",
-    title: "Share the value your story creates.",
-    body: "Build transparent revenue participation with teammates, universities, organizations, and rights holders.",
   },
 ] as const;
 
@@ -152,6 +152,44 @@ const revenuePartners = [
   },
 ] as const;
 
+const athleteAudiences = [
+  {
+    title: "Current Athletes",
+    image: "/images/landing/cal-generated.png",
+    position: "center 24%",
+  },
+  {
+    title: "Former Athletes",
+    image: "/images/media-9.jpg",
+    position: "55% center",
+  },
+  {
+    title: "High School",
+    image: "/images/Media-4.avif",
+    position: "center",
+  },
+  {
+    title: "College",
+    image: "/images/media-6.jpg",
+    position: "68% center",
+  },
+  {
+    title: "PRO",
+    image: "/images/media-5.jpg",
+    position: "52% center",
+  },
+  {
+    title: "Hometown Heroes",
+    image: "/images/Headshot.png",
+    position: "center 16%",
+  },
+  {
+    title: "Coaches",
+    image: "/images/media-9.jpg",
+    position: "28% center",
+  },
+] as const;
+
 const landingLockerData: LockerData = {
   slug: "landing-preview",
   fullName: "Jordan Carter",
@@ -242,6 +280,29 @@ function RevenueAccordion() {
         );
       })}
     </div>
+  );
+}
+
+function AthleteAudienceGrid() {
+  return (
+    <section className={styles.audienceSection} aria-label="Athletes BLTZ is built for">
+      <div className={styles.audienceBento}>
+        {athleteAudiences.map((audience) => (
+          <article className={styles.audienceCard} key={audience.title}>
+            <Image
+              className={styles.audienceCardImage}
+              src={audience.image}
+              alt=""
+              fill
+              sizes="(min-width: 1025px) 42vw, (min-width: 761px) 50vw, 92vw"
+              style={{ objectPosition: audience.position }}
+            />
+            <span className={styles.audienceCardShade} aria-hidden="true" />
+            <h3>{audience.title}</h3>
+          </article>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -575,7 +636,6 @@ export function LandingJourney() {
 
       <section className={styles.hero} id="hero" data-section="hero">
         <HeroDepthPortrait />
-        <div className={styles.heroEyebrow}>digital locker room</div>
         <div className={styles.heroContent}>
           <h1>Build your legacy now</h1>
           <p>
@@ -662,11 +722,21 @@ export function LandingJourney() {
         </div>
       </section>
 
+      <AthleteAudienceGrid />
+
       {sections.map((section) => (
         <section className={styles.contentSection} id={section.id} key={section.id}>
           <div className={styles.sectionInner}>
             <div className={styles.sectionCopy}>
-              <h2>{section.title}</h2>
+              <h2>
+                {section.id === "ownership" ? (
+                  <>
+                    Share the Value
+                    <br />
+                    Your Story Creates
+                  </>
+                ) : section.title}
+              </h2>
               <p>{section.body}</p>
             </div>
             {section.id === "media" ? (
