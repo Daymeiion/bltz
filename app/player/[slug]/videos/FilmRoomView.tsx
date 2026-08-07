@@ -3,22 +3,12 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Maximize, Pause, Play, Search, Volume2, VolumeX, X } from "lucide-react";
+import { ArrowUpRight, Maximize, Pause, Play, Search, Volume2, VolumeX, X } from "lucide-react";
 import type { SearchResult } from "@/components/ui/search-modal";
+import type { PublicVideo } from "@/lib/player/public-video";
 import styles from "./film-room.module.css";
 
-export type FilmRoomVideo = {
-  id: string;
-  title: string;
-  description: string | null;
-  thumbnailUrl: string | null;
-  playbackUrl: string | null;
-  durationSeconds: number | null;
-  level: "cfb" | "pro" | "off-field";
-  season: string | null;
-  attribution: string;
-  sourceLabel: string;
-};
+export type FilmRoomVideo = PublicVideo;
 
 export type FilmRoomData = {
   slug: string;
@@ -161,6 +151,7 @@ export default function FilmRoomView({ data }: { data: FilmRoomData }) {
   const [scrollOverlayOpacity, setScrollOverlayOpacity] = useState(0);
 
   const selected = data.videos.find((video) => video.id === selectedId) ?? data.videos[0] ?? null;
+  const hsVideos = useMemo(() => data.videos.filter((video) => video.level === "hs"), [data.videos]);
   const cfbVideos = useMemo(() => data.videos.filter((video) => video.level === "cfb"), [data.videos]);
   const proVideos = useMemo(() => data.videos.filter((video) => video.level === "pro"), [data.videos]);
   const offFieldVideos = useMemo(() => data.videos.filter((video) => video.level === "off-field"), [data.videos]);
@@ -396,6 +387,13 @@ export default function FilmRoomView({ data }: { data: FilmRoomData }) {
                       <strong>{selected.title}</strong>
                       <small>{selected.attribution} · {formatDuration(selected.durationSeconds)}</small>
                     </span>
+                    <Link
+                      className={styles.detailLink}
+                      href={`/player/${data.slug}/videos/${selected.id}`}
+                      aria-label={`Open details for ${selected.title}`}
+                    >
+                      <ArrowUpRight aria-hidden="true" />
+                    </Link>
                   </div>
                 </div>
               </div>
@@ -410,6 +408,16 @@ export default function FilmRoomView({ data }: { data: FilmRoomData }) {
         </section>
 
         <div ref={libraryStackRef} className={styles.libraryStack}>
+          {hsVideos.length > 0 && (
+            <section className={styles.library} aria-labelledby="hs-heading">
+              <div className={styles.sectionHeading}>
+                <h1 id="hs-heading">HIGH SCHOOL</h1>
+                <span>{yearRange(hsVideos)}</span>
+              </div>
+              <FilmShelf videos={hsVideos} selectedId={selected?.id ?? null} onSelect={chooseVideo} />
+            </section>
+          )}
+
           {cfbVideos.length > 0 && (
             <section className={styles.library} aria-labelledby="cfb-heading">
               <div className={styles.sectionHeading}>

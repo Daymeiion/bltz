@@ -233,9 +233,19 @@ export default function LockerView({
   useEffect(() => {
     const el = screenRef.current;
     if (!el) return;
-    const onScroll = () => setScrolled(el.scrollTop > 320);
+    const onScroll = () => {
+      const scrollTop = window.innerWidth >= 900 ? window.scrollY : el.scrollTop;
+      setScrolled(scrollTop > 320);
+    };
     el.addEventListener("scroll", onScroll, { passive: true });
-    return () => el.removeEventListener("scroll", onScroll);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    onScroll();
+    return () => {
+      el.removeEventListener("scroll", onScroll);
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+    };
   }, []);
 
   useEffect(() => {
@@ -537,12 +547,12 @@ export default function LockerView({
   const reelBase: React.CSSProperties = { position: "absolute", inset: 0, backgroundSize: "cover", backgroundPosition: "center", animation: "heroFade 18s ease-in-out infinite" };
 
   return (
-    <div style={{ minHeight: isEmbedded ? "100%" : "100dvh", height: isEmbedded ? "100%" : undefined, width: "100%", overflow: isEmbedded ? "hidden" : undefined, background: "#05070F", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: body }}>
+    <div className="locker-page-shell" style={{ minHeight: isEmbedded ? "100%" : "100dvh", height: isEmbedded ? "100%" : undefined, width: "100%", overflow: isEmbedded ? "hidden" : undefined, background: "#05070F", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: body }}>
       <style>{styleSheet}</style>
       <div className={`bltz-frame${isEmbedded ? " bltz-frame-embedded" : ""}`}>
 
         {/* STICKY MINI HEADER */}
-        <div style={{
+        <div className="locker-sticky-header" style={{
           position: "absolute", top: 0, left: 0, right: 0, zIndex: 30,
           display: "flex", alignItems: "center", justifyContent: "space-between",
           padding: "12px 18px", background: "rgba(11,14,26,.9)", backdropFilter: "blur(20px)",
@@ -581,7 +591,7 @@ export default function LockerView({
         <div className="scr" ref={screenRef} style={{ position: "absolute", inset: 0, overflowY: "auto", overflowX: "hidden" }}>
 
           {/* ===== TOP BAR (outside the hero container) ===== */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 18px 12px", position: "relative", zIndex: 6 }}>
+          <div className="locker-topbar" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 18px 12px", position: "relative", zIndex: 6 }}>
             <img src={data.logoSrc} alt="BLTZ" style={{ height: 30, width: "auto", display: "block" }} />
             <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
               <button type="button" aria-label="Search BLTZ" onClick={openSiteSearch} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", display: "flex", alignItems: "center" }}>
@@ -594,8 +604,8 @@ export default function LockerView({
           </div>
 
           {/* ===== HERO ===== */}
-          <section style={{ padding: "0 18px" }}>
-            <div style={{ position: "relative", height: 600, borderRadius: 24, overflow: "hidden", background: "linear-gradient(180deg,#161B30 0%,#10142404 55%,#0B0E1A 100%)" }}>
+          <section className="locker-hero-section" style={{ padding: "0 18px" }}>
+            <div className="locker-hero-card" style={{ position: "relative", height: 600, borderRadius: 24, overflow: "hidden", background: "linear-gradient(180deg,#161B30 0%,#10142404 55%,#0B0E1A 100%)" }}>
               {/* video / photo-reel background */}
               <div style={{ position: "absolute", inset: 0 }}>
                 {data.heroVideoUrl ? (
@@ -682,7 +692,7 @@ export default function LockerView({
 
               {/* cutout headshot — bottom edge masked so it dissolves into the
                   container background, letting the name/hometown read clearly */}
-              <img src={data.headshotUrl} alt={data.fullName} style={{ position: "absolute", bottom: 96, left: "50%", transform: "translateX(-50%)", height: 268, width: 210, objectFit: "cover", objectPosition: "top", zIndex: 3, filter: "drop-shadow(0 24px 40px rgba(0,0,0,.55))", WebkitMaskImage: "linear-gradient(to bottom,#000 74%,transparent 100%)", maskImage: "linear-gradient(to bottom,#000 74%,transparent 100%)" }} />
+              <img className="locker-hero-headshot" src={data.headshotUrl} alt={data.fullName} style={{ position: "absolute", bottom: 96, left: "50%", transform: "translateX(-50%)", height: 268, width: 210, objectFit: "cover", objectPosition: "top", zIndex: 3, filter: "drop-shadow(0 24px 40px rgba(0,0,0,.55))", WebkitMaskImage: "linear-gradient(to bottom,#000 74%,transparent 100%)", maskImage: "linear-gradient(to bottom,#000 74%,transparent 100%)" }} />
 
               {/* small solid-navy fade pinned to the bottom of the headshot — same
                   color as the container background, so name + hometown pop */}
@@ -692,7 +702,7 @@ export default function LockerView({
               <div style={{ position: "absolute", inset: 0, zIndex: 4, background: "linear-gradient(to bottom, transparent 0%, transparent 58%, rgba(5,7,15,.5) 78%, rgba(11,14,26,.95) 100%)", pointerEvents: "none" }} />
 
               {/* name block */}
-              <div style={{ position: "absolute", bottom: 18, left: 0, right: 0, zIndex: 5, textAlign: "center", padding: "0 16px" }}>
+              <div className="locker-hero-copy" style={{ position: "absolute", bottom: 18, left: 0, right: 0, zIndex: 5, textAlign: "center", padding: "0 16px" }}>
                 <h1 style={{ fontFamily: disp, fontWeight: 900, fontSize: heroNameSize, lineHeight: ".9", letterSpacing: "-.005em", textTransform: "uppercase", color: "#fff", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{data.fullName}</h1>
                 <div style={{ fontFamily: mono, fontSize: 14, letterSpacing: ".14em", color: "#F5A623", margin: "8px 0 14px", fontWeight: 700 }}>{data.hometown}</div>
                 <div style={{ display: "flex", gap: 8, alignItems: "center", width: "100%" }}>
@@ -721,7 +731,7 @@ export default function LockerView({
           )}
 
           {/* ===== FILM ROOM ===== */}
-          <section style={{ padding: "18px 18px 4px" }}>
+          <section className="locker-film-section" style={{ padding: "18px 18px 4px" }}>
             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 10 }}>
               <h2 style={{ fontFamily: disp, fontWeight: 700, fontSize: 24, lineHeight: 1, letterSpacing: "-.02em", textTransform: "uppercase", color: "#fff", margin: 0 }}>FILM ROOM</h2>
               <a
@@ -759,7 +769,7 @@ export default function LockerView({
           </section>
 
           {/* ===== PHOTOS ===== */}
-          <section style={{ padding: "20px 18px 8px" }}>
+          <section className="locker-photos-section" style={{ padding: "20px 18px 8px" }}>
             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 14 }}>
               <h1 style={{ fontFamily: disp, fontWeight: 700, fontSize: 24, lineHeight: 1, letterSpacing: "-.02em", textTransform: "uppercase", color: "#fff", margin: 0 }}>PHOTOS</h1>
               <a
@@ -806,7 +816,7 @@ export default function LockerView({
           </section>
 
           {/* ===== TABS ===== */}
-          <section style={{ padding: "24px 0 0" }}>
+          <section className="locker-tabs-section" style={{ padding: "24px 0 0" }}>
             <Tabs
               value={tab}
               onValueChange={(value) => selectTab(value as "bio" | "media" | "stats")}
@@ -1484,6 +1494,26 @@ const styleSheet = `
 @media (min-width:640px){.bltz-frame{border-radius:28px}}
 @media (max-width:640px){.bltz-frame{width:100vw;height:100dvh;box-shadow:none}}
 .bltz-frame.bltz-frame-embedded{width:100%;max-width:575px;height:100%;border-radius:18px;box-shadow:none}
+@media (min-width:900px){
+  .locker-page-shell{align-items:flex-start!important;background:linear-gradient(180deg,#05070F,#080B17 46%,#05070F)!important}
+  .bltz-frame:not(.bltz-frame-embedded){width:min(1440px,100%);height:auto;min-height:100vh;overflow:visible;border-radius:0;box-shadow:none}
+  .bltz-frame:not(.bltz-frame-embedded)>.scr{position:relative!important;inset:auto!important;min-height:100vh;overflow:visible!important}
+  .bltz-frame:not(.bltz-frame-embedded) .locker-sticky-header{position:fixed!important;right:0!important;left:0!important;padding:12px max(32px,calc((100vw - 1280px)/2))!important}
+  .bltz-frame:not(.bltz-frame-embedded) .locker-topbar{width:min(1240px,calc(100% - 64px));margin:0 auto;padding:22px 0 16px!important}
+  .bltz-frame:not(.bltz-frame-embedded) .scr>section{width:min(1180px,calc(100% - 64px));margin-right:auto;margin-left:auto}
+  .bltz-frame:not(.bltz-frame-embedded) .locker-hero-section{padding:0!important}
+  .bltz-frame:not(.bltz-frame-embedded) .locker-hero-card{height:min(76vh,760px)!important;min-height:640px;border-radius:8px!important}
+  .bltz-frame:not(.bltz-frame-embedded) .locker-hero-headshot{bottom:104px!important;width:390px!important;height:500px!important}
+  .bltz-frame:not(.bltz-frame-embedded) .locker-hero-copy{right:50%!important;left:50%!important;width:min(560px,calc(100% - 48px));padding:0!important;transform:translateX(-50%)}
+  .bltz-frame:not(.bltz-frame-embedded) .locker-hero-copy h1{font-size:clamp(52px,5vw,76px)!important}
+  .bltz-frame:not(.bltz-frame-embedded) .locker-film-section,
+  .bltz-frame:not(.bltz-frame-embedded) .locker-photos-section{padding-right:0!important;padding-left:0!important}
+  .bltz-frame:not(.bltz-frame-embedded) .locker-film-section .hs{gap:16px!important;padding-bottom:16px!important}
+  .bltz-frame:not(.bltz-frame-embedded) .locker-film-section .hs>div{width:320px!important}
+  .bltz-frame:not(.bltz-frame-embedded) .locker-film-section .hs>div>div{height:182px!important;border-radius:8px!important}
+  .bltz-frame:not(.bltz-frame-embedded) .locker-photos-section>div:last-child{grid-auto-rows:160px!important;gap:12px!important}
+  .bltz-frame:not(.bltz-frame-embedded) .locker-tabs-section{padding-top:34px!important}
+}
 .scr::-webkit-scrollbar,.hs::-webkit-scrollbar{display:none;width:0;height:0}
 .scr,.hs{scrollbar-width:none;-ms-overflow-style:none}
 .media-inner-scroll{scrollbar-width:none;-ms-overflow-style:none}

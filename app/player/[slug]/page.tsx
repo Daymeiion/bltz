@@ -114,9 +114,11 @@ function heightDisplay(heightIn?: number | null) {
 
 export default async function PlayerLocker({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
+  const usePreviewMock =
+    useMock || (slug === "test-null-user-id" && process.env.NODE_ENV !== "production");
 
   // -------- MOCK PATH (dev only) --------
-  if (useMock) {
+  if (usePreviewMock) {
     const player = MOCK_PLAYERS.find((p: any) => p.slug === slug) ?? MOCK_PLAYERS[0];
     const meta = (player as any).meta ?? {};
     const heightIn = meta.height_in ?? 71;
