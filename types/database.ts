@@ -141,6 +141,13 @@ export interface PlayerTeammate {
   updated_at: string;
 }
 
+export interface PlayerFollow {
+  id: string;
+  user_id: string;
+  player_id: string;
+  created_at: string;
+}
+
 export interface LandingWaitlistLead {
   id: string;
   email: string;
@@ -195,6 +202,11 @@ export interface Database {
         Row: TeamInvite;
         Insert: Omit<TeamInvite, "id" | "invite_code" | "created_at" | "updated_at">;
         Update: Partial<Omit<TeamInvite, "id" | "invite_code" | "created_at" | "updated_at">>;
+      };
+      player_follows: {
+        Row: PlayerFollow;
+        Insert: Omit<PlayerFollow, "id" | "created_at"> & { id?: string };
+        Update: never;
       };
       player_awards: {
         Row: PlayerAward;

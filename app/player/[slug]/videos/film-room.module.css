@@ -1,7 +1,8 @@
 .page {
   --film-accent: #ffbb00;
+  --film-surface: #05070e;
   min-height: 100vh;
-  background: #05070e;
+  background: var(--film-surface);
   color: #fff;
   font-family: "Barlow", sans-serif;
 }
@@ -68,26 +69,32 @@
   position: relative;
   height: 60svh;
   min-height: 360px;
-  overflow: hidden;
   border: 0;
-  border-radius: 8px;
-  background: #11131c;
+  outline: 0;
+  box-shadow: none;
 }
 
-.featuredMedia::before {
-  position: absolute;
-  z-index: 1;
-  inset: 0;
-  border: .75px solid #3c4049;
-  border-radius: inherit;
-  content: "";
-  pointer-events: none;
-}
-
-.featuredMedia > video,
-.featuredMedia > img {
+.featuredViewport {
+  --player-radius: 6px;
+  position: relative;
   width: 100%;
   height: 100%;
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--player-radius);
+  outline: 0;
+  box-shadow: none;
+  background: var(--film-surface);
+  clip-path: inset(0 round var(--player-radius));
+  contain: paint;
+}
+
+.featuredViewport > video,
+.featuredViewport > img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  border-radius: inherit;
   object-fit: cover;
 }
 
@@ -103,7 +110,7 @@
   left: 14px;
   z-index: 2;
   padding: 7px 10px;
-  border: 1px solid rgba(255,255,255,.22);
+  border: 0;
   border-radius: 999px;
   background: rgba(5,7,14,.72);
   color: #fff;
@@ -125,7 +132,8 @@
 .scrollShade {
   position: absolute;
   z-index: 5;
-  inset: -2px;
+  inset: 0;
+  border-radius: inherit;
   pointer-events: none;
   background:
     linear-gradient(
@@ -133,17 +141,19 @@
       rgba(0,0,0,0) 0%,
       rgba(0,0,0,.24) 24%,
       rgba(0,0,0,.76) 52%,
-      rgba(0,0,0,.96) 72%,
-      rgba(0,0,0,1) 100%
+      rgba(1,2,5,.96) 72%,
+      var(--film-surface) 100%
     );
   transition: opacity 120ms linear;
 }
 
 .mediaShade {
   position: absolute;
-  inset: 40% 0 0;
+  z-index: 2;
+  inset: 0;
+  border-radius: inherit;
   pointer-events: none;
-  background: linear-gradient(transparent, rgba(0,0,0,.95));
+  background: linear-gradient(180deg, transparent 40%, rgba(1,2,5,.78) 72%, var(--film-surface) 100%);
   transition: opacity 420ms ease;
 }
 
@@ -216,7 +226,7 @@
 }
 
 .featuredAvatar { width: 28px; height: 28px; border-radius: 50%; background: #f3f4f6; }
-.featuredInfo span:last-child { min-width: 0; display: flex; flex-direction: column; }
+.featuredCopy { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; }
 .featuredInfo strong { overflow: hidden; font-size: 15px; line-height: 1.05; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
 .featuredInfo small { margin-top: 3px; overflow: hidden; color: var(--film-accent); font-family: "JetBrains Mono", monospace; font-size: 9px; line-height: 1.25; text-overflow: ellipsis; white-space: nowrap; }
 
@@ -225,7 +235,7 @@
   height: 32px;
   display: grid;
   place-items: center;
-  border: 1px solid rgba(255,255,255,.22);
+  border: 0;
   border-radius: 6px;
   background: rgba(5,7,14,.5);
   color: var(--film-accent);
@@ -388,8 +398,9 @@
   .shell { padding-inline: 28px; background: linear-gradient(180deg, #070a45 0, #05070e 140px, #05070e 100%); }
   .header { height: 78px; }
   .featuredMedia {
-    height: 60svh;
-    min-height: 430px;
+    height: auto;
+    min-height: 0;
+    aspect-ratio: 16 / 9;
   }
   .controls { left: 22px; right: 22px; bottom: 18px; }
   .sourceBadge { top: 20px; left: 20px; }

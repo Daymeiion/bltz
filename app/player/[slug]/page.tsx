@@ -112,6 +112,32 @@ function heightDisplay(heightIn?: number | null) {
   return `${feet}'${inches}"`;
 }
 
+type LockerGameLog = NonNullable<LockerData["gameLogs"]>[number];
+
+const MOCK_DEFENSIVE_GAME_LOG_COLUMNS: LockerGameLog["columns"] = [
+  { key: "opponent", label: "OPPONENT", width: 150, align: "left" },
+  { key: "result", label: "RESULT", width: 88 },
+  { key: "tackles", label: "TKL", width: 72 },
+  { key: "solo", label: "SOLO", width: 72 },
+  { key: "assists", label: "AST", width: 72 },
+  { key: "sacks", label: "SACK", width: 72 },
+  { key: "tfl", label: "TFL", width: 72 },
+  { key: "interceptions", label: "INT", width: 72 },
+  { key: "pass_breakups", label: "PBU", width: 72 },
+  { key: "forced_fumbles", label: "FF", width: 72 },
+  { key: "fumble_recoveries", label: "FR", width: 72 },
+  { key: "qb_hits", label: "QB HIT", width: 76 },
+];
+
+const MOCK_DEFENSIVE_GAME_ROWS: LockerGameLog["seasons"][number]["rows"] = [
+  { id: "rival", resultTone: "win", values: { opponent: "@ RIVAL", result: "W 27-20", tackles: 5, solo: 3, assists: 2, sacks: 1, tfl: 1, interceptions: 2, pass_breakups: 3, forced_fumbles: 1, fumble_recoveries: 0, qb_hits: 1 } },
+  { id: "state", resultTone: "win", values: { opponent: "STATE", result: "W 31-24", tackles: 6, solo: 4, assists: 2, sacks: 0.5, tfl: 2, interceptions: 1, pass_breakups: 2, forced_fumbles: 0, fumble_recoveries: 1, qb_hits: 2 } },
+  { id: "tech", resultTone: "loss", values: { opponent: "@ TECH", result: "L 21-28", tackles: 7, solo: 5, assists: 2, sacks: 0, tfl: 1, interceptions: 0, pass_breakups: 2, forced_fumbles: 0, fumble_recoveries: 0, qb_hits: 1 } },
+  { id: "north", resultTone: "win", values: { opponent: "NORTH", result: "W 34-17", tackles: 4, solo: 2, assists: 2, sacks: 1.5, tfl: 2, interceptions: 1, pass_breakups: 4, forced_fumbles: 1, fumble_recoveries: 1, qb_hits: 3 } },
+  { id: "south", resultTone: "win", values: { opponent: "SOUTH", result: "W 41-10", tackles: 3, solo: 3, assists: 0, sacks: 0, tfl: 0, interceptions: 2, pass_breakups: 1, forced_fumbles: 0, fumble_recoveries: 0, qb_hits: 0 } },
+  { id: "west", resultTone: "win", values: { opponent: "@ WEST", result: "W 24-14", tackles: 5, solo: 4, assists: 1, sacks: 1, tfl: 1, interceptions: 0, pass_breakups: 2, forced_fumbles: 1, fumble_recoveries: 0, qb_hits: 2 } },
+];
+
 export default async function PlayerLocker({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const usePreviewMock =
@@ -128,8 +154,10 @@ export default async function PlayerLocker({ params }: { params: Promise<{ slug:
       hometown: "LOS ANGELES, CA",
       position: (player as any).position || "CB",
       jersey: "#1",
+      jerseyNumbers: ["#1", "#7", "#21"],
       levelLabel: "Pro",
       headshotUrl: "/images/Headshot.png",
+      headshotYear: "2025",
       heroVideoUrl: (player as any).video_url ?? null,
       logoSrc: "/bltz-white-logo.svg",
       bio: (player as any).bio || "Mock biography goes here.",
@@ -138,6 +166,47 @@ export default async function PlayerLocker({ params }: { params: Promise<{ slug:
       dobDisplay: formatDob(meta.dob ?? "1985-08-07"),
       age: calcAge(meta.dob ?? "1985-08-07"),
       gamesPlayed: meta.games_played ?? 116,
+      careerStats: [
+        { key: "tackles", label: "TACKLES", value: 187 },
+        { key: "solo_tackles", label: "SOLO", value: 126 },
+        { key: "interceptions", label: "INTERCEPTIONS", value: 15 },
+        { key: "pass_breakups", label: "PASS BREAKUPS", value: 41 },
+        { key: "forced_fumbles", label: "FORCED FUMBLES", value: 6 },
+        { key: "sacks", label: "SACKS", value: 4.5 },
+        { key: "tackles_for_loss", label: "TACKLES FOR LOSS", value: 12 },
+        { key: "defensive_touchdowns", label: "DEFENSIVE TD", value: 4 },
+        { key: "starts", label: "STARTS", value: 35 },
+      ],
+      careerSeasons: Array.from({ length: 16 }, (_, index) => ({
+        year: String(2009 + index),
+        gamesPlayed: index < 4 ? [12, 13, 13, 14][index] : index >= 12 ? 17 : 16,
+        level: index < 4 ? "cfb" : "pro",
+        team: index < 4 ? "CAL" : "LAC",
+      })),
+      gameLogs: [
+        {
+          key: "cfb",
+          label: "CFB",
+          meta: "4 seasons · organization / scrape data",
+          columns: MOCK_DEFENSIVE_GAME_LOG_COLUMNS,
+          seasons: ["2024", "2023", "2022", "2021"].map((year, index) => ({
+            year,
+            summary: `${6 - Math.min(index, 2)} games · ${58 - index * 7} tackles · ${Math.max(1, 6 - index)} INT`,
+            rows: MOCK_DEFENSIVE_GAME_ROWS.slice(0, index === 0 ? 6 : 4).map((row) => ({ ...row, id: `cfb-${year}-${row.id}` })),
+          })),
+        },
+        {
+          key: "pro",
+          label: "PRO",
+          meta: "3 seasons · league / team data",
+          columns: MOCK_DEFENSIVE_GAME_LOG_COLUMNS,
+          seasons: ["2027", "2026", "2025"].map((year, index) => ({
+            year,
+            summary: `${12 - index} games · ${42 - index * 6} tackles · ${Math.max(0, 3 - index)} INT`,
+            rows: MOCK_DEFENSIVE_GAME_ROWS.slice(0, 4).map((row) => ({ ...row, id: `pro-${year}-${row.id}` })),
+          })),
+        },
+      ],
       highSchool: "CRENSHAW",
       classOf: "2025",
       school: { name: "California", abbr: "CAL", primaryColor: "#003262", logoUrl: null },
@@ -293,8 +362,10 @@ export default async function PlayerLocker({ params }: { params: Promise<{ slug:
     hometown: (player.hometown || "").toUpperCase() || "—",
     position: player.position || nflPlayer?.position || "",
     jersey,
+    jerseyNumbers: jersey ? [jersey] : [],
     levelLabel,
     headshotUrl,
+    headshotYear: null,
     heroVideoUrl: (player as any).video_url ?? null,
     logoSrc: "/bltz-white-logo.svg",
     bio: bioCopy,
@@ -303,6 +374,9 @@ export default async function PlayerLocker({ params }: { params: Promise<{ slug:
     dobDisplay: formatDob(dob),
     age,
     gamesPlayed: player.games_played ?? null,
+    careerStats: [],
+    careerSeasons: [],
+    gameLogs: [],
     highSchool: schoolName,
     classOf: nflPlayer?.draft_year ? String(nflPlayer.draft_year) : "—",
     school: cfbTeam

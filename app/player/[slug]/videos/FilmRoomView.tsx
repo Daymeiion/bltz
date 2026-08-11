@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowUpRight, Maximize, Pause, Play, Search, Volume2, VolumeX, X } from "lucide-react";
+import { ArrowUpRight, Maximize, Minimize, Pause, Play, Search, Volume2, VolumeX, X } from "lucide-react";
 import type { SearchResult } from "@/components/ui/search-modal";
 import type { PublicVideo } from "@/lib/player/public-video";
 import styles from "./film-room.module.css";
@@ -143,6 +143,7 @@ export default function FilmRoomView({ data }: { data: FilmRoomData }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const playerRef = useRef<HTMLDivElement>(null);
   const libraryStackRef = useRef<HTMLDivElement>(null);
@@ -165,6 +166,14 @@ export default function FilmRoomView({ data }: { data: FilmRoomData }) {
 
   useEffect(() => () => {
     if (controlsTimerRef.current !== null) window.clearTimeout(controlsTimerRef.current);
+  }, []);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(document.fullscreenElement === playerRef.current);
+    };
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
   }, []);
 
   useEffect(() => {
@@ -277,6 +286,15 @@ export default function FilmRoomView({ data }: { data: FilmRoomData }) {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  async function toggleFullscreen() {
+    if (document.fullscreenElement) {
+      await document.exitFullscreen().catch(() => undefined);
+    } else {
+      await playerRef.current?.requestFullscreen?.().catch(() => undefined);
+    }
+    revealControls();
+  }
+
   return (
     <main className={styles.page} style={{ "--film-accent": data.accentColor } as React.CSSProperties}>
       <div className={styles.shell}>
@@ -308,6 +326,7 @@ export default function FilmRoomView({ data }: { data: FilmRoomData }) {
                 }}
                 onFocusCapture={() => setControlsVisible(true)}
               >
+                <div className={styles.featuredViewport}>
                 {selected.playbackUrl ? (
                   <video
                     ref={videoRef}
@@ -377,13 +396,13 @@ export default function FilmRoomView({ data }: { data: FilmRoomData }) {
                       }}
                       style={{ "--progress": `${progress}%` } as React.CSSProperties}
                     />
-                    <button type="button" onClick={() => videoRef.current?.requestFullscreen()} disabled={!selected.playbackUrl} aria-label="View film fullscreen">
-                      <Maximize aria-hidden="true" />
+                    <button type="button" onClick={toggleFullscreen} disabled={!selected.playbackUrl} aria-label={isFullscreen ? "Exit fullscreen" : "View film fullscreen"}>
+                      {isFullscreen ? <Minimize aria-hidden="true" /> : <Maximize aria-hidden="true" />}
                     </button>
                   </div>
                   <div className={styles.featuredInfo}>
                     <span className={styles.featuredAvatar} aria-hidden="true" />
-                    <span>
+                    <span className={styles.featuredCopy}>
                       <strong>{selected.title}</strong>
                       <small>{selected.attribution} · {formatDuration(selected.durationSeconds)}</small>
                     </span>
@@ -395,6 +414,7 @@ export default function FilmRoomView({ data }: { data: FilmRoomData }) {
                       <ArrowUpRight aria-hidden="true" />
                     </Link>
                   </div>
+                </div>
                 </div>
               </div>
             </>

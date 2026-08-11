@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
+import { ChevronDown, ChevronUp, Mic } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { SearchResult } from "@/components/ui/search-modal";
 
@@ -21,8 +22,10 @@ export type LockerData = {
   hometown: string;
   position: string;
   jersey: string;
+  jerseyNumbers?: string[];
   levelLabel: string;
   headshotUrl: string;
+  headshotYear?: string | null;
   heroVideoUrl: string | null;
   logoSrc: string;
   bio: string;
@@ -33,6 +36,37 @@ export type LockerData = {
   dobDisplay: string;
   age?: number;
   gamesPlayed: number | null;
+  careerStats?: {
+    key: string;
+    label: string;
+    value: string | number;
+  }[];
+  careerSeasons?: {
+    year: string;
+    gamesPlayed: number;
+    level: "cfb" | "pro" | string;
+    team: string | null;
+  }[];
+  gameLogs?: {
+    key: string;
+    label: string;
+    meta: string;
+    columns: {
+      key: string;
+      label: string;
+      width?: number;
+      align?: "left" | "center" | "right";
+    }[];
+    seasons: {
+      year: string;
+      summary: string;
+      rows: {
+        id: string;
+        resultTone?: "win" | "loss" | "neutral";
+        values: Record<string, string | number | null>;
+      }[];
+    }[];
+  }[];
   highSchool: string;
   classOf: string;
   school: {
@@ -55,6 +89,14 @@ export type LockerData = {
   proTeams: { label: string; color: string; logo: string | null }[];
   awards: { year: string; label: string }[];
   videos: { id: string; title: string; thumb: string | null }[];
+  podcastAppearances?: {
+    id: string;
+    type: "podcast" | "interview";
+    source: string;
+    title: string;
+    meta: string;
+    sourceUrl?: string | null;
+  }[];
   photos: {
     id: string;
     url: string;
@@ -87,6 +129,28 @@ const mono = "'JetBrains Mono',ui-monospace,monospace";
 const disp = "'Barlow','Oswald',Impact,sans-serif";
 const body = "'Barlow','Inter',system-ui,sans-serif";
 
+const statNumberFormatter = new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 });
+
+function formatStatNumber(value: string | number) {
+  const numericValue = typeof value === "number" ? value : Number(value.replace(/,/g, ""));
+  return Number.isFinite(numericValue) ? statNumberFormatter.format(numericValue) : String(value);
+}
+
+function fittedStatSize(value: string, standardSize: number) {
+  if (value.length >= 8) return Math.max(12, standardSize - 10);
+  if (value.length >= 6) return Math.max(13, standardSize - 6);
+  return standardSize;
+}
+
+function safeExternalUrl(value: string) {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" || url.protocol === "http:" ? url.href : null;
+  } catch {
+    return null;
+  }
+}
+
 type LockerViewerMode = "public" | "athlete";
 type LockerPresentation = "page" | "embedded";
 
@@ -105,6 +169,10 @@ export default function LockerView({
   const [statsSort, setStatsSort] = useState("career");
   const [gameLogOpen, setGameLogOpen] = useState<Record<string, boolean>>({ cfb: true, pro: false });
   const [articleModalOpen, setArticleModalOpen] = useState(false);
+  const [pendingArticleRedirect, setPendingArticleRedirect] = useState<{ source: string; title: string; url: string } | null>(null);
+  const [externalRedirectCountdown, setExternalRedirectCountdown] = useState(5);
+  const [selectedSocialIndex, setSelectedSocialIndex] = useState<number | null>(null);
+  const [shortModalIndex, setShortModalIndex] = useState<number | null>(null);
   const [activeShortIndex, setActiveShortIndex] = useState(0);
   const [shortsScrolling, setShortsScrolling] = useState(false);
   const [shortsScrollProgress, setShortsScrollProgress] = useState(0);
@@ -112,6 +180,11 @@ export default function LockerView({
   const [socialScrollProgress, setSocialScrollProgress] = useState(0);
   const [awardsScrolling, setAwardsScrolling] = useState(false);
   const [awardsScrollProgress, setAwardsScrollProgress] = useState(0);
+  const [teamHistoryInView, setTeamHistoryInView] = useState(false);
+  const [teamHistoryNeedsScroll, setTeamHistoryNeedsScroll] = useState(false);
+  const [careerGamesInView, setCareerGamesInView] = useState(false);
+  const [careerGamesNeedsScroll, setCareerGamesNeedsScroll] = useState(false);
+  const [showAllCareerStats, setShowAllCareerStats] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
@@ -126,15 +199,91 @@ export default function LockerView({
   const heroVideoRef = useRef<HTMLVideoElement | null>(null);
   const shortsScrollRef = useRef<HTMLDivElement | null>(null);
   const shortsScrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const shortModalScrollRef = useRef<HTMLDivElement | null>(null);
+  const shortModalVideoRefs = useRef<(HTMLVideoElement | null)[]>([]);
+  const shortModalInitialIndexRef = useRef<number | null>(null);
   const socialScrollRef = useRef<HTMLDivElement | null>(null);
   const socialScrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const awardsScrollRef = useRef<HTMLDivElement | null>(null);
   const awardsScrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const shortRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const teamHistoryRef = useRef<HTMLDivElement | null>(null);
+  const teamHistoryViewportRef = useRef<HTMLDivElement | null>(null);
+  const teamHistoryPrimaryRef = useRef<HTMLDivElement | null>(null);
+  const careerGamesRef = useRef<HTMLDivElement | null>(null);
+  const careerGamesViewportRef = useRef<HTMLDivElement | null>(null);
+  const careerGamesPrimaryRef = useRef<HTMLDivElement | null>(null);
+  const shortRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const shortVideoRefs = useRef<(HTMLVideoElement | null)[]>([]);
   const [heroPlaying, setHeroPlaying] = useState(true);
   const showAthleteNav = viewerMode === "athlete";
   const isEmbedded = presentation === "embedded";
+
+  useEffect(() => {
+    const node = teamHistoryRef.current;
+    if (tab !== "stats" || statsSort !== "career" || !node) {
+      setTeamHistoryInView(false);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => setTeamHistoryInView(entry.isIntersecting),
+      { threshold: 0.35 },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [statsSort, tab]);
+
+  useEffect(() => {
+    const viewport = teamHistoryViewportRef.current;
+    const primary = teamHistoryPrimaryRef.current;
+    if (tab !== "stats" || statsSort !== "career" || !viewport || !primary) {
+      setTeamHistoryNeedsScroll(false);
+      return;
+    }
+
+    const measure = () => {
+      const isPhone = window.matchMedia("(max-width: 640px)").matches;
+      setTeamHistoryNeedsScroll(isPhone && primary.scrollWidth > viewport.clientWidth + 1);
+    };
+    measure();
+
+    const resizeObserver = new ResizeObserver(measure);
+    resizeObserver.observe(viewport);
+    resizeObserver.observe(primary);
+    return () => resizeObserver.disconnect();
+  }, [data.proTeams.length, data.school?.abbr, data.schools.length, statsSort, tab]);
+
+  useEffect(() => {
+    const node = careerGamesRef.current;
+    if (tab !== "stats" || statsSort !== "career" || !node) {
+      setCareerGamesInView(false);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => setCareerGamesInView(entry.isIntersecting),
+      { threshold: 0.25 },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [statsSort, tab]);
+
+  useEffect(() => {
+    const viewport = careerGamesViewportRef.current;
+    const primary = careerGamesPrimaryRef.current;
+    if (tab !== "stats" || statsSort !== "career" || !viewport || !primary) {
+      setCareerGamesNeedsScroll(false);
+      return;
+    }
+
+    const measure = () => setCareerGamesNeedsScroll(primary.scrollWidth > viewport.clientWidth + 1);
+    measure();
+
+    const resizeObserver = new ResizeObserver(measure);
+    resizeObserver.observe(viewport);
+    resizeObserver.observe(primary);
+    return () => resizeObserver.disconnect();
+  }, [data.careerSeasons?.length, statsSort, tab]);
 
   const openSiteSearch = () => {
     setSearchOpen(true);
@@ -199,6 +348,45 @@ export default function LockerView({
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [searchOpen]);
+
+  useEffect(() => {
+    if (selectedSocialIndex === null) return;
+    const previousOverflow = document.body.style.overflow;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setSelectedSocialIndex(null);
+    };
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [selectedSocialIndex]);
+
+  useEffect(() => {
+    if (!pendingArticleRedirect) return;
+    const startedAt = Date.now();
+    const previousOverflow = document.body.style.overflow;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setPendingArticleRedirect(null);
+    };
+    setExternalRedirectCountdown(5);
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", onKeyDown);
+    const interval = window.setInterval(() => {
+      const elapsedSeconds = Math.floor((Date.now() - startedAt) / 1000);
+      setExternalRedirectCountdown(Math.max(0, 5 - elapsedSeconds));
+    }, 250);
+    const timeout = window.setTimeout(() => {
+      window.location.assign(pendingArticleRedirect.url);
+    }, 5000);
+    return () => {
+      window.clearInterval(interval);
+      window.clearTimeout(timeout);
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [pendingArticleRedirect]);
 
   // ---- Spotify "now playing" (live) ----
   // Polls the athlete's currently-playing track. Stays null until we confirm a
@@ -449,10 +637,10 @@ export default function LockerView({
 
   // ---- MEDIA cards (visuals use real photos; SAMPLE article/podcast copy) ----
   const mediaArticles = [
-    { source: "THE ATHLETIC", title: "THE CONFERENCE'S BEST COVER MAN", meta: "6 MIN READ", img: poolAt(0), dek: "Film, leadership, and the week-by-week rise of a verified locker profile." },
-    { source: "ESPN", title: "DRAFT STOCK RISING", meta: "4 MIN READ", img: poolAt(3), dek: "Scouts circle the traits, production, and projection behind the latest board movement." },
-    { source: "TEAM SITE", title: "LOCKER ROOM STANDARD SETTER", meta: "3 MIN READ", img: poolAt(1), dek: "How preparation and practice habits have become part of the weekly team story." },
-    { source: "LOCAL PRESS", title: "FROM FRIDAY NIGHTS TO FEATURE FILM", meta: "5 MIN READ", img: poolAt(2), dek: "The hometown arc behind the athlete's growing media archive." },
+    { source: "THE ATHLETIC", title: "THE CONFERENCE'S BEST COVER MAN", meta: "6 MIN READ", img: poolAt(0), dek: "Film, leadership, and the week-by-week rise of a verified locker profile.", originalUrl: "https://www.nytimes.com/athletic/" },
+    { source: "ESPN", title: "DRAFT STOCK RISING", meta: "4 MIN READ", img: poolAt(3), dek: "Scouts circle the traits, production, and projection behind the latest board movement.", originalUrl: "https://www.espn.com/" },
+    { source: "TEAM SITE", title: "LOCKER ROOM STANDARD SETTER", meta: "3 MIN READ", img: poolAt(1), dek: "How preparation and practice habits have become part of the weekly team story.", originalUrl: "https://calbears.com/" },
+    { source: "LOCAL PRESS", title: "FROM FRIDAY NIGHTS TO FEATURE FILM", meta: "5 MIN READ", img: poolAt(2), dek: "The hometown arc behind the athlete's growing media archive.", originalUrl: "https://www.latimes.com/sports/" },
   ];
   const mediaShorts = [
     { source: "@ATHLETE", title: "PREGAME WALK", meta: "218K VIEWS", img: poolAt(1), videoUrl: null },
@@ -460,15 +648,66 @@ export default function LockerView({
     { source: "TEAM CAM", title: "TUNNEL READY", meta: "74K VIEWS", img: poolAt(3), videoUrl: null },
     { source: "BLTZ CUT", title: "SIDELINE ENERGY", meta: "52K VIEWS", img: poolAt(4), videoUrl: null },
   ];
-  const mediaPodcast: any[] = [];
+  const modalShortHasVideo = shortModalIndex !== null && Boolean(mediaShorts[shortModalIndex]?.videoUrl);
+  const modalShortCount = mediaShorts.length;
+
+  useEffect(() => {
+    if (shortModalIndex === null) return;
+    const previousOverflow = document.body.style.overflow;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setShortModalIndex(null);
+        return;
+      }
+      if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+      const direction = event.key === "ArrowDown" ? 1 : -1;
+      const nextIndex = Math.min(modalShortCount - 1, Math.max(0, shortModalIndex + direction));
+      const container = shortModalScrollRef.current;
+      container?.scrollTo({ top: nextIndex * container.clientHeight, behavior: "smooth" });
+      setShortModalIndex(nextIndex);
+    };
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", onKeyDown);
+    if (shortModalInitialIndexRef.current !== null) {
+      const initialIndex = shortModalInitialIndexRef.current;
+      window.requestAnimationFrame(() => {
+        const container = shortModalScrollRef.current;
+        if (container) container.scrollTop = initialIndex * container.clientHeight;
+        shortModalInitialIndexRef.current = null;
+      });
+    }
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [modalShortCount, shortModalIndex]);
+
+  useEffect(() => {
+    if (shortModalIndex === null) return;
+    shortModalVideoRefs.current.forEach((video, index) => {
+      if (!video) return;
+      if (index === shortModalIndex) void video.play().catch(() => undefined);
+      else video.pause();
+    });
+    if (modalShortHasVideo || shortModalIndex >= modalShortCount - 1) return;
+    const timeout = window.setTimeout(() => {
+      const nextIndex = shortModalIndex + 1;
+      const container = shortModalScrollRef.current;
+      container?.scrollTo({ top: nextIndex * container.clientHeight, behavior: "smooth" });
+      setShortModalIndex(nextIndex);
+    }, 6000);
+    return () => window.clearTimeout(timeout);
+  }, [modalShortCount, modalShortHasVideo, shortModalIndex]);
+  const mediaPodcast = data.podcastAppearances ?? [];
   const mediaSocial = [
-    { platform: "Instagram", handle: "@athlete", meta: "12.4K LIKES", img: poolAt(4) },
-    { platform: "X", handle: "@athlete", meta: "4.8K REPOSTS", img: poolAt(0) },
-    { platform: "Facebook", handle: "Athlete Page", meta: "8.1K REACTIONS", img: poolAt(1) },
-    { platform: "LinkedIn", handle: "Athlete", meta: "2.2K IMPRESSIONS", img: poolAt(2) },
-    { platform: "Instagram", handle: "@athlete", meta: "18.6K VIEWS", img: poolAt(3) },
-    { platform: "X", handle: "@athlete", meta: "9.3K VIEWS", img: poolAt(4) },
+    { platform: "Instagram", handle: "@athlete", meta: "12.4K LIKES", img: poolAt(4), format: "square", published: "OCT 18, 2025", caption: "Game day with the people who make every rep count." },
+    { platform: "X", handle: "@athlete", meta: "4.8K REPOSTS", img: poolAt(0), format: "portrait", published: "SEP 29, 2025", caption: "The work travels. Another week, another opportunity to raise the standard." },
+    { platform: "Facebook", handle: "Athlete Page", meta: "8.1K REACTIONS", img: poolAt(1), format: "square", published: "AUG 12, 2025", caption: "A hometown moment worth keeping in the career archive." },
+    { platform: "LinkedIn", handle: "Athlete", meta: "2.2K IMPRESSIONS", img: poolAt(2), format: "portrait", published: "JUL 24, 2025", caption: "Leadership is built in the quiet moments long before the lights turn on." },
+    { platform: "Instagram", handle: "@athlete", meta: "18.6K VIEWS", img: poolAt(3), format: "portrait", published: "JUN 08, 2025", caption: "Behind the scenes from a full day of preparation, film, and recovery." },
+    { platform: "X", handle: "@athlete", meta: "9.3K VIEWS", img: poolAt(4), format: "square", published: "MAY 17, 2025", caption: "One chapter at a time. The full story belongs in one place." },
   ];
+  const selectedSocialPost = selectedSocialIndex === null ? null : mediaSocial[selectedSocialIndex];
   const contact = { kind: "contact", isContact: true, style: { flex: "none", width: 224, scrollSnapAlign: "start", borderRadius: 16, overflow: "hidden", border: "1px solid rgba(41,82,255,.3)" } as React.CSSProperties };
   let mediaCards: any[] = mediaSort === "podcast" ? mediaPodcast : [];
   mediaCards = [...mediaCards, contact];
@@ -480,13 +719,34 @@ export default function LockerView({
     [stats.tackles, "TACKLES"], [stats.int, "INTERCEPTIONS"], [stats.pbu, "PASS BREAKUPS"],
     [stats.solo, "SOLO"], [stats.ff, "FORCED FUM."], [stats.dtd, "DEF. TD"],
   ].map(([value, label]) => ({ value, label }));
-  const careerCells = [["39", "GAMES"], ["187", "TACKLES"], ["15", "INT"], ["41", "PASS BU"], ["6", "FORCED FUM"], ["4", "DEF. TD"]]
-    .map(([value, label]) => ({ value, label }));
-  const intData: [string, number][] = [["2021", 3], ["2022", 2], ["2023", 4], ["2024", 6]];
-  const maxInt = 6;
-  const intBars = intData.map(([year, value]) => ({
-    year, value,
-    barStyle: { width: 26, height: (value / maxInt * 100) + "%", borderRadius: 5, background: year === "2024" ? "linear-gradient(180deg,#FFB940,#C77D00)" : "linear-gradient(180deg,#2952FF,#1A3DCC)", transformOrigin: "bottom", animation: "barGrow .6s cubic-bezier(.16,1,.3,1) both" } as React.CSSProperties,
+  const careerSeasons = [...(data.careerSeasons ?? [])].sort((a, b) => a.year.localeCompare(b.year, undefined, { numeric: true }));
+  const totalCareerGames = careerSeasons.reduce((total, season) => total + season.gamesPlayed, 0);
+  const suppliedCareerStats = data.careerStats ?? [];
+  const careerCells = [
+    {
+      key: "games",
+      label: "GAMES",
+      value: careerSeasons.length ? totalCareerGames : data.gamesPlayed ?? "—",
+    },
+    ...suppliedCareerStats.filter((stat) => stat.key.toLowerCase() !== "games"),
+  ];
+  const visibleCareerCells = showAllCareerStats ? careerCells : careerCells.slice(0, 6);
+  const collegeTeams = data.schools.length
+    ? data.schools
+    : data.school
+      ? [{ label: data.school.abbr, color: data.school.primaryColor, logo: data.school.logoUrl }]
+      : [];
+  const careerTeams = Array.from(
+    new Map(
+      [...collegeTeams, ...data.proTeams].map((team) => [team.label.trim().toUpperCase(), team]),
+    ).values(),
+  );
+  const maxCareerGames = Math.max(...careerSeasons.map((season) => season.gamesPlayed), 1);
+  const careerGameBars = careerSeasons.map((season) => ({
+    ...season,
+    levelLabel: season.level.toUpperCase(),
+    value: formatStatNumber(season.gamesPlayed),
+    barStyle: { width: 26, height: Math.max(8, season.gamesPlayed / maxCareerGames * 100) + "%", borderRadius: 5, background: season.level.toLowerCase() === "pro" ? "linear-gradient(180deg,#FFB940,#C77D00)" : "linear-gradient(180deg,#2952FF,#1A3DCC)", transformOrigin: "bottom", animation: "barGrow .6s cubic-bezier(.16,1,.3,1) both" } as React.CSSProperties,
   }));
   const timeline = [
     { year: "2021", tag: "TRUE FRESHMAN", title: "BROKE THE ROTATION", note: "Started 4 games, first career INT. Freshman All-American nod." },
@@ -494,35 +754,8 @@ export default function LockerView({
     { year: "2023", tag: "ALL-CONFERENCE", title: "FIRST-TEAM ALL-CONFERENCE", note: "4 INT, 2 returned for scores. Led conference in PBU." },
     { year: "2024", tag: "THE LEAP", title: "CONSENSUS ALL-AMERICAN", note: "Thorpe finalist. $14K in pool earnings shared with the secondary." },
   ];
-  const gameRows = [
-    ["@ RIVAL", "W 27-20", "5", "3", "1.0", "2", "3", "1"], ["STATE", "W 31-24", "6", "4", "0.5", "1", "2", "0"],
-    ["@ TECH", "L 21-28", "7", "5", "0.0", "0", "2", "0"], ["NORTH", "W 34-17", "4", "2", "1.5", "1", "4", "1"],
-    ["SOUTH", "W 41-10", "3", "3", "0.0", "2", "1", "0"], ["@ WEST", "W 24-14", "5", "4", "1.0", "0", "2", "1"],
-  ].map(([opp, res, tkl, solo, sack, int, pbu, ff]) => ({ opp, res, tkl, solo, sack, int, pbu, ff, resColor: (res as string)[0] === "W" ? "#00D68F" : "#FF3D5A" }));
-  const showProGameLogPreview = true;
-  const gameLogSections = [
-    {
-      key: "cfb",
-      label: "CFB",
-      meta: "4 seasons · organization / scrape data",
-      seasons: ["2024", "2023", "2022", "2021"].map((year, index) => ({
-        year,
-        summary: `${gameRows.length} games · ${58 - index * 7} tackles · ${Math.max(1, 6 - index)} INT`,
-        rows: gameRows.slice(0, index === 0 ? 6 : 3),
-      })),
-    },
-    ...(showProGameLogPreview ? [{
-      key: "pro",
-      label: "PRO",
-      meta: "3 seasons · league / team data",
-      seasons: ["2027", "2026", "2025"].map((year, index) => ({
-        year,
-        summary: `${12 - index} games · ${42 - index * 6} tackles · ${Math.max(0, 3 - index)} INT`,
-        rows: gameRows.slice(0, 3),
-      })),
-    }] : []),
-  ];
-  const statsPills = [["career", "CAREER"], ["awards", "AWARDS"], ["log", "GAME LOG"]]
+  const gameLogSections = data.gameLogs ?? [];
+  const statsPills = [["career", "STATS"], ["awards", "AWARDS"], ["log", "GAME LOG"]]
     .map(([key, label]) => ({ key, label, active: statsSort === key }));
 
   const hasBio = hasKnownText(data.bio) && !data.bio.includes("hasn't written their story yet");
@@ -536,7 +769,12 @@ export default function LockerView({
       ? `Early Life: ${data.bio}\n\nCollege: BLTZ will expand this section with scraped school history, roster context, awards, and career milestones from verified sources.\n\nProfessional: Pro team, draft, media, and post-college details will appear here when available from organization/team data.`
       : `Early Life: Verified early-life details have not been added yet.\n\nCollege: School history, roster context, awards, and major performances will appear here once signup, scraped source, school, or team data is available.\n\nProfessional: Draft notes, pro affiliations, media coverage, and career milestones will populate here as verified organization and league data becomes available.`;
   const displayDob = hasKnownText(data.dobDisplay) ? `${data.dobDisplay}${data.age ? ` (${data.age})` : ""}` : unknownText;
-  const displayJersey = hasKnownText(data.jersey) ? data.jersey : unknownText;
+  const knownJerseyNumbers = (data.jerseyNumbers ?? []).filter(hasKnownText);
+  const displayJerseyNumbers = knownJerseyNumbers.length
+    ? knownJerseyNumbers
+    : hasKnownText(data.jersey)
+      ? [data.jersey]
+      : [];
   const displayPosition = hasKnownText(data.position) ? data.position : unknownText;
   const displayHighSchool = hasKnownText(data.highSchool) ? data.highSchool : unknownText;
 
@@ -545,6 +783,25 @@ export default function LockerView({
   const viewsFmt = Math.round((stats.views || 0) / 1000) + "K";
 
   const reelBase: React.CSSProperties = { position: "absolute", inset: 0, backgroundSize: "cover", backgroundPosition: "center", animation: "heroFade 18s ease-in-out infinite" };
+
+  const renderSocialCard = (post: (typeof mediaSocial)[number], index: number) => (
+    <button
+      type="button"
+      key={`${post.platform}-${index}`}
+      className={`locker-social-card locker-social-card--${post.format}`}
+      onClick={() => setSelectedSocialIndex(index)}
+      aria-label={`Open ${post.platform} post from ${post.handle}`}
+      style={{ position: "relative", overflow: "hidden", border: "none", padding: 0, background: GRAD_FIELD, textAlign: "left", cursor: "pointer" }}
+    >
+      {post.img ? <img src={post.img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : null}
+      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top,rgba(5,7,15,.88),rgba(5,7,15,.04) 58%)" }} />
+      <div style={{ position: "absolute", top: 8, left: 8, padding: "4px 7px", borderRadius: 9999, background: "rgba(11,14,26,.7)", border: "1px solid rgba(255,255,255,.14)", fontFamily: mono, fontSize: 7.5, letterSpacing: ".1em", color: "#fff", textTransform: "uppercase" }}>{post.platform}</div>
+      <div style={{ position: "absolute", left: 10, right: 10, bottom: 10 }}>
+        <div style={{ fontFamily: mono, fontSize: 7.5, letterSpacing: ".1em", color: lockerAccent, textTransform: "uppercase", marginBottom: 4 }}>{post.handle}</div>
+        <div style={{ fontFamily: mono, fontSize: 8, letterSpacing: ".08em", color: "rgba(255,255,255,.68)", textTransform: "uppercase" }}>{post.meta}</div>
+      </div>
+    </button>
+  );
 
   return (
     <div className="locker-page-shell" style={{ minHeight: isEmbedded ? "100%" : "100dvh", height: isEmbedded ? "100%" : undefined, width: "100%", overflow: isEmbedded ? "hidden" : undefined, background: "#05070F", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: body }}>
@@ -607,7 +864,7 @@ export default function LockerView({
           <section className="locker-hero-section" style={{ padding: "0 18px" }}>
             <div className="locker-hero-card" style={{ position: "relative", height: 600, borderRadius: 24, overflow: "hidden", background: "linear-gradient(180deg,#161B30 0%,#10142404 55%,#0B0E1A 100%)" }}>
               {/* video / photo-reel background */}
-              <div style={{ position: "absolute", inset: 0 }}>
+              <div className="locker-hero-media">
                 {data.heroVideoUrl ? (
                   <video
                     ref={heroVideoRef}
@@ -624,14 +881,14 @@ export default function LockerView({
                     return img ? <div key={i} style={{ ...reelBase, backgroundImage: `url(${img})`, animationDelay: `${delay}s` }} /> : null;
                   })
                 )}
+                {/* stadium grid */}
+                <div style={{ position: "absolute", inset: "-40%", backgroundImage: "linear-gradient(rgba(41,82,255,.10) 1px,transparent 1px),linear-gradient(90deg,rgba(41,82,255,.10) 1px,transparent 1px)", backgroundSize: "46px 46px", transformOrigin: "50% 40%", animation: "drift 20s ease-in-out infinite alternate", pointerEvents: "none" }} />
+                {/* glows */}
+                <div style={{ position: "absolute", top: -60, left: -80, width: 340, height: 340, borderRadius: 9999, background: "radial-gradient(circle,rgba(41,82,255,.35),transparent 70%)", animation: "glowA 7s ease-in-out infinite", pointerEvents: "none" }} />
+                <div style={{ position: "absolute", bottom: 120, right: -70, width: 260, height: 260, borderRadius: 9999, background: "radial-gradient(circle,rgba(245,166,35,.28),transparent 70%)", animation: "glowB 8s ease-in-out infinite", pointerEvents: "none" }} />
+                {/* bottom blend */}
+                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom,rgba(11,14,26,.15) 0%,rgba(11,14,26,0) 30%,rgba(11,14,26,.15) 52%,rgba(11,14,26,.72) 78%,#0B0E1A 100%)", pointerEvents: "none" }} />
               </div>
-              {/* stadium grid */}
-              <div style={{ position: "absolute", inset: "-40%", backgroundImage: "linear-gradient(rgba(41,82,255,.10) 1px,transparent 1px),linear-gradient(90deg,rgba(41,82,255,.10) 1px,transparent 1px)", backgroundSize: "46px 46px", transformOrigin: "50% 40%", animation: "drift 20s ease-in-out infinite alternate", pointerEvents: "none" }} />
-              {/* glows */}
-              <div style={{ position: "absolute", top: -60, left: -80, width: 340, height: 340, borderRadius: 9999, background: "radial-gradient(circle,rgba(41,82,255,.35),transparent 70%)", animation: "glowA 7s ease-in-out infinite", pointerEvents: "none" }} />
-              <div style={{ position: "absolute", bottom: 120, right: -70, width: 260, height: 260, borderRadius: 9999, background: "radial-gradient(circle,rgba(245,166,35,.28),transparent 70%)", animation: "glowB 8s ease-in-out infinite", pointerEvents: "none" }} />
-              {/* bottom blend */}
-              <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom,rgba(11,14,26,.15) 0%,rgba(11,14,26,0) 30%,rgba(11,14,26,.15) 52%,rgba(11,14,26,.72) 78%,#0B0E1A 100%)", pointerEvents: "none" }} />
 
               {/* Spotify "now playing" — live. Collapses entirely when the athlete
                   hasn't linked Spotify or nothing is currently playing. */}
@@ -713,7 +970,7 @@ export default function LockerView({
               </div>
 
               {/* container stroke — fades out toward the bottom */}
-              <div style={{ position: "absolute", inset: 0, borderRadius: 24, border: "1px solid rgba(255,255,255,.18)", pointerEvents: "none", WebkitMaskImage: "linear-gradient(to bottom,#000 0%,#000 42%,transparent 88%)", maskImage: "linear-gradient(to bottom,#000 0%,#000 42%,transparent 88%)" }} />
+              <div className="locker-hero-stroke" style={{ position: "absolute", inset: 0, border: "1px solid rgba(255,255,255,.18)", pointerEvents: "none", WebkitMaskImage: "linear-gradient(to bottom,#000 0%,#000 42%,transparent 88%)", maskImage: "linear-gradient(to bottom,#000 0%,#000 42%,transparent 88%)" }} />
             </div>
           </section>
 
@@ -822,8 +1079,8 @@ export default function LockerView({
               onValueChange={(value) => selectTab(value as "bio" | "media" | "stats")}
               className="gap-0"
             >
-              <div style={{ padding: "0 18px" }}>
-                <TabsList className="relative grid h-[52px] w-full grid-cols-3 overflow-hidden rounded-full border border-[#1E2640] bg-[#111624] p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,.05)]">
+              <div className="locker-tabs-nav" style={{ padding: "0 18px" }}>
+                <TabsList className="locker-main-tabs-list relative grid h-[52px] w-full grid-cols-3 overflow-hidden rounded-full border border-[#1E2640] bg-[#111624] p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,.05)]">
                   <div
                     aria-hidden="true"
                     className="pointer-events-none absolute bottom-1.5 left-1.5 top-1.5 rounded-full"
@@ -843,7 +1100,7 @@ export default function LockerView({
                     <TabsTrigger
                       key={value}
                       value={value}
-                      className="relative z-10 h-10 rounded-full border-0 px-2 text-[12px] font-extrabold uppercase tracking-normal text-white/45 transition-colors duration-300 data-[state=active]:text-[#0B0E1A]"
+                      className="locker-main-tab relative z-10 h-10 rounded-full border-0 px-2 font-extrabold uppercase tracking-normal text-white/45 transition-colors duration-300 data-[state=active]:text-[#0B0E1A]"
                       style={{ fontFamily: disp, background: "transparent", boxShadow: "none", textShadow: tabTextShadow }}
                     >
                       {label}
@@ -855,32 +1112,38 @@ export default function LockerView({
             {/* BIO TAB */}
             {tab === "bio" && (
               <div style={{ animation: "tabIn .4s cubic-bezier(.16,1,.3,1)", paddingTop: 16 }}>
-                <div className="hs" style={{ display: "flex", gap: 9, justifyContent: "center", overflowX: "auto", padding: "0 18px 4px" }}>
+                <div className="hs locker-filter-row" style={{ display: "flex", gap: 9, justifyContent: "center", overflowX: "auto", padding: "0 18px 4px" }}>
                   {bioPills.map((p) => (
-                    <button key={p.key} onClick={() => setBioSort(p.key)} style={pillStyle(p.active)}>{p.label}</button>
+                    <button className="locker-filter-pill" key={p.key} onClick={() => setBioSort(p.key)} style={pillStyle(p.active)}>{p.label}</button>
                   ))}
                 </div>
                 {bioSort === "all" ? (
                   <div style={{ display: "grid", gridTemplateColumns: "42% 1fr", gap: 8, alignItems: "start", padding: "14px 18px 10px" }}>
-                    <div style={{ height: 216, borderRadius: 14, overflow: "hidden", border: "1px solid #1E2640", background: GRAD_FIELD, position: "relative" }}>
-                      <img
-                        src={data.headshotUrl}
-                        alt=""
-                        onError={(event) => {
-                          if (event.currentTarget.src.endsWith(HEADSHOT_FALLBACK)) return;
-                          event.currentTarget.src = HEADSHOT_FALLBACK;
-                        }}
-                        style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "50% 12%", filter: "drop-shadow(0 10px 18px rgba(0,0,0,.55))" }}
-                      />
+                    <div className="bio-headshot-card">
+                      <div className="bio-headshot-image">
+                        <img
+                          className="bio-headshot-photo"
+                          src={data.headshotUrl}
+                          alt={`${data.fullName} headshot`}
+                          onError={(event) => {
+                            if (event.currentTarget.src.endsWith(HEADSHOT_FALLBACK)) return;
+                            event.currentTarget.src = HEADSHOT_FALLBACK;
+                          }}
+                          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", filter: "drop-shadow(0 10px 18px rgba(0,0,0,.55))" }}
+                        />
+                      </div>
+                      <div className="bio-headshot-year" aria-label={`Headshot year ${data.headshotYear ?? "pending"}`}>
+                        {data.headshotYear ?? "YEAR PENDING"}
+                      </div>
                     </div>
                     <div style={{ minHeight: 216, borderRadius: 14, border: "1px solid #1E2640", background: "#131829", padding: 16, display: "flex", flexDirection: "column", justifyContent: "flex-start" }}>
                       <div style={{ fontFamily: disp, fontWeight: 800, fontSize: 18, lineHeight: 1, letterSpacing: ".02em", textTransform: "uppercase", color: lockerAccent, marginBottom: 14 }}>BASIC INFO</div>
-                      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0,1fr))", gap: 10 }}>
-                        <IdRow label="HOMETOWN" value={displayHometown} />
-                        <IdRow label="BIRTHDATE" value={displayDob} />
-                        <IdRow label="JERSEY NUMBERS" value={displayJersey} />
+                      <div className="basic-info-grid">
+                        <IdRow className="basic-info-hometown" label="HOMETOWN" value={displayHometown} />
+                        <IdRow className="basic-info-birthdate" label="BIRTHDATE" value={displayDob} />
+                        <JerseyNumberRow values={displayJerseyNumbers} fallback={unknownText} />
                         <IdRow label="POSITION" value={displayPosition} />
-                        <IdRow label="HIGH SCHOOL" value={displayHighSchool} />
+                        <IdRow className="basic-info-high-school" label="HIGH SCHOOL" value={displayHighSchool} />
                       </div>
                     </div>
                     <div style={{ gridColumn: "1/3", minHeight: 326, borderRadius: 14, border: "1px solid #1E2640", background: "#131829", padding: "22px 20px", display: "flex", flexDirection: "column", justifyContent: "flex-start" }}>
@@ -891,8 +1154,8 @@ export default function LockerView({
                 ) : bioSort === "measurables" ? (
                   <div style={{ padding: "14px 18px 10px" }}>
                     <div style={{ borderRadius: 14, border: "1px solid #1E2640", background: "#131829", overflow: "hidden" }}>
-                      <div style={{ padding: "18px 18px 16px", background: "linear-gradient(135deg,rgba(255,185,64,.12),rgba(41,82,255,.08),rgba(19,24,41,0))", borderBottom: "1px solid #1E2640" }}>
-                        <div style={{ fontFamily: disp, fontWeight: 800, fontSize: 20, lineHeight: 1, letterSpacing: ".02em", textTransform: "uppercase", color: lockerAccent, marginBottom: 14 }}>MEASURABLES</div>
+                      <div style={{ padding: "18px 18px 16px", background: "#131829", borderBottom: "1px solid #1E2640" }}>
+                        <div style={{ fontFamily: disp, fontWeight: 800, fontSize: 18, lineHeight: 1, letterSpacing: ".02em", textTransform: "uppercase", color: lockerAccent, marginBottom: 14 }}>MEASURABLES</div>
                         <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 10 }}>
                           <div style={{ borderRadius: 12, padding: "14px 13px", background: "rgba(255,255,255,.05)", border: "1px solid rgba(255,255,255,.08)", textAlign: "center" }}>
                             <div style={{ fontFamily: disp, fontWeight: 900, fontSize: 38, lineHeight: ".85", color: "#fff" }}>{data.heightDisplay || pendingMetric}</div>
@@ -926,7 +1189,7 @@ export default function LockerView({
                 ) : bioSort === "story" ? (
                   <div style={{ padding: "14px 18px 10px" }}>
                     <div style={{ borderRadius: 14, border: "1px solid #1E2640", background: "#131829", padding: "22px 20px 24px" }}>
-                      <div style={{ fontFamily: disp, fontWeight: 800, fontSize: 20, lineHeight: 1, letterSpacing: ".02em", textTransform: "uppercase", color: lockerAccent, marginBottom: 16 }}>THE STORY</div>
+                      <div style={{ fontFamily: disp, fontWeight: 800, fontSize: 18, lineHeight: 1, letterSpacing: ".02em", textTransform: "uppercase", color: lockerAccent, marginBottom: 16 }}>THE STORY</div>
                       <p style={{ fontFamily: body, fontSize: 16, lineHeight: 1.72, color: "rgba(255,255,255,.82)", margin: 0, whiteSpace: "pre-line" }}>{displayStory}</p>
                     </div>
                   </div>
@@ -956,9 +1219,9 @@ export default function LockerView({
             {/* MEDIA TAB */}
             {tab === "media" && (
               <div style={{ animation: "tabIn .4s cubic-bezier(.16,1,.3,1)", paddingTop: 16 }}>
-                <div className="hs" style={{ display: "flex", gap: 9, justifyContent: "center", overflowX: "auto", padding: "0 18px 4px" }}>
+                <div className="hs locker-filter-row" style={{ display: "flex", gap: 9, justifyContent: "center", overflowX: "auto", padding: "0 18px 4px" }}>
                   {mediaPills.map((p) => (
-                    <button key={p.key} onClick={() => setMediaSort(p.key)} style={pillStyle(p.active)}>{p.label}</button>
+                    <button className="locker-filter-pill" key={p.key} onClick={() => setMediaSort(p.key)} style={pillStyle(p.active)}>{p.label}</button>
                   ))}
                 </div>
                 {mediaSort === "articles" ? (
@@ -984,17 +1247,24 @@ export default function LockerView({
                   <div style={{ padding: "14px 18px 10px" }}>
                     <div style={{ position: "relative" }}>
                       <div
-                        className="media-inner-scroll"
+                        className="media-inner-scroll locker-shorts-grid"
                         ref={shortsScrollRef}
                         onScroll={handleShortsScroll}
-                        style={{ height: 408, overflowY: "auto", overscrollBehavior: "auto", paddingRight: 6, display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 10 }}
+                        style={{ height: 408, overflowY: "auto", overscrollBehavior: "auto", paddingRight: 6, display: "grid", gap: 10 }}
                       >
                       {mediaShorts.map((short, index) => (
-                        <div
+                        <button
+                          type="button"
                           key={short.title}
+                          className="locker-short-card"
                           ref={(node) => { shortRefs.current[index] = node; }}
                           data-short-index={index}
-                          style={{ minHeight: 246, borderRadius: 14, overflow: "hidden", border: "1px solid #1E2640", background: "#131829", position: "relative" }}
+                          onClick={() => {
+                            shortModalInitialIndexRef.current = index;
+                            setShortModalIndex(index);
+                          }}
+                          aria-label={`Open short: ${short.title}`}
+                          style={{ borderRadius: 14, overflow: "hidden", border: "1px solid #1E2640", padding: 0, background: "#131829", position: "relative", textAlign: "left", cursor: "pointer" }}
                         >
                           {short.videoUrl ? (
                             <video ref={(node) => { shortVideoRefs.current[index] = node; }} src={short.videoUrl} muted loop playsInline style={{ width: "100%", height: "100%", objectFit: "cover" }} />
@@ -1012,7 +1282,7 @@ export default function LockerView({
                             <div style={{ fontFamily: disp, fontWeight: 800, fontSize: 16, lineHeight: .95, textTransform: "uppercase", color: "#fff" }}>{short.title}</div>
                             <div style={{ fontFamily: mono, fontSize: 8, letterSpacing: ".08em", color: "rgba(255,255,255,.5)", marginTop: 7 }}>{short.meta}</div>
                           </div>
-                        </div>
+                        </button>
                       ))}
                       </div>
                       <div style={{ position: "absolute", top: 14 + shortsScrollProgress * 286, right: 1, width: 2, height: 54, borderRadius: 9999, background: "rgba(210,214,224,.72)", boxShadow: "0 0 8px rgba(210,214,224,.22)", opacity: shortsScrolling ? 1 : 0, transition: "opacity .22s ease, top .08s linear", pointerEvents: "none" }} />
@@ -1021,24 +1291,27 @@ export default function LockerView({
                 ) : mediaSort === "podcast" ? (
                   <div style={{ padding: "14px 18px 10px", display: "flex", flexDirection: "column", gap: 10 }}>
                     {mediaPodcast.length ? (
-                      mediaPodcast.map((m) => (
-                        <div key={m.title} style={{ width: "100%", height: 178, borderRadius: 16, overflow: "hidden", border: "1px solid #1E2640", background: "#131829" }}>
-                          <div style={{ display: "flex", flexDirection: "column", height: "100%", padding: 16, background: "linear-gradient(150deg,#12183a,#131829)" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-                              <span style={{ width: 34, height: 34, borderRadius: 8, background: "linear-gradient(135deg,#2952FF,#1A3DCC)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>🎙</span>
-                              <span style={{ fontFamily: mono, fontSize: 9, letterSpacing: ".14em", color: "rgba(255,255,255,.5)" }}>{m.source}</span>
-                            </div>
-                            <div style={{ fontFamily: disp, fontWeight: 700, fontSize: 21, lineHeight: .95, textTransform: "uppercase", color: "#fff", marginBottom: 14 }}>{m.title}</div>
-                            <div style={{ display: "flex", alignItems: "flex-end", gap: 3, height: 34, marginTop: "auto" }}>
-                              {[[.4, "#FFB940", 0], [.8, "#FFB940", .15], [.55, "#F5A623", .3], [.95, "#F5A623", .45], [.35, "#C77D00", .6], [.7, "#C77D00", .2]].map((b, k) => (
-                                <span key={k} style={{ width: 3, background: b[1] as string, borderRadius: 2, height: `${(b[0] as number) * 100}%`, animation: `eqbar 1.1s ease-in-out ${b[2]}s infinite` }} />
-                              ))}
-                              <span style={{ flex: 1 }} />
-                              <span style={{ fontFamily: mono, fontSize: 10, color: "rgba(255,255,255,.6)" }}>{m.meta}</span>
+                      <div className="locker-podcast-grid">
+                        {mediaPodcast.map((m) => (
+                          <div key={m.id} style={{ minWidth: 0, height: 188, borderRadius: 14, overflow: "hidden", border: "1px solid #1E2640", background: "#131829" }}>
+                            <div style={{ display: "flex", flexDirection: "column", height: "100%", padding: 14, background: "linear-gradient(150deg,#12183a,#131829)" }}>
+                              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 12 }}>
+                                <span style={{ width: 30, height: 30, flex: "0 0 auto", borderRadius: 8, background: "linear-gradient(135deg,#2952FF,#1A3DCC)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}><Mic size={16} strokeWidth={2.25} /></span>
+                                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontFamily: mono, fontWeight: 700, fontSize: 7.5, letterSpacing: ".12em", color: lockerAccent, textTransform: "uppercase" }}>{m.type}</span>
+                              </div>
+                              <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontFamily: mono, fontSize: 7.5, letterSpacing: ".1em", color: "rgba(255,255,255,.48)", textTransform: "uppercase", marginBottom: 7 }}>{m.source}</div>
+                              <div style={{ display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 3, overflow: "hidden", fontFamily: disp, fontWeight: 800, fontSize: 16, lineHeight: .98, textTransform: "uppercase", color: "#fff", marginBottom: 12 }}>{m.title}</div>
+                              <div style={{ display: "flex", alignItems: "flex-end", gap: 3, height: 26, marginTop: "auto" }}>
+                                {[[.4, "#FFB940", 0], [.8, "#FFB940", .15], [.55, "#F5A623", .3], [.95, "#F5A623", .45], [.35, "#C77D00", .6], [.7, "#C77D00", .2]].map((b, k) => (
+                                  <span key={k} style={{ width: 3, background: b[1] as string, borderRadius: 2, height: `${(b[0] as number) * 100}%`, animation: `eqbar 1.1s ease-in-out ${b[2]}s infinite` }} />
+                                ))}
+                                <span style={{ flex: 1 }} />
+                                <span style={{ fontFamily: mono, fontSize: 8, color: "rgba(255,255,255,.6)" }}>{m.meta}</span>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))
+                        ))}
+                      </div>
                     ) : (
                       <div style={{ width: "100%", minHeight: 178, borderRadius: 16, border: "1px solid #1E2640", background: "linear-gradient(150deg,#12183a,#131829)", padding: "22px 18px", display: "flex", flexDirection: "column", justifyContent: "center", textAlign: "center" }}>
                         <div style={{ fontFamily: disp, fontWeight: 900, fontSize: 24, lineHeight: .92, color: "#fff", textTransform: "uppercase", marginBottom: 12 }}>The mic is waiting</div>
@@ -1055,22 +1328,25 @@ export default function LockerView({
                   <div style={{ padding: "14px 18px 10px" }}>
                     <div style={{ position: "relative" }}>
                       <div
-                        className="media-inner-scroll"
+                        className="media-inner-scroll locker-social-scroll"
                         ref={socialScrollRef}
                         onScroll={handleSocialScroll}
-                        style={{ height: 408, overflowY: "auto", overscrollBehavior: "auto", display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 0 }}
+                        style={{ height: 408, overflowY: "auto", overscrollBehavior: "auto" }}
                       >
-                        {mediaSocial.map((post, index) => (
-                          <div key={`${post.platform}-${index}`} style={{ aspectRatio: "1 / 1.18", position: "relative", overflow: "hidden", background: GRAD_FIELD }}>
-                            {post.img ? <img src={post.img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : null}
-                            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top,rgba(5,7,15,.88),rgba(5,7,15,.04) 58%)" }} />
-                            <div style={{ position: "absolute", top: 8, left: 8, padding: "4px 7px", borderRadius: 9999, background: "rgba(11,14,26,.7)", border: "1px solid rgba(255,255,255,.14)", fontFamily: mono, fontSize: 7.5, letterSpacing: ".1em", color: "#fff", textTransform: "uppercase" }}>{post.platform}</div>
-                            <div style={{ position: "absolute", left: 10, right: 10, bottom: 10 }}>
-                              <div style={{ fontFamily: mono, fontSize: 7.5, letterSpacing: ".1em", color: lockerAccent, textTransform: "uppercase", marginBottom: 4 }}>{post.handle}</div>
-                              <div style={{ fontFamily: mono, fontSize: 8, letterSpacing: ".08em", color: "rgba(255,255,255,.68)", textTransform: "uppercase" }}>{post.meta}</div>
+                        <div className="locker-social-layout locker-social-layout--mobile">
+                          {[0, 1].map((column) => (
+                            <div className="locker-social-column" key={column}>
+                              {mediaSocial.map((post, index) => index % 2 === column ? renderSocialCard(post, index) : null)}
                             </div>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
+                        <div className="locker-social-layout locker-social-layout--desktop">
+                          {[0, 1, 2].map((column) => (
+                            <div className="locker-social-column" key={column}>
+                              {mediaSocial.map((post, index) => index % 3 === column ? renderSocialCard(post, index) : null)}
+                            </div>
+                          ))}
+                        </div>
                       </div>
                       <div style={{ position: "absolute", top: 14 + socialScrollProgress * 286, right: 1, width: 2, height: 54, borderRadius: 9999, background: "rgba(210,214,224,.72)", boxShadow: "0 0 8px rgba(210,214,224,.22)", opacity: socialScrolling ? 1 : 0, transition: "opacity .22s ease, top .08s linear", pointerEvents: "none" }} />
                     </div>
@@ -1124,6 +1400,92 @@ export default function LockerView({
                     ))}
                   </div>
                 )}
+                {shortModalIndex !== null && (
+                  <div
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label="Shorts viewer"
+                    onClick={(event) => {
+                      if (event.currentTarget === event.target) setShortModalIndex(null);
+                    }}
+                    style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(5,7,15,.9)", backdropFilter: "blur(14px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 12 }}
+                  >
+                    <div className="locker-short-modal-shell">
+                      <div style={{ position: "absolute", top: 12, left: 12, zIndex: 3, padding: "5px 8px", borderRadius: 9999, border: "1px solid rgba(255,255,255,.14)", background: "rgba(5,7,15,.68)", fontFamily: mono, fontSize: 8, letterSpacing: ".12em", color: "#fff" }}>{shortModalIndex + 1} / {modalShortCount}</div>
+                      <button type="button" onClick={() => setShortModalIndex(null)} aria-label="Close Shorts viewer" style={{ position: "absolute", top: 10, right: 10, zIndex: 3, width: 38, height: 38, borderRadius: 9999, border: "1px solid rgba(255,255,255,.18)", background: "rgba(5,7,15,.68)", color: "#fff", fontFamily: disp, fontSize: 22, cursor: "pointer" }}>×</button>
+                      <button
+                        type="button"
+                        aria-label="Previous short"
+                        disabled={shortModalIndex === 0}
+                        onClick={() => {
+                          const previousIndex = Math.max(0, shortModalIndex - 1);
+                          const container = shortModalScrollRef.current;
+                          container?.scrollTo({ top: previousIndex * container.clientHeight, behavior: "smooth" });
+                          setShortModalIndex(previousIndex);
+                        }}
+                        className="locker-short-modal-arrow locker-short-modal-arrow--up"
+                      ><ChevronUp size={17} strokeWidth={2.25} /></button>
+                      <button
+                        type="button"
+                        aria-label="Next short"
+                        disabled={shortModalIndex === modalShortCount - 1}
+                        onClick={() => {
+                          const nextIndex = Math.min(modalShortCount - 1, shortModalIndex + 1);
+                          const container = shortModalScrollRef.current;
+                          container?.scrollTo({ top: nextIndex * container.clientHeight, behavior: "smooth" });
+                          setShortModalIndex(nextIndex);
+                        }}
+                        className="locker-short-modal-arrow locker-short-modal-arrow--down"
+                      ><ChevronDown size={17} strokeWidth={2.25} /></button>
+                      <div
+                        className="locker-short-modal-feed"
+                        ref={shortModalScrollRef}
+                        onScroll={(event) => {
+                          const container = event.currentTarget;
+                          if (!container.clientHeight) return;
+                          const nextIndex = Math.min(modalShortCount - 1, Math.max(0, Math.round(container.scrollTop / container.clientHeight)));
+                          if (nextIndex !== shortModalIndex) setShortModalIndex(nextIndex);
+                        }}
+                      >
+                        {mediaShorts.map((short, index) => (
+                          <div
+                            key={`modal-${short.title}`}
+                            className="locker-short-modal-slide"
+                          >
+                            {short.videoUrl ? (
+                              <video
+                                ref={(node) => { shortModalVideoRefs.current[index] = node; }}
+                                src={short.videoUrl}
+                                autoPlay={index === shortModalIndex}
+                                muted
+                                playsInline
+                                preload="metadata"
+                                onEnded={() => {
+                                  if (index >= modalShortCount - 1) return;
+                                  const nextIndex = index + 1;
+                                  const container = shortModalScrollRef.current;
+                                  container?.scrollTo({ top: nextIndex * container.clientHeight, behavior: "smooth" });
+                                  setShortModalIndex(nextIndex);
+                                }}
+                                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                              />
+                            ) : short.img ? (
+                              <img src={short.img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                            ) : (
+                              <div style={{ width: "100%", height: "100%", background: GRAD_FIELD }} />
+                            )}
+                            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top,rgba(5,7,15,.94),rgba(5,7,15,.02) 62%,rgba(5,7,15,.28))", pointerEvents: "none" }} />
+                            <div style={{ position: "absolute", left: 18, right: 54, bottom: 22, zIndex: 1 }}>
+                              <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: ".12em", color: lockerAccent, textTransform: "uppercase", marginBottom: 7 }}>{short.source}</div>
+                              <div style={{ fontFamily: disp, fontWeight: 900, fontSize: 27, lineHeight: .92, color: "#fff", textTransform: "uppercase" }}>{short.title}</div>
+                              <div style={{ marginTop: 9, fontFamily: mono, fontSize: 9, letterSpacing: ".1em", color: "rgba(255,255,255,.62)", textTransform: "uppercase" }}>{short.meta}</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
                 {articleModalOpen && (
                   <div role="dialog" aria-modal="true" aria-label="Articles" style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(5,7,15,.78)", backdropFilter: "blur(14px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }}>
                     <div style={{ width: "min(100%, 520px)", maxHeight: "82dvh", border: "1px solid #1E2640", borderRadius: 18, background: "#0B0E1A", boxShadow: "0 24px 90px rgba(0,0,0,.58)", overflow: "hidden", display: "flex", flexDirection: "column" }}>
@@ -1134,19 +1496,90 @@ export default function LockerView({
                         </div>
                         <button type="button" onClick={() => setArticleModalOpen(false)} aria-label="Close articles" style={{ width: 36, height: 36, borderRadius: 9999, border: "1px solid rgba(255,255,255,.14)", background: "rgba(255,255,255,.06)", color: "#fff", fontFamily: disp, fontSize: 20, cursor: "pointer" }}>×</button>
                       </div>
-                      <div style={{ overflowY: "auto", padding: "12px 18px 22px", display: "flex", flexDirection: "column", gap: 10 }}>
+                      <div className="locker-modal-scroll" style={{ overflowY: "auto", padding: "12px 18px 22px", display: "flex", flexDirection: "column", gap: 10 }}>
                         {mediaArticles.map((article) => (
-                          <article key={article.title} style={{ display: "grid", gridTemplateColumns: "88px 1fr", gap: 12, border: "1px solid #1E2640", borderRadius: 12, background: "#131829", padding: 10 }}>
+                          <button
+                            type="button"
+                            key={article.title}
+                            onClick={() => {
+                              const url = safeExternalUrl(article.originalUrl);
+                              if (url) setPendingArticleRedirect({ source: article.source, title: article.title, url });
+                            }}
+                            style={{ width: "100%", display: "grid", gridTemplateColumns: "88px 1fr", gap: 12, border: "1px solid #1E2640", borderRadius: 12, background: "#131829", padding: 10, color: "inherit", textAlign: "left", cursor: "pointer" }}
+                          >
                             <div style={{ height: 76, borderRadius: 8, overflow: "hidden", background: GRAD_FIELD }}>
                               {article.img ? <img src={article.img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : null}
                             </div>
                             <div>
                               <div style={{ fontFamily: mono, fontSize: 8, letterSpacing: ".12em", color: lockerAccent, textTransform: "uppercase", marginBottom: 5 }}>{article.source} · {article.meta}</div>
-                              <h3 style={{ fontFamily: disp, fontWeight: 800, fontSize: 17, lineHeight: .95, color: "#fff", textTransform: "uppercase", margin: "0 0 7px" }}>{article.title}</h3>
-                              <p style={{ fontFamily: body, fontSize: 12.5, lineHeight: 1.45, color: "rgba(255,255,255,.62)", margin: 0 }}>{article.dek}</p>
+                              <h3 style={{ fontFamily: disp, fontWeight: 800, fontSize: 14, lineHeight: 1, color: "#fff", textTransform: "uppercase", margin: "0 0 7px" }}>{article.title}</h3>
+                              <p style={{ display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 2, overflow: "hidden", fontFamily: body, fontSize: 12.5, lineHeight: 1.45, color: "rgba(255,255,255,.62)", margin: 0 }}>{article.dek}</p>
+                              <div style={{ marginTop: 8, fontFamily: mono, fontSize: 8, fontWeight: 700, letterSpacing: ".11em", color: lockerAccent, textTransform: "uppercase" }}>Open original source ↗</div>
                             </div>
-                          </article>
+                          </button>
                         ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {pendingArticleRedirect && (
+                  <div role="alertdialog" aria-modal="true" aria-label="External article warning" style={{ position: "fixed", inset: 0, zIndex: 10000, background: "rgba(5,7,15,.88)", backdropFilter: "blur(16px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }}>
+                    <div style={{ width: "min(100%, 430px)", border: "1px solid #1E2640", borderRadius: 18, background: "#0B0E1A", boxShadow: "0 28px 100px rgba(0,0,0,.7)", padding: "24px 20px 20px", textAlign: "center" }}>
+                      <div style={{ width: 58, height: 58, margin: "0 auto 18px", borderRadius: 9999, border: `1px solid ${lockerAccent}`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: mono, fontWeight: 800, fontSize: 20, color: lockerAccent }}>{externalRedirectCountdown}</div>
+                      <div style={{ fontFamily: mono, fontSize: 8.5, letterSpacing: ".16em", color: lockerAccent, textTransform: "uppercase", marginBottom: 8 }}>Leaving BLTZ</div>
+                      <h3 style={{ margin: "0 0 10px", fontFamily: disp, fontWeight: 900, fontSize: 25, lineHeight: .95, color: "#fff", textTransform: "uppercase" }}>Continue to the original article?</h3>
+                      <p style={{ margin: "0 auto", maxWidth: 350, fontFamily: body, fontSize: 14, lineHeight: 1.5, color: "rgba(255,255,255,.66)" }}>
+                        You will leave this Player Locker and be redirected to {pendingArticleRedirect.source} in {externalRedirectCountdown} seconds.
+                      </p>
+                      <div style={{ marginTop: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontFamily: mono, fontSize: 8, letterSpacing: ".08em", color: "rgba(255,255,255,.36)", textTransform: "uppercase" }}>{pendingArticleRedirect.title}</div>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 10, marginTop: 22 }}>
+                        <button type="button" onClick={() => setPendingArticleRedirect(null)} style={{ minHeight: 46, border: "1px solid rgba(255,255,255,.16)", borderRadius: 10, background: "rgba(255,255,255,.06)", color: "#fff", fontFamily: disp, fontWeight: 800, fontSize: 14, textTransform: "uppercase", cursor: "pointer" }}>Stay in BLTZ</button>
+                        <button type="button" onClick={() => window.location.assign(pendingArticleRedirect.url)} style={{ minHeight: 46, border: "none", borderRadius: 10, background: lockerAccent, color: "#0A0800", fontFamily: disp, fontWeight: 900, fontSize: 14, textTransform: "uppercase", cursor: "pointer" }}>Continue now</button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {selectedSocialPost && (
+                  <div
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label={`${selectedSocialPost.platform} post details`}
+                    onClick={(event) => {
+                      if (event.currentTarget === event.target) setSelectedSocialIndex(null);
+                    }}
+                    style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(5,7,15,.84)", backdropFilter: "blur(14px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }}
+                  >
+                    <div style={{ width: "min(100%, 760px)", maxHeight: "88dvh", padding: "5px 0", border: "1px solid #1E2640", borderRadius: 18, background: "#0B0E1A", boxShadow: "0 24px 90px rgba(0,0,0,.62)", overflow: "hidden" }}>
+                      <div className="locker-modal-scroll" style={{ maxHeight: "calc(88dvh - 10px)", overflowY: "auto" }}>
+                      <div style={{ position: "sticky", top: 0, zIndex: 2, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "15px 16px", borderBottom: "1px solid #1E2640", background: "rgba(11,14,26,.96)", backdropFilter: "blur(12px)" }}>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontFamily: mono, fontSize: 8.5, letterSpacing: ".16em", color: lockerAccent, textTransform: "uppercase", marginBottom: 4 }}>{selectedSocialPost.platform}</div>
+                          <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontFamily: disp, fontWeight: 800, fontSize: 18, color: "#fff", textTransform: "uppercase" }}>{selectedSocialPost.handle}</div>
+                        </div>
+                        <button type="button" onClick={() => setSelectedSocialIndex(null)} aria-label="Close social post" style={{ flex: "0 0 auto", width: 36, height: 36, borderRadius: 9999, border: "1px solid rgba(255,255,255,.14)", background: "rgba(255,255,255,.06)", color: "#fff", fontFamily: disp, fontSize: 20, cursor: "pointer" }}>×</button>
+                      </div>
+                      <div className="locker-social-modal-layout">
+                        <div className={`locker-social-modal-media locker-social-modal-media--${selectedSocialPost.format}`} style={{ overflow: "hidden", background: GRAD_FIELD }}>
+                          {selectedSocialPost.img ? <img src={selectedSocialPost.img} alt={`${selectedSocialPost.platform} post by ${selectedSocialPost.handle}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : null}
+                        </div>
+                        <div style={{ display: "flex", flexDirection: "column", minWidth: 0, padding: "20px 18px 22px" }}>
+                          <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 10, marginBottom: 18 }}>
+                            <div style={{ padding: "11px 12px", border: "1px solid #1E2640", borderRadius: 10, background: "#131829", textAlign: "center" }}>
+                              <div style={{ fontFamily: mono, fontSize: 7.5, letterSpacing: ".13em", color: "rgba(255,255,255,.42)", textTransform: "uppercase", marginBottom: 5 }}>Published</div>
+                              <div style={{ fontFamily: mono, fontSize: 9.5, letterSpacing: ".06em", color: "#fff" }}>{selectedSocialPost.published}</div>
+                            </div>
+                            <div style={{ padding: "11px 12px", border: "1px solid #1E2640", borderRadius: 10, background: "#131829", textAlign: "center" }}>
+                              <div style={{ fontFamily: mono, fontSize: 7.5, letterSpacing: ".13em", color: "rgba(255,255,255,.42)", textTransform: "uppercase", marginBottom: 5 }}>Engagement</div>
+                              <div style={{ fontFamily: mono, fontSize: 9.5, letterSpacing: ".06em", color: lockerAccent }}>{selectedSocialPost.meta}</div>
+                            </div>
+                          </div>
+                          <div style={{ fontFamily: mono, fontSize: 8, letterSpacing: ".14em", color: "rgba(255,255,255,.42)", textTransform: "uppercase", marginBottom: 8 }}>Post caption</div>
+                          <p style={{ margin: 0, fontFamily: body, fontSize: 16, lineHeight: 1.55, color: "rgba(255,255,255,.82)" }}>{selectedSocialPost.caption}</p>
+                          <div style={{ marginTop: "auto", paddingTop: 24, fontFamily: mono, fontSize: 8, lineHeight: 1.45, letterSpacing: ".1em", color: "rgba(255,255,255,.4)", textTransform: "uppercase" }}>
+                            Connected account content · Athlete dashboard source
+                          </div>
+                        </div>
+                      </div>
                       </div>
                     </div>
                   </div>
@@ -1157,9 +1590,9 @@ export default function LockerView({
             {/* STATS TAB */}
             {tab === "stats" && (
               <div style={{ animation: "tabIn .4s cubic-bezier(.16,1,.3,1)", paddingTop: 16 }}>
-                <div className="hs" style={{ display: "flex", gap: 9, justifyContent: "center", overflowX: "auto", padding: "0 18px 4px" }}>
+                <div className="hs locker-filter-row" style={{ display: "flex", gap: 9, justifyContent: "center", overflowX: "auto", padding: "0 18px 4px" }}>
                   {statsPills.map((p) => (
-                    <button key={p.key} onClick={() => setStatsSort(p.key)} style={pillStyle(p.active)}>{p.label}</button>
+                    <button className="locker-filter-pill" key={p.key} onClick={() => setStatsSort(p.key)} style={pillStyle(p.active)}>{p.label}</button>
                   ))}
                 </div>
 
@@ -1176,7 +1609,7 @@ export default function LockerView({
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8 }}>
                       {seasonCells.map((s, i) => (
                         <div key={i} style={{ borderRadius: 12, padding: "15px 12px", border: "1px solid #1E2640", background: "#131829" }}>
-                          <div style={{ fontFamily: disp, fontWeight: 900, fontSize: 32, lineHeight: ".85", color: "#fff" }}>{s.value}</div>
+                          <div style={{ maxWidth: "100%", overflow: "hidden", fontFamily: disp, fontWeight: 900, fontSize: fittedStatSize(formatStatNumber(s.value), 32), fontVariantNumeric: "tabular-nums", lineHeight: ".85", color: "#fff", whiteSpace: "nowrap" }}>{formatStatNumber(s.value)}</div>
                           <div style={{ fontFamily: mono, fontSize: 8.5, letterSpacing: ".12em", color: "rgba(255,255,255,.45)", marginTop: 6 }}>{s.label}</div>
                         </div>
                       ))}
@@ -1186,28 +1619,71 @@ export default function LockerView({
 
                 {statsSort === "career" && (
                   <div style={{ animation: "tabIn .35s ease", padding: "14px 18px 4px" }}>
+                    <div ref={teamHistoryRef} className="team-history-container" style={{ width: "100%", minHeight: 66, marginBottom: 12, padding: "11px 14px", borderRadius: 12, border: "1px solid #1E2640", background: "#131829", display: "flex", alignItems: "center", gap: 14, overflow: "hidden" }}>
+                      <span className="team-history-heading" style={{ flex: "none", fontFamily: mono, fontSize: 9, fontWeight: 700, letterSpacing: ".12em", color: lockerAccent, whiteSpace: "nowrap" }}>TEAM HISTORY</span>
+                      <div ref={teamHistoryViewportRef} className="team-history-viewport">
+                        {careerTeams.length ? (
+                          <div className={`team-history-track${teamHistoryInView && teamHistoryNeedsScroll ? " is-active" : ""}`}>
+                            {[false, true].map((duplicate) => (
+                              <div ref={duplicate ? undefined : teamHistoryPrimaryRef} className="team-history-sequence" aria-hidden={duplicate || undefined} key={duplicate ? "duplicate" : "primary"}>
+                                {careerTeams.map((team, index) => (
+                                  <div key={`${team.label}-${index}`} style={{ flex: "none", display: "flex", alignItems: "center", gap: 8, padding: "0 14px", borderLeft: "1px solid rgba(255,255,255,.12)" }}>
+                                    <div style={{ width: 28, height: 28, flex: "none", borderRadius: 6, background: team.color, display: "grid", placeItems: "center", overflow: "hidden" }}>
+                                      {team.logo ? <img src={team.logo} alt="" style={{ width: 21, height: 21, objectFit: "contain" }} /> : <span style={{ fontFamily: disp, fontSize: 11, fontWeight: 900, color: "#fff" }}>{team.label.slice(0, 2)}</span>}
+                                    </div>
+                                    <span style={{ fontFamily: disp, fontSize: 16, fontWeight: 800, color: "#fff", textTransform: "uppercase" }}>{team.label}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <span style={{ fontFamily: mono, fontSize: 9, letterSpacing: ".1em", color: "rgba(255,255,255,.48)", textTransform: "uppercase" }}>Verified team history pending</span>
+                        )}
+                      </div>
+                    </div>
                     <div style={{ marginBottom: 12, padding: "11px 12px", borderRadius: 12, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.04)", fontFamily: mono, fontSize: 8, letterSpacing: ".11em", color: "rgba(255,255,255,.52)", textTransform: "uppercase", lineHeight: 1.35, textAlign: "center" }}>
                       Career metrics adapt by sport and position from onboarding scrape, athlete upload, or organization data.
                     </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8, marginBottom: 16 }}>
-                      {careerCells.map((s, i) => (
-                        <div key={i} style={{ minHeight: 86, borderRadius: 12, padding: "15px 10px", border: "1px solid #1E2640", background: "#131829", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center" }}>
-                          <div style={{ fontFamily: disp, fontWeight: 900, fontSize: 30, lineHeight: ".85", color: "#fff" }}>{s.value}</div>
+                    <div className="career-stat-grid">
+                      {visibleCareerCells.map((s) => (
+                        <div className="career-stat-card" key={s.key} style={{ minHeight: 86, borderRadius: 12, padding: "15px 10px", border: "1px solid #1E2640", background: "#131829", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center" }}>
+                          <div style={{ maxWidth: "100%", overflow: "hidden", fontFamily: disp, fontWeight: 900, fontSize: fittedStatSize(formatStatNumber(s.value), 30), fontVariantNumeric: "tabular-nums", lineHeight: ".85", color: "#fff", whiteSpace: "nowrap" }}>{formatStatNumber(s.value)}</div>
                           <div style={{ fontFamily: mono, fontSize: 8.5, letterSpacing: ".12em", color: "rgba(255,255,255,.45)", marginTop: 6 }}>{s.label}</div>
                         </div>
                       ))}
                     </div>
-                    <div style={{ borderRadius: 16, padding: 18, border: "1px solid #1E2640", background: "#131829" }}>
-                      <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: ".16em", color: "#FFB940", marginBottom: 16 }}>◆ INTERCEPTIONS BY SEASON</div>
-                      <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 14, height: 120 }}>
-                        {intBars.map((b, i) => (
-                          <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 8, height: "100%", justifyContent: "flex-end" }}>
-                            <span style={{ fontFamily: disp, fontWeight: 800, fontSize: 16, color: "#fff" }}>{b.value}</span>
-                            <div style={b.barStyle} />
-                            <span style={{ fontFamily: mono, fontSize: 9, letterSpacing: ".08em", color: "rgba(255,255,255,.45)" }}>{b.year}</span>
-                          </div>
-                        ))}
+                    {careerCells.length > 6 ? (
+                      <div style={{ display: "flex", justifyContent: "center", margin: "-4px 0 16px" }}>
+                        <button type="button" onClick={() => setShowAllCareerStats((current) => !current)} style={{ minHeight: 34, padding: "7px 14px", borderRadius: 9999, border: "1px solid #1E2640", background: "rgba(255,255,255,.04)", color: "rgba(255,255,255,.72)", fontFamily: mono, fontSize: 8.5, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", cursor: "pointer" }}>
+                          {showAllCareerStats ? "SHOW FEATURED STATS" : `VIEW ALL ${careerCells.length} STATS`}
+                        </button>
                       </div>
+                    ) : null}
+                    <div ref={careerGamesRef} style={{ borderRadius: 16, padding: 18, border: "1px solid #1E2640", background: "#131829", overflow: "hidden" }}>
+                      <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: ".16em", color: "#FFB940", marginBottom: 16 }}>◆ GAMES PLAYED BY SEASON</div>
+                      {careerGameBars.length ? (
+                        <div ref={careerGamesViewportRef} className="career-games-viewport">
+                          <div className={`career-games-track${careerGamesInView && careerGamesNeedsScroll ? " is-active" : ""}`}>
+                            {[false, true].map((duplicate) => (
+                              <div ref={duplicate ? undefined : careerGamesPrimaryRef} className="career-games-sequence" aria-hidden={duplicate || undefined} key={duplicate ? "duplicate" : "primary"}>
+                                {careerGameBars.map((season) => (
+                                  <div key={`${season.level}-${season.year}`} title={`${season.year} ${season.team ?? season.levelLabel}: ${season.value} games`} style={{ width: 64, flex: "0 0 64px", display: "flex", flexDirection: "column", alignItems: "center", gap: 7, height: 132, justifyContent: "flex-end" }}>
+                                    <span style={{ maxWidth: "100%", fontFamily: disp, fontWeight: 800, fontSize: fittedStatSize(season.value, 16), fontVariantNumeric: "tabular-nums", color: "#fff", whiteSpace: "nowrap" }}>{season.value}</span>
+                                    <div style={season.barStyle} />
+                                    <span style={{ fontFamily: mono, fontSize: 8.5, letterSpacing: ".06em", color: "rgba(255,255,255,.58)" }}>{season.year}</span>
+                                    <span style={{ fontFamily: mono, fontSize: 7, letterSpacing: ".1em", color: season.level.toLowerCase() === "pro" ? lockerAccent : "#6E8BFF" }}>{season.levelLabel}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <div style={{ minHeight: 110, display: "grid", placeItems: "center", fontFamily: mono, fontSize: 9, letterSpacing: ".1em", color: "rgba(255,255,255,.48)", textAlign: "center", textTransform: "uppercase" }}>
+                          Verified season-by-season games pending
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -1237,7 +1713,7 @@ export default function LockerView({
                         <div style={{ position: "absolute", top: 14 + awardsScrollProgress * 286, right: 1, width: 2, height: 54, borderRadius: 9999, background: "rgba(210,214,224,.72)", boxShadow: "0 0 8px rgba(210,214,224,.22)", opacity: awardsScrolling ? 1 : 0, transition: "opacity .22s ease, top .08s linear", pointerEvents: "none" }} />
                       </div>
                     ) : (
-                      <div style={{ minHeight: 260, borderRadius: 16, border: "1px solid #1E2640", background: "radial-gradient(120% 100% at 100% 0,rgba(255,185,64,.12),#131829 58%)", padding: "26px 22px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center" }}>
+                      <div style={{ minHeight: 260, borderRadius: 16, border: "1px solid #1E2640", background: "#131829", padding: "26px 22px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center" }}>
                         <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: ".16em", color: lockerAccent, textTransform: "uppercase", marginBottom: 12 }}>Awards archive</div>
                         <div style={{ fontFamily: disp, fontWeight: 900, fontSize: 28, lineHeight: .9, textTransform: "uppercase", color: "#fff", marginBottom: 12 }}>Legacy still loading</div>
                         <p style={{ fontFamily: body, fontSize: 14, lineHeight: 1.55, color: "rgba(255,255,255,.68)", margin: 0 }}>
@@ -1271,6 +1747,8 @@ export default function LockerView({
                     </div>
                     {gameLogSections.map((section) => {
                       const isOpen = gameLogOpen[section.key];
+                      const gridTemplateColumns = section.columns.map((column) => `${column.width ?? 72}px`).join(" ");
+                      const tableWidth = section.columns.reduce((total, column) => total + (column.width ?? 72), 0) + 20;
                       return (
                         <div key={section.key} style={{ borderRadius: 14, border: "1px solid #1E2640", background: "#131829", overflow: "hidden" }}>
                           <button
@@ -1280,7 +1758,7 @@ export default function LockerView({
                           >
                             <span>
                               <span style={{ display: "block", fontFamily: disp, fontWeight: 900, fontSize: 23, lineHeight: .9, color: "#fff", textTransform: "uppercase" }}>{section.label}</span>
-                              <span style={{ display: "block", fontFamily: mono, fontSize: 8, letterSpacing: ".11em", color: "rgba(255,255,255,.45)", textTransform: "uppercase", marginTop: 5 }}>{section.meta}</span>
+                              <span style={{ display: "block", fontFamily: mono, fontSize: 8, lineHeight: 1.35, letterSpacing: ".11em", color: "rgba(255,255,255,.45)", textTransform: "uppercase", marginTop: 10 }}>{section.meta}</span>
                             </span>
                             <span style={{ width: 24, alignSelf: "stretch", display: "flex", alignItems: "center", justifyContent: "center", color: lockerAccent, fontFamily: disp, fontSize: 22, lineHeight: 1, transform: isOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform .2s ease" }}>⌄</span>
                           </button>
@@ -1293,22 +1771,23 @@ export default function LockerView({
                                     <span style={{ fontFamily: mono, fontSize: 8, letterSpacing: ".1em", color: "rgba(255,255,255,.5)", textTransform: "uppercase", textAlign: "right" }}>{season.summary}</span>
                                   </summary>
                                   <div className="game-log-scroll" style={{ maxWidth: "100%", overflowX: "auto", overflowY: "hidden", padding: "0 10px 16px", marginBottom: 4, WebkitOverflowScrolling: "touch" }}>
-                                    <div style={{ width: 688, maxWidth: "none" }}>
-                                      <div style={{ display: "grid", gridTemplateColumns: "150px 76px repeat(6,72px)", gap: 0, padding: "0 10px 8px", borderBottom: "1px solid rgba(255,255,255,.08)" }}>
-                                        {["OPPONENT", "RES", "TKL", "SOLO", "SACK", "INT", "PBU", "FF"].map((h, i) => (
-                                          <span key={h} style={{ fontFamily: mono, fontSize: 8, letterSpacing: ".1em", color: "rgba(255,255,255,.4)", textAlign: i === 0 ? "left" : "center", whiteSpace: "nowrap" }}>{h}</span>
+                                    <div style={{ width: tableWidth, maxWidth: "none" }}>
+                                      <div style={{ display: "grid", gridTemplateColumns, gap: 0, padding: "0 10px 8px", borderBottom: "1px solid rgba(255,255,255,.08)" }}>
+                                        {section.columns.map((column) => (
+                                          <span key={column.key} style={{ fontFamily: mono, fontSize: 8, letterSpacing: ".1em", color: "rgba(255,255,255,.4)", textAlign: column.align ?? (column.key === "opponent" ? "left" : "center"), whiteSpace: "nowrap" }}>{column.label}</span>
                                         ))}
                                       </div>
-                                      {season.rows.map((g, i) => (
-                                        <div key={`${season.year}-${g.opp}-${i}`} style={{ display: "grid", gridTemplateColumns: "150px 76px repeat(6,72px)", alignItems: "center", padding: "11px 10px", borderRadius: 9, background: i % 2 ? "transparent" : "rgba(255,255,255,.035)" }}>
-                                          <span style={{ fontFamily: disp, fontWeight: 700, fontSize: 14, textTransform: "uppercase", color: "#fff" }}>{g.opp}</span>
-                                          <span style={{ fontFamily: mono, fontSize: 10, textAlign: "center", color: g.resColor }}>{g.res}</span>
-                                          <span style={{ fontFamily: disp, fontWeight: 700, fontSize: 14, color: "#fff", textAlign: "center" }}>{g.tkl}</span>
-                                          <span style={{ fontFamily: disp, fontWeight: 700, fontSize: 14, color: "#fff", textAlign: "center" }}>{g.solo}</span>
-                                          <span style={{ fontFamily: disp, fontWeight: 700, fontSize: 14, color: "#fff", textAlign: "center" }}>{g.sack}</span>
-                                          <span style={{ fontFamily: disp, fontWeight: 700, fontSize: 14, color: "#fff", textAlign: "center" }}>{g.int}</span>
-                                          <span style={{ fontFamily: disp, fontWeight: 700, fontSize: 14, color: "#fff", textAlign: "center" }}>{g.pbu}</span>
-                                          <span style={{ fontFamily: disp, fontWeight: 700, fontSize: 14, color: "#fff", textAlign: "center" }}>{g.ff}</span>
+                                      {season.rows.map((game, i) => (
+                                        <div key={game.id} style={{ display: "grid", gridTemplateColumns, alignItems: "center", padding: "11px 10px", borderRadius: 9, background: i % 2 ? "transparent" : "rgba(255,255,255,.035)" }}>
+                                          {section.columns.map((column) => {
+                                            const value = game.values[column.key] ?? "—";
+                                            const isOpponent = column.key === "opponent";
+                                            const isResult = column.key === "result";
+                                            const resultColor = game.resultTone === "win" ? "#00D68F" : game.resultTone === "loss" ? "#FF3D5A" : "rgba(255,255,255,.72)";
+                                            return (
+                                              <span key={column.key} title={String(value)} style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", fontFamily: isResult ? mono : disp, fontWeight: isResult ? 600 : 700, fontSize: isResult ? 10 : 14, textTransform: isOpponent ? "uppercase" : undefined, color: isResult ? resultColor : "#fff", textAlign: column.align ?? (isOpponent ? "left" : "center"), whiteSpace: "nowrap" }}>{formatStatNumber(value)}</span>
+                                            );
+                                          })}
                                         </div>
                                       ))}
                                     </div>
@@ -1320,6 +1799,11 @@ export default function LockerView({
                         </div>
                       );
                     })}
+                    {!gameLogSections.length ? (
+                      <div style={{ minHeight: 180, borderRadius: 14, border: "1px solid #1E2640", background: "#131829", padding: 22, display: "grid", placeItems: "center", textAlign: "center", fontFamily: mono, fontSize: 9, letterSpacing: ".11em", lineHeight: 1.5, color: "rgba(255,255,255,.5)", textTransform: "uppercase" }}>
+                        Verified position-specific game logs pending
+                      </div>
+                    ) : null}
                   </div>
                 )}
               </div>
@@ -1360,7 +1844,7 @@ export default function LockerView({
               </div>
               <button type="button" onClick={closeSiteSearch} aria-label="Close search" style={{ width: 42, height: 42, borderRadius: 9999, border: "1px solid #1E2640", background: "rgba(255,255,255,.06)", color: "#fff", fontFamily: disp, fontSize: 24, lineHeight: 1, cursor: "pointer" }}>×</button>
             </div>
-            <div style={{ maxHeight: "calc(100% - 68px)", overflowY: "auto", paddingRight: 2 }}>
+            <div className="locker-modal-scroll" style={{ maxHeight: "calc(100% - 68px)", overflowY: "auto", paddingRight: 2 }}>
               {!searchQuery.trim() ? (
                 <div style={{ padding: "28px 14px", borderRadius: 14, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.04)", textAlign: "center" }}>
                   <div style={{ fontFamily: disp, fontWeight: 900, fontSize: 24, lineHeight: .9, color: "#fff", textTransform: "uppercase", marginBottom: 10 }}>Search BLTZ</div>
@@ -1467,11 +1951,36 @@ function RotatingPill({ items, fallback }: {
   );
 }
 
-function IdRow({ label, value }: { label: string; value: string }) {
+function IdRow({ label, value, className }: { label: string; value: string; className?: string }) {
+  return (
+    <div className={className} style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 0 }}>
+      <span title={label} style={{ fontFamily: mono, fontSize: 9.5, letterSpacing: ".12em", color: "rgba(255,255,255,.4)", textTransform: "uppercase", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{label}</span>
+      <span className="basic-info-value" title={value} style={{ fontFamily: disp, fontWeight: 700, fontSize: 15, lineHeight: 1, textTransform: "uppercase", color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{value}</span>
+    </div>
+  );
+}
+
+function JerseyNumberRow({ values, fallback }: { values: string[]; fallback: string }) {
+  const normalized = values.map((value) => value.replace(/^#\s*/, "").trim()).filter(Boolean);
+  const accessibleValue = normalized.length ? normalized.map((value) => `#${value}`).join(" - ") : fallback;
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 0 }}>
-      <span style={{ fontFamily: mono, fontSize: 8.5, letterSpacing: ".12em", color: "rgba(255,255,255,.4)", textTransform: "uppercase" }}>{label}</span>
-      <span style={{ fontFamily: disp, fontWeight: 700, fontSize: 15, lineHeight: 1, textTransform: "uppercase", color: "#fff", overflowWrap: "anywhere" }}>{value}</span>
+      <span style={{ fontFamily: mono, fontSize: 9.5, letterSpacing: ".12em", color: "rgba(255,255,255,.4)", textTransform: "uppercase", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>JERSEY NUMBERS</span>
+      <span
+        className="basic-info-value"
+        title={accessibleValue}
+        aria-label={accessibleValue}
+        style={{ display: "flex", alignItems: "baseline", gap: 7, minWidth: 0, overflow: "hidden", fontFamily: disp, fontWeight: 700, fontSize: 15, lineHeight: 1, color: "#fff", whiteSpace: "nowrap" }}
+      >
+        {normalized.length ? normalized.map((value, index) => (
+          <span key={`${value}-${index}`} style={{ display: "inline-flex", alignItems: "baseline", gap: 1, flex: "none" }}>
+            {index > 0 ? <span aria-hidden="true" style={{ marginRight: 6, color: "rgba(255,255,255,.45)", fontSize: ".7em" }}>-</span> : null}
+            <span aria-hidden="true" style={{ fontSize: ".72em", color: "rgba(255,255,255,.62)" }}>#</span>
+            <span aria-hidden="true">{value}</span>
+          </span>
+        )) : fallback}
+      </span>
     </div>
   );
 }
@@ -1491,19 +2000,92 @@ const followOff: React.CSSProperties = { padding: "8px 14px", borderRadius: 9999
 
 const styleSheet = `
 .bltz-frame{position:relative;width:390px;height:844px;background:#0B0E1A;overflow:hidden;box-shadow:0 30px 90px rgba(0,0,0,.6);border-radius:0}
+.locker-hero-card{contain:paint;isolation:isolate;transform:translateZ(0);clip-path:inset(0 round 24px);outline:1px solid rgba(255,255,255,.12);outline-offset:-1px}
+.locker-hero-media{position:absolute;inset:3px;overflow:hidden;border-radius:21px;clip-path:inset(0 round 21px)}
+.locker-hero-stroke{border-radius:24px}
+.bio-headshot-card{height:250px;overflow:hidden;border:1px solid #1E2640;border-radius:14px;background:#131829;display:flex;flex-direction:column}
+.bio-headshot-image{position:relative;height:216px;flex:0 0 216px;overflow:hidden;background:${GRAD_FIELD}}
+.bio-headshot-photo{object-fit:cover;object-position:50% 12%}
+.bio-headshot-year{height:34px;flex:0 0 34px;display:flex;align-items:center;justify-content:center;border-top:1px solid #1E2640;color:${lockerAccent};font-family:${mono};font-size:11px;font-weight:700;letter-spacing:.12em;line-height:1;text-align:center;white-space:nowrap}
+.team-history-viewport{min-width:0;flex:1;overflow:hidden;white-space:nowrap}
+.team-history-track{display:flex;width:max-content;will-change:transform}
+.team-history-sequence{display:flex;align-items:center;flex:none}
+.team-history-track:not(.is-active) .team-history-sequence:first-child>div:first-child{border-left:none!important;padding-left:0!important}
+.career-games-viewport{width:100%;overflow:hidden}
+.career-games-track{display:flex;width:max-content;will-change:transform}
+.career-games-sequence{display:flex;align-items:flex-end;flex:none}
+.career-games-track:not(.is-active){margin-right:auto;margin-left:auto}
+.career-games-track:not(.is-active) .career-games-sequence[aria-hidden="true"]{display:none}
+.career-games-track.is-active{animation:careerGamesMarquee 48s linear infinite}
+.career-stat-grid{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-bottom:16px}
+.career-stat-card{min-width:0;flex:0 0 calc((100% - 16px)/3)}
+.locker-main-tab{font-size:15px}
+.locker-shorts-grid{grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:max-content;align-content:start;align-items:start}
+.locker-short-card{width:100%;aspect-ratio:9/16;justify-self:center}
+.locker-short-card:focus-visible{outline:2px solid ${lockerAccent};outline-offset:-3px}
+.locker-short-modal-shell{position:relative;width:min(calc(100vw - 24px),calc((100dvh - 24px)*.5625),430px);aspect-ratio:9/16;overflow:hidden;border:1px solid rgba(255,255,255,.16);border-radius:16px;background:#05070f;box-shadow:0 28px 100px rgba(0,0,0,.72)}
+.locker-short-modal-feed{width:100%;height:100%;overflow-y:auto;overscroll-behavior:contain;scroll-snap-type:y mandatory;scroll-behavior:smooth;scrollbar-width:none;-ms-overflow-style:none}
+.locker-short-modal-slide{position:relative;width:100%;height:100%;overflow:hidden;scroll-snap-align:start;scroll-snap-stop:always;background:${GRAD_FIELD}}
+.locker-short-modal-arrow{position:absolute;right:11px;z-index:4;width:36px;height:36px;padding:0;border:1px solid rgba(255,255,255,.18);border-radius:9999px;background:rgba(5,7,15,.68);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.locker-short-modal-arrow--up{top:56px}
+.locker-short-modal-arrow--down{bottom:12px}
+.locker-short-modal-arrow:disabled{opacity:.28;cursor:default}
+.locker-short-modal-arrow:focus-visible{outline:2px solid ${lockerAccent};outline-offset:1px}
+.locker-podcast-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.locker-social-scroll{padding-right:6px}
+.locker-social-layout{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.locker-social-layout--desktop{display:none}
+.locker-social-column{display:flex;min-width:0;flex-direction:column;gap:8px}
+.locker-social-card{display:block;width:100%;flex:none;border-radius:10px}
+.locker-social-card--square{aspect-ratio:1/1}
+.locker-social-card--portrait{aspect-ratio:9/16}
+.locker-social-card:focus-visible{outline:2px solid ${lockerAccent};outline-offset:-3px}
+.locker-social-modal-layout{display:grid;grid-template-columns:minmax(0,1fr)}
+.locker-social-modal-media{width:100%}
+.locker-social-modal-media--square{aspect-ratio:1/1}
+.locker-social-modal-media--portrait{aspect-ratio:9/16}
+.basic-info-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.basic-info-grid>div{grid-column:1/-1}
 @media (min-width:640px){.bltz-frame{border-radius:28px}}
-@media (max-width:640px){.bltz-frame{width:100vw;height:100dvh;box-shadow:none}}
+@media (min-width:641px){.bio-headshot-card{height:216px}.bio-headshot-image{height:178px;flex-basis:178px}.bio-headshot-photo{object-fit:contain;object-position:center bottom}.bio-headshot-year{height:38px;flex-basis:38px}.basic-info-grid>div{grid-column:auto}.basic-info-grid>.basic-info-high-school{grid-column:1/-1}}
+@media (max-width:640px){
+  .bltz-frame{width:100vw;height:100dvh;box-shadow:none}
+  .locker-filter-row{gap:6px!important;padding-right:12px!important;padding-left:12px!important}
+  .locker-filter-pill{min-width:0;padding:7px 9px!important;font-size:9px!important;letter-spacing:.08em!important}
+  .team-history-container{flex-direction:column;gap:10px!important}
+  .team-history-heading{width:100%;text-align:center}
+  .team-history-viewport{width:100%;flex:none}
+  .team-history-track:not(.is-active){margin-right:auto;margin-left:auto}
+  .team-history-track:not(.is-active) .team-history-sequence[aria-hidden="true"]{display:none}
+  .team-history-track.is-active{animation:teamHistoryMarquee 24s linear infinite}
+}
+@media (min-width:641px){.team-history-viewport{overflow-x:auto}.team-history-sequence[aria-hidden="true"]{display:none}}
+@media (prefers-reduced-motion:reduce){.team-history-track.is-active,.career-games-track.is-active{animation:none}.team-history-viewport,.career-games-viewport{overflow-x:auto}.career-games-track.is-active .career-games-sequence[aria-hidden="true"]{display:none}}
 .bltz-frame.bltz-frame-embedded{width:100%;max-width:575px;height:100%;border-radius:18px;box-shadow:none}
+@media (min-width:641px) and (max-width:899px){
+  .bltz-frame:not(.bltz-frame-embedded){width:100vw;height:100dvh;border-radius:0;box-shadow:none}
+}
 @media (min-width:900px){
+  .locker-shorts-grid{grid-template-columns:repeat(3,minmax(0,220px));justify-content:center}
+  .locker-social-layout--mobile{display:none}
+  .locker-social-layout--desktop{display:grid;width:min(100%,760px);margin-right:auto;margin-left:auto;grid-template-columns:repeat(3,minmax(0,1fr))}
+  .locker-social-modal-layout{grid-template-columns:minmax(0,46%) minmax(0,54%);align-items:start}
+  .basic-info-value{font-size:20px!important}
+  .career-stat-card{flex-basis:calc((100% - 24px)/4);min-height:100px!important}
+  .locker-main-tabs-list{height:65px!important}
+  .locker-main-tab{height:53px!important;font-size:19px}
+  .locker-tabs-nav{width:70%;margin-right:auto;margin-left:auto}
   .locker-page-shell{align-items:flex-start!important;background:linear-gradient(180deg,#05070F,#080B17 46%,#05070F)!important}
   .bltz-frame:not(.bltz-frame-embedded){width:min(1440px,100%);height:auto;min-height:100vh;overflow:visible;border-radius:0;box-shadow:none}
   .bltz-frame:not(.bltz-frame-embedded)>.scr{position:relative!important;inset:auto!important;min-height:100vh;overflow:visible!important}
   .bltz-frame:not(.bltz-frame-embedded) .locker-sticky-header{position:fixed!important;right:0!important;left:0!important;padding:12px max(32px,calc((100vw - 1280px)/2))!important}
   .bltz-frame:not(.bltz-frame-embedded) .locker-topbar{width:min(1240px,calc(100% - 64px));margin:0 auto;padding:22px 0 16px!important}
   .bltz-frame:not(.bltz-frame-embedded) .scr>section{width:min(1180px,calc(100% - 64px));margin-right:auto;margin-left:auto}
-  .bltz-frame:not(.bltz-frame-embedded) .locker-hero-section{padding:0!important}
-  .bltz-frame:not(.bltz-frame-embedded) .locker-hero-card{height:min(76vh,760px)!important;min-height:640px;border-radius:8px!important}
-  .bltz-frame:not(.bltz-frame-embedded) .locker-hero-headshot{bottom:104px!important;width:390px!important;height:500px!important}
+  .bltz-frame:not(.bltz-frame-embedded) .locker-hero-section{width:calc(100% - 32px)!important;max-width:none!important;padding:0!important}
+  .bltz-frame:not(.bltz-frame-embedded) .locker-hero-card{height:min(76vh,760px)!important;min-height:640px;border-radius:8px!important;clip-path:inset(0 round 8px)}
+  .bltz-frame:not(.bltz-frame-embedded) .locker-hero-media{border-radius:5px;clip-path:inset(0 round 5px)}
+  .bltz-frame:not(.bltz-frame-embedded) .locker-hero-stroke{border-radius:8px}
+  .bltz-frame:not(.bltz-frame-embedded) .locker-hero-headshot{bottom:104px!important;width:220px!important;height:282px!important}
   .bltz-frame:not(.bltz-frame-embedded) .locker-hero-copy{right:50%!important;left:50%!important;width:min(560px,calc(100% - 48px));padding:0!important;transform:translateX(-50%)}
   .bltz-frame:not(.bltz-frame-embedded) .locker-hero-copy h1{font-size:clamp(52px,5vw,76px)!important}
   .bltz-frame:not(.bltz-frame-embedded) .locker-film-section,
@@ -1522,6 +2104,13 @@ const styleSheet = `
 .media-inner-scroll::-webkit-scrollbar-thumb{background:transparent}
 .media-inner-scroll::-webkit-scrollbar-button{display:none;width:0;height:0;background:transparent}
 .media-inner-scroll::-webkit-scrollbar-corner{background:transparent}
+.locker-modal-scroll{scrollbar-width:thin;scrollbar-color:rgba(196,201,214,.68) transparent}
+.locker-modal-scroll::-webkit-scrollbar{width:3px;height:3px;background:transparent}
+.locker-modal-scroll::-webkit-scrollbar-track{background:transparent;border:none;box-shadow:none}
+.locker-modal-scroll::-webkit-scrollbar-thumb{border:none;border-radius:999px;background:rgba(196,201,214,.68)}
+.locker-modal-scroll::-webkit-scrollbar-button{display:none;width:0;height:0;background:transparent}
+.locker-modal-scroll::-webkit-scrollbar-corner{background:transparent}
+.locker-short-modal-feed::-webkit-scrollbar{display:none;width:0;height:0;background:transparent}
 .game-log-scroll{scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.34) transparent}
 .game-log-scroll::-webkit-scrollbar{height:4px;background:transparent}
 .game-log-scroll::-webkit-scrollbar-track{background:transparent;margin:0 10px}
@@ -1534,6 +2123,8 @@ const styleSheet = `
 @keyframes glowB{0%,100%{transform:scale(1.1);opacity:.75}50%{transform:scale(1);opacity:.45}}
 @keyframes tabIn{0%{opacity:0;transform:translateY(18px)}100%{opacity:1;transform:translateY(0)}}
 @keyframes barGrow{0%{transform:scaleY(0)}100%{transform:scaleY(1)}}
+@keyframes teamHistoryMarquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+@keyframes careerGamesMarquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
 @keyframes eqbar{0%,100%{height:20%}50%{height:95%}}
 @keyframes pillScroll{0%{transform:translateY(0)}100%{transform:translateY(-44px)}}
 @keyframes pillSeamFade{0%{opacity:0}45%{opacity:1}100%{opacity:0}}

@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Check,
@@ -10,13 +11,18 @@ import {
   Eye,
   Film,
   Link2,
+  Maximize,
+  Minimize,
+  Pause,
   Play,
   Search,
   Share2,
-  ThumbsDown,
   ThumbsUp,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
 import type { PublicVideo, PublicVideoLevel } from "@/lib/player/public-video";
+import { createClient } from "@/lib/supabase/client";
 import styles from "./video-detail.module.css";
 
 export type VideoDetailData = {
@@ -28,6 +34,17 @@ export type VideoDetailData = {
   videos: PublicVideo[];
   views: number;
   likes: number;
+  taggedTeammates: TaggedTeammate[];
+  playerId: string | null;
+  isFollowing: boolean;
+};
+
+export type TaggedTeammate = {
+  id: string;
+  name: string;
+  headshotUrl: string | null;
+  position: string | null;
+  team: string | null;
 };
 
 const LEVELS: { key: PublicVideoLevel; label: string }[] = [
@@ -38,7 +55,7 @@ const LEVELS: { key: PublicVideoLevel; label: string }[] = [
 ];
 
 function formatDuration(seconds: number | null): string {
-  if (!seconds || seconds < 0) return "--:--";
+  if (seconds === null || !Number.isFinite(seconds) || seconds < 0) return "--:--";
   const minutes = Math.floor(seconds / 60);
   const remaining = Math.floor(seconds % 60);
   return `${minutes}:${String(remaining).padStart(2, "0")}`;
@@ -66,6 +83,16 @@ function formatTitle(title: string): string {
     .replace(/(^|\s|[-/])\p{L}/gu, (letter) => letter.toLocaleUpperCase());
 }
 
+function teammateInitials(name: string): string {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
+}
+
 function VideoListItem({ video, slug, current }: { video: PublicVideo; slug: string; current: boolean }) {
   return (
     <Link
@@ -89,10 +116,32 @@ function VideoListItem({ video, slug, current }: { video: PublicVideo; slug: str
 }
 
 export default function VideoDetailView({ data }: { data: VideoDetailData }) {
+  const router = useRouter();
   const [copied, setCopied] = useState(false);
   const [titleScrollDistance, setTitleScrollDistance] = useState(0);
+  const [publicationScrollDistance, setPublicationScrollDistance] = useState(0);
+  const [activeTeammateId, setActiveTeammateId] = useState<string | null>(null);
+  const [hoveredTeammateId, setHoveredTeammateId] = useState<string | null>(null);
+  const [teammateMarqueeNeeded, setTeammateMarqueeNeeded] = useState(false);
+  const [teammateMarqueeInView, setTeammateMarqueeInView] = useState(false);
+  const [teammateMarqueeDistance, setTeammateMarqueeDistance] = useState(0);
+  const [playerControlsActive, setPlayerControlsActive] = useState(true);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [videoDuration, setVideoDuration] = useState(data.video.durationSeconds ?? 0);
+  const [following, setFollowing] = useState(data.isFollowing);
+  const [followPending, setFollowPending] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const titleViewportRef = useRef<HTMLDivElement>(null);
   const titleTrackRef = useRef<HTMLDivElement>(null);
+  const publicationViewportRef = useRef<HTMLDivElement>(null);
+  const publicationTrackRef = useRef<HTMLSpanElement>(null);
+  const teammateViewportRef = useRef<HTMLDivElement>(null);
+  const teammateGroupRef = useRef<HTMLDivElement>(null);
+  const playerRef = useRef<HTMLElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const controlsTimerRef = useRef<number | null>(null);
   const grouped = useMemo(
     () => LEVELS.map((level) => ({
       ...level,
@@ -107,9 +156,44 @@ export default function VideoDetailView({ data }: { data: VideoDetailData }) {
     window.setTimeout(() => setCopied(false), 1800);
   }
 
+  async function toggleFollow() {
+    if (followPending) return;
+    if (!data.playerId) {
+      setFollowing((current) => !current);
+      return;
+    }
+
+    const supabase = createClient();
+    const { data: authData } = await supabase.auth.getUser();
+    const user = authData.user;
+    if (!user) {
+      const next = `${window.location.pathname}${window.location.search}`;
+      router.push(`/auth/login?next=${encodeURIComponent(next)}`);
+      return;
+    }
+
+    const previous = following;
+    setFollowing(!previous);
+    setFollowPending(true);
+    const result = previous
+      ? await supabase
+          .from("player_follows")
+          .delete()
+          .eq("user_id", user.id)
+          .eq("player_id", data.playerId)
+      : await supabase
+          .from("player_follows")
+          .insert({ user_id: user.id, player_id: data.playerId });
+    if (result.error) setFollowing(previous);
+    setFollowPending(false);
+  }
+
   const description =
     data.video.description ||
     `This film is part of ${data.athleteName}'s verified public BLTZ archive. Additional context will appear as it is approved.`;
+  const displayedTeammate = data.taggedTeammates.find(
+    (teammate) => teammate.id === (activeTeammateId ?? hoveredTeammateId),
+  ) ?? null;
 
   useEffect(() => {
     const viewport = titleViewportRef.current;
@@ -125,6 +209,108 @@ export default function VideoDetailView({ data }: { data: VideoDetailData }) {
     measureTitle();
     return () => observer.disconnect();
   }, [data.video.title, data.video.durationSeconds]);
+
+  useEffect(() => {
+    const viewport = publicationViewportRef.current;
+    const track = publicationTrackRef.current;
+    if (!viewport || !track) return;
+
+    const measurePublication = () => {
+      setPublicationScrollDistance(Math.max(0, track.scrollWidth - viewport.clientWidth));
+    };
+    const observer = new ResizeObserver(measurePublication);
+    observer.observe(viewport);
+    observer.observe(track);
+    measurePublication();
+    return () => observer.disconnect();
+  }, [data.video.publishedAt]);
+
+  useEffect(() => {
+    const viewport = teammateViewportRef.current;
+    const group = teammateGroupRef.current;
+    if (!viewport || !group) return;
+
+    const measureTeammates = () => {
+      const gap = 10;
+      setTeammateMarqueeNeeded(group.scrollWidth > viewport.clientWidth + 1);
+      setTeammateMarqueeDistance(group.scrollWidth + gap);
+    };
+    const resizeObserver = new ResizeObserver(measureTeammates);
+    const intersectionObserver = new IntersectionObserver(
+      ([entry]) => setTeammateMarqueeInView(entry.isIntersecting),
+      { threshold: 0.15 },
+    );
+    resizeObserver.observe(viewport);
+    resizeObserver.observe(group);
+    intersectionObserver.observe(viewport);
+    measureTeammates();
+    return () => {
+      resizeObserver.disconnect();
+      intersectionObserver.disconnect();
+    };
+  }, [data.taggedTeammates.length]);
+
+  useEffect(() => () => {
+    if (controlsTimerRef.current) window.clearTimeout(controlsTimerRef.current);
+  }, []);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(document.fullscreenElement === playerRef.current);
+    };
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, []);
+
+  function keepPlayerControlsVisible() {
+    if (controlsTimerRef.current) window.clearTimeout(controlsTimerRef.current);
+    setPlayerControlsActive(true);
+  }
+
+  function schedulePlayerControlsFade() {
+    keepPlayerControlsVisible();
+    controlsTimerRef.current = window.setTimeout(() => {
+      setPlayerControlsActive(false);
+      controlsTimerRef.current = null;
+    }, 2000);
+  }
+
+  function handlePlayerInteraction() {
+    if (videoRef.current?.paused === false) schedulePlayerControlsFade();
+    else keepPlayerControlsVisible();
+  }
+
+  async function togglePlayback() {
+    const video = videoRef.current;
+    if (!video) return;
+    if (video.paused) await video.play().catch(() => undefined);
+    else video.pause();
+  }
+
+  function toggleMute() {
+    const video = videoRef.current;
+    if (!video) return;
+    video.muted = !video.muted;
+    setIsMuted(video.muted);
+    handlePlayerInteraction();
+  }
+
+  function seekVideo(value: number) {
+    const video = videoRef.current;
+    if (!video) return;
+    video.currentTime = value;
+    setCurrentTime(value);
+    handlePlayerInteraction();
+  }
+
+  async function toggleFullscreen() {
+    if (document.fullscreenElement) {
+      await document.exitFullscreen().catch(() => undefined);
+    } else {
+      await playerRef.current?.requestFullscreen?.().catch(() => undefined);
+    }
+    handlePlayerInteraction();
+  }
 
   return (
     <main className={styles.page} style={{ "--video-accent": data.accentColor } as React.CSSProperties}>
@@ -157,14 +343,35 @@ export default function VideoDetailView({ data }: { data: VideoDetailData }) {
 
         <div className={styles.layout}>
           <div className={styles.primary}>
-            <section className={styles.player} aria-label={`${data.video.title} video player`}>
+            <section
+              ref={playerRef}
+              className={`${styles.player} ${playerControlsActive ? styles.playerControlsActive : ""}`}
+              aria-label={`${data.video.title} video player`}
+              onMouseMove={handlePlayerInteraction}
+              onPointerDown={handlePlayerInteraction}
+            >
               {data.video.playbackUrl ? (
                 <video
+                  ref={videoRef}
                   src={data.video.playbackUrl}
                   poster={data.video.thumbnailUrl ?? undefined}
-                  controls
                   playsInline
                   preload="metadata"
+                  onClick={togglePlayback}
+                  onLoadedMetadata={(event) => setVideoDuration(event.currentTarget.duration)}
+                  onTimeUpdate={(event) => setCurrentTime(event.currentTarget.currentTime)}
+                  onPlay={() => {
+                    setIsPlaying(true);
+                    schedulePlayerControlsFade();
+                  }}
+                  onPause={() => {
+                    setIsPlaying(false);
+                    keepPlayerControlsVisible();
+                  }}
+                  onEnded={() => {
+                    setIsPlaying(false);
+                    keepPlayerControlsVisible();
+                  }}
                 />
               ) : data.video.thumbnailUrl ? (
                 <Image src={data.video.thumbnailUrl} alt="" fill priority sizes="(max-width: 900px) 100vw, 820px" />
@@ -175,6 +382,32 @@ export default function VideoDetailView({ data }: { data: VideoDetailData }) {
                 </div>
               )}
               <span className={styles.playerShade} aria-hidden="true" />
+              {data.video.playbackUrl ? (
+                <div className={`${styles.playerChrome} ${playerControlsActive ? styles.playerChromeVisible : ""}`}>
+                  <div className={styles.playerControls}>
+                    <button type="button" onClick={togglePlayback} aria-label={isPlaying ? "Pause video" : "Play video"}>
+                      {isPlaying ? <Pause aria-hidden="true" fill="currentColor" /> : <Play aria-hidden="true" fill="currentColor" />}
+                    </button>
+                    <span className={styles.playerTime}>{formatDuration(currentTime)} / {formatDuration(videoDuration)}</span>
+                    <input
+                      className={styles.playerProgress}
+                      type="range"
+                      min="0"
+                      max={Math.max(videoDuration, 0)}
+                      step="0.1"
+                      value={Math.min(currentTime, videoDuration || 0)}
+                      onChange={(event) => seekVideo(Number(event.target.value))}
+                      aria-label="Video progress"
+                    />
+                    <button type="button" onClick={toggleMute} aria-label={isMuted ? "Unmute video" : "Mute video"}>
+                      {isMuted ? <VolumeX aria-hidden="true" /> : <Volume2 aria-hidden="true" />}
+                    </button>
+                    <button type="button" onClick={toggleFullscreen} aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}>
+                      {isFullscreen ? <Minimize aria-hidden="true" /> : <Maximize aria-hidden="true" />}
+                    </button>
+                  </div>
+                </div>
+              ) : null}
               <div className={styles.playerTools}>
                 <span>{data.video.sourceLabel}</span>
                 <button type="button" onClick={copyShareLink} aria-label="Copy video share link">
@@ -182,24 +415,42 @@ export default function VideoDetailView({ data }: { data: VideoDetailData }) {
                 </button>
               </div>
             </section>
+          </div>
 
+          <div className={styles.detailColumn}>
             <section className={styles.videoInfo}>
               <div className={styles.titleRow}>
-                <div className={styles.titleViewport} ref={titleViewportRef}>
-                  <div
-                    ref={titleTrackRef}
-                    className={`${styles.titleTrack} ${titleScrollDistance > 0 ? styles.titleTrackScrolling : ""}`}
-                    style={{ "--title-scroll-distance": `${titleScrollDistance}px` } as React.CSSProperties}
-                  >
-                    <h1>{formatTitle(data.video.title)}</h1>
-                    <span>{formatDuration(data.video.durationSeconds)}</span>
+                <div className={styles.titleBlock}>
+                  <div className={styles.titleViewport} ref={titleViewportRef}>
+                    <div
+                      ref={titleTrackRef}
+                      className={`${styles.titleTrack} ${titleScrollDistance > 0 ? styles.titleTrackScrolling : ""}`}
+                      style={{ "--title-scroll-distance": `${titleScrollDistance}px` } as React.CSSProperties}
+                    >
+                      <h1>{formatTitle(data.video.title)}</h1>
+                      <span className={styles.titleDuration}>{formatDuration(data.video.durationSeconds)}</span>
+                    </div>
                   </div>
                 </div>
-                <button type="button" className={styles.followButton}>Following</button>
+                <button
+                  type="button"
+                  className={`${styles.followButton} ${following ? styles.followButtonFollowing : ""}`}
+                  onClick={toggleFollow}
+                  disabled={followPending}
+                  aria-pressed={following}
+                >
+                  {following ? "Following" : "Follow"}
+                </button>
               </div>
               <div className={styles.metadataRow}>
-                <div className={styles.publicationMeta}>
-                  <span>Published on {formatDate(data.video.publishedAt)}</span>
+                <div className={styles.publicationMeta} ref={publicationViewportRef}>
+                  <span
+                    ref={publicationTrackRef}
+                    className={publicationScrollDistance > 0 ? styles.publicationTrackScrolling : undefined}
+                    style={{ "--title-scroll-distance": `${publicationScrollDistance}px` } as React.CSSProperties}
+                  >
+                    Published on {formatDate(data.video.publishedAt)}
+                  </span>
                 </div>
                 <div className={styles.engagementMeta}>
                   <span><Eye aria-hidden="true" />{formatViews(data.views)} viewers</span>
@@ -207,38 +458,112 @@ export default function VideoDetailView({ data }: { data: VideoDetailData }) {
                     <ThumbsUp aria-hidden="true" />
                     {data.likes > 0 ? `${formatViews(data.likes)} Liked` : "Like"}
                   </button>
-                  <button type="button" aria-label="Dislike this video">
-                    <ThumbsDown aria-hidden="true" />
-                    Dislike
-                  </button>
                 </div>
               </div>
               <p className={styles.description}>{description}</p>
             </section>
 
-            <section className={styles.conversation}>
-              <strong>Player conversation</strong>
+            <details className={styles.conversation} open>
+              <summary>
+                <strong>Player conversation</strong>
+                <ChevronDown aria-hidden="true" />
+              </summary>
               <p>Comments and reactions will appear here when the verified community feature is available.</p>
-            </section>
+            </details>
           </div>
 
           <aside className={styles.sidebar} aria-label="Player film archive">
-            <div className={styles.archive}>
-              {grouped.map((group) => (
-                <details key={group.key} open={group.videos.some((video) => video.id === data.video.id)}>
-                  <summary>
-                    <span>{group.label}</span>
-                    <small>{group.videos.length} {group.videos.length === 1 ? "video" : "videos"}</small>
-                    <ChevronDown aria-hidden="true" />
-                  </summary>
-                  <div className={styles.episodeList}>
-                    {group.videos.map((video) => (
-                      <VideoListItem key={video.id} video={video} slug={data.slug} current={video.id === data.video.id} />
-                    ))}
+            <section className={styles.additionalVideos} aria-label="Additional videos">
+              <div className={styles.archive}>
+                {grouped.map((group) => (
+                  <details key={group.key} open={group.videos.some((video) => video.id === data.video.id)}>
+                    <summary>
+                      <span>{group.label}</span>
+                      <small>{group.videos.length} {group.videos.length === 1 ? "video" : "videos"}</small>
+                      <ChevronDown aria-hidden="true" />
+                    </summary>
+                    <div className={styles.episodeList}>
+                      {group.videos.map((video) => (
+                        <VideoListItem key={video.id} video={video} slug={data.slug} current={video.id === data.video.id} />
+                      ))}
+                    </div>
+                  </details>
+                ))}
+              </div>
+            </section>
+
+            {data.taggedTeammates.length > 0 && (
+              <section className={styles.teammateCard} aria-labelledby="tagged-teammates-title">
+                <h2 id="tagged-teammates-title">Tagged teammates</h2>
+                <div className={styles.teammateList} ref={teammateViewportRef}>
+                  <div
+                    className={`${styles.teammateTrack} ${
+                      teammateMarqueeNeeded && teammateMarqueeInView ? styles.teammateTrackScrolling : ""
+                    } ${activeTeammateId || hoveredTeammateId ? styles.teammateTrackPaused : ""}`}
+                    style={{ "--teammate-marquee-distance": `${teammateMarqueeDistance}px` } as React.CSSProperties}
+                  >
+                    <div className={styles.teammateGroup} ref={teammateGroupRef}>
+                      {data.taggedTeammates.map((teammate) => {
+                        const isActive = activeTeammateId === teammate.id;
+                        return (
+                          <div
+                            key={teammate.id}
+                            className={`${styles.teammateItem} ${isActive ? styles.teammateItemActive : ""}`}
+                            onMouseEnter={() => setHoveredTeammateId(teammate.id)}
+                            onMouseLeave={() => setHoveredTeammateId(null)}
+                          >
+                            <button
+                              type="button"
+                              className={styles.teammateAvatar}
+                              aria-label={`Show details for ${teammate.name}`}
+                              aria-describedby="tagged-teammate-tooltip"
+                              aria-expanded={isActive}
+                              onFocus={() => setHoveredTeammateId(teammate.id)}
+                              onBlur={() => setHoveredTeammateId(null)}
+                              onPointerDown={() => setHoveredTeammateId(teammate.id)}
+                              onClick={() => setActiveTeammateId((current) => current === teammate.id ? null : teammate.id)}
+                            >
+                              {teammate.headshotUrl ? (
+                                <Image src={teammate.headshotUrl} alt="" fill sizes="44px" />
+                              ) : (
+                                <span>{teammateInitials(teammate.name)}</span>
+                              )}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {teammateMarqueeNeeded && (
+                      <div className={styles.teammateGroup} aria-hidden="true">
+                        {data.taggedTeammates.map((teammate) => (
+                          <div key={`duplicate-${teammate.id}`} className={styles.teammateAvatar}>
+                            {teammate.headshotUrl ? (
+                              <Image src={teammate.headshotUrl} alt="" fill sizes="44px" />
+                            ) : (
+                              <span>{teammateInitials(teammate.name)}</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                </details>
-              ))}
-            </div>
+                </div>
+                <div
+                  id="tagged-teammate-tooltip"
+                  role="tooltip"
+                  className={`${styles.teammateTooltip} ${displayedTeammate ? styles.teammateTooltipVisible : ""}`}
+                >
+                  {displayedTeammate && (
+                    <>
+                      <strong>{displayedTeammate.name}</strong>
+                      {(displayedTeammate.position || displayedTeammate.team) && (
+                        <span>{[displayedTeammate.position, displayedTeammate.team].filter(Boolean).join(" · ")}</span>
+                      )}
+                    </>
+                  )}
+                </div>
+              </section>
+            )}
 
             <section className={styles.shareCard}>
               <h2>Share this film</h2>
