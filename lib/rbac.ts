@@ -1,5 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { USER_ROLES, type UserRole } from "@/types/database";
+import {
+  getTestUser,
+  TEST_PLAYER_ID,
+  TEST_USER_ID,
+} from "@/lib/onboarding/test-auth";
 
 export type { UserRole } from "@/types/database";
 
@@ -21,6 +26,18 @@ function isUserRole(role: string | null): role is UserRole {
  * Fetches from the existing profiles table in Supabase
  */
 export async function getCurrentUserProfile(): Promise<UserProfile | null> {
+  const testUser = await getTestUser();
+  if (testUser) {
+    return {
+      id: TEST_USER_ID,
+      email: testUser.email,
+      role: "player",
+      display_name: "Demo Player",
+      avatar_url: "/images/Headshot.png",
+      player_id: TEST_PLAYER_ID,
+    };
+  }
+
   const supabase = await createClient();
   
   const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -103,6 +120,7 @@ export async function isPlayer(): Promise<boolean> {
  * Check if the current user is authenticated
  */
 export async function isAuthenticated(): Promise<boolean> {
+  if (await getTestUser()) return true;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   return !!user;

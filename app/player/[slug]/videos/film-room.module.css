@@ -287,6 +287,8 @@
 .sectionHeading h1 { margin: 0; font-family: "Barlow", sans-serif; font-size: 22px; font-weight: 800; line-height: 1; }
 .sectionHeading span { color: var(--film-accent); font-family: "JetBrains Mono", monospace; font-size: 10px; font-weight: 700; }
 
+.filmRowViewport { position: relative; }
+
 .filmRow {
   display: grid;
   grid-auto-columns: minmax(250px, 82%);
@@ -306,7 +308,7 @@
   padding: 0;
   overflow: hidden;
   border: 0;
-  border-radius: 4px;
+  border-radius: 8px;
   background: #0c1121;
   color: #fff;
   text-align: left;
@@ -376,6 +378,30 @@
 .cardCopy strong { overflow: hidden; font-size: 10px; line-height: 1.1; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
 .cardCopy span { margin-top: 5px; overflow: hidden; color: rgba(255,255,255,.56); font-family: "JetBrains Mono", monospace; font-size: 8.5px; line-height: 1.25; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
 
+.shelfControl {
+  position: absolute;
+  top: 50%;
+  z-index: 4;
+  width: 38px;
+  height: 46px;
+  display: none;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(255,255,255,.18);
+  border-radius: 8px;
+  background: rgba(5,7,14,.88);
+  color: var(--film-accent);
+  cursor: pointer;
+  transform: translateY(-50%);
+  backdrop-filter: blur(8px);
+}
+
+.shelfControl svg { width: 22px; height: 22px; }
+.shelfControlPrevious { left: 8px; }
+.shelfControlNext { right: 8px; }
+.shelfControl:disabled { opacity: .28; cursor: default; }
+.shelfControl:focus-visible { outline: 2px solid var(--film-accent); outline-offset: 2px; }
+
 .searchOverlay { position: fixed; z-index: 50; inset: 0; display: grid; align-items: start; justify-items: center; padding: 76px 18px 18px; }
 .searchBackdrop { position: absolute; inset: 0; border: 0; background: rgba(0,0,0,.78); backdrop-filter: blur(5px); }
 .searchPanel { position: relative; width: min(100%, 520px); padding: 16px; border: 1px solid #252c42; border-radius: 8px; background: #0b0e18; }
@@ -415,6 +441,31 @@
 
 @media (min-width: 1024px) {
   .filmRow { grid-auto-columns: minmax(300px, 33%); padding-inline: 33.5%; scroll-padding-inline: 33.5%; }
+}
+
+@media (min-width: 900px) {
+  .filmRow {
+    grid-auto-columns: 300px;
+    align-items: stretch;
+    gap: 16px;
+    padding: 10px 46px 14px;
+    scroll-padding-inline: 0;
+    scroll-snap-type: x proximity;
+  }
+
+  .filmCard,
+  .filmCardFocused,
+  .filmCard:has(+ .filmCardFocused),
+  .filmCardFocused + .filmCard {
+    opacity: 1;
+    transform: none;
+    transform-origin: center;
+    transition: none;
+  }
+
+  .filmCard { scroll-snap-align: start; }
+  .filmCard { display: grid; height: 100%; grid-template-rows: auto 1fr; }
+  .shelfControl { display: grid; }
 }
 
 @media (prefers-reduced-motion: reduce) {

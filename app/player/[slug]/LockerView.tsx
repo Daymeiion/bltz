@@ -977,10 +977,10 @@ export default function LockerView({
           {hasAthleteQuote && (
             <section style={{ padding: "10px 18px 0" }}>
               <div style={{ padding: "0 2px", textAlign: "center" }}>
-                <p style={{ margin: 0, fontFamily: mono, fontWeight: 700, fontSize: 13, lineHeight: 1.5, color: "rgba(255,255,255,.86)" }}>
+                <p className="locker-athlete-quote" style={{ margin: 0, fontFamily: mono, fontWeight: 700, lineHeight: 1.5, color: "rgba(255,255,255,.86)" }}>
                   “{displayAthleteQuote}”
                 </p>
-                <div style={{ marginTop: 8, fontFamily: mono, fontSize: 8.5, letterSpacing: ".14em", color: "rgba(255,255,255,.48)", textTransform: "uppercase" }}>
+                <div className="locker-athlete-quote-author" style={{ marginTop: 8, fontFamily: mono, letterSpacing: ".14em", color: "rgba(255,255,255,.48)", textTransform: "uppercase" }}>
                   {displayAthleteQuoteAuthor}
                 </div>
               </div>
@@ -2020,6 +2020,8 @@ const styleSheet = `
 .career-stat-grid{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-bottom:16px}
 .career-stat-card{min-width:0;flex:0 0 calc((100% - 16px)/3)}
 .locker-main-tab{font-size:15px}
+.locker-athlete-quote{font-size:13px}
+.locker-athlete-quote-author{font-size:10px}
 .locker-shorts-grid{grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:max-content;align-content:start;align-items:start}
 .locker-short-card{width:100%;aspect-ratio:9/16;justify-self:center}
 .locker-short-card:focus-visible{outline:2px solid ${lockerAccent};outline-offset:-3px}
@@ -2064,6 +2066,8 @@ const styleSheet = `
 .bltz-frame.bltz-frame-embedded{width:100%;max-width:575px;height:100%;border-radius:18px;box-shadow:none}
 @media (min-width:641px) and (max-width:899px){
   .bltz-frame:not(.bltz-frame-embedded){width:100vw;height:100dvh;border-radius:0;box-shadow:none}
+  .locker-athlete-quote{font-size:16px}
+  .locker-athlete-quote-author{font-size:11px}
 }
 @media (min-width:900px){
   .locker-shorts-grid{grid-template-columns:repeat(3,minmax(0,220px));justify-content:center}
@@ -2074,6 +2078,8 @@ const styleSheet = `
   .career-stat-card{flex-basis:calc((100% - 24px)/4);min-height:100px!important}
   .locker-main-tabs-list{height:65px!important}
   .locker-main-tab{height:53px!important;font-size:19px}
+  .locker-athlete-quote{font-size:18px}
+  .locker-athlete-quote-author{font-size:12px}
   .locker-tabs-nav{width:70%;margin-right:auto;margin-left:auto}
   .locker-page-shell{align-items:flex-start!important;background:linear-gradient(180deg,#05070F,#080B17 46%,#05070F)!important}
   .bltz-frame:not(.bltz-frame-embedded){width:min(1440px,100%);height:auto;min-height:100vh;overflow:visible;border-radius:0;box-shadow:none}

@@ -41,7 +41,7 @@ export function RecentVideos({ videos }: { videos: VideoWithStats[] }) {
       {videos.map((video) => (
         <Link
           key={video.id}
-          href={`/watch/${video.id}`}
+          href={video.href ?? `/watch/${video.id}`}
           className="flex gap-4 p-3 bg-white dark:bg-neutral-800 rounded-lg border border-neutral-200 dark:border-neutral-700 hover:border-blue-300 dark:hover:border-blue-700 transition-colors group"
         >
           {/* Thumbnail */}

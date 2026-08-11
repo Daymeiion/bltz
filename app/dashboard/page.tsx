@@ -11,6 +11,8 @@ import {
 import { getCurrentUserProfile } from "@/lib/rbac";
 import { createClient } from "@/lib/supabase/server";
 import { Skeleton } from "@/components/ui/skeleton";
+import { isTestUserId } from "@/lib/onboarding/test-auth";
+import type { Activity, DashboardStats, VideoWithStats } from "@/lib/queries/dashboard";
 
 export const metadata = {
   title: "Player Dashboard | BLTZ",
@@ -24,6 +26,74 @@ const QUOTES = [
   { text: "Champions keep playing until they get it right.", author: "Billie Jean King" },
   { text: "The difference between the impossible and the possible lies in determination.", author: "Tommy Lasorda" },
 ];
+
+const DEMO_STATS: DashboardStats = {
+  videoCount: 12,
+  videoGrowth: 2,
+  viewCount: 842000,
+  viewGrowth: 18,
+  followerCount: 12840,
+  followerGrowth: 324,
+  achievementCount: 6,
+  recentAchievements: 1,
+  revenue: 2450,
+  revenueGrowth: 12,
+};
+
+const DEMO_VIDEOS: VideoWithStats[] = [
+  {
+    id: "demo-video-1",
+    title: "2025 Season Highlights",
+    description: "Top plays from the 2025 season.",
+    thumbnail_url: "/images/Awards/video-thumb.png",
+    playback_url: "/videos/demo.mp4",
+    duration_seconds: 167,
+    created_at: "2026-08-08T12:00:00.000Z",
+    views: 326400,
+    watch_time: 214800,
+    href: "/player/test-null-user-id/videos/cfb-2025",
+  },
+  {
+    id: "demo-video-2",
+    title: "High School Senior Film",
+    description: "The film that started the journey.",
+    thumbnail_url: "/images/Awards/video-thumb.png",
+    playback_url: "/videos/demo.mp4",
+    duration_seconds: 126,
+    created_at: "2026-08-02T12:00:00.000Z",
+    views: 214900,
+    watch_time: 126300,
+    href: "/player/test-null-user-id/videos/hs-2021",
+  },
+  {
+    id: "demo-video-3",
+    title: "Off the Field",
+    description: "Training, preparation, and community work.",
+    thumbnail_url: "/images/Awards/video-thumb.png",
+    playback_url: "/videos/demo.mp4",
+    duration_seconds: 98,
+    created_at: "2026-07-28T12:00:00.000Z",
+    views: 118700,
+    watch_time: 68400,
+    href: "/player/test-null-user-id/videos/off-field-2025",
+  },
+];
+
+const DEMO_ACTIVITIES: Activity[] = [
+  { id: "demo-activity-1", type: "video_view", description: "2025 Season Highlights passed 300K views", timestamp: "2026-08-11T16:00:00.000Z" },
+  { id: "demo-activity-2", type: "follower", description: "324 new followers this week", timestamp: "2026-08-10T18:30:00.000Z" },
+  { id: "demo-activity-3", type: "achievement", description: "A new verified award was added", timestamp: "2026-08-09T14:00:00.000Z" },
+];
+
+const DEMO_PERFORMANCE = Array.from({ length: 8 }, (_, index) => {
+  const date = new Date("2026-08-04T12:00:00.000Z");
+  date.setDate(date.getDate() + index);
+  return {
+    date: date.toISOString(),
+    views: [6400, 8200, 7900, 12400, 10900, 14800, 13600, 17200][index],
+    watchTime: [420, 510, 485, 730, 680, 860, 790, 940][index],
+  };
+});
 
 function DashboardSkeleton() {
   return (
@@ -68,12 +138,14 @@ export default async function DashboardPage({
   const welcome = params.welcome === "1";
   const todayQuote = QUOTES[Math.floor(Math.random() * QUOTES.length)];
 
-  const [stats, videos, activities, performanceData] = await Promise.all([
-    getDashboardStats(playerId),
-    getRecentVideos(playerId, 3),
-    getRecentActivity(playerId, profile.id),
-    getPerformanceStats(playerId, "week"),
-  ]);
+  const [stats, videos, activities, performanceData] = isTestUserId(profile.id)
+    ? [DEMO_STATS, DEMO_VIDEOS, DEMO_ACTIVITIES, DEMO_PERFORMANCE]
+    : await Promise.all([
+        getDashboardStats(playerId),
+        getRecentVideos(playerId, 3),
+        getRecentActivity(playerId, profile.id),
+        getPerformanceStats(playerId, "week"),
+      ]);
 
   const firstName =
     (profile.display_name?.split(" ")[0] ??

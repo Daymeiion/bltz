@@ -161,6 +161,8 @@ export default async function PlayerLocker({ params }: { params: Promise<{ slug:
       heroVideoUrl: (player as any).video_url ?? null,
       logoSrc: "/bltz-white-logo.svg",
       bio: (player as any).bio || "Mock biography goes here.",
+      athleteQuote: "Pressure is a privilege. It means you earned the moment.",
+      athleteQuoteAuthor: "Demo Player",
       heightDisplay: heightDisplay(heightIn),
       weightLbs: meta.weight_lbs ?? 210,
       dobDisplay: formatDob(meta.dob ?? "1985-08-07"),
@@ -260,7 +262,7 @@ export default async function PlayerLocker({ params }: { params: Promise<{ slug:
 
   const { data: locker } = await supabase
     .from("player_lockers")
-    .select("headline, bio, colors")
+    .select("headline, bio, colors, quote_text, quote_author")
     .eq("player_id", player.id)
     .maybeSingle();
 
@@ -369,6 +371,8 @@ export default async function PlayerLocker({ params }: { params: Promise<{ slug:
     heroVideoUrl: (player as any).video_url ?? null,
     logoSrc: "/bltz-white-logo.svg",
     bio: bioCopy,
+    athleteQuote: locker?.quote_text ?? null,
+    athleteQuoteAuthor: locker?.quote_author ?? null,
     heightDisplay: heightDisplay(player.height_in),
     weightLbs: player.weight_lbs ?? null,
     dobDisplay: formatDob(dob),

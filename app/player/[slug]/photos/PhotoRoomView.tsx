@@ -109,7 +109,7 @@ export default function PhotoRoomView({ data }: { data: PhotoRoomData }) {
       const lockDistance = Math.min(heroRect.height * 0.5, window.innerHeight * 0.22);
       const progress = Math.min(Math.max(window.scrollY / lockDistance, 0), 1);
       setGalleryProgress(progress);
-      setScrollOverlayOpacity(progress);
+      setScrollOverlayOpacity(Math.min(1, progress * 1.2));
       setGalleryLocked(progress >= 0.98);
     }
 

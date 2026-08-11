@@ -87,6 +87,7 @@ export async function updateSession(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname;
   const inOnboarding = pathname === ONBOARDING_PATH || pathname.startsWith(`${ONBOARDING_PATH}/`);
+  const inAthleteDashboard = pathname === "/dashboard" || pathname.startsWith("/dashboard/");
 
   // Rule 1: redirect anonymous users to login (with original path preserved).
   if (!user && !testAuth && !isPublicPath(pathname) && pathname !== "/") {
@@ -99,7 +100,7 @@ export async function updateSession(request: NextRequest) {
   }
 
   // Rules 2 + 4: athlete-path redirect to onboarding.
-  if (testAuth && !inOnboarding && !isPublicPath(pathname)) {
+  if (testAuth && !inOnboarding && !inAthleteDashboard && !isPublicPath(pathname)) {
     const url = request.nextUrl.clone();
     url.pathname = ONBOARDING_PATH;
     return NextResponse.redirect(url);

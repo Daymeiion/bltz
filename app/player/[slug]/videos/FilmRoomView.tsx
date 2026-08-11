@@ -2,8 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowUpRight, Maximize, Minimize, Pause, Play, Search, Volume2, VolumeX, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ArrowUpRight, ChevronLeft, ChevronRight, Maximize, Minimize, Pause, Play, Search, Volume2, VolumeX, X } from "lucide-react";
 import type { SearchResult } from "@/components/ui/search-modal";
 import type { PublicVideo } from "@/lib/player/public-video";
 import styles from "./film-room.module.css";
@@ -86,10 +86,27 @@ function FilmShelf({
   const rowRef = useRef<HTMLDivElement>(null);
   const frameRef = useRef<number | null>(null);
   const [focusedId, setFocusedId] = useState(videos[0]?.id ?? null);
+  const [shelfPosition, setShelfPosition] = useState({ canGoBack: false, canGoForward: false });
+  const updateShelfPosition = useCallback(() => {
+    const row = rowRef.current;
+    if (!row) return;
+    const maxScroll = Math.max(0, row.scrollWidth - row.clientWidth);
+    setShelfPosition({
+      canGoBack: row.scrollLeft > 2,
+      canGoForward: row.scrollLeft < maxScroll - 2,
+    });
+  }, []);
 
   useEffect(() => {
     setFocusedId(videos[0]?.id ?? null);
-  }, [videos]);
+    const frame = window.requestAnimationFrame(updateShelfPosition);
+    return () => window.cancelAnimationFrame(frame);
+  }, [updateShelfPosition, videos]);
+
+  useEffect(() => {
+    window.addEventListener("resize", updateShelfPosition);
+    return () => window.removeEventListener("resize", updateShelfPosition);
+  }, [updateShelfPosition]);
 
   useEffect(() => () => {
     if (frameRef.current !== null) window.cancelAnimationFrame(frameRef.current);
@@ -112,23 +129,42 @@ function FilmShelf({
 
   function handleScroll() {
     if (frameRef.current !== null) window.cancelAnimationFrame(frameRef.current);
-    frameRef.current = window.requestAnimationFrame(updateFocusedCard);
+    frameRef.current = window.requestAnimationFrame(() => {
+      updateFocusedCard();
+      updateShelfPosition();
+    });
+  }
+
+  function scrollShelf(direction: -1 | 1) {
+    const row = rowRef.current;
+    const card = row?.querySelector<HTMLElement>("[data-gallery-id]");
+    if (!row || !card) return;
+    const gap = Number.parseFloat(window.getComputedStyle(row).columnGap) || 0;
+    row.scrollBy({ left: direction * (card.getBoundingClientRect().width + gap), behavior: "smooth" });
   }
 
   return (
-    <div ref={rowRef} className={styles.filmRow} onScroll={handleScroll}>
-      {videos.map((video) => (
-        <FilmCard
-          key={video.id}
-          video={video}
-          active={video.id === selectedId}
-          focused={video.id === focusedId}
-          onSelect={() => {
-            setFocusedId(video.id);
-            onSelect(video.id);
-          }}
-        />
-      ))}
+    <div className={styles.filmRowViewport}>
+      <button type="button" className={`${styles.shelfControl} ${styles.shelfControlPrevious}`} onClick={() => scrollShelf(-1)} disabled={!shelfPosition.canGoBack} aria-label="View previous videos">
+        <ChevronLeft aria-hidden="true" />
+      </button>
+      <div ref={rowRef} className={styles.filmRow} onScroll={handleScroll}>
+        {videos.map((video) => (
+          <FilmCard
+            key={video.id}
+            video={video}
+            active={video.id === selectedId}
+            focused={video.id === focusedId}
+            onSelect={() => {
+              setFocusedId(video.id);
+              onSelect(video.id);
+            }}
+          />
+        ))}
+      </div>
+      <button type="button" className={`${styles.shelfControl} ${styles.shelfControlNext}`} onClick={() => scrollShelf(1)} disabled={!shelfPosition.canGoForward} aria-label="View more videos">
+        <ChevronRight aria-hidden="true" />
+      </button>
     </div>
   );
 }

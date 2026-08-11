@@ -24,6 +24,7 @@ export interface VideoWithStats {
   created_at: string;
   views: number;
   watch_time: number;
+  href?: string;
 }
 
 export interface Activity {

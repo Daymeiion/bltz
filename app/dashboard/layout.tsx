@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUserProfile, hasRole } from "@/lib/rbac";
 import { createClient } from "@/lib/supabase/server";
 import DashboardLayoutClient from "./dashboard-layout-client";
+import { isTestUserId, TEST_PLAYER_SLUG } from "@/lib/onboarding/test-auth";
 
 export default async function DashboardLayout({
   children,
@@ -30,7 +31,7 @@ export default async function DashboardLayout({
     .single();
 
   const playerId = player?.id || profile.player_id;
-  const playerSlug = player?.slug;
+  const playerSlug = player?.slug || (isTestUserId(profile.id) ? TEST_PLAYER_SLUG : null);
 
   return (
     <DashboardLayoutClient profile={profile} playerId={playerId} playerSlug={playerSlug}>

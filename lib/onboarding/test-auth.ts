@@ -3,6 +3,12 @@ import type { PipelineSink } from "@/lib/pipeline/run";
 
 export const TEST_AUTH_COOKIE = "bltz_test_auth";
 export const TEST_USER_ID = "00000000-0000-4000-8000-000000000001";
+export const TEST_PLAYER_ID = "00000000-0000-4000-8000-000000000002";
+export const TEST_PLAYER_SLUG = "test-null-user-id";
+
+export function isTestUserId(userId: string) {
+  return isTestAuthEnabled() && userId === TEST_USER_ID;
+}
 
 export type TestRunStatus =
   | "pending"

@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { User } from "@supabase/supabase-js";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
@@ -15,7 +15,8 @@ import {
   IconBrandLinkedin,
   IconBrandYoutube,
   IconBrandTiktok,
-  IconLoader2
+  IconLoader2,
+  IconQuote
 } from "@tabler/icons-react";
 import { toast } from "sonner";
 
@@ -31,11 +32,7 @@ interface UserSettings {
   updated_at: string;
 }
 
-interface SettingsClientProps {
-  user: User;
-}
-
-export default function SettingsClient({ user }: SettingsClientProps) {
+export default function SettingsClient() {
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -56,11 +53,15 @@ export default function SettingsClient({ user }: SettingsClientProps) {
     displayName: string | null;
   } | null>(null);
   const [spotifyBusy, setSpotifyBusy] = useState(false);
+  const [lockerQuote, setLockerQuote] = useState({ quote: "", author: "" });
+  const [quoteLoading, setQuoteLoading] = useState(true);
+  const [quoteSaving, setQuoteSaving] = useState(false);
 
 
   useEffect(() => {
     loadSettings();
     loadSpotifyStatus();
+    loadLockerQuote();
   }, []);
 
   // Surface the OAuth result from the callback redirect (?spotify=connected|error).
@@ -95,6 +96,38 @@ export default function SettingsClient({ user }: SettingsClientProps) {
       toast.error("Failed to disconnect Spotify");
     } finally {
       setSpotifyBusy(false);
+    }
+  };
+
+  const loadLockerQuote = async () => {
+    try {
+      const response = await fetch("/api/locker/quote");
+      if (!response.ok) throw new Error();
+      const data = await response.json();
+      setLockerQuote({ quote: data.quote || "", author: data.author || "" });
+    } catch {
+      toast.error("Failed to load your Locker quote");
+    } finally {
+      setQuoteLoading(false);
+    }
+  };
+
+  const saveLockerQuote = async (remove = false) => {
+    setQuoteSaving(true);
+    try {
+      const response = await fetch("/api/locker/quote", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(remove ? { quote: null, author: null } : lockerQuote),
+      });
+      if (!response.ok) throw new Error();
+      const data = await response.json();
+      setLockerQuote({ quote: data.quote || "", author: data.author || "" });
+      toast.success(remove ? "Quote removed from your Locker" : "Locker quote saved");
+    } catch {
+      toast.error("Failed to update your Locker quote");
+    } finally {
+      setQuoteSaving(false);
     }
   };
 
@@ -281,6 +314,62 @@ export default function SettingsClient({ user }: SettingsClientProps) {
                 <a href="/api/spotify/connect">Connect Spotify</a>
               </Button>
             )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <IconQuote className="h-5 w-5" />
+              Player Locker quote
+            </CardTitle>
+            <CardDescription>
+              Add a personal or favorite quote above your Film Room. Leave it empty to hide the section completely.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="locker-quote">Quote</Label>
+              <Textarea
+                id="locker-quote"
+                maxLength={280}
+                rows={4}
+                disabled={quoteLoading || quoteSaving}
+                placeholder="Pressure is a privilege."
+                value={lockerQuote.quote}
+                onChange={(event) => setLockerQuote((current) => ({ ...current, quote: event.target.value }))}
+              />
+              <p className="text-right text-xs text-muted-foreground">{lockerQuote.quote.length}/280</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="locker-quote-author">Attribution</Label>
+              <Input
+                id="locker-quote-author"
+                maxLength={80}
+                disabled={quoteLoading || quoteSaving}
+                placeholder="Your name or the original author"
+                value={lockerQuote.author}
+                onChange={(event) => setLockerQuote((current) => ({ ...current, author: event.target.value }))}
+              />
+            </div>
+            <div className="flex flex-wrap justify-end gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={quoteLoading || quoteSaving || !lockerQuote.quote}
+                onClick={() => saveLockerQuote(true)}
+              >
+                Remove quote
+              </Button>
+              <Button
+                type="button"
+                disabled={quoteLoading || quoteSaving || !lockerQuote.quote.trim()}
+                onClick={() => saveLockerQuote()}
+              >
+                {quoteSaving ? <IconLoader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Save quote
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
