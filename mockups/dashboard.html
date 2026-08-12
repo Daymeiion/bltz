@@ -152,6 +152,41 @@ h5, .h5, .card-title { font-family: var(--font-display); font-weight: 700; font-
 /* MAIN */
 .dash-main { flex: 1; min-width: 0; overflow-x: hidden; }
 
+.dash-topbar {
+  height: 62px; padding: 0 28px 0 36px; position: relative; z-index: 90;
+  display: flex; align-items: center; justify-content: flex-end; gap: 10px;
+  background: color-mix(in srgb, var(--brand-bg) 82%, transparent);
+  backdrop-filter: blur(18px); border-bottom: 1px solid rgba(255,255,255,0.055);
+}
+.dashboard-search { position: relative; width: min(360px, 42vw); }
+.dashboard-search-input {
+  width: 100%; height: 38px; padding: 0 40px 0 14px; border-radius: 8px;
+  border: 1px solid #1C2238; background: rgba(5,6,16,0.72); color: #fff;
+  font: 500 12px var(--font-body); outline: none; transition: border-color .15s, background .15s;
+}
+.dashboard-search-input:focus { border-color: color-mix(in srgb, var(--brand-accent) 55%, #1C2238); background: #070811; }
+.dashboard-search-results {
+  position: absolute; top: calc(100% + 8px); left: 0; right: 0; padding: 6px;
+  background: rgba(7,8,15,.98); border: 1px solid #1E2640; border-radius: 8px;
+  box-shadow: 0 18px 50px rgba(0,0,0,.55); max-height: 340px; overflow-y: auto;
+}
+.dashboard-search-result {
+  width: 100%; border: 0; border-radius: 6px; padding: 10px; cursor: pointer;
+  background: transparent; color: #fff; text-align: left; display: flex; align-items: center; gap: 10px;
+}
+.dashboard-search-result:hover, .dashboard-search-result:focus { background: rgba(255,255,255,.055); outline: none; }
+.dashboard-profile-button {
+  width: 38px; height: 38px; border-radius: 50%; padding: 0; overflow: hidden; cursor: pointer;
+  border: 1px solid rgba(255,255,255,.22); color: var(--brand-bg);
+  background: linear-gradient(135deg,var(--brand-accent-2),var(--brand-accent));
+  font: 900 12px var(--font-display); flex-shrink: 0;
+}
+.dashboard-mobile-logo {
+  display: none; width: 34px; height: 34px; padding: 0; border: 0;
+  background: transparent; cursor: pointer; flex-shrink: 0;
+}
+.dashboard-mobile-logo img { width: 100%; height: 100%; object-fit: contain; display: block; }
+
 /* RIGHT LIVE PREVIEW PANEL — fan/claim view + theme + fonts (per dashboard-plan.md) */
 .locker-desktop {
   width: 0; flex-shrink: 0; background: #050610;
@@ -237,6 +272,14 @@ h5, .h5, .card-title { font-family: var(--font-display); font-weight: 700; font-
   cursor: pointer; transition: transform 0.2s, border-color 0.2s, background 0.25s ease;
 }
 .video-card:hover { transform: translateY(-4px); border-color: color-mix(in srgb, var(--brand-accent) 30%, transparent); }
+.dashboard-video-reel {
+  display: flex; gap: 12px; overflow-x: auto; overflow-y: hidden;
+  padding-top: 9px; padding-bottom: 6px;
+  scroll-behavior: smooth; scroll-snap-type: x proximity;
+  overscroll-behavior-x: contain; touch-action: pan-x pan-y;
+  -webkit-overflow-scrolling: touch;
+}
+.dashboard-video-reel .video-card { scroll-snap-align: start; scroll-snap-stop: normal; }
 
 /* MODAL */
 .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(10px); z-index: 1000; display: flex; align-items: center; justify-content: center; }
@@ -245,7 +288,10 @@ h5, .h5, .card-title { font-family: var(--font-display); font-weight: 700; font-
 .mobile-bottom-nav { display: none; position: fixed; bottom: 0; left: 0; right: 0; background: rgba(5,6,16,0.97); backdrop-filter: blur(20px); border-top: 1px solid #141929; z-index: 400; padding: 10px 0 20px; }
 
 /* RESPONSIVE */
-@media (max-width: 900px) { .locker-desktop { display: none !important; } }
+@media (max-width: 900px) {
+  .locker-desktop,
+  .locker-toggle-btn { display: none !important; }
+}
 @media (max-width: 1100px) {
   .grid-2-1 { grid-template-columns: 1fr; }
   .grid-3 { grid-template-columns: repeat(2, 1fr); }
@@ -256,8 +302,82 @@ h5, .h5, .card-title { font-family: var(--font-display); font-weight: 700; font-
   .dash-shell::before { display: none; }
   .dash-content { padding: 0 14px 80px; }
   .grid-3 { grid-template-columns: 1fr; }
+  .dash-main-grid {
+    display: flex !important;
+    flex-direction: column;
+    align-items: stretch !important;
+    gap: 14px !important;
+    width: 100%;
+    min-width: 0;
+  }
+  .dashboard-primary,
+  .dashboard-secondary { display: contents !important; }
+  .dashboard-photos,
+  .dashboard-earning-stack,
+  .dashboard-bio,
+  .dashboard-press {
+    width: 100%;
+    min-width: 0;
+  }
+  .dashboard-photos { order: 1; }
+  .dashboard-earning-stack { order: 2; grid-template-columns: minmax(0, 1fr) !important; }
+  .dashboard-bio { order: 3; }
+  .dashboard-press { order: 4; }
   .mobile-bottom-nav { display: flex !important; }
   .locker-toggle-btn { display: none; }
+  .dash-topbar { height: 56px; padding: 0 14px; justify-content: space-between; gap: 10px; }
+  .dashboard-mobile-logo { display: block; }
+  .dashboard-search { width: auto; min-width: 0; flex: 1; }
+  .dashboard-hero { height: 390px !important; }
+  .dashboard-background-actions {
+    top: 12px !important;
+    right: 14px !important;
+    flex-direction: column !important;
+    gap: 7px !important;
+  }
+  .dashboard-background-edit {
+    order: 1;
+    width: 36px !important;
+    height: 36px !important;
+    padding: 0 !important;
+    justify-content: center !important;
+  }
+  .dashboard-background-edit-text { display: none; }
+  .dashboard-background-remove { order: 2; width: 36px !important; height: 36px !important; }
+  .dashboard-athlete-identity {
+    bottom: 14px !important;
+    left: 14px !important;
+    right: 14px !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 9px !important;
+    text-align: center;
+  }
+  .dashboard-athlete-copy { padding-bottom: 0 !important; width: 100%; }
+  .dashboard-athlete-name { font-size: 34px !important; line-height: .92 !important; margin-bottom: 8px !important; }
+  .dashboard-athlete-meta { justify-content: center; font-size: 10px !important; line-height: 1.45; }
+  .dashboard-quote-wrap { padding: 0 14px !important; margin-bottom: 16px !important; }
+  .dashboard-quote-card { padding: 20px 18px 18px !important; }
+  .dashboard-quote-text { font-size: 15px !important; line-height: 1.5 !important; margin-bottom: 13px !important; }
+  .dashboard-video-section { padding: 0 14px !important; }
+  .dashboard-video-heading {
+    align-items: stretch !important;
+    flex-direction: column !important;
+    gap: 11px !important;
+    margin-bottom: 8px !important;
+  }
+  .dashboard-video-title { text-align: center; }
+  .dashboard-video-sorts { display: grid !important; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px !important; }
+  .dashboard-video-sorts button { min-width: 0; padding: 7px 5px !important; font-size: 8px !important; }
+  .dashboard-video-reel {
+    width: 100%;
+    padding-right: 18px;
+    scroll-padding-inline: 0 18px;
+    cursor: grab;
+  }
+  .dashboard-video-reel .video-card { width: min(78vw, 286px); }
+  .dashboard-video-carousel > button { display: none !important; }
+  .dashboard-video-carousel > div[aria-hidden="true"] { display: none !important; }
 }
 </style>
 
@@ -291,8 +411,8 @@ function QuoteBanner() {
   const week = Math.floor(Date.now() / (7 * 24 * 60 * 60 * 1000));
   const { quote, author, title } = QUOTES[week % QUOTES.length];
   return (
-    <div style={{ padding: '0 36px', marginBottom: 20 }}>
-      <div style={{
+    <div className="dashboard-quote-wrap" style={{ padding: '0 36px', marginBottom: 20 }}>
+      <div className="dashboard-quote-card" style={{
         position: 'relative', overflow: 'hidden',
         background: 'linear-gradient(135deg, color-mix(in srgb, var(--brand-surface) 60%, var(--brand-bg)) 0%, color-mix(in srgb, var(--brand-accent) 6%, var(--brand-bg)) 100%)',
         borderRadius: 14, padding: '28px 40px 24px', textAlign: 'center',
@@ -303,7 +423,7 @@ function QuoteBanner() {
           fontFamily: 'Georgia, serif', fontSize: 140, lineHeight: 1,
           color: 'color-mix(in srgb, var(--brand-accent) 5%, transparent)', fontWeight: 900, pointerEvents: 'none', userSelect: 'none',
         }}>"</div>
-        <p style={{
+        <p className="dashboard-quote-text" style={{
           fontFamily: 'var(--font-body, Georgia, serif)',
           fontSize: 26, fontStyle: 'italic', fontWeight: 500,
           lineHeight: 1.6, color: 'rgba(255,255,255,0.82)',
@@ -365,11 +485,11 @@ function ScoutStatsCard() {
 }
 
 const VIDEOS = [
-  { title: '78-Yd TD vs Michigan',         views: 284000, earned: 892, duration: '0:38', hot: true },
-  { title: 'Route Running Masterclass',    views: 112000, earned: 341, duration: '1:12' },
-  { title: 'Season Highlights 2024',       views: 98000,  earned: 312, duration: '3:24' },
-  { title: 'One-Handed Grab vs Penn State',views: 67000,  earned: 201, duration: '0:22' },
-  { title: 'Spring Practice Reel',         views: 23000,  earned: 71,  duration: '2:15' },
+  { title: '78-Yd TD vs Michigan',         views: 284000, earned: 892, duration: '0:38', published:'2026-08-10', hot: true },
+  { title: 'Route Running Masterclass',    views: 112000, earned: 341, duration: '1:12', published:'2026-07-24' },
+  { title: 'Season Highlights 2024',       views: 98000,  earned: 312, duration: '3:24', published:'2026-06-18' },
+  { title: 'One-Handed Grab vs Penn State',views: 67000,  earned: 201, duration: '0:22', published:'2026-08-04' },
+  { title: 'Spring Practice Reel',         views: 23000,  earned: 71,  duration: '2:15', published:'2026-05-02' },
 ];
 const fmtV = n => n >= 1000 ? (n/1000).toFixed(0)+'K' : n;
 const fmtE = n => '$'+n.toLocaleString();
@@ -383,6 +503,7 @@ function VideosRow() {
 
   const sorted = React.useMemo(() => {
     const v = [...VIDEOS];
+    if (sort === 'recent') v.sort((a,b) => new Date(b.published) - new Date(a.published));
     if (sort === 'views') v.sort((a,b) => b.views - a.views);
     if (sort === 'earned') v.sort((a,b) => b.earned - a.earned);
     return v;
@@ -404,12 +525,12 @@ function VideosRow() {
   };
 
   return (
-    <div style={{ padding: '0 36px', marginBottom: 20 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 0 }}>
-        <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 24, textTransform: 'uppercase', letterSpacing: '0.02em' }}>Highlights</div>
-        <div style={{ display: 'flex', gap: 4 }}>
+    <div className="dashboard-video-section" style={{ padding: '0 36px', marginBottom: 20 }}>
+      <div className="dashboard-video-heading" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 0 }}>
+        <div className="dashboard-video-title" style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 24, textTransform: 'uppercase', letterSpacing: '0.02em' }}>Highlights</div>
+        <div className="dashboard-video-sorts" style={{ display: 'flex', gap: 4 }}>
           {[['recent','Recent'],['views','Most Viewed'],['earned','Top Earning']].map(([id,lbl]) => (
-            <button key={id} onClick={() => setSort(id)} style={{
+            <button key={id} onClick={() => setSort(id)} aria-pressed={sort===id} style={{
               fontFamily: 'var(--font-mono)', fontSize: 9.5, letterSpacing: '0.1em',
               textTransform: 'uppercase', padding: '6px 11px', cursor: 'pointer', borderRadius: 6,
               background: sort===id ? 'var(--brand-accent)' : '#0C0E1A',
@@ -422,16 +543,16 @@ function VideosRow() {
       </div>
 
       {/* Carousel viewport: relative container holding the scroller + edge gradients + arrows */}
-      <div style={{ position: 'relative', isolation: 'isolate' }}>
+      <div className="dashboard-video-carousel" style={{ position: 'relative', isolation: 'isolate' }}>
         {/* Left edge gradient (only when scrolled in) — fades into the page bg, which itself follows brand-bg */}
-        <div style={{
+        <div aria-hidden="true" style={{
           position: 'absolute', top: 0, bottom: 0, left: 0, width: 80, zIndex: 5,
           background: 'linear-gradient(90deg, var(--brand-bg) 0%, color-mix(in srgb, var(--brand-bg) 85%, transparent) 35%, transparent 100%)',
           pointerEvents: 'none',
           opacity: atStart ? 0 : 1, transition: 'opacity 0.2s',
         }} />
         {/* Right edge gradient (only when more content to the right) */}
-        <div style={{
+        <div aria-hidden="true" style={{
           position: 'absolute', top: 0, bottom: 0, right: 0, width: 80, zIndex: 5,
           background: 'linear-gradient(270deg, var(--brand-bg) 0%, color-mix(in srgb, var(--brand-bg) 85%, transparent) 35%, transparent 100%)',
           pointerEvents: 'none',
@@ -474,7 +595,7 @@ function VideosRow() {
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
         </button>
 
-      <div ref={reelRef} onScroll={updateEdges} className="no-scrollbar" style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingTop: 9, paddingBottom: 6, scrollBehavior: 'smooth' }}>
+      <div ref={reelRef} onScroll={updateEdges} className="dashboard-video-reel no-scrollbar" aria-label="Player highlights. Swipe horizontally to view more videos.">
         {sorted.map((v, i) => (
           <div key={v.title} className="video-card">
             <div style={{
@@ -643,11 +764,18 @@ const PHOTO_DATA = [
 
 function PhotosCard() {
   const [hoverUpload, setHoverUpload] = React.useState(false);
+  const [uploads, setUploads] = React.useState([]);
+  const fileRef = React.useRef(null);
+  const addPhotos = (event) => {
+    const files = Array.from(event.target.files || []).filter(file => file.type.startsWith('image/'));
+    setUploads(current => [...files.map(file => ({ url:URL.createObjectURL(file), name:file.name })), ...current]);
+    event.target.value = '';
+  };
   return (
     <div className="card">
       <div className="card-header">
         <span className="card-title">Photos</span>
-        <button aria-label="Upload New Photos"
+        <button aria-label="Upload New Photos" onClick={()=>fileRef.current?.click()}
           onMouseEnter={() => setHoverUpload(true)}
           onMouseLeave={() => setHoverUpload(false)}
           style={{
@@ -686,9 +814,16 @@ function PhotosCard() {
             </span>
           )}
         </button>
+        <input ref={fileRef} type="file" accept="image/*" multiple style={{display:'none'}} onChange={addPhotos}/>
       </div>
       <div style={{ padding:14 }}>
+        {uploads.length > 0 && <div style={{fontFamily:'var(--font-mono)',fontSize:9,color:'var(--brand-accent)',textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:8,textAlign:'center'}}>Local preview · save integration pending</div>}
         <div style={{ columns:2, gap:8 }}>
+          {uploads.map((photo,i) => (
+            <div key={photo.url} title={photo.name} style={{height:i%2?134:168,marginBottom:8,borderRadius:8,overflow:'hidden',breakInside:'avoid',background:'#080B16'}}>
+              <img src={photo.url} alt={photo.name} style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/>
+            </div>
+          ))}
           {PHOTO_DATA.map((p,i) => (
             <div key={i} style={{
               height:p.h, marginBottom:8, borderRadius:8, overflow:'hidden',
@@ -706,7 +841,7 @@ function PhotosCard() {
             </div>
           ))}
         </div>
-        <button className="btn-ghost" style={{ width:'100%', textAlign:'center', marginTop:4 }}>View All 47 Photos</button>
+        <button onClick={()=>window.dispatchEvent(new CustomEvent('bltz-navigate',{detail:'media'}))} className="btn-ghost" style={{ display:'block', width:'100%', textAlign:'center', marginTop:4 }}>View All 47 Photos</button>
       </div>
     </div>
   );
@@ -962,8 +1097,25 @@ function BioCard() {
   const [editing, setEditing] = React.useState(false);
   const [saved, setSaved] = React.useState(DEFAULT_BIO);
   const [draft, setDraft] = React.useState(DEFAULT_BIO);
+  const [polishing, setPolishing] = React.useState(false);
+  const [polishNote, setPolishNote] = React.useState('');
   const save = () => { setSaved(draft); setEditing(false); };
   const cancel = () => { setDraft(saved); setEditing(false); };
+  const polish = async () => {
+    if (draft.trim().length < 20 || polishing) return;
+    setPolishing(true); setPolishNote('');
+    try {
+      const res = await fetch('http://localhost:3000/api/dashboard/bio-polish', {
+        method:'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body:JSON.stringify({bio:draft}),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Unable to polish bio');
+      setDraft(data.bio);
+      setPolishNote(data.mode === 'ai' ? 'AI polish applied · review before saving' : data.message);
+    } catch (error) {
+      setPolishNote(error.message || 'AI polish is unavailable');
+    } finally { setPolishing(false); }
+  };
   return (
     <div className="card">
       <div className="card-header">
@@ -985,14 +1137,24 @@ function BioCard() {
           </div>
         )}
       </div>
-      <div style={{ padding:'18px 20px' }}>
+      <div style={{ padding:'18px 20px', position:'relative' }}>
         {editing ? (
-          <textarea value={draft} onChange={e=>setDraft(e.target.value)} style={{
-            width:'100%', background:'#07080F', border:'1px solid #2952FF',
-            borderRadius:10, padding:'14px', color:'#fff',
-            fontFamily:'var(--font-body)', fontSize:14, lineHeight:1.75,
-            resize:'vertical', minHeight:160, outline:'none',
-          }} />
+          <>
+            <div style={{position:'relative'}}>
+              <textarea value={draft} onChange={e=>setDraft(e.target.value)} style={{
+                width:'100%', background:'#07080F', border:'1px solid #2952FF',
+                borderRadius:10, padding:'14px 54px 38px 14px', color:'#fff',
+                fontFamily:'var(--font-body)', fontSize:14, lineHeight:1.75,
+                resize:'vertical', minHeight:180, outline:'none', display:'block',
+              }} />
+              <button onClick={polish} disabled={polishing || draft.trim().length < 20} aria-label="Polish biography with AI" title="Polish with AI" style={{
+                position:'absolute',right:10,bottom:10,width:34,height:34,borderRadius:7,cursor:polishing?'wait':'pointer',
+                border:'1px solid color-mix(in srgb,var(--brand-accent) 45%,#1C2238)',background:'#0C0E1A',color:'var(--brand-accent)',
+                display:'flex',alignItems:'center',justifyContent:'center',opacity:draft.trim().length<20?.45:1,
+              }}><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="m15 4 5 5L9 20H4v-5L15 4Z"/><path d="m13 6 5 5M5 3v4M3 5h4M19 16v5M16.5 18.5h5"/></svg></button>
+            </div>
+            {polishNote && <div style={{fontFamily:'var(--font-mono)',fontSize:9,color:'var(--brand-accent)',marginTop:7,textAlign:'right'}}>{polishNote}</div>}
+          </>
         ) : (
           <p style={{ fontFamily:'var(--font-body)', fontSize:14, lineHeight:1.8, color:'rgba(255,255,255,0.68)', margin:0, whiteSpace:'pre-line' }}>{saved}</p>
         )}
@@ -1014,23 +1176,36 @@ const ATHLETE_V2 = {
   position:'Wide Receiver', jersey:'1', class:'Junior', hometown:'Atlanta, GA',
 };
 
-function V2Hero({ scoutMode }) {
-  const [headshot, setHeadshot] = React.useState(null);
+function V2Hero({ scoutMode, headshot, setHeadshot, bgImg, setBgImg }) {
   const [hsHover, setHsHover] = React.useState(false);
-  const [bgImg, setBgImg] = React.useState(null);
+  const [cropSource, setCropSource] = React.useState(null);
+  const [backgroundCropSource, setBackgroundCropSource] = React.useState(null);
+
+  const chooseHeadshot = (event) => {
+    const file = event.target.files?.[0];
+    if (file?.type.startsWith('image/')) setCropSource(URL.createObjectURL(file));
+    event.target.value = '';
+  };
+  const chooseBackground = (event) => {
+    const file = event.target.files?.[0];
+    if (file?.type.startsWith('image/')) setBackgroundCropSource(URL.createObjectURL(file));
+    event.target.value = '';
+  };
 
   return (
-    <div style={{ position:'relative', height:300, overflow:'hidden', flexShrink:0 }}>
+    <div className="dashboard-hero" style={{ position:'relative', height:300, overflow:'hidden', flexShrink:0 }}>
       <div style={{ position:'absolute', inset:0, background:'var(--brand-bg)' }}/>
+      {bgImg && <img src={bgImg} alt="Dashboard background preview" style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',display:'block'}}/>}
       {/* Perspective-rotated grid — uses accent-2 (the bright highlight) so warm accents like
           BLTZ gold #F5A623 read as gold instead of muddy orange-brown at low opacity */}
-      <div style={{
+      {!bgImg && <div style={{
         position:'absolute', inset:0,
         background:'linear-gradient(color-mix(in srgb, var(--brand-accent-2) 20%, transparent) 1px,transparent 1px),linear-gradient(90deg,color-mix(in srgb, var(--brand-accent-2) 20%, transparent) 1px,transparent 1px)',
         backgroundSize:'48px 48px',
         transform:'perspective(900px) rotateX(26deg) scale(2.5) translateY(28%)',
         transformOrigin:'center bottom',
       }}/>
+      }
       {/* Surface glow left */}
       <div style={{ position:'absolute', width:480,height:480,borderRadius:'50%',background:'radial-gradient(circle, color-mix(in srgb, var(--brand-surface) 60%, transparent), transparent 70%)',top:-140,left:-80,pointerEvents:'none' }}/>
       {/* Accent glow right */}
@@ -1038,9 +1213,13 @@ function V2Hero({ scoutMode }) {
       {/* Bottom fade into page */}
       <div style={{ position:'absolute', bottom:0, left:0, right:0, height:90, background:'linear-gradient(to bottom,transparent, var(--brand-bg))', pointerEvents:'none' }}/>
 
-      {/* Edit Profile button — top right */}
-      <div style={{ position:'absolute', top:16, right:18, zIndex:20, display:'flex', gap:8 }}>
-        <label style={{
+      {/* Edit dashboard background — top right */}
+      <div className="dashboard-background-actions" style={{ position:'absolute', top:16, right:18, zIndex:20, display:'flex', gap:8 }}>
+        {bgImg && <button className="dashboard-background-remove" onClick={()=>setBgImg(null)} aria-label="Remove background" title="Remove background" style={{
+          width:34,height:34,padding:0,borderRadius:7,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',
+          background:'rgba(7,8,15,.66)',border:'1px solid rgba(255,255,255,.18)',color:'rgba(255,255,255,.72)',backdropFilter:'blur(10px)',
+        }}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 15H6L5 6M10 11v6M14 11v6"/></svg></button>}
+        <label className="dashboard-background-edit" aria-label="Edit background" title="Edit background" style={{
           display:'flex', alignItems:'center', gap:6, cursor:'pointer',
           background:'rgba(7,8,15,0.55)', border:'1px solid rgba(255,255,255,0.18)',
           borderRadius:7, padding:'7px 13px', backdropFilter:'blur(10px)',
@@ -1051,14 +1230,13 @@ function V2Hero({ scoutMode }) {
         onMouseLeave={e=>e.currentTarget.style.background='rgba(7,8,15,0.55)'}
         >
           <svg width="11" height="11" viewBox="0 0 14 14" fill="none"><path d="M9.5 2l2.5 2.5L4 13H1.5v-2.5L9.5 2z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/></svg>
-          Edit Profile
-          <input type="file" accept="image/*" style={{display:'none'}}
-            onChange={e=>{ const f=e.target.files[0]; if(f) setBgImg(URL.createObjectURL(f)); }}/>
+          <span className="dashboard-background-edit-text">Edit Background</span>
+          <input type="file" accept="image/*" style={{display:'none'}} onChange={chooseBackground}/>
         </label>
       </div>
 
       {/* Player info anchored bottom-left */}
-      <div style={{
+      <div className="dashboard-athlete-identity" style={{
         position:'absolute', bottom:22, left:36, right:36,
         display:'flex', alignItems:'flex-end', gap:18, zIndex:10,
       }}>
@@ -1085,8 +1263,7 @@ function V2Hero({ scoutMode }) {
             }}>
               <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><rect x="2" y="5" width="16" height="11" rx="2" stroke="white" strokeWidth="1.5"/><circle cx="10" cy="10.5" r="2.8" stroke="white" strokeWidth="1.5"/><path d="M7 5l1-2h4l1 2" stroke="white" strokeWidth="1.5" strokeLinecap="round"/></svg>
               <span style={{fontFamily:'var(--font-mono)',fontSize:8,color:'#fff',textTransform:'uppercase',letterSpacing:'0.1em'}}>Edit</span>
-              <input type="file" accept="image/*" style={{display:'none'}}
-                onChange={e=>{ const f=e.target.files[0]; if(f) setHeadshot(URL.createObjectURL(f)); }}/>
+              <input type="file" accept="image/*" style={{display:'none'}} onChange={chooseHeadshot}/>
             </label>
           </div>
           <div style={{
@@ -1099,15 +1276,15 @@ function V2Hero({ scoutMode }) {
           }}>{ATHLETE_V2.jersey}</div>
         </div>
 
-        <div style={{ minWidth:0, paddingBottom:2 }}>
-          <h1 style={{
+        <div className="dashboard-athlete-copy" style={{ minWidth:0, paddingBottom:2 }}>
+          <h1 className="dashboard-athlete-name" style={{
             fontFamily:'var(--font-display)', fontWeight:900,
             fontSize:'clamp(30px,5vw,60px)', lineHeight:0.9,
             letterSpacing:'-0.03em', textTransform:'uppercase', margin:0, marginBottom:7,
             textShadow:'0 2px 20px rgba(0,0,0,0.8)', whiteSpace:'nowrap',
           }}>{ATHLETE_V2.firstName} {ATHLETE_V2.lastName}</h1>
 
-          <div style={{
+          <div className="dashboard-athlete-meta" style={{
             fontFamily:'var(--font-mono)', fontSize:14,
             color:'rgba(255,255,255,0.65)', textTransform:'uppercase', letterSpacing:'0.08em',
             display:'flex', flexWrap:'wrap', gap:'2px 8px', marginBottom:0,
@@ -1123,8 +1300,102 @@ function V2Hero({ scoutMode }) {
           </div>
         </div>
       </div>
+      {cropSource && <HeadshotCropModal source={cropSource} onCancel={()=>setCropSource(null)} onApply={(url)=>{setHeadshot(url);setCropSource(null);}}/>}
+      {backgroundCropSource && <BackgroundCropModal source={backgroundCropSource} onCancel={()=>setBackgroundCropSource(null)} onApply={(url)=>{setBgImg(url);setBackgroundCropSource(null);}}/>}
     </div>
   );
+}
+
+function HeadshotCropModal({ source, onCancel, onApply }) {
+  const imageRef = React.useRef(null);
+  const [zoom, setZoom] = React.useState(1);
+  const [x, setX] = React.useState(50);
+  const [y, setY] = React.useState(50);
+  const [removeBackground, setRemoveBackground] = React.useState(false);
+  const [threshold, setThreshold] = React.useState(56);
+  const [preview, setPreview] = React.useState(null);
+
+  const renderHeadshot = () => {
+    const image = imageRef.current; if (!image) return null;
+    const size = Math.min(image.naturalWidth, image.naturalHeight) / zoom;
+    const maxX = Math.max(0, image.naturalWidth - size);
+    const maxY = Math.max(0, image.naturalHeight - size);
+    const sx = maxX * (x / 100); const sy = maxY * (y / 100);
+    const canvas = document.createElement('canvas'); canvas.width = 800; canvas.height = 800;
+    const context = canvas.getContext('2d', {willReadFrequently:true});
+    context.drawImage(image, sx, sy, size, size, 0, 0, 800, 800);
+    if (removeBackground) {
+      const pixels = context.getImageData(0,0,800,800);
+      const samples = [[0,0],[799,0],[0,799],[799,799]].map(([px,py]) => {
+        const i=(py*800+px)*4; return [pixels.data[i],pixels.data[i+1],pixels.data[i+2]];
+      });
+      const bg = samples.reduce((out,sample)=>out.map((value,index)=>value+sample[index]/samples.length),[0,0,0]);
+      for (let i=0;i<pixels.data.length;i+=4) {
+        const distance=Math.hypot(pixels.data[i]-bg[0],pixels.data[i+1]-bg[1],pixels.data[i+2]-bg[2]);
+        if (distance < threshold) pixels.data[i+3] = Math.round(255 * Math.max(0, distance / threshold));
+      }
+      context.putImageData(pixels,0,0);
+    }
+    return canvas;
+  };
+  const updatePreview = () => {
+    const canvas = renderHeadshot();
+    if (canvas) setPreview(canvas.toDataURL('image/png'));
+  };
+  React.useEffect(() => {
+    if (!imageRef.current?.complete) return;
+    const timer = setTimeout(updatePreview, 30);
+    return () => clearTimeout(timer);
+  }, [source, zoom, x, y, removeBackground, threshold]);
+  const apply = () => {
+    const canvas = renderHeadshot(); if (canvas) onApply(canvas.toDataURL('image/png'));
+  };
+  return <div className="modal-bg" role="dialog" aria-modal="true" aria-label="Crop headshot">
+    <div className="card" style={{width:'min(460px,calc(100vw - 28px))',padding:18,boxShadow:'var(--shadow-elevated)'}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}><strong style={{fontFamily:'var(--font-display)',fontSize:22,textTransform:'uppercase'}}>Crop headshot</strong><button onClick={onCancel} className="btn-ghost" aria-label="Close">×</button></div>
+      <div style={{width:'min(320px,78vw)',aspectRatio:'1',margin:'0 auto 16px',borderRadius:'50%',overflow:'hidden',border:'2px solid var(--brand-accent)',background:'#050610'}}>
+        <img src={preview || source} alt="Headshot crop preview" style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/>
+        <img ref={imageRef} src={source} alt="" aria-hidden="true" onLoad={updatePreview} style={{display:'none'}}/>
+      </div>
+      {[['Zoom',zoom,1,2,.01,setZoom],['Horizontal',x,0,100,1,setX],['Vertical',y,0,100,1,setY]].map(([label,value,min,max,step,setter])=><label key={label} style={{display:'grid',gridTemplateColumns:'84px 1fr',alignItems:'center',gap:10,marginTop:9,fontFamily:'var(--font-mono)',fontSize:10,textTransform:'uppercase',color:'rgba(255,255,255,.6)'}}>{label}<input type="range" value={value} min={min} max={max} step={step} onChange={e=>setter(Number(e.target.value))}/></label>)}
+      <div style={{marginTop:14,padding:'12px',border:'1px solid #1C2238',borderRadius:8,background:'rgba(255,255,255,.025)'}}>
+        <label style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:12,fontFamily:'var(--font-mono)',fontSize:10,textTransform:'uppercase',color:'rgba(255,255,255,.7)',cursor:'pointer'}}>Remove background<input type="checkbox" checked={removeBackground} onChange={e=>setRemoveBackground(e.target.checked)}/></label>
+        {removeBackground && <label style={{display:'grid',gridTemplateColumns:'84px 1fr',alignItems:'center',gap:10,marginTop:10,fontFamily:'var(--font-mono)',fontSize:9,textTransform:'uppercase',color:'rgba(255,255,255,.45)'}}>Sensitivity<input type="range" min="20" max="120" value={threshold} onChange={e=>setThreshold(Number(e.target.value))}/></label>}
+        <div style={{fontFamily:'var(--font-mono)',fontSize:8,color:'rgba(255,255,255,.28)',marginTop:7,lineHeight:1.5}}>Best for solid or clean backgrounds. Review the cutout before saving.</div>
+      </div>
+      <div style={{display:'flex',justifyContent:'flex-end',gap:8,marginTop:18}}><button className="btn-ghost" onClick={onCancel}>Cancel</button><button className="btn-gold" onClick={apply}>Use headshot</button></div>
+      <div style={{fontFamily:'var(--font-mono)',fontSize:8.5,color:'rgba(255,255,255,.35)',marginTop:10,textAlign:'right'}}>Local preview · storage save pending</div>
+    </div>
+  </div>;
+}
+
+function BackgroundCropModal({ source, onCancel, onApply }) {
+  const imageRef = React.useRef(null);
+  const [zoom, setZoom] = React.useState(1);
+  const [x, setX] = React.useState(50);
+  const [y, setY] = React.useState(50);
+  const apply = () => {
+    const image=imageRef.current; if(!image) return;
+    const targetRatio=16/5;
+    let width=image.naturalWidth/zoom; let height=width/targetRatio;
+    if(height>image.naturalHeight){height=image.naturalHeight/zoom;width=height*targetRatio;}
+    const sx=Math.max(0,(image.naturalWidth-width)*(x/100));
+    const sy=Math.max(0,(image.naturalHeight-height)*(y/100));
+    const canvas=document.createElement('canvas');canvas.width=1600;canvas.height=500;
+    canvas.getContext('2d').drawImage(image,sx,sy,width,height,0,0,1600,500);
+    onApply(canvas.toDataURL('image/png'));
+  };
+  return <div className="modal-bg" role="dialog" aria-modal="true" aria-label="Crop dashboard background">
+    <div className="card" style={{width:'min(760px,calc(100vw - 28px))',padding:18,boxShadow:'var(--shadow-elevated)'}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}><strong style={{fontFamily:'var(--font-display)',fontSize:22,textTransform:'uppercase'}}>Crop background</strong><button onClick={onCancel} className="btn-ghost" aria-label="Close">×</button></div>
+      <div style={{width:'100%',aspectRatio:'16 / 5',overflow:'hidden',borderRadius:8,border:'1px solid var(--brand-accent)',background:'var(--brand-bg)'}}>
+        <img ref={imageRef} src={source} alt="Background crop preview" style={{width:'100%',height:'100%',objectFit:'cover',objectPosition:`${x}% ${y}%`,transform:`scale(${zoom})`,display:'block'}}/>
+      </div>
+      {[['Zoom',zoom,1,2,.01,setZoom],['Horizontal',x,0,100,1,setX],['Vertical',y,0,100,1,setY]].map(([label,value,min,max,step,setter])=><label key={label} style={{display:'grid',gridTemplateColumns:'84px 1fr',alignItems:'center',gap:10,marginTop:10,fontFamily:'var(--font-mono)',fontSize:10,textTransform:'uppercase',color:'rgba(255,255,255,.6)'}}>{label}<input type="range" value={value} min={min} max={max} step={step} onChange={e=>setter(Number(e.target.value))}/></label>)}
+      <div style={{fontFamily:'var(--font-mono)',fontSize:8.5,color:'rgba(255,255,255,.35)',marginTop:10}}>Transparent PNG areas retain the dashboard background color.</div>
+      <div style={{display:'flex',justifyContent:'flex-end',gap:8,marginTop:16}}><button className="btn-ghost" onClick={onCancel}>Cancel</button><button className="btn-gold" onClick={apply}>Use background</button></div>
+    </div>
+  </div>;
 }
 
 Object.assign(window, { V2Hero });
@@ -1142,15 +1413,17 @@ const V2Icons = {
   analytics:  <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M3 17h14M5.5 17V12M9.5 17V8M13.5 17V4M17.5 17V10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>,
   team:       <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="8" cy="6.5" r="2.8" stroke="currentColor" strokeWidth="1.5"/><path d="M2 17.5c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/><circle cx="15" cy="7" r="2" stroke="currentColor" strokeWidth="1.5" opacity=".5"/><path d="M18 17.5c0-2.5-1.6-4.6-3.5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity=".5"/></svg>,
   settings:   <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="3" stroke="currentColor" strokeWidth="1.5"/><path d="M10 2v2M10 16v2M2 10h2M16 10h2M4.6 4.6l1.4 1.4M14 14l1.4 1.4M4.6 15.4l1.4-1.4M14 6l1.4-1.4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>,
+  locker:     <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><rect x="4" y="2" width="12" height="16" rx="1.5" stroke="currentColor" strokeWidth="1.5"/><path d="M7 6h6M7 9h6M12.5 14h.01" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>,
 };
 
 const V2_NAV = [
   { id:'dashboard',  label:'Dashboard',  icon:V2Icons.dashboard },
-  { id:'highlights', label:'Highlights', icon:V2Icons.highlights },
-  { id:'press',      label:'Press',      icon:V2Icons.press },
+  { id:'highlights', label:'Film Room',  icon:V2Icons.highlights },
   { id:'media',      label:'Media',      icon:V2Icons.media },
+  { id:'press',      label:'Press',      icon:V2Icons.press },
   { id:'analytics',  label:'Analytics',  icon:V2Icons.analytics },
   { id:'team',       label:'Team',       icon:V2Icons.team },
+  { id:'locker',     label:'My Locker',  icon:V2Icons.locker, href:'http://localhost:3000/player/test-null-user-id' },
 ];
 
 function ScoutModeTogglePill() {
@@ -1199,8 +1472,8 @@ function V2Sidebar({ active, setActive }) {
       </div>
 
       <div style={{ display:'flex', flexDirection:'column', gap:1 }}>
-        {V2_NAV.map(({ id, label, icon }) => (
-          <button key={id} onClick={() => setActive(id)}
+        {V2_NAV.map(({ id, label, icon, href }) => (
+          <button key={id} onClick={() => href ? window.open(href, '_blank', 'noopener,noreferrer') : setActive(id)}
             className={`sidebar-nav-btn${active === id ? ' active' : ''}`}
             style={{ gap:0 }}
           >
@@ -1350,10 +1623,10 @@ function V2PreviewPanel({ open, appliedTheme, appliedFontId, onSave }) {
               {savingPulse ? 'Saving' : dirty ? 'Preview only' : 'In sync'}
             </span>
           </div>
-          <div style={{ fontFamily:'var(--font-mono)', fontSize:9, color:'rgba(255,255,255,0.32)', textTransform:'uppercase', letterSpacing:'0.15em' }}>Live preview</div>
+          <span />
         </div>
         <div style={{ display:'flex', justifyContent:'flex-end', alignItems:'center', gap:8 }}>
-          <a href="locker-page.html" target="_blank" rel="noreferrer" style={{
+          <a href="http://localhost:3000/player/test-null-user-id" target="_blank" rel="noreferrer" style={{
             fontFamily:'var(--font-mono)', fontSize:9, color:'#F5A623',
             textDecoration:'none', letterSpacing:'0.1em', textTransform:'uppercase',
             border:'1px solid rgba(245,166,35,0.28)', borderRadius:5, padding:'4px 8px', flexShrink:0,
@@ -1683,7 +1956,7 @@ function V2Placeholder({ name }) {
   );
 }
 
-function V2DashboardPage() {
+function V2DashboardPage({ headshot, setHeadshot, bgImg, setBgImg }) {
   const [scoutMode, setScoutMode] = React.useState(false);
   React.useEffect(() => {
     const handler = () => setScoutMode(!!window.__bltzScout);
@@ -1692,7 +1965,7 @@ function V2DashboardPage() {
   }, []);
   return (
     <div>
-      <V2Hero scoutMode={scoutMode} />
+      <V2Hero scoutMode={scoutMode} headshot={headshot} setHeadshot={setHeadshot} bgImg={bgImg} setBgImg={setBgImg} />
       <QuoteBanner />
       {scoutMode && (
         <div style={{ padding:'20px 36px 0' }}>
@@ -1702,16 +1975,16 @@ function V2DashboardPage() {
       <VideosRow />
       <div className="dash-content">
         <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr', gap:14, alignItems:'start' }} className="dash-main-grid">
-          <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
+          <div className="dashboard-primary" style={{ display:'flex', flexDirection:'column', gap:14 }}>
+            <div className="dashboard-earning-stack" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
               <MonetizationCard />
               {scoutMode ? <AcademicCard /> : <SpotifyCard />}
             </div>
-            <BioCard />
+            <div className="dashboard-bio"><BioCard /></div>
           </div>
-          <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
-            <PhotosCard />
-            <PressCard />
+          <div className="dashboard-secondary" style={{ display:'flex', flexDirection:'column', gap:14 }}>
+            <div className="dashboard-photos"><PhotosCard /></div>
+            <div className="dashboard-press"><PressCard /></div>
           </div>
         </div>
       </div>
@@ -1736,7 +2009,26 @@ function DashApp() {
   const [page, setPage] = React.useState(
     () => localStorage.getItem('bltz-v2-page') || 'dashboard'
   );
-  const [previewOpen, setPreviewOpen] = React.useState(true);
+  const [previewOpen, setPreviewOpen] = React.useState(false);
+  const [dashboardBackground, setDashboardBackground] = React.useState(() => {
+    try { return localStorage.getItem('bltz-dashboard-background'); } catch (_) { return null; }
+  });
+  const [dashboardHeadshot, setDashboardHeadshot] = React.useState(() => {
+    try { return localStorage.getItem('bltz-dashboard-headshot'); } catch (_) { return null; }
+  });
+
+  React.useEffect(() => {
+    try {
+      if (dashboardBackground) localStorage.setItem('bltz-dashboard-background', dashboardBackground);
+      else localStorage.removeItem('bltz-dashboard-background');
+    } catch (_) { /* local preview remains available in memory */ }
+  }, [dashboardBackground]);
+  React.useEffect(() => {
+    try {
+      if (dashboardHeadshot) localStorage.setItem('bltz-dashboard-headshot', dashboardHeadshot);
+      else localStorage.removeItem('bltz-dashboard-headshot');
+    } catch (_) { /* local preview remains available in memory */ }
+  }, [dashboardHeadshot]);
 
   // Persisted brand theme — lifted out of the panel so saves recolor the dashboard.
   const [appliedTheme, setAppliedTheme] = React.useState(() => {
@@ -1769,7 +2061,26 @@ function DashApp() {
     () => localStorage.getItem('bltz-brand-font') || DEFAULT_BRAND_FONT
   );
 
+  const navigateDashboard = React.useCallback((nextPage) => {
+    setPage(nextPage);
+    if (nextPage === 'dashboard') setPreviewOpen(false);
+  }, []);
+
   React.useEffect(() => { localStorage.setItem('bltz-v2-page', page); }, [page]);
+  React.useEffect(() => {
+    const navigate = event => navigateDashboard(event.detail);
+    window.addEventListener('bltz-navigate', navigate);
+    return () => window.removeEventListener('bltz-navigate', navigate);
+  }, [navigateDashboard]);
+  React.useEffect(() => {
+    const desktop = window.matchMedia('(min-width: 901px)');
+    const enforceDesktopCustomization = event => {
+      if (!event.matches) setPreviewOpen(false);
+    };
+    enforceDesktopCustomization(desktop);
+    desktop.addEventListener?.('change', enforceDesktopCustomization);
+    return () => desktop.removeEventListener?.('change', enforceDesktopCustomization);
+  }, []);
 
   // Push brand → CSS custom properties + persist. The dashboard's gold/accent surfaces
   // (sidebar active state, .btn-gold, V2Hero glows + jersey badge) read these vars.
@@ -1804,12 +2115,61 @@ function DashApp() {
     setAppliedFontId(fontIdOut);
   };
 
+  const [searchOpen, setSearchOpen] = React.useState(false);
+  const [searchQuery, setSearchQuery] = React.useState('');
+  const [searchResults, setSearchResults] = React.useState([]);
+  const [searching, setSearching] = React.useState(false);
+  React.useEffect(() => {
+    const query = searchQuery.trim();
+    if (query.length < 2) { setSearchResults([]); setSearching(false); return; }
+    setSearching(true);
+    const timer = setTimeout(async () => {
+      const controller = new AbortController();
+      const requestTimeout = setTimeout(() => controller.abort(), 4500);
+      try {
+        const response = await fetch(`http://localhost:3000/api/search?q=${encodeURIComponent(query)}&limit=8`, {signal:controller.signal});
+        const data = await response.json();
+        setSearchResults(response.ok ? (data.results || []) : []);
+      } catch (_) {
+        const demos = [
+          {type:'player',id:'demo-player',name:'Demo Player',slug:'test-null-user-id',school:'BLTZ Demo Locker'},
+          {type:'team',id:'demo-team',name:'Ohio State Buckeyes',school:'Ohio State University'},
+          {type:'school',id:'demo-school',name:'Ohio State University',state:'OH'},
+        ];
+        setSearchResults(demos.filter(item => item.name.toLowerCase().includes(query.toLowerCase())));
+      } finally { clearTimeout(requestTimeout); setSearching(false); }
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const openResult = (result) => {
+    if (result.type === 'player' && result.slug) window.open(`http://localhost:3000/player/${result.slug}`, '_blank', 'noopener,noreferrer');
+    else window.open(`http://localhost:3000/?search=${encodeURIComponent(result.name)}`, '_blank', 'noopener,noreferrer');
+    setSearchOpen(false);
+  };
+
   return (
     <>
       <div className="dash-shell">
-        <V2Sidebar active={page} setActive={setPage} />
+        <V2Sidebar active={page} setActive={navigateDashboard} />
         <div className="dash-main">
-          {page === 'dashboard' ? <V2DashboardPage /> : <V2Placeholder name={page} />}
+          <nav className="dash-topbar" aria-label="Dashboard tools">
+            <button className="dashboard-mobile-logo" onClick={()=>navigateDashboard('dashboard')} aria-label="Open dashboard">
+              <img src="assets/bltz-logo.svg" alt="BLTZ" />
+            </button>
+            <div className="dashboard-search">
+              <input className="dashboard-search-input" value={searchQuery} onChange={e=>{setSearchQuery(e.target.value);setSearchOpen(true);}} onFocus={()=>setSearchOpen(true)} placeholder="Search athletes, teams, schools" aria-label="Search athletes, teams, and schools"/>
+              <svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{position:'absolute',right:13,top:10,color:'var(--brand-accent)'}}><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+              {searchOpen && searchQuery.trim().length >= 2 && <div className="dashboard-search-results">
+                {searching ? <div style={{padding:12,fontFamily:'var(--font-mono)',fontSize:9,color:'rgba(255,255,255,.4)',textTransform:'uppercase'}}>Searching…</div> : searchResults.length ? searchResults.map(result=><button key={`${result.type}-${result.id}`} className="dashboard-search-result" onClick={()=>openResult(result)}>
+                  <span style={{width:30,height:30,borderRadius:result.type==='player'?'50%':6,background:'#131829',display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden',flexShrink:0}}>{result.image_url||result.logo_url?<img src={result.image_url||result.logo_url} alt="" style={{width:'100%',height:'100%',objectFit:'cover'}}/>:<span style={{fontFamily:'var(--font-display)',fontWeight:800,color:'var(--brand-accent)'}}>{result.name?.charAt(0)}</span>}</span>
+                  <span style={{minWidth:0}}><span style={{display:'block',fontFamily:'var(--font-body)',fontSize:12,fontWeight:600,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{result.name}</span><span style={{display:'block',fontFamily:'var(--font-mono)',fontSize:8,color:'rgba(255,255,255,.35)',textTransform:'uppercase',letterSpacing:'.1em'}}>{result.type}{result.school?` · ${result.school}`:''}</span></span>
+                </button>) : <div style={{padding:12,fontFamily:'var(--font-mono)',fontSize:9,color:'rgba(255,255,255,.4)',textTransform:'uppercase'}}>No matches found</div>}
+              </div>}
+            </div>
+            <button className="dashboard-profile-button" onClick={()=>navigateDashboard('dashboard')} aria-label="Open profile"><img src="http://localhost:3000/images/Headshot.png" alt="Darius Cole" style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/></button>
+          </nav>
+          {page === 'dashboard' ? <V2DashboardPage headshot={dashboardHeadshot} setHeadshot={setDashboardHeadshot} bgImg={dashboardBackground} setBgImg={setDashboardBackground} /> : <V2Placeholder name={page} />}
         </div>
         <V2PreviewPanel
           open={previewOpen}
@@ -1818,7 +2178,9 @@ function DashApp() {
           onSave={handleBrandSave}
         />
       </div>
-      <V2PreviewToggle open={previewOpen} onClick={() => setPreviewOpen(v => !v)} />
+      <V2PreviewToggle open={previewOpen} onClick={() => {
+        if (window.matchMedia('(min-width: 901px)').matches) setPreviewOpen(v => !v);
+      }} />
       <V2MobileNav active={page} setActive={setPage} />
     </>
   );

@@ -28,6 +28,7 @@ This document tracks Phase 1 of `BLTZ_MASTER_BUILD_ORDER_UPDATED.md`. Status val
 | Basic Locker analytics | partially_complete | Existing video view totals are readable. Public view-event writes, share tracking, and retention rules are deferred. |
 | Comments and reactions | blocked | Query helpers are placeholders and no completed comments contract exists. The public video page displays an honest unavailable state. |
 | Locker claim and athlete editing | partially_complete | Existing onboarding and claim work remains separate from this public UI cycle and requires the approved authentication contract. |
+| Claimed-Locker headshot cutout | out_of_scope | Deferred to the next Locker phase. After an athlete claims a Locker and approves a primary headshot, BLTZ may use a paid background-removal provider to create the transparent derivative required by the Locker design. Unclaimed and unapproved scraped images must not trigger paid processing. |
 | Accessibility | partially_complete | Semantic headings, labels, native video controls, focusable archive navigation, and reduced-motion handling exist. A full keyboard and screen-reader audit remains. |
 
 ## Acceptance Check
@@ -46,3 +47,33 @@ This document tracks Phase 1 of `BLTZ_MASTER_BUILD_ORDER_UPDATED.md`. Status val
 3. Replace placeholder sport statistics after canonical athlete and sport contracts are approved.
 4. Connect video assets to canonical media-rights records through an approved migration and regenerated database types.
 5. Add tested view-event, share-event, comment, and reaction services only after their retention and authorization rules are defined.
+
+## Next Locker Phase: Claimed Headshot Processing
+
+### Product Decision
+
+The standard claimed-Locker experience should include one background-removed derivative of the athlete's approved primary headshot. This is a Locker compatibility feature, not a premium entitlement: the public Locker depends on a transparent athlete image to achieve its intended visual treatment.
+
+Paid plans may later add a separate **Studio Headshot** feature with additional cutouts, manual edge refinement, alternate crops, background replacement, school-color treatments, shadows, outlines, lighting, and season- or team-specific variants.
+
+### Trigger and Cost Controls
+
+- Do not process every scraped headshot during onboarding.
+- Preserve scraped images as candidates with their source, rights, and approval metadata.
+- Trigger paid removal only after the athlete has claimed the Locker, selected the primary headshot, confirmed that BLTZ may use it, and the image is eligible for public display.
+- Process one standard primary cutout per claimed Locker unless the source image changes or processing fails.
+- Cache the result by source-image hash so repeated previews and crops do not create duplicate provider charges.
+- White-background headshots are expected to be common, but the workflow must still use real subject segmentation rather than brightness or color-threshold removal.
+
+### Data and Storage Requirements
+
+- Keep the untouched original and transparent derivative as separate assets.
+- Record the processing provider, status, source-image hash, completion time, and failure reason.
+- Never overwrite or discard the original image.
+- Perform provider requests server-side and keep provider credentials out of the browser.
+- Allow the athlete to preview and approve the cutout before it becomes the Locker's public headshot.
+- Provide an honest contained-photo or standard BLTZ silhouette fallback until a cutout is approved.
+
+### Implementation Boundary
+
+The current browser-based background-lightening control is not a production background-removal method and must not be represented as one. Production implementation is deferred until the next Locker phase, when a provider can be selected using a representative test set and expected claimed-Locker volume.

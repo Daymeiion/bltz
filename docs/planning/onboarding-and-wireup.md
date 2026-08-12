@@ -46,6 +46,15 @@ Build founder-spec onboarding (identity, AI magic-moment via SSE, review/publish
 | Trust surface | Prefer **confirmed-by-athlete** for machine-derived numerics versus silent truth. Badge or subdued styling until user confirms Review row aligns with hallucination gate. |
 | Observability | Instrument minimal funnel: signup to publish, pipeline success vs manual fallback, claim link time to publish. |
 
+## Controlled Athlete Test Amendment (August 2026)
+
+- Initial athletes enter through unique, expiring claim links issued for a specific athlete and Locker; there is no open dashboard enrollment requirement for this cohort.
+- A claim token must be single-use, bound to the intended Locker, expire safely, and record issuance, opening, validation, completion, and invalid or expired attempts.
+- After validation, the athlete reviews the Locker and uses the limited beta dashboard as a private workspace.
+- Dashboard work remains draft or pending review until the explicit publish workflow updates the public Locker.
+- Full Media, Film Room management, Press, and Analytics pages are deferred. Access attempts and optional notification requests may be recorded to measure demand, but unavailable pages must not show fabricated data or imply that attribution is complete.
+- General dashboard publication is a post-beta decision based on Locker feedback, claim completion, observed navigation, and notification interest.
+
 ## Architecture
 
 ```mermaid

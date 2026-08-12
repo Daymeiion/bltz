@@ -398,6 +398,7 @@ Complete the remaining public Locker work without introducing enterprise scope i
 - Shareable Locker URLs
 - Basic Locker analytics
 - Athlete onboarding and claim calls to action
+- Deferred next-Locker enhancement: claim-triggered transparent headshot processing, preserving the original and avoiding paid processing for unclaimed scraped candidates (see `docs/player-locker-gap-analysis.md`)
 
 ## Deliverables
 
@@ -482,9 +483,22 @@ Create the shared identity and organization foundation that supports both public
 
 # Phase 3 — Athlete Beta and Feedback System
 
+Status: **Active — V1 testing dashboard implementation completed August 11, 2026; controlled athlete testing and feedback outcomes pending.**
+
 ## Objective
 
 Release the Locker to a controlled athlete cohort before expanding enterprise scope.
+
+## V1 Beta Release Boundary
+
+- The public Player Locker is the product being validated in V1.
+- Each test athlete receives a unique, expiring claim link tied to the intended athlete and Locker.
+- The athlete dashboard is an invite-only claim, review, correction, and preview workspace during testing. It is not a generally released V1 product surface.
+- Dashboard changes remain draft or preview state until the approved publish workflow makes the corresponding Locker changes public.
+- Media, Film Room management, Press, and Analytics dashboard pages are deferred until Locker feedback and observed athlete behavior justify them.
+- Do not build full deferred pages merely to complete the sidebar. A deferred destination may use a small honest interest state that records an access attempt or explicit **Notify me** request, then returns the athlete to the available review workflow.
+- Do not expose placeholder analytics, fabricated attribution, or incomplete rights and revenue data during the beta.
+- Decide whether the full dashboard belongs in the public app release only after the controlled test cohort has been analyzed.
 
 ## Scope
 
@@ -500,6 +514,32 @@ Release the Locker to a controlled athlete cohort before expanding enterprise sc
 - Testimonial and case-study consent tracking
 - Admin feedback review
 - Beta cohort tagging
+- Deferred-feature interest events and notification requests
+- Draft-versus-published Locker state validation
+
+## Minimum Beta Dashboard
+
+- Athlete identity and claim confirmation
+- Current Locker preview
+- Permitted profile, headshot, background, biography, and quote review controls
+- Correction and media-submission requests
+- View-live action for already published Lockers
+- Structured feedback and support access
+- Clear draft, saved, pending-review, and published states
+
+Implementation status: **Complete for the V1 controlled-testing boundary.** The dashboard mockup now provides the approved responsive overview, Locker preview and view-live access, athlete identity presentation, headshot and dashboard-background controls, biography editing with optional AI polish, photo upload entry, sortable and swipeable highlight presentation, desktop-only Locker theme preview, persistent local test state, and honest deferred-page placeholders. Production persistence, claim-token enforcement, review state transitions, feedback capture, and cohort analytics remain Phase 3 integration work.
+
+## Required Beta Signals
+
+- Claim-link opened, validated, expired, rejected, and completed
+- Locker preview viewed and live Locker opened
+- Dashboard section selected
+- Deferred destination selected (`media`, `film_room`, `press`, or `analytics`)
+- Notify request submitted or dismissed for each deferred destination
+- Field edited, correction requested, media submitted, and review completed
+- Time from claim-link open to completed review
+
+Interest signals measure demand; they must not be presented as evidence that the deferred feature exists.
 
 ## Exit Criteria
 
@@ -508,6 +548,10 @@ Release the Locker to a controlled athlete cohort before expanding enterprise sc
 - At least 5 useful testimonials or structured feedback records.
 - Three potential case-study athletes selected.
 - Product changes are prioritized from observed behavior rather than assumptions.
+- Deferred dashboard pages have not been promoted into scope without cohort evidence.
+- Dashboard drafts cannot accidentally publish to a public Locker.
+
+Phase 3 remains active until the controlled cohort satisfies these outcome-based exit criteria. Completing the V1 dashboard interface does not by itself complete athlete beta validation.
 
 ---
 

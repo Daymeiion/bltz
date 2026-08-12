@@ -1,9 +1,45 @@
 # BLTZ Player Dashboard — Plan + Review
 
 **Source design doc:** `~/.gstack/projects/Daymeiion-bltz/Administrator-claude-busy-hellman-6b7937-design-20260501-131831.md`
-**Status:** APPROVED (2026-05-01) — all 4 taste recommendations accepted
+**Status:** V1 TESTING INTERFACE COMPLETE (2026-08-11) — production release deferred pending athlete feedback
 **Branch:** claude/busy-hellman-6b7937
 **Date:** 2026-05-01
+
+---
+
+## August 2026 Beta Scope Override
+
+The earlier plan describes the long-term dashboard product. It does not define the V1 release commitment.
+
+For the initial athlete test cohort, the Player Locker is the product under validation. Dashboard access is available only through an athlete-specific claim and review flow. It is a private testing workspace, not a generally published application surface, and may remain unreleased when the public Locker enters V1 testing.
+
+### Included in the testing dashboard
+
+- Claim confirmation and athlete identity review
+- Actual Locker preview and view-live link
+- Permitted edits for the athlete's headshot, dashboard background, biography, and quote
+- Correction and media-submission requests
+- Explicit draft, saved, pending-review, and published states
+- Structured feedback and support access
+
+### Deferred until Locker feedback is analyzed
+
+- Media management page
+- Film Room management page
+- Press management page
+- Athlete analytics page
+- Attribution-dependent reporting
+- Any feature that implies rights, revenue, or performance data is complete when it is not
+
+Sidebar selections for deferred destinations may open a concise unavailable state with **Notify me**. That interaction should record interest in the selected destination without creating a visually complete placeholder page. The beta should track both attempted access and notification consent so the next dashboard scope is driven by observed athlete behavior.
+
+### Publication rule
+
+Dashboard edits are draft or preview data until the approved publish action updates the public Locker. Navigating away from the dashboard must not publish changes. Test access to dashboard controls does not imply that the dashboard itself is part of the public V1 launch.
+
+### V1 implementation milestone
+
+The responsive dashboard testing interface is complete for the approved beta boundary. It includes the overview experience, athlete hero and identity controls, Locker preview and live link, headshot and dashboard-background editing, biography editing and optional polish action, photos entry point, sortable/swipeable highlights, desktop-only theme preview, and deferred-feature interest states. Remaining work belongs to controlled-test integration: secure claim links, durable draft persistence, explicit review/publish transitions, feedback capture, event instrumentation, and analysis of athlete behavior.
 
 ---
 
