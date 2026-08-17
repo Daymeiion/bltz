@@ -1,18 +1,6 @@
 "use client";
 
-import type { AnalyticsEventName, AnalyticsSource } from "@/lib/analytics/events";
-
-type ClientEvent = {
-  eventName?: AnalyticsEventName;
-  name?: AnalyticsEventName;
-  source?: AnalyticsSource;
-  page?: string;
-  route?: string;
-  athleteId?: string | null;
-  athleteSlug?: string;
-  properties?: Record<string, unknown>;
-  dedupeKey?: string;
-};
+import type { ProductEventInput } from "@/lib/analytics/events";
 
 const SESSION_KEY = "bltz.analytics.session.v1";
 const DEDUPE_PREFIX = "bltz.analytics.intent.v2:";
@@ -73,14 +61,13 @@ function finishIntent(key: string | undefined, intent: StoredIntent, sent: boole
 }
 
 export async function trackProductEvent(
-  event: ClientEvent,
+  event: ProductEventInput,
   transport: typeof fetch = fetch,
 ): Promise<boolean> {
   if (typeof window === "undefined") return false;
-  if (event.source === "public_locker" && !event.athleteId) return false;
+  if (event.source === "public_locker" && !event.athleteId && !event.athleteSlug) return false;
 
-  const eventName = event.eventName ?? event.name;
-  if (!eventName) return false;
+  const eventName = event.eventName;
   const page = (event.page ?? event.route ?? window.location.pathname).split("?")[0].slice(0, 512);
   const intent = event.dedupeKey ? claimIntent(event.dedupeKey) : {
     eventId: window.crypto.randomUUID(),

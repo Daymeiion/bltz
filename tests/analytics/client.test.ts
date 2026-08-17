@@ -76,4 +76,20 @@ describe("analytics client", () => {
     expect(accepted).toBe(false);
     expect(transport).not.toHaveBeenCalled();
   });
+
+  it("accepts an athlete slug as the public event target", async () => {
+    const transport = vi.fn<typeof fetch>(async () => new Response(null, { status: 202 }));
+    const accepted = await trackProductEvent({
+      eventName: "locker_viewed",
+      source: "public_locker",
+      athleteSlug: "test-athlete",
+      properties: {},
+    }, transport);
+
+    expect(accepted).toBe(true);
+    expect(JSON.parse(String(transport.mock.calls[0]?.[1]?.body))).toMatchObject({
+      eventName: "locker_viewed",
+      athleteSlug: "test-athlete",
+    });
+  });
 });
