@@ -6,11 +6,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowUpRight, ChevronLeft, ChevronRight, Maximize, Minimize, Pause, Play, Search, Volume2, VolumeX, X } from "lucide-react";
 import type { SearchResult } from "@/components/ui/search-modal";
 import type { PublicVideo } from "@/lib/player/public-video";
+import { trackProductEvent } from "@/lib/analytics/client";
 import styles from "./film-room.module.css";
 
 export type FilmRoomVideo = PublicVideo;
 
 export type FilmRoomData = {
+  athleteId: string | null;
   slug: string;
   athleteName: string;
   athleteHeadshotUrl: string;
@@ -178,6 +180,16 @@ export default function FilmRoomView({ data }: { data: FilmRoomData }) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+
+  useEffect(() => {
+    void trackProductEvent({
+      eventName: "film_room_opened",
+      source: "public_locker",
+      athleteId: data.athleteId,
+      properties: { video_count: data.videos.length },
+      dedupeKey: `film_room_opened:${data.slug}:${window.location.pathname}`,
+    });
+  }, [data.athleteId, data.slug, data.videos.length]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -318,6 +330,13 @@ export default function FilmRoomView({ data }: { data: FilmRoomData }) {
   }
 
   function chooseVideo(id: string) {
+    void trackProductEvent({
+      eventName: "media_viewed",
+      source: "public_locker",
+      athleteId: data.athleteId,
+      properties: { media_id: id, media_type: "video", section: "film_room" },
+      dedupeKey: `media_viewed:video:${id}`,
+    });
     setSelectedId(id);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }

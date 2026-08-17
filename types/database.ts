@@ -100,6 +100,10 @@ export type MediaContentContext =
   | "off_field";
 export type WaitlistPlayingLevel = "hs" | "cfb" | "pro" | "former";
 export type WaitlistStatus = "new" | "contacted" | "invited" | "claimed" | "archived";
+export type BetaParticipantStatus = "invited" | "active" | "completed" | "withdrawn";
+export type CaseStudyPermission = "not_requested" | "pending" | "granted" | "declined" | "revoked";
+export type AthleteInsightSeverity = "low" | "medium" | "high" | "critical";
+export type AthleteInsightStatus = "open" | "monitoring" | "resolved" | "dismissed";
 
 export interface Media {
   id: string;
@@ -178,6 +182,98 @@ export interface TeamInvite {
   updated_at: string;
 }
 
+export interface AnalyticsEvent {
+  id: string;
+  client_event_id: string | null;
+  event_name: string;
+  user_id: string | null;
+  athlete_id: string | null;
+  session_id: string | null;
+  source: string;
+  page: string | null;
+  properties: Json;
+  occurred_at: string;
+  created_at: string;
+}
+
+export interface BetaParticipant {
+  id: string;
+  athlete_id: string;
+  user_id: string | null;
+  cohort: string;
+  invite_source: string | null;
+  invited_at: string | null;
+  joined_at: string | null;
+  locker_claimed_at: string | null;
+  feedback_completed_at: string | null;
+  case_study_candidate: boolean;
+  case_study_permission: CaseStudyPermission;
+  status: BetaParticipantStatus;
+  internal_notes: string | null;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AthleteFeedback {
+  id: string;
+  athlete_id: string;
+  participant_id: string | null;
+  interview_date: string;
+  interviewer_id: string | null;
+  overall_rating: number | null;
+  locker_value_rating: number | null;
+  career_accuracy_rating: number | null;
+  media_value_rating: number | null;
+  would_share: boolean | null;
+  willingness_to_pay: boolean | null;
+  payment_expectation: string | null;
+  preferred_audience: string | null;
+  biggest_problem: string | null;
+  favorite_feature: string | null;
+  missing_feature: string | null;
+  missing_career_content: string | null;
+  missing_media: string | null;
+  monetization_interest: boolean | null;
+  analytics_interest: boolean | null;
+  digital_intelligence_interest: boolean | null;
+  testimonial_quote: string | null;
+  raw_notes: string | null;
+  follow_up_required: boolean;
+  additional_responses: Json;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AthleteInsight {
+  id: string;
+  athlete_id: string;
+  category: string;
+  description: string;
+  severity: AthleteInsightSeverity;
+  source: string;
+  status: AthleteInsightStatus;
+  evidence: Json;
+  created_by: string | null;
+  resolved_by: string | null;
+  created_at: string;
+  updated_at: string;
+  resolved_at: string | null;
+}
+
+export interface AthleteBaselineSnapshot {
+  id: string;
+  athlete_id: string;
+  participant_id: string | null;
+  schema_version: number;
+  snapshot: Json;
+  captured_by: string | null;
+  created_at: string;
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -236,6 +332,34 @@ export interface Database {
           status?: WaitlistStatus;
         };
         Update: Partial<Omit<LandingWaitlistLead, "id" | "created_at" | "updated_at">>;
+      };
+      analytics_events: {
+        Row: AnalyticsEvent;
+        Insert: Pick<AnalyticsEvent, "event_name" | "source"> & Partial<Omit<AnalyticsEvent, "event_name" | "source">>;
+        Update: never;
+      };
+      beta_participants: {
+        Row: BetaParticipant;
+        Insert: Pick<BetaParticipant, "athlete_id" | "cohort"> &
+          Partial<Omit<BetaParticipant, "athlete_id" | "cohort">>;
+        Update: Partial<Omit<BetaParticipant, "id" | "created_at" | "updated_at">>;
+      };
+      athlete_feedback: {
+        Row: AthleteFeedback;
+        Insert: Pick<AthleteFeedback, "athlete_id"> & Partial<Omit<AthleteFeedback, "athlete_id">>;
+        Update: Partial<Omit<AthleteFeedback, "id" | "created_at" | "updated_at">>;
+      };
+      athlete_insights: {
+        Row: AthleteInsight;
+        Insert: Pick<AthleteInsight, "athlete_id" | "category" | "description" | "source"> &
+          Partial<Omit<AthleteInsight, "athlete_id" | "category" | "description" | "source">>;
+        Update: Partial<Omit<AthleteInsight, "id" | "created_at" | "updated_at">>;
+      };
+      athlete_baseline_snapshots: {
+        Row: AthleteBaselineSnapshot;
+        Insert: Pick<AthleteBaselineSnapshot, "athlete_id" | "snapshot"> &
+          Partial<Omit<AthleteBaselineSnapshot, "athlete_id" | "snapshot">>;
+        Update: never;
       };
     };
   };

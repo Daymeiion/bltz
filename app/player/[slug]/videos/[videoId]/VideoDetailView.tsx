@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import type { PublicVideo, PublicVideoLevel } from "@/lib/player/public-video";
 import { createClient } from "@/lib/supabase/client";
+import { trackProductEvent } from "@/lib/analytics/client";
 import styles from "./video-detail.module.css";
 
 export type VideoDetailData = {
@@ -150,10 +151,36 @@ export default function VideoDetailView({ data }: { data: VideoDetailData }) {
     [data.videos],
   );
 
+  useEffect(() => {
+    void trackProductEvent({
+      eventName: "media_viewed",
+      source: "public_locker",
+      athleteId: data.playerId,
+      properties: { media_id: data.video.id, media_type: "video", section: "video_detail" },
+      dedupeKey: `media_viewed:video:${data.video.id}`,
+    });
+  }, [data.playerId, data.slug, data.video.id]);
+
   async function copyShareLink() {
-    await navigator.clipboard.writeText(window.location.href).catch(() => undefined);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1800);
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+      void trackProductEvent({
+        eventName: "share_link_copied",
+        source: "public_locker",
+        athleteId: data.playerId,
+        properties: { surface: "locker_share_modal" },
+      });
+      void trackProductEvent({
+        eventName: "locker_shared",
+        source: "public_locker",
+        athleteId: data.playerId,
+        properties: { mechanism: "clipboard" },
+      });
+    } catch {
+      // Clipboard permission failures must not interrupt video playback.
+    }
   }
 
   async function toggleFollow() {

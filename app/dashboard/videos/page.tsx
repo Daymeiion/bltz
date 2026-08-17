@@ -7,6 +7,7 @@ import Link from "next/link";
 import { VideoCard, VideoCardSkeleton } from "@/components/dashboard/VideoCard";
 import { VideoModal, type VideoFormData } from "@/components/dashboard/VideoModal";
 import type { VideoWithStats } from "@/lib/queries/videos";
+import { trackProductEvent } from "@/lib/analytics/client";
 
 export default function VideosPage() {
   const [videos, setVideos] = useState<VideoWithStats[]>([]);
@@ -63,6 +64,19 @@ export default function VideosPage() {
 
       if (!response.ok) {
         throw new Error('Failed to save video');
+      }
+
+      if (!editingVideo) {
+        const payload = (await response.json().catch(() => ({}))) as { video?: { id?: string } };
+        void trackProductEvent({
+          eventName: "media_uploaded",
+          source: "athlete_dashboard",
+          properties: {
+            media_id: payload.video?.id,
+            media_type: "video",
+            visibility: formData.visibility,
+          },
+        });
       }
 
       await loadVideos();

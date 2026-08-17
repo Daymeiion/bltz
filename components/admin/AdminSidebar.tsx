@@ -14,6 +14,7 @@ import {
   IconX,
   IconShield,
   IconMessageCircle,
+  IconFlask,
 } from "@tabler/icons-react";
 
 interface SidebarLink {
@@ -50,6 +51,11 @@ export function AdminSidebar() {
       label: "Analytics",
       href: "/admin/analytics",
       icon: <IconChartBar className="h-5 w-5 flex-shrink-0" />,
+    },
+    {
+      label: "Beta Intelligence",
+      href: "/admin/beta",
+      icon: <IconFlask className="h-5 w-5 flex-shrink-0" />,
     },
     {
       label: "Settings",

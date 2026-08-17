@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { ChevronDown, ChevronUp, Mic } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { SearchResult } from "@/components/ui/search-modal";
+import { trackProductEvent } from "@/lib/analytics/client";
 
 // ---------------------------------------------------------------------------
 // LockerView — fan-facing athlete locker, ported from the standalone design.
@@ -17,6 +18,7 @@ import type { SearchResult } from "@/components/ui/search-modal";
 // ---------------------------------------------------------------------------
 
 export type LockerData = {
+  athleteId: string | null;
   slug: string;
   fullName: string;
   hometown: string;
@@ -217,6 +219,22 @@ export default function LockerView({
   const [heroPlaying, setHeroPlaying] = useState(true);
   const showAthleteNav = viewerMode === "athlete";
   const isEmbedded = presentation === "embedded";
+
+  useEffect(() => {
+    if (isEmbedded) return;
+    const source = document.referrer
+      ? (() => {
+          try { return new URL(document.referrer).hostname; } catch { return undefined; }
+        })()
+      : undefined;
+    void trackProductEvent({
+      eventName: "locker_viewed",
+      source: "public_locker",
+      athleteId: data.athleteId,
+      properties: { source, viewer_mode: viewerMode },
+      dedupeKey: `locker_viewed:${data.slug}:${viewerMode}:${window.location.pathname}`,
+    });
+  }, [data.athleteId, data.slug, isEmbedded, viewerMode]);
 
   useEffect(() => {
     const node = teamHistoryRef.current;

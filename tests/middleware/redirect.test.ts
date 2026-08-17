@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isPublicPath, shouldRedirectToOnboarding } from "@/lib/supabase/middleware";
+import { isPublicPath, shouldRedirectToOnboarding, shouldUseTestAuth } from "@/lib/supabase/middleware";
 
 describe("isPublicPath", () => {
   it("treats root, auth, api, and locker pages as public", () => {
@@ -85,6 +85,22 @@ describe("shouldRedirectToOnboarding", () => {
       shouldRedirectToOnboarding({
         pathname: "/dashboard",
         profile: null,
+      }),
+    ).toBe(false);
+  });
+});
+
+describe("test-auth precedence", () => {
+  it("never lets the development test player override a real Supabase session", () => {
+    expect(shouldUseTestAuth(true, true)).toBe(false);
+    expect(shouldUseTestAuth(true, false)).toBe(true);
+  });
+
+  it("leaves admin routes to the dedicated admin authorization gate", () => {
+    expect(
+      shouldRedirectToOnboarding({
+        pathname: "/admin/beta",
+        profile: { role: "player", player_id: null },
       }),
     ).toBe(false);
   });

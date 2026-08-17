@@ -191,6 +191,7 @@ const athleteAudiences = [
 ] as const;
 
 const landingLockerData: LockerData = {
+  athleteId: null,
   slug: "landing-preview",
   fullName: "Jordan Carter",
   hometown: "Los Angeles, CA",

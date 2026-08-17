@@ -158,6 +158,7 @@ export default async function DashboardPage({
         <FirstSessionOverview
           firstName={firstName}
           slug={player.slug}
+          athleteId={playerId}
           headshotUrl={player.headshot_url ?? player.image_url ?? null}
         />
       ) : null}

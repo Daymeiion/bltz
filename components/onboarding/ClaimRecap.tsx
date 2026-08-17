@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, Eye, Lock, Pencil, ShieldCheck } from "lucide-react";
 import { BroadcastHeader, BroadcastPanel, SourceChip, TrustRail } from "./BroadcastShell";
+import { analyticsSessionHeaders } from "@/lib/analytics/client";
 
 interface PlayerSnapshot {
   id: string;
@@ -38,12 +39,13 @@ export function ClaimRecap({ token, player, sources }: Props) {
   const [err, setErr] = React.useState<string | null>(null);
 
   async function accept() {
+    if (accepting) return;
     setAccepting(true);
     setErr(null);
     try {
       const r = await fetch("/api/onboarding/claim", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...analyticsSessionHeaders() },
         body: JSON.stringify({ token }),
       });
       if (!r.ok) {

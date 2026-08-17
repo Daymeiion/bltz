@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import type { PipelineDraft, PipelineEvent, ScraperSource } from "@/lib/pipeline/types";
+import { recordTrustedAnalyticsEvent } from "@/lib/analytics/server";
 
 export const runtime = "nodejs";
 
@@ -38,6 +39,17 @@ export async function POST(req: Request) {
   if (new Date(tokenRow.expires_at).getTime() < Date.now())
     return NextResponse.json({ error: "expired" }, { status: 410 });
 
+  const analyticsSession = z.string().uuid().safeParse(req.headers.get("x-bltz-analytics-session"));
+  await recordTrustedAnalyticsEvent({
+    eventName: "claim_link_validated",
+    userId: user.id,
+    athleteId: tokenRow.player_id,
+    sessionId: analyticsSession.success ? analyticsSession.data : null,
+    source: "onboarding",
+    page: "/onboarding/claim/[token]",
+    properties: { entry_point: "claim_recap" },
+  }).catch(() => undefined);
+
   const { data: activeRun } = await sb
     .from("onboarding_pipeline_runs")
     .select("id, user_id")
@@ -46,6 +58,15 @@ export async function POST(req: Request) {
     .maybeSingle();
   if (activeRun) {
     if (activeRun.user_id === user.id) {
+      await recordTrustedAnalyticsEvent({
+        eventName: "claim_completed",
+        userId: user.id,
+        athleteId: tokenRow.player_id,
+        sessionId: analyticsSession.success ? analyticsSession.data : null,
+        source: "onboarding",
+        page: "/onboarding/claim/[token]",
+        properties: { reused: true },
+      }).catch(() => undefined);
       return NextResponse.json({ runId: activeRun.id, reused: true });
     }
 
@@ -163,6 +184,16 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ error: "could_not_seed", detail: insertErr?.message }, { status: 500 });
   }
+
+  await recordTrustedAnalyticsEvent({
+    eventName: "claim_completed",
+    userId: user.id,
+    athleteId: tokenRow.player_id,
+    sessionId: analyticsSession.success ? analyticsSession.data : null,
+    source: "onboarding",
+    page: "/onboarding/claim/[token]",
+    properties: { reused: false },
+  }).catch(() => undefined);
 
   return NextResponse.json({ runId: run.id });
 }

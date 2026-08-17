@@ -117,6 +117,7 @@ function mockPhotoRoom(slug: string): PhotoRoomData {
   ] as const;
 
   return {
+    athleteId: null,
     slug,
     athleteName,
     athleteHeadshotUrl: "/images/Headshot.png",
@@ -174,6 +175,7 @@ export default async function PhotosPage({
     .map(toPhotoRoomImage);
 
   const data: PhotoRoomData = {
+    athleteId: player.id,
     slug,
     athleteName,
     athleteHeadshotUrl:

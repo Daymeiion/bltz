@@ -11,7 +11,7 @@ export default async function AdminLayout({
 
   // Check if user is admin
   if (!profile || profile.role !== "admin") {
-    redirect("/?error=admin_access_required");
+    redirect("/auth/admin?error=not_admin");
   }
 
   return (

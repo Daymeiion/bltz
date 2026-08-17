@@ -12,6 +12,7 @@ function mockFilmRoom(slug: string): FilmRoomData {
   const athleteName = player?.full_name ?? "Demo Player";
 
   return {
+    athleteId: null,
     slug,
     athleteName,
     athleteHeadshotUrl: "/images/Headshot.png",
@@ -56,6 +57,7 @@ export default async function FilmRoomPage({
     .limit(48);
 
   const data: FilmRoomData = {
+    athleteId: player.id,
     slug,
     athleteName,
     athleteHeadshotUrl:

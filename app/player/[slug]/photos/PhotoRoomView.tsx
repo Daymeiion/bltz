@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Play, Search, X } from "lucide-react";
 import type { SearchResult } from "@/components/ui/search-modal";
+import { trackProductEvent } from "@/lib/analytics/client";
 import styles from "./photo-room.module.css";
 
 export type PhotoRoomImage = {
@@ -21,6 +22,7 @@ export type PhotoRoomImage = {
 };
 
 export type PhotoRoomData = {
+  athleteId: string | null;
   slug: string;
   athleteName: string;
   athleteHeadshotUrl: string;
@@ -57,6 +59,16 @@ export default function PhotoRoomView({ data }: { data: PhotoRoomData }) {
   const heroRef = useRef<HTMLElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
   const resumeTriggeredRef = useRef(false);
+
+  useEffect(() => {
+    void trackProductEvent({
+      eventName: "photo_gallery_opened",
+      source: "public_locker",
+      athleteId: data.athleteId,
+      properties: { photo_count: data.images.length },
+      dedupeKey: `photo_gallery_opened:${data.slug}:${window.location.pathname}`,
+    });
+  }, [data.athleteId, data.images.length, data.slug]);
 
   const slideshowImages = data.images.length ? data.images : [];
   const hasAnyImages = data.images.length > 0;
@@ -168,6 +180,13 @@ export default function PhotoRoomView({ data }: { data: PhotoRoomData }) {
   }, [searchOpen]);
 
   function selectImage(id: string) {
+    void trackProductEvent({
+      eventName: "media_viewed",
+      source: "public_locker",
+      athleteId: data.athleteId,
+      properties: { media_id: id, media_type: "photo", section: activeFilter },
+      dedupeKey: `media_viewed:photo:${id}`,
+    });
     const nextIndex = data.images.findIndex((image) => image.id === id);
     if (nextIndex >= 0) setActiveIndex(nextIndex);
     resumeTriggeredRef.current = false;

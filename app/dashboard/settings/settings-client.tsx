@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,7 @@ import {
   IconQuote
 } from "@tabler/icons-react";
 import { toast } from "sonner";
+import { trackProductEvent } from "@/lib/analytics/client";
 
 interface UserSettings {
   id: string;
@@ -56,6 +57,23 @@ export default function SettingsClient() {
   const [lockerQuote, setLockerQuote] = useState({ quote: "", author: "" });
   const [quoteLoading, setQuoteLoading] = useState(true);
   const [quoteSaving, setQuoteSaving] = useState(false);
+  const startedSections = useRef(new Set<string>());
+
+  const markEditStarted = (section: "social_links" | "locker_quote") => {
+    if (startedSections.current.has(section)) return;
+    startedSections.current.add(section);
+    void trackProductEvent({
+      eventName: "profile_edit_started",
+      source: "athlete_dashboard",
+      properties: { section },
+      dedupeKey: `profile_edit_started:${section}:${window.location.pathname}`,
+    });
+  };
+
+  const updateSocialHandle = (key: keyof typeof socialHandles, value: string) => {
+    markEditStarted("social_links");
+    setSocialHandles((current) => ({ ...current, [key]: value }));
+  };
 
 
   useEffect(() => {
@@ -124,6 +142,11 @@ export default function SettingsClient() {
       const data = await response.json();
       setLockerQuote({ quote: data.quote || "", author: data.author || "" });
       toast.success(remove ? "Quote removed from your Locker" : "Locker quote saved");
+      void trackProductEvent({
+        eventName: "profile_edit_completed",
+        source: "athlete_dashboard",
+        properties: { section: "locker_quote", changed_fields: ["quote", "author"] },
+      });
     } catch {
       toast.error("Failed to update your Locker quote");
     } finally {
@@ -169,6 +192,13 @@ export default function SettingsClient() {
 
       if (response.ok) {
         toast.success("Settings saved successfully!");
+        const changedFields = (["twitter", "instagram", "linkedin", "youtube", "tiktok"] as const)
+          .filter((key) => socialHandles[key] !== (settings?.[`${key}_handle` as keyof UserSettings] ?? ""));
+        void trackProductEvent({
+          eventName: "profile_edit_completed",
+          source: "athlete_dashboard",
+          properties: { section: "social_links", changed_fields: changedFields },
+        });
         loadSettings();
       } else {
         throw new Error('Failed to save settings');
@@ -221,7 +251,7 @@ export default function SettingsClient() {
                   id="twitter"
                   placeholder="@username"
                   value={socialHandles.twitter}
-                  onChange={(e) => setSocialHandles(prev => ({ ...prev, twitter: e.target.value }))}
+                  onChange={(e) => updateSocialHandle("twitter", e.target.value)}
                 />
               </div>
 
@@ -234,7 +264,7 @@ export default function SettingsClient() {
                   id="instagram"
                   placeholder="@username"
                   value={socialHandles.instagram}
-                  onChange={(e) => setSocialHandles(prev => ({ ...prev, instagram: e.target.value }))}
+                  onChange={(e) => updateSocialHandle("instagram", e.target.value)}
                 />
               </div>
 
@@ -247,7 +277,7 @@ export default function SettingsClient() {
                   id="linkedin"
                   placeholder="username"
                   value={socialHandles.linkedin}
-                  onChange={(e) => setSocialHandles(prev => ({ ...prev, linkedin: e.target.value }))}
+                  onChange={(e) => updateSocialHandle("linkedin", e.target.value)}
                 />
               </div>
 
@@ -260,7 +290,7 @@ export default function SettingsClient() {
                   id="youtube"
                   placeholder="@username or channel name"
                   value={socialHandles.youtube}
-                  onChange={(e) => setSocialHandles(prev => ({ ...prev, youtube: e.target.value }))}
+                  onChange={(e) => updateSocialHandle("youtube", e.target.value)}
                 />
               </div>
 
@@ -273,7 +303,7 @@ export default function SettingsClient() {
                   id="tiktok"
                   placeholder="@username"
                   value={socialHandles.tiktok}
-                  onChange={(e) => setSocialHandles(prev => ({ ...prev, tiktok: e.target.value }))}
+                  onChange={(e) => updateSocialHandle("tiktok", e.target.value)}
                 />
               </div>
             </div>
@@ -337,7 +367,10 @@ export default function SettingsClient() {
                 disabled={quoteLoading || quoteSaving}
                 placeholder="Pressure is a privilege."
                 value={lockerQuote.quote}
-                onChange={(event) => setLockerQuote((current) => ({ ...current, quote: event.target.value }))}
+                onChange={(event) => {
+                  markEditStarted("locker_quote");
+                  setLockerQuote((current) => ({ ...current, quote: event.target.value }));
+                }}
               />
               <p className="text-right text-xs text-muted-foreground">{lockerQuote.quote.length}/280</p>
             </div>
@@ -349,7 +382,10 @@ export default function SettingsClient() {
                 disabled={quoteLoading || quoteSaving}
                 placeholder="Your name or the original author"
                 value={lockerQuote.author}
-                onChange={(event) => setLockerQuote((current) => ({ ...current, author: event.target.value }))}
+                onChange={(event) => {
+                  markEditStarted("locker_quote");
+                  setLockerQuote((current) => ({ ...current, author: event.target.value }));
+                }}
               />
             </div>
             <div className="flex flex-wrap justify-end gap-3">

@@ -4,10 +4,12 @@ import * as React from "react";
 import Link from "next/link";
 import { Check, Copy, ExternalLink, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { trackProductEvent } from "@/lib/analytics/client";
 
 interface Props {
   firstName: string;
   slug: string;
+  athleteId: string;
   headshotUrl: string | null;
 }
 
@@ -18,7 +20,7 @@ interface Props {
  * don't list deferred features (theme builder, pipeline queue) — every row
  * here resolves to a real page so the user never bumps into a 404.
  */
-export function FirstSessionOverview({ firstName, slug, headshotUrl }: Props) {
+export function FirstSessionOverview({ firstName, slug, athleteId, headshotUrl }: Props) {
   const [dismissed, setDismissed] = React.useState(false);
   const [copied, setCopied] = React.useState(false);
 
@@ -33,6 +35,18 @@ export function FirstSessionOverview({ firstName, slug, headshotUrl }: Props) {
       await navigator.clipboard.writeText(fullUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
+      void trackProductEvent({
+        eventName: "share_link_copied",
+        source: "public_locker",
+        athleteId,
+        properties: { surface: "dashboard_welcome" },
+      });
+      void trackProductEvent({
+        eventName: "locker_shared",
+        source: "public_locker",
+        athleteId,
+        properties: { mechanism: "clipboard" },
+      });
     } catch {
       // ignore — fallback is the visible URL
     }

@@ -149,6 +149,7 @@ export default async function PlayerLocker({ params }: { params: Promise<{ slug:
     const meta = (player as any).meta ?? {};
     const heightIn = meta.height_in ?? 71;
     const data: LockerData = {
+      athleteId: null,
       slug,
       fullName: (player as any).full_name || (player as any).name || "Unknown Player",
       hometown: "LOS ANGELES, CA",
@@ -359,6 +360,7 @@ export default async function PlayerLocker({ params }: { params: Promise<{ slug:
   }
 
   const data: LockerData = {
+    athleteId: player.id,
     slug,
     fullName: playerFullName,
     hometown: (player.hometown || "").toUpperCase() || "—",

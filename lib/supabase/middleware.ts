@@ -45,7 +45,9 @@ export function shouldRedirectToOnboarding(args: {
 }): boolean {
   const inOnboarding =
     args.pathname === ONBOARDING_PATH || args.pathname.startsWith(`${ONBOARDING_PATH}/`);
+  const inAdmin = args.pathname === "/admin" || args.pathname.startsWith("/admin/");
   if (inOnboarding) return false;
+  if (inAdmin) return false;
   if (isPublicPath(args.pathname)) return false;
   const isAthlete = args.profile?.role === "player";
   const hasClaim = Boolean(args.claimIntentCookie);
@@ -53,9 +55,14 @@ export function shouldRedirectToOnboarding(args: {
   return needsOnboarding;
 }
 
+export function shouldUseTestAuth(hasTestCookie: boolean, hasRealUser: boolean): boolean {
+  return hasTestCookie && !hasRealUser;
+}
+
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
-  const testAuth = isTestAuthEnabled() && request.cookies.get(TEST_AUTH_COOKIE)?.value === "1";
+  const hasTestAuthCookie =
+    isTestAuthEnabled() && request.cookies.get(TEST_AUTH_COOKIE)?.value === "1";
 
   if (!hasEnvVars) {
     return supabaseResponse;
@@ -84,15 +91,17 @@ export async function updateSession(request: NextRequest) {
 
   const { data } = await supabase.auth.getClaims();
   const user = data?.claims;
+  const testAuth = shouldUseTestAuth(hasTestAuthCookie, Boolean(user));
 
   const pathname = request.nextUrl.pathname;
+  const inAdmin = pathname === "/admin" || pathname.startsWith("/admin/");
   const inOnboarding = pathname === ONBOARDING_PATH || pathname.startsWith(`${ONBOARDING_PATH}/`);
   const inAthleteDashboard = pathname === "/dashboard" || pathname.startsWith("/dashboard/");
 
   // Rule 1: redirect anonymous users to login (with original path preserved).
   if (!user && !testAuth && !isPublicPath(pathname) && pathname !== "/") {
     const url = request.nextUrl.clone();
-    url.pathname = "/auth/login";
+    url.pathname = inAdmin ? "/auth/admin" : "/auth/login";
     if (pathname !== "/auth/login") {
       url.searchParams.set("next", pathname);
     }
@@ -102,11 +111,11 @@ export async function updateSession(request: NextRequest) {
   // Rules 2 + 4: athlete-path redirect to onboarding.
   if (testAuth && !inOnboarding && !inAthleteDashboard && !isPublicPath(pathname)) {
     const url = request.nextUrl.clone();
-    url.pathname = ONBOARDING_PATH;
+    url.pathname = inAdmin ? "/auth/admin" : ONBOARDING_PATH;
     return NextResponse.redirect(url);
   }
 
-  if (user && !inOnboarding && !isPublicPath(pathname)) {
+  if (user && !inAdmin && !inOnboarding && !isPublicPath(pathname)) {
     const userId = (user as { sub?: string }).sub;
     if (userId) {
       const { data: profile } = await supabase

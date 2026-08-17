@@ -27,22 +27,21 @@ function isUserRole(role: string | null): role is UserRole {
  */
 export async function getCurrentUserProfile(): Promise<UserProfile | null> {
   const testUser = await getTestUser();
-  if (testUser) {
-    return {
-      id: TEST_USER_ID,
-      email: testUser.email,
-      role: "player",
-      display_name: "Demo Player",
-      avatar_url: "/images/Headshot.png",
-      player_id: TEST_PLAYER_ID,
-    };
-  }
-
   const supabase = await createClient();
   
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   
   if (authError || !user) {
+    if (testUser) {
+      return {
+        id: TEST_USER_ID,
+        email: testUser.email,
+        role: "player",
+        display_name: "Demo Player",
+        avatar_url: "/images/Headshot.png",
+        player_id: TEST_PLAYER_ID,
+      };
+    }
     return null;
   }
 
