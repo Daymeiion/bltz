@@ -37,24 +37,46 @@ describe("trusted analytics persistence", () => {
     expect(lookupEq).toHaveBeenCalledWith("client_event_id", "8bb12ac1-5181-4df4-8c37-70643339f32b");
   });
 
-  it("uses both session and rotating network buckets for anonymous traffic", async () => {
+  it("uses session, network-profile, and rotating network buckets for anonymous traffic", async () => {
     const rpc = vi.fn(async (_name: string, _args: { p_key_hash: string }) => ({ data: true, error: null }));
     createServiceClient.mockReturnValue({ rpc });
     const { consumeAnalyticsRateLimits } = await import("@/lib/analytics/server");
     const allowed = await consumeAnalyticsRateLimits({
       request: new Request("https://bltz.app/api/analytics/events", {
-        headers: { "x-forwarded-for": "203.0.113.10, 10.0.0.1" },
+        headers: {
+          "x-forwarded-for": "203.0.113.10, 10.0.0.1",
+          "user-agent": "BLTZ regression browser",
+          "accept-language": "en-US",
+        },
       }),
       sessionId: "c682bce7-76ac-4c02-9132-8fc6705bf163",
       userId: null,
     });
 
     expect(allowed).toBe(true);
-    expect(rpc).toHaveBeenCalledTimes(2);
-    const firstArgs = rpc.mock.calls[0]?.[1];
-    const secondArgs = rpc.mock.calls[1]?.[1];
-    if (!firstArgs || !secondArgs) throw new Error("expected both anonymous rate-limit buckets");
-    for (const args of [firstArgs, secondArgs]) expect(args.p_key_hash).toMatch(/^[a-f0-9]{64}$/);
-    expect(firstArgs.p_key_hash).not.toBe(secondArgs.p_key_hash);
+    expect(rpc).toHaveBeenCalledTimes(3);
+    const hashes = rpc.mock.calls.map((call) => call[1].p_key_hash);
+    for (const hash of hashes) expect(hash).toMatch(/^[a-f0-9]{64}$/);
+    expect(new Set(hashes).size).toBe(3);
+  });
+
+  it("uses only a conservative session bucket when network metadata is unavailable", async () => {
+    const rpc = vi.fn(async () => ({ data: true, error: null }));
+    createServiceClient.mockReturnValue({ rpc });
+    const { consumeAnalyticsRateLimits } = await import("@/lib/analytics/server");
+    const request = new Request("https://bltz.app/api/analytics/events", {
+      headers: { "user-agent": "BLTZ regression browser", "accept-language": "en-US" },
+    });
+
+    await consumeAnalyticsRateLimits({
+      request,
+      sessionId: "c682bce7-76ac-4c02-9132-8fc6705bf163",
+      userId: null,
+    });
+
+    expect(rpc).toHaveBeenCalledTimes(1);
+    expect(rpc).toHaveBeenCalledWith("consume_analytics_rate_limit", expect.objectContaining({
+      p_limit: 30,
+    }));
   });
 });

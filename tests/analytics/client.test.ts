@@ -64,6 +64,37 @@ describe("analytics client", () => {
     expect(new Set(occurredAtValues).size).toBe(1);
   });
 
+  it("treats a durable duplicate response as accepted", async () => {
+    const transport = vi.fn<typeof fetch>(async () => new Response(
+      JSON.stringify({ accepted: true, duplicate: true, eventId: "stored-event-id" }),
+      { status: 202, headers: { "content-type": "application/json" } },
+    ));
+    const event = {
+      eventName: "locker_viewed" as const,
+      source: "public_locker" as const,
+      athleteSlug: "example",
+      dedupeKey: "duplicate-locker-view",
+    };
+
+    expect(await trackProductEvent(event, transport)).toBe(true);
+    expect(await trackProductEvent(event, transport)).toBe(false);
+    expect(transport).toHaveBeenCalledTimes(1);
+  });
+
+  it("suppresses later delivery attempts after a permanent rejection", async () => {
+    const transport = vi.fn<typeof fetch>(async () => new Response(null, { status: 400 }));
+    const event = {
+      eventName: "locker_viewed" as const,
+      source: "public_locker" as const,
+      athleteSlug: "example",
+      dedupeKey: "invalid-locker-view",
+    };
+
+    expect(await trackProductEvent(event, transport)).toBe(false);
+    expect(await trackProductEvent(event, transport)).toBe(false);
+    expect(transport).toHaveBeenCalledTimes(1);
+  });
+
   it("does not send a public event without an athlete target", async () => {
     const transport = vi.fn();
     const accepted = await trackProductEvent({
