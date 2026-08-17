@@ -1,25 +1,10 @@
 "use client";
 
-type BrowserEventName =
-  | "claim_link_validated"
-  | "claim_completed"
-  | "locker_viewed"
-  | "locker_shared"
-  | "share_link_copied"
-  | "media_viewed"
-  | "film_room_opened"
-  | "photo_gallery_opened"
-  | "profile_edit_started"
-  | "profile_edit_completed"
-  | "media_uploaded"
-  | "field_edited"
-  | "media_submitted";
-
-type AnalyticsSource = "public_locker" | "athlete_dashboard" | "onboarding" | "beta_feedback";
+import type { AnalyticsEventName, AnalyticsSource } from "@/lib/analytics/events";
 
 type ClientEvent = {
-  eventName?: BrowserEventName;
-  name?: BrowserEventName;
+  eventName?: AnalyticsEventName;
+  name?: AnalyticsEventName;
   source?: AnalyticsSource;
   page?: string;
   route?: string;
@@ -30,7 +15,10 @@ type ClientEvent = {
 };
 
 const SESSION_KEY = "bltz.analytics.session.v1";
-const DEDUPE_PREFIX = "bltz.analytics.sent.v1:";
+const DEDUPE_PREFIX = "bltz.analytics.intent.v2:";
+const inFlightDedupeKeys = new Set<string>();
+
+type StoredIntent = { eventId: string; occurredAt: string; status: "pending" | "sent" };
 
 function sessionId(): string {
   try {
@@ -44,21 +32,41 @@ function sessionId(): string {
   }
 }
 
-function claimDedupeKey(key: string): boolean {
+function claimIntent(key: string): StoredIntent | null {
+  if (inFlightDedupeKeys.has(key)) return null;
   try {
     const storageKey = `${DEDUPE_PREFIX}${key}`;
-    if (window.sessionStorage.getItem(storageKey)) return false;
-    window.sessionStorage.setItem(storageKey, "1");
-    return true;
+    const stored = window.sessionStorage.getItem(storageKey);
+    if (stored) {
+      const intent = JSON.parse(stored) as StoredIntent;
+      if (intent.eventId && intent.occurredAt && (intent.status === "pending" || intent.status === "sent")) {
+        if (intent.status === "sent") return null;
+        inFlightDedupeKeys.add(key);
+        return intent;
+      }
+    }
+    const intent: StoredIntent = {
+      eventId: window.crypto.randomUUID(), occurredAt: new Date().toISOString(), status: "pending",
+    };
+    window.sessionStorage.setItem(storageKey, JSON.stringify(intent));
+    inFlightDedupeKeys.add(key);
+    return intent;
   } catch {
-    return true;
+    inFlightDedupeKeys.add(key);
+    return {
+      eventId: window.crypto.randomUUID(), occurredAt: new Date().toISOString(), status: "pending",
+    };
   }
 }
 
-function releaseDedupeKey(key?: string): void {
+function finishIntent(key: string | undefined, intent: StoredIntent, sent: boolean): void {
   if (!key) return;
+  inFlightDedupeKeys.delete(key);
   try {
-    window.sessionStorage.removeItem(`${DEDUPE_PREFIX}${key}`);
+    window.sessionStorage.setItem(
+      `${DEDUPE_PREFIX}${key}`,
+      JSON.stringify({ ...intent, status: sent ? "sent" : "pending" } satisfies StoredIntent),
+    );
   } catch {
     // Storage is optional; failed analytics must remain invisible to the user.
   }
@@ -70,39 +78,47 @@ export async function trackProductEvent(
 ): Promise<boolean> {
   if (typeof window === "undefined") return false;
   if (event.source === "public_locker" && !event.athleteId) return false;
-  if (event.dedupeKey && !claimDedupeKey(event.dedupeKey)) return false;
 
   const eventName = event.eventName ?? event.name;
   if (!eventName) return false;
   const page = (event.page ?? event.route ?? window.location.pathname).split("?")[0].slice(0, 512);
-  const source = event.source ?? (
-    page.startsWith("/player/") ? "public_locker"
-      : page.startsWith("/onboarding") ? "onboarding"
-        : page.startsWith("/dashboard") ? "athlete_dashboard"
-          : "beta_feedback"
-  );
+  const intent = event.dedupeKey ? claimIntent(event.dedupeKey) : {
+    eventId: window.crypto.randomUUID(),
+    occurredAt: new Date().toISOString(),
+    status: "pending" as const,
+  };
+  if (!intent) return false;
+  const body = JSON.stringify({
+    eventId: intent.eventId,
+    eventName,
+    occurredAt: intent.occurredAt,
+    athleteId: event.athleteId || undefined,
+    athleteSlug: event.athleteSlug,
+    sessionId: sessionId(),
+    page,
+    properties: event.properties ?? {},
+  });
 
   try {
-    const response = await transport("/api/analytics/events", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        eventId: window.crypto.randomUUID(),
-        eventName,
-        occurredAt: new Date().toISOString(),
-        athleteId: event.athleteId || undefined,
-        athleteSlug: event.athleteSlug,
-        sessionId: sessionId(),
-        source,
-        page,
-        properties: event.properties ?? {},
-      }),
-      keepalive: true,
-    });
-    if (!response.ok) releaseDedupeKey(event.dedupeKey);
+    let response: Response | null = null;
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        response = await transport("/api/analytics/events", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body,
+          keepalive: true,
+        });
+        if (response.status < 500) break;
+      } catch {
+        if (attempt === 1) throw new Error("analytics_transport_failed");
+      }
+    }
+    if (!response) throw new Error("analytics_transport_failed");
+    finishIntent(event.dedupeKey, intent, response.ok);
     return response.ok;
   } catch {
-    releaseDedupeKey(event.dedupeKey);
+    finishIntent(event.dedupeKey, intent, false);
     return false;
   }
 }

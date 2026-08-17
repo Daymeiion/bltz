@@ -1,19 +1,18 @@
 import { NextResponse } from "next/server";
 import {
-  AUTHENTICATED_EVENT_NAMES,
-  PUBLIC_ATHLETE_TARGET_EVENTS,
+  deriveAnalyticsSource,
   hasSensitiveAnalyticsProperty,
   analyticsEventRequestSchema,
+  normalizeRoute,
   serializedPropertiesSize,
 } from "@/lib/analytics/events";
-import { recordTrustedAnalyticsEvent } from "@/lib/analytics/server";
+import { consumeAnalyticsRateLimits, recordTrustedAnalyticsEvent } from "@/lib/analytics/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 
 export const runtime = "nodejs";
 
 const MAX_REQUEST_BYTES = 16 * 1024;
-const MAX_EVENTS_PER_SESSION_PER_MINUTE = 60;
 
 export async function POST(request: Request) {
   const contentLength = Number(request.headers.get("content-length") ?? 0);
@@ -33,6 +32,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "invalid_event" }, { status: 400 });
   }
   const event = parsed.data;
+  const page = normalizeRoute(event.page);
+  const source = deriveAnalyticsSource(event.eventName, page);
+  if (!source) return NextResponse.json({ error: "invalid_event_context" }, { status: 400 });
 
   if (event.occurredAt) {
     const occurredAt = new Date(event.occurredAt).getTime();
@@ -52,30 +54,28 @@ export async function POST(request: Request) {
   const sessionClient = await createClient();
   const { data: { user } } = await sessionClient.auth.getUser();
 
-  if (AUTHENTICATED_EVENT_NAMES.has(event.eventName) && !user) {
+  if (source !== "public_locker" && !user) {
     return NextResponse.json({ error: "authentication_required" }, { status: 401 });
   }
   if (!user && !event.sessionId) {
     return NextResponse.json({ error: "session_id_required" }, { status: 400 });
   }
 
-  const service = createServiceClient();
-  if (event.sessionId) {
-    const since = new Date(Date.now() - 60_000).toISOString();
-    const { count, error } = await service
-      .from("analytics_events")
-      .select("id", { count: "exact", head: true })
-      .eq("session_id", event.sessionId)
-      .gte("created_at", since);
-
-    if (error) return NextResponse.json({ error: "analytics_unavailable" }, { status: 503 });
-    if ((count ?? 0) >= MAX_EVENTS_PER_SESSION_PER_MINUTE) {
-      return NextResponse.json({ error: "rate_limited" }, { status: 429 });
-    }
+  try {
+    const allowed = await consumeAnalyticsRateLimits({
+      request,
+      sessionId: event.sessionId ?? null,
+      userId: user?.id ?? null,
+    });
+    if (!allowed) return NextResponse.json({ error: "rate_limited" }, { status: 429 });
+  } catch {
+    return NextResponse.json({ error: "analytics_unavailable" }, { status: 503 });
   }
 
+  const service = createServiceClient();
+
   let athleteId: string | null = null;
-  if (PUBLIC_ATHLETE_TARGET_EVENTS.has(event.eventName)) {
+  if (source === "public_locker") {
     if (!event.athleteId && !event.athleteSlug) {
       return NextResponse.json({ error: "athlete_target_required" }, { status: 400 });
     }
@@ -106,23 +106,23 @@ export async function POST(request: Request) {
       athleteId = profile?.player_id ?? null;
     }
   }
+  if (source !== "public_locker" && !athleteId) {
+    return NextResponse.json({ error: "athlete_context_required" }, { status: 403 });
+  }
 
   try {
-    const eventId = await recordTrustedAnalyticsEvent({
+    const result = await recordTrustedAnalyticsEvent({
       eventName: event.eventName,
-      clientEventId: event.eventId ?? null,
-      occurredAt: event.occurredAt ?? null,
+      clientEventId: event.eventId,
+      occurredAt: event.occurredAt,
       userId: user?.id ?? null,
       athleteId,
       sessionId: event.sessionId ?? null,
-      source: event.page.startsWith("/player/") ? "public_locker"
-        : event.page.startsWith("/onboarding") ? "onboarding"
-          : event.page.startsWith("/dashboard") ? "athlete_dashboard"
-            : event.source,
-      page: event.page,
+      source,
+      page,
       properties: event.properties,
     });
-    return NextResponse.json({ accepted: true, eventId }, { status: 202 });
+    return NextResponse.json({ accepted: true, eventId: result.eventId, duplicate: result.duplicate }, { status: 202 });
   } catch {
     return NextResponse.json({ error: "analytics_unavailable" }, { status: 503 });
   }

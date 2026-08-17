@@ -3,7 +3,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import type { PipelineDraft, PipelineEvent, ScraperSource } from "@/lib/pipeline/types";
-import { recordTrustedAnalyticsEvent } from "@/lib/analytics/server";
+import { analyticsEventIdFromParts, recordTrustedAnalyticsEvent } from "@/lib/analytics/server";
 
 export const runtime = "nodejs";
 
@@ -42,6 +42,7 @@ export async function POST(req: Request) {
   const analyticsSession = z.string().uuid().safeParse(req.headers.get("x-bltz-analytics-session"));
   await recordTrustedAnalyticsEvent({
     eventName: "claim_link_validated",
+    clientEventId: analyticsEventIdFromParts("claim_link_validated", user.id, tokenRow.player_id, body.token),
     userId: user.id,
     athleteId: tokenRow.player_id,
     sessionId: analyticsSession.success ? analyticsSession.data : null,
@@ -60,6 +61,7 @@ export async function POST(req: Request) {
     if (activeRun.user_id === user.id) {
       await recordTrustedAnalyticsEvent({
         eventName: "claim_completed",
+        clientEventId: analyticsEventIdFromParts("claim_completed", activeRun.id),
         userId: user.id,
         athleteId: tokenRow.player_id,
         sessionId: analyticsSession.success ? analyticsSession.data : null,
@@ -187,6 +189,7 @@ export async function POST(req: Request) {
 
   await recordTrustedAnalyticsEvent({
     eventName: "claim_completed",
+    clientEventId: analyticsEventIdFromParts("claim_completed", run.id),
     userId: user.id,
     athleteId: tokenRow.player_id,
     sessionId: analyticsSession.success ? analyticsSession.data : null,

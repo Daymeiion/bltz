@@ -11,6 +11,7 @@ export const ANALYTICS_EVENT_NAMES = [
   "locker_viewed",
   "locker_shared",
   "share_link_copied",
+  "social_link_clicked",
   "media_viewed",
   "film_room_opened",
   "photo_gallery_opened",
@@ -30,12 +31,14 @@ export const ANALYTICS_EVENT_NAMES = [
 
 export type AnalyticsEventName = (typeof ANALYTICS_EVENT_NAMES)[number];
 export type ProductEventName = AnalyticsEventName;
+export type AnalyticsSource = "public_locker" | "athlete_dashboard" | "onboarding" | "beta_feedback";
 
 export const PUBLIC_ATHLETE_TARGET_EVENTS = new Set<AnalyticsEventName>([
   "live_locker_opened",
   "locker_viewed",
   "locker_shared",
   "share_link_copied",
+  "social_link_clicked",
   "media_viewed",
   "film_room_opened",
   "photo_gallery_opened",
@@ -60,16 +63,17 @@ export const AUTHENTICATED_EVENT_NAMES = new Set<AnalyticsEventName>([
 const propertiesSchema = z.record(z.string().max(80), z.unknown()).default({});
 
 export const analyticsEventRequestSchema = z.object({
-  eventId: z.string().uuid().optional(),
+  eventId: z.string().uuid(),
   eventName: z.enum(ANALYTICS_EVENT_NAMES),
-  occurredAt: z.string().datetime({ offset: true }).optional(),
-  source: z.enum(["public_locker", "athlete_dashboard", "onboarding", "beta_feedback"]),
+  occurredAt: z.string().datetime({ offset: true }),
   page: z.string().max(512).startsWith("/"),
   athleteId: z.string().uuid().optional(),
   athleteSlug: z.string().trim().min(1).max(160).optional(),
   sessionId: z.string().uuid().optional(),
   properties: propertiesSchema,
-}).strict();
+}).strict().refine((event) => !(event.athleteId && event.athleteSlug), {
+  message: "provide one athlete target",
+});
 
 export type ProductEventRequest = z.infer<typeof analyticsEventRequestSchema>;
 export type ProductEventInput<Name extends ProductEventName = ProductEventName> = {
@@ -79,6 +83,21 @@ export type ProductEventInput<Name extends ProductEventName = ProductEventName> 
   properties?: Record<string, unknown>;
   dedupeKey?: string;
 };
+
+export function deriveAnalyticsSource(
+  eventName: AnalyticsEventName,
+  route: string,
+): AnalyticsSource | null {
+  const page = normalizeRoute(route);
+  if (page.startsWith("/player/") && PUBLIC_ATHLETE_TARGET_EVENTS.has(eventName)) {
+    return "public_locker";
+  }
+  if (page === "/dashboard" || page.startsWith("/dashboard/")) {
+    return eventName === "feedback_completed" ? "beta_feedback" : "athlete_dashboard";
+  }
+  if (page === "/onboarding" || page.startsWith("/onboarding/")) return "onboarding";
+  return null;
+}
 
 export function normalizeRoute(route: string): string {
   const pathname = route.split(/[?#]/, 1)[0] || "/";

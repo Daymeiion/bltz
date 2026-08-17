@@ -2,8 +2,10 @@
  * Verified application-facing database contracts.
  *
  * These are intentionally limited to tables inspected through the configured
- * Supabase OpenAPI schema on 2026-07-15. They are not a substitute for a full
- * `supabase gen types` snapshot.
+ * Supabase OpenAPI schema on 2026-07-15, plus migration-verified Phase One
+ * analytics contracts on 2026-08-17. They are not a substitute for a full
+ * `supabase gen types` snapshot; regenerate after the hardening migration is
+ * deployed to an authenticated Supabase project.
  */
 export type Json =
   | string
@@ -184,7 +186,7 @@ export interface TeamInvite {
 
 export interface AnalyticsEvent {
   id: string;
-  client_event_id: string | null;
+  client_event_id: string;
   event_name: string;
   user_id: string | null;
   athlete_id: string | null;
@@ -194,6 +196,13 @@ export interface AnalyticsEvent {
   properties: Json;
   occurred_at: string;
   created_at: string;
+}
+
+export interface AnalyticsRateLimitBucket {
+  key_hash: string;
+  bucket_start: string;
+  request_count: number;
+  expires_at: string;
 }
 
 export interface BetaParticipant {
@@ -335,8 +344,14 @@ export interface Database {
       };
       analytics_events: {
         Row: AnalyticsEvent;
-        Insert: Pick<AnalyticsEvent, "event_name" | "source"> & Partial<Omit<AnalyticsEvent, "event_name" | "source">>;
+        Insert: Pick<AnalyticsEvent, "client_event_id" | "event_name" | "source"> &
+          Partial<Omit<AnalyticsEvent, "client_event_id" | "event_name" | "source">>;
         Update: never;
+      };
+      analytics_rate_limit_buckets: {
+        Row: AnalyticsRateLimitBucket;
+        Insert: AnalyticsRateLimitBucket;
+        Update: Pick<AnalyticsRateLimitBucket, "request_count" | "expires_at">;
       };
       beta_participants: {
         Row: BetaParticipant;
@@ -360,6 +375,21 @@ export interface Database {
         Insert: Pick<AthleteBaselineSnapshot, "athlete_id" | "snapshot"> &
           Partial<Omit<AthleteBaselineSnapshot, "athlete_id" | "snapshot">>;
         Update: never;
+      };
+    };
+    Functions: {
+      consume_analytics_rate_limit: {
+        Args: { p_key_hash: string; p_limit: number; p_window_seconds?: number };
+        Returns: boolean;
+      };
+      get_beta_intelligence_dashboard: {
+        Args: {
+          p_since?: string | null;
+          p_cohort?: string | null;
+          p_status?: string | null;
+          p_athlete_id?: string | null;
+        };
+        Returns: Json;
       };
     };
   };

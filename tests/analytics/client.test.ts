@@ -25,8 +25,8 @@ describe("analytics client", () => {
     expect(request).toMatchObject({
       eventName: "locker_viewed",
       athleteId: event.athleteId,
-      source: "public_locker",
     });
+    expect(request).not.toHaveProperty("source");
     expect(request).not.toHaveProperty("userId");
     expect(request.sessionId).toMatch(/^[0-9a-f-]{36}$/i);
   });
@@ -42,8 +42,9 @@ describe("analytics client", () => {
     expect(accepted).toBe(false);
   });
 
-  it("releases a dedupe key after transport failure so a later retry can succeed", async () => {
+  it("reuses one durable event id across automatic and later delivery retries", async () => {
     const transport = vi.fn<typeof fetch>()
+      .mockRejectedValueOnce(new Error("offline"))
       .mockRejectedValueOnce(new Error("offline"))
       .mockResolvedValueOnce(new Response(null, { status: 202 }));
     const event = {
@@ -56,7 +57,11 @@ describe("analytics client", () => {
 
     expect(await trackProductEvent(event, transport)).toBe(false);
     expect(await trackProductEvent(event, transport)).toBe(true);
-    expect(transport).toHaveBeenCalledTimes(2);
+    expect(transport).toHaveBeenCalledTimes(3);
+    const eventIds = transport.mock.calls.map(([, init]) => JSON.parse(String(init?.body)).eventId);
+    const occurredAtValues = transport.mock.calls.map(([, init]) => JSON.parse(String(init?.body)).occurredAt);
+    expect(new Set(eventIds).size).toBe(1);
+    expect(new Set(occurredAtValues).size).toBe(1);
   });
 
   it("does not send a public event without an athlete target", async () => {

@@ -1,0 +1,183 @@
+.admin-theme-shell {
+  color-scheme: light;
+}
+
+.dark .admin-theme-shell {
+  color-scheme: dark;
+}
+
+/* Legacy admin panels were authored as dark-only. These scoped overrides map
+   their existing utility tokens onto the shared light palette without changing
+   component behavior or leaking into athlete/public surfaces. */
+.admin-theme-legacy [class~="text-white"],
+.admin-theme-legacy [class~="text-neutral-100"] {
+  color: #171717 !important;
+}
+
+.admin-theme-legacy [class~="text-neutral-200"],
+.admin-theme-legacy [class~="text-neutral-300"] {
+  color: #404040 !important;
+}
+
+.admin-theme-legacy [class~="text-neutral-400"] {
+  color: #666 !important;
+}
+
+.admin-theme-legacy [class~="text-neutral-500"] {
+  color: #737373 !important;
+}
+
+.admin-theme-legacy [class~="bg-black"],
+.admin-theme-legacy [class~="bg-black/40"],
+.admin-theme-legacy [class~="bg-black/60"],
+.admin-theme-legacy [class~="bg-neutral-950"],
+.admin-theme-legacy [class~="bg-neutral-900"],
+.admin-theme-legacy [class~="bg-neutral-900/50"],
+.admin-theme-legacy [class~="bg-neutral-900/60"],
+.admin-theme-legacy [class~="bg-neutral-900/70"],
+.admin-theme-legacy [class~="bg-neutral-900/80"],
+.admin-theme-legacy [class~="bg-[#0b0b0b]"],
+.admin-theme-legacy [class~="bg-[#0b0b0b]/60"] {
+  background-color: rgba(255, 255, 255, 0.86) !important;
+}
+
+.admin-theme-legacy [class~="bg-neutral-800"],
+.admin-theme-legacy [class~="bg-neutral-800/50"],
+.admin-theme-legacy [class~="bg-neutral-800/70"] {
+  background-color: #ebeae7 !important;
+}
+
+.admin-theme-legacy [class~="border-neutral-800"],
+.admin-theme-legacy [class~="border-neutral-700"],
+.admin-theme-legacy [class~="border-[#1f1f1f]"] {
+  border-color: #d4d4d4 !important;
+}
+
+.admin-theme-legacy input,
+.admin-theme-legacy select,
+.admin-theme-legacy textarea {
+  border-color: #d4d4d4 !important;
+  background-color: rgba(255, 255, 255, 0.92) !important;
+  color: #171717 !important;
+}
+
+.admin-theme-legacy input::placeholder,
+.admin-theme-legacy textarea::placeholder {
+  color: #8a8a8a !important;
+}
+
+.admin-theme-legacy table thead,
+.admin-theme-legacy [class~="bg-neutral-900/70"] {
+  background-color: #e7e6e2 !important;
+}
+
+.admin-theme-legacy tbody tr:hover,
+.admin-theme-legacy li:hover {
+  background-color: rgba(23, 23, 23, 0.035) !important;
+}
+
+.admin-theme-legacy [class~="bg-[#000CF5]"],
+.admin-theme-legacy [class~="bg-bltz-blue"] {
+  background-color: #171717 !important;
+  color: #fafafa !important;
+}
+
+.admin-theme-legacy [class~="text-[#000CF5]"] {
+  color: #525252 !important;
+}
+
+.admin-theme-legacy .recharts-cartesian-grid line {
+  stroke: #d4d4d4;
+}
+
+.admin-theme-legacy .recharts-cartesian-axis-tick-value,
+.admin-theme-legacy .recharts-legend-item-text {
+  fill: #666 !important;
+  color: #666 !important;
+}
+
+.admin-theme-legacy [role="dialog"] [class~="bg-black/60"] {
+  background-color: rgba(23, 23, 23, 0.55) !important;
+}
+
+.dark .admin-theme-legacy [class~="text-white"],
+.dark .admin-theme-legacy [class~="text-neutral-100"] {
+  color: #fafafa !important;
+}
+
+.dark .admin-theme-legacy [class~="text-neutral-200"],
+.dark .admin-theme-legacy [class~="text-neutral-300"] {
+  color: #d4d4d4 !important;
+}
+
+.dark .admin-theme-legacy [class~="text-neutral-400"] {
+  color: #a3a3a3 !important;
+}
+
+.dark .admin-theme-legacy [class~="text-neutral-500"] {
+  color: #737373 !important;
+}
+
+.dark .admin-theme-legacy [class~="bg-black"],
+.dark .admin-theme-legacy [class~="bg-black/40"],
+.dark .admin-theme-legacy [class~="bg-black/60"],
+.dark .admin-theme-legacy [class~="bg-neutral-950"],
+.dark .admin-theme-legacy [class~="bg-neutral-900"],
+.dark .admin-theme-legacy [class~="bg-neutral-900/50"],
+.dark .admin-theme-legacy [class~="bg-neutral-900/60"],
+.dark .admin-theme-legacy [class~="bg-neutral-900/70"],
+.dark .admin-theme-legacy [class~="bg-neutral-900/80"],
+.dark .admin-theme-legacy [class~="bg-[#0b0b0b]"],
+.dark .admin-theme-legacy [class~="bg-[#0b0b0b]/60"] {
+  background-color: rgba(23, 23, 23, 0.72) !important;
+}
+
+.dark .admin-theme-legacy [class~="bg-neutral-800"],
+.dark .admin-theme-legacy [class~="bg-neutral-800/50"],
+.dark .admin-theme-legacy [class~="bg-neutral-800/70"] {
+  background-color: #262626 !important;
+}
+
+.dark .admin-theme-legacy [class~="border-neutral-800"],
+.dark .admin-theme-legacy [class~="border-neutral-700"],
+.dark .admin-theme-legacy [class~="border-[#1f1f1f]"] {
+  border-color: #333 !important;
+}
+
+.dark .admin-theme-legacy input,
+.dark .admin-theme-legacy select,
+.dark .admin-theme-legacy textarea {
+  border-color: #404040 !important;
+  background-color: #171717 !important;
+  color: #fafafa !important;
+}
+
+.dark .admin-theme-legacy table thead,
+.dark .admin-theme-legacy [class~="bg-neutral-900/70"] {
+  background-color: #171717 !important;
+}
+
+.dark .admin-theme-legacy tbody tr:hover,
+.dark .admin-theme-legacy li:hover {
+  background-color: rgba(255, 255, 255, 0.035) !important;
+}
+
+.dark .admin-theme-legacy [class~="bg-[#000CF5]"],
+.dark .admin-theme-legacy [class~="bg-bltz-blue"] {
+  background-color: #fafafa !important;
+  color: #171717 !important;
+}
+
+.dark .admin-theme-legacy [class~="text-[#000CF5]"] {
+  color: #d4d4d4 !important;
+}
+
+.dark .admin-theme-legacy .recharts-cartesian-grid line {
+  stroke: #333;
+}
+
+.dark .admin-theme-legacy .recharts-cartesian-axis-tick-value,
+.dark .admin-theme-legacy .recharts-legend-item-text {
+  fill: #a3a3a3 !important;
+  color: #a3a3a3 !important;
+}

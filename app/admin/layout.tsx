@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { getCurrentUserProfile } from "@/lib/rbac";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
+import { AdminThemeShell } from "@/components/admin/AdminThemeShell";
+import "./admin-theme.css";
 
 export default async function AdminLayout({
   children,
@@ -15,10 +17,10 @@ export default async function AdminLayout({
   }
 
   return (
-    <div className="flex min-h-screen w-full bg-black overflow-x-hidden">
+    <div className="flex min-h-screen w-full overflow-x-hidden bg-[#f1f0ed] transition-colors duration-300 dark:bg-[#0b0c0e]">
       <AdminSidebar />
-      <main className="flex-1 md:pt-0 pt-16 min-w-0">
-        {children}
+      <main className="min-w-0 flex-1 pt-16 md:pt-0">
+        <AdminThemeShell>{children}</AdminThemeShell>
       </main>
     </div>
   );

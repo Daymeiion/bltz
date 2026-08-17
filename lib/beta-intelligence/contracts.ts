@@ -71,6 +71,33 @@ export interface BetaIntelligenceReadModel {
   source: "live" | "fixture";
   generatedAt: string;
   athletes: BetaAthleteSummary[];
+  summary?: BetaDashboardSummary;
+  recentFeedback?: BetaRecentFeedback[];
+}
+
+export interface BetaActionPercentage {
+  numerator: number;
+  denominator: number;
+}
+
+export interface BetaDashboardSummary {
+  participantDenominator: number;
+  athletesInvited: number;
+  athletesJoined: number;
+  lockersClaimed: number;
+  activeAthletes: number;
+  feedbackCompleted: number;
+  caseStudyCandidates: number;
+  actionPercentages: Record<string, BetaActionPercentage>;
+}
+
+export interface BetaRecentFeedback {
+  athleteId: string;
+  athleteName: string;
+  completedAt: string;
+  lockerValueRating: number | null;
+  biggestProblem: string | null;
+  favoriteFeature: string | null;
 }
 
 export interface BetaDashboardFilters {

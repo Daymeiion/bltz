@@ -10,32 +10,25 @@ import { SecuritySettings } from "@/components/admin/settings/SecuritySettings";
 import { SystemSettings } from "@/components/admin/settings/SystemSettings";
 import { IntegrationSettings } from "@/components/admin/settings/IntegrationSettings";
 import { SetupRequired } from "@/components/admin/settings/SetupRequired";
+import { Bell, Cable, Database, Fingerprint, SlidersHorizontal, Users, Waypoints } from "lucide-react";
 
 export default function AdminSettingsPage() {
   const [activeTab, setActiveTab] = useState("site");
 
   const tabs = [
-    { id: "site", label: "Site Configuration", icon: "⚙️" },
-    { id: "users", label: "User Management", icon: "👥" },
-    { id: "moderation", label: "Content Moderation", icon: "🛡️" },
-    { id: "notifications", label: "Email & Notifications", icon: "📧" },
-    { id: "security", label: "Security", icon: "🔒" },
-    { id: "system", label: "System", icon: "⚡" },
-    { id: "integrations", label: "Integrations", icon: "🔗" },
+    { id: "site", label: "Site Configuration", icon: SlidersHorizontal },
+    { id: "users", label: "User Management", icon: Users },
+    { id: "moderation", label: "Content Moderation", icon: Waypoints },
+    { id: "notifications", label: "Email & Notifications", icon: Bell },
+    { id: "security", label: "Security", icon: Fingerprint },
+    { id: "system", label: "System", icon: Database },
+    { id: "integrations", label: "Integrations", icon: Cable },
   ];
 
   return (
     <div className="p-3 md:p-8 space-y-4 md:space-y-6 max-w-[1600px] mx-auto">
-      {/* Header */}
-      <div>
-        <h1 className="text-xl md:text-3xl font-bold text-white mb-2">Admin Settings</h1>
-        <p className="text-xs md:text-sm text-neutral-400 mb-4 md:mb-6">
-          Configure platform settings, user permissions, and system preferences
-        </p>
-      </div>
-
       {/* Settings Overview Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+      <div className="grid grid-flow-dense grid-cols-2 gap-4 md:gap-6 lg:grid-cols-4">
         <StatCard
           title="Active Users"
           value="12,480"
@@ -73,20 +66,22 @@ export default function AdminSettingsPage() {
       {/* Settings Navigation */}
       <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 md:p-6">
         <div className="flex flex-wrap gap-2 mb-6">
-          {tabs.map((tab) => (
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            return (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                 activeTab === tab.id
-                  ? "bg-[#000CF5] text-white"
-                  : "bg-neutral-800 text-neutral-300 hover:bg-neutral-700 hover:text-white"
+                  ? "bg-[#171717] text-[#fafafa] dark:bg-[#fafafa] dark:text-[#171717]"
+                  : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200 hover:text-neutral-950 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700 dark:hover:text-white"
               }`}
             >
-              <span>{tab.icon}</span>
+              <Icon className="h-4 w-4" aria-hidden="true" />
               <span className="hidden sm:inline">{tab.label}</span>
             </button>
-          ))}
+          )})}
         </div>
 
         {/* Settings Content */}

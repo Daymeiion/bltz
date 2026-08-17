@@ -14,7 +14,8 @@ export function ClientShell({ children }: Readonly<{ children: React.ReactNode }
   const hideNavbar =
     pathname === "/" ||
     (pathname?.startsWith("/onboarding") ?? false) ||
-    (pathname?.startsWith("/player") ?? false);
+    (pathname?.startsWith("/player") ?? false) ||
+    (pathname?.startsWith("/admin") ?? false);
 
   return (
     <ThemeProvider
