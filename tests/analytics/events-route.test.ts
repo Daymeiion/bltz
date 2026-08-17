@@ -77,7 +77,9 @@ describe("beta analytics ingestion", () => {
     createClient.mockResolvedValue({ auth: { getUser: vi.fn(async () => ({ data: { user: null } })) } });
     const playerQuery = {
       select: vi.fn(() => playerQuery), eq: vi.fn(() => playerQuery),
-      maybeSingle: vi.fn(async () => ({ data: { id: "c0ffb93f-7851-44d4-96e6-e3044b4b3d55" }, error: null })),
+      maybeSingle: vi.fn(async () => ({
+        data: { id: "c0ffb93f-7851-44d4-96e6-e3044b4b3d55", slug: "example" }, error: null,
+      })),
     };
     createServiceClient.mockReturnValue({ from: vi.fn(() => playerQuery) });
     const { POST } = await import("@/app/api/analytics/events/route");
@@ -94,13 +96,35 @@ describe("beta analytics ingestion", () => {
     }));
   });
 
+  it("rejects a visible athlete target that does not match the player route", async () => {
+    createClient.mockResolvedValue({ auth: { getUser: vi.fn(async () => ({ data: { user: null } })) } });
+    const playerQuery = {
+      select: vi.fn(() => playerQuery), eq: vi.fn(() => playerQuery),
+      maybeSingle: vi.fn(async () => ({
+        data: { id: "c0ffb93f-7851-44d4-96e6-e3044b4b3d55", slug: "different-athlete" }, error: null,
+      })),
+    };
+    createServiceClient.mockReturnValue({ from: vi.fn(() => playerQuery) });
+    const { POST } = await import("@/app/api/analytics/events/route");
+    const response = await POST(request({
+      ...envelope(), eventName: "locker_viewed",
+      athleteId: "c0ffb93f-7851-44d4-96e6-e3044b4b3d55",
+      sessionId: "c682bce7-76ac-4c02-9132-8fc6705bf163",
+      page: "/player/example", properties: {},
+    }));
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "athlete_context_mismatch" });
+    expect(recordTrustedAnalyticsEvent).not.toHaveBeenCalled();
+  });
+
   it("associates dashboard events with the authenticated user's athlete", async () => {
     createClient.mockResolvedValue({
       auth: { getUser: vi.fn(async () => ({ data: { user: { id: "f9b54ff4-f61b-48f5-a682-cd76f8574800" } } })) },
     });
     const playerQuery = {
       select: vi.fn(() => playerQuery), eq: vi.fn(() => playerQuery),
-      maybeSingle: vi.fn(async () => ({ data: { id: "c0ffb93f-7851-44d4-96e6-e3044b4b3d55" } })),
+      maybeSingle: vi.fn(async () => ({ data: { id: "c0ffb93f-7851-44d4-96e6-e3044b4b3d55" }, error: null })),
     };
     createServiceClient.mockReturnValue({ from: vi.fn(() => playerQuery) });
     const { POST } = await import("@/app/api/analytics/events/route");

@@ -102,7 +102,8 @@ export async function trackProductEvent(
       }
     }
     if (!response) throw new Error("analytics_transport_failed");
-    finishIntent(event.dedupeKey, intent, response.ok);
+    const retryable = response.status === 408 || response.status === 429 || response.status >= 500;
+    finishIntent(event.dedupeKey, intent, response.ok || !retryable);
     return response.ok;
   } catch {
     finishIntent(event.dedupeKey, intent, false);

@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
 import {
   analyticsEventRequestSchema,
   deriveAnalyticsSource,
@@ -13,6 +15,8 @@ const IMPLEMENTED_EVENT_CONTEXTS = [
   ["media_viewed", "/player/test-athlete/videos/test-video", "public_locker"],
   ["share_link_copied", "/player/test-athlete/videos/test-video", "public_locker"],
   ["locker_shared", "/player/test-athlete", "public_locker"],
+  ["share_link_copied", "/dashboard", "athlete_dashboard"],
+  ["locker_shared", "/dashboard", "athlete_dashboard"],
   ["claim_link_validated", "/onboarding/claim/test-token", "onboarding"],
   ["claim_completed", "/onboarding/claim/test-token", "onboarding"],
   ["profile_edit_started", "/dashboard/settings", "athlete_dashboard"],
@@ -52,5 +56,28 @@ describe("implemented analytics event contracts", () => {
     });
 
     expect(request.success).toBe(false);
+  });
+
+  it("rejects valid event names in an unauthorized route class", () => {
+    expect(deriveAnalyticsSource("media_uploaded", "/player/test-athlete")).toBeNull();
+    expect(deriveAnalyticsSource("locker_viewed", "/dashboard")).toBeNull();
+    expect(deriveAnalyticsSource("profile_edit_completed", "/onboarding/review")).toBeNull();
+  });
+
+  it("covers every literal event emitted by product code", () => {
+    const emittedNames = new Set<string>();
+    for (const root of ["app", "components"]) {
+      const rootPath = join(process.cwd(), root);
+      for (const relativePath of readdirSync(rootPath, { recursive: true, encoding: "utf8" })) {
+        if (!/\.[cm]?[jt]sx?$/.test(relativePath)) continue;
+        const source = readFileSync(join(rootPath, relativePath), "utf8");
+        for (const match of source.matchAll(/eventName:\s*["']([^"']+)["']/g)) {
+          emittedNames.add(match[1]);
+        }
+      }
+    }
+
+    const coveredNames = new Set(IMPLEMENTED_EVENT_CONTEXTS.map(([eventName]) => eventName));
+    expect([...emittedNames].sort()).toEqual([...coveredNames].sort());
   });
 });

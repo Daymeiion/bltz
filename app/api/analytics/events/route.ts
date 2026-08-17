@@ -14,6 +14,16 @@ export const runtime = "nodejs";
 
 const MAX_REQUEST_BYTES = 16 * 1024;
 
+function playerSlugFromPage(page: string): string | null {
+  const encodedSlug = page.match(/^\/player\/([^/]+)(?:\/|$)/)?.[1];
+  if (!encodedSlug) return null;
+  try {
+    return decodeURIComponent(encodedSlug);
+  } catch {
+    return null;
+  }
+}
+
 export async function POST(request: Request) {
   const contentLength = Number(request.headers.get("content-length") ?? 0);
   if (Number.isFinite(contentLength) && contentLength > MAX_REQUEST_BYTES) {
@@ -76,33 +86,50 @@ export async function POST(request: Request) {
 
   let athleteId: string | null = null;
   if (source === "public_locker") {
+    const pageAthleteSlug = playerSlugFromPage(page);
+    if (!pageAthleteSlug) {
+      return NextResponse.json({ error: "invalid_athlete_context" }, { status: 400 });
+    }
     if (!event.athleteId && !event.athleteSlug) {
       return NextResponse.json({ error: "athlete_target_required" }, { status: 400 });
     }
+    if (event.athleteSlug && event.athleteSlug !== pageAthleteSlug) {
+      return NextResponse.json({ error: "athlete_context_mismatch" }, { status: 400 });
+    }
     const { data: visibleAthlete, error } = await service
       .from("players")
-      .select("id")
+      .select("id, slug")
       .eq(event.athleteId ? "id" : "slug", event.athleteId ?? event.athleteSlug!)
       .eq("visibility", true)
       .maybeSingle();
     if (error) return NextResponse.json({ error: "analytics_unavailable" }, { status: 503 });
     if (!visibleAthlete) return NextResponse.json({ error: "athlete_not_found" }, { status: 404 });
+    if (visibleAthlete.slug !== pageAthleteSlug) {
+      return NextResponse.json({ error: "athlete_context_mismatch" }, { status: 400 });
+    }
     athleteId = visibleAthlete.id;
   } else if (user) {
-    const { data: ownedAthlete } = await service
+    const { data: ownedAthlete, error: ownedAthleteError } = await service
       .from("players")
       .select("id")
       .eq("user_id", user.id)
       .maybeSingle();
 
+    if (ownedAthleteError) {
+      return NextResponse.json({ error: "analytics_unavailable" }, { status: 503 });
+    }
+
     if (ownedAthlete?.id) {
       athleteId = ownedAthlete.id;
     } else {
-      const { data: profile } = await service
+      const { data: profile, error: profileError } = await service
         .from("profiles")
         .select("player_id")
         .eq("id", user.id)
         .maybeSingle();
+      if (profileError) {
+        return NextResponse.json({ error: "analytics_unavailable" }, { status: 503 });
+      }
       athleteId = profile?.player_id ?? null;
     }
   }

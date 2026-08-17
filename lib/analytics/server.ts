@@ -81,6 +81,14 @@ function clientNetworkAddress(request: Request): string | null {
   return forwarded?.split(",", 1)[0]?.trim() || null;
 }
 
+function anonymousClientProfile(request: Request): string {
+  return [
+    request.headers.get("user-agent") ?? "unknown-agent",
+    request.headers.get("accept-language") ?? "unknown-language",
+    request.headers.get("sec-ch-ua-platform") ?? "unknown-platform",
+  ].join("\u001f");
+}
+
 export async function consumeAnalyticsRateLimits(input: {
   request: Request;
   sessionId: string | null;
@@ -93,6 +101,10 @@ export async function consumeAnalyticsRateLimits(input: {
     limits.push({ key: analyticsRateLimitHash("user", input.userId), limit: 120 });
   } else {
     if (input.sessionId) limits.push({ key: analyticsRateLimitHash("session", input.sessionId), limit: 60 });
+    limits.push({
+      key: analyticsRateLimitHash("client-profile", anonymousClientProfile(input.request)),
+      limit: 120,
+    });
     const address = clientNetworkAddress(input.request);
     if (address) limits.push({ key: analyticsRateLimitHash("network-day", `${day}:${address}`), limit: 300 });
   }

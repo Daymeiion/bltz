@@ -45,6 +45,8 @@ export const PUBLIC_ATHLETE_TARGET_EVENTS = new Set<AnalyticsEventName>([
 ]);
 
 export const AUTHENTICATED_EVENT_NAMES = new Set<AnalyticsEventName>([
+  "locker_shared",
+  "share_link_copied",
   "locker_preview_viewed",
   "dashboard_section_selected",
   "deferred_destination_selected",
@@ -58,6 +60,16 @@ export const AUTHENTICATED_EVENT_NAMES = new Set<AnalyticsEventName>([
   "profile_edit_started",
   "profile_edit_completed",
   "media_uploaded",
+]);
+
+export const ONBOARDING_EVENT_NAMES = new Set<AnalyticsEventName>([
+  "claim_link_opened",
+  "claim_link_validated",
+  "claim_link_expired",
+  "claim_link_rejected",
+  "claim_completed",
+  "locker_preview_viewed",
+  "live_locker_opened",
 ]);
 
 const propertiesSchema = z.record(z.string().max(80), z.unknown()).default({});
@@ -101,9 +113,13 @@ export function deriveAnalyticsSource(
     return "public_locker";
   }
   if (page === "/dashboard" || page.startsWith("/dashboard/")) {
-    return eventName === "feedback_completed" ? "beta_feedback" : "athlete_dashboard";
+    if (eventName === "feedback_completed") return "beta_feedback";
+    return AUTHENTICATED_EVENT_NAMES.has(eventName) ? "athlete_dashboard" : null;
   }
-  if (page === "/onboarding" || page.startsWith("/onboarding/")) return "onboarding";
+  if (
+    (page === "/onboarding" || page.startsWith("/onboarding/"))
+    && ONBOARDING_EVENT_NAMES.has(eventName)
+  ) return "onboarding";
   return null;
 }
 
