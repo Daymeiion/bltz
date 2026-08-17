@@ -2,7 +2,7 @@
 
 ## 1. Summary
 
-Stabilized the implemented analytics ingestion path against the 2026-08-16 QA defect list. Browser events now use Agent 1's shared client-safe contract, event names are bound to allowed route/source classes, public Locker events are bound to the athlete identified by the route, transient delivery failures retain a stable event UUID for retry, duplicate persistence is treated as accepted, and anonymous throttling uses layered durable buckets rather than a caller-rotatable session alone.
+Stabilized the implemented analytics ingestion path against the 2026-08-16 QA defect list. Browser events now use Agent 1's shared client-safe contract, event names are bound to allowed route/source classes, public Locker events are bound to the athlete identified by the route, transient delivery failures retain a stable event UUID for retry, duplicate persistence is treated as accepted, and anonymous throttling uses layered durable buckets when trusted network metadata is available.
 
 ## 2. Files changed
 
@@ -63,7 +63,8 @@ Analytics contract coverage now scans product source for every literal `eventNam
 ## 10. Known limitations
 
 - Live Supabase execution of the new database uniqueness constraint, rate-limit RPC, and multi-role RLS was not available in this branch's local test environment; final QA must validate the applied migration against the target database.
-- The fallback anonymous client-profile bucket is intentionally pseudonymous and heuristic. It supplements session and proxy network buckets but is not authentication.
+- Anonymous requests with trusted network metadata use session, network-plus-browser-profile, and network-wide buckets. The browser profile is never a standalone global bucket, preventing unrelated users with common browser settings from sharing a low-entropy cap.
+- When trusted network metadata is unavailable, anonymous requests use only a conservative 30-request session bucket. This avoids a cross-user shared cap, but a determined caller can rotate session identifiers; deployment-level network metadata or edge rate limiting remains the stronger control.
 - The repository retains 204 lint warnings; there are no lint errors, and warning cleanup is outside the authoritative stabilization defect list.
 
 ## 11. Deferred work

@@ -37,7 +37,7 @@ describe("trusted analytics persistence", () => {
     expect(lookupEq).toHaveBeenCalledWith("client_event_id", "8bb12ac1-5181-4df4-8c37-70643339f32b");
   });
 
-  it("uses session, client-profile, and rotating network buckets for anonymous traffic", async () => {
+  it("uses session, network-profile, and rotating network buckets for anonymous traffic", async () => {
     const rpc = vi.fn(async (_name: string, _args: { p_key_hash: string }) => ({ data: true, error: null }));
     createServiceClient.mockReturnValue({ rpc });
     const { consumeAnalyticsRateLimits } = await import("@/lib/analytics/server");
@@ -60,7 +60,7 @@ describe("trusted analytics persistence", () => {
     expect(new Set(hashes).size).toBe(3);
   });
 
-  it("retains a stable anonymous bucket when network metadata is unavailable", async () => {
+  it("uses only a conservative session bucket when network metadata is unavailable", async () => {
     const rpc = vi.fn(async () => ({ data: true, error: null }));
     createServiceClient.mockReturnValue({ rpc });
     const { consumeAnalyticsRateLimits } = await import("@/lib/analytics/server");
@@ -74,6 +74,9 @@ describe("trusted analytics persistence", () => {
       userId: null,
     });
 
-    expect(rpc).toHaveBeenCalledTimes(2);
+    expect(rpc).toHaveBeenCalledTimes(1);
+    expect(rpc).toHaveBeenCalledWith("consume_analytics_rate_limit", expect.objectContaining({
+      p_limit: 30,
+    }));
   });
 });

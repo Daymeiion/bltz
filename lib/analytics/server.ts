@@ -100,13 +100,21 @@ export async function consumeAnalyticsRateLimits(input: {
   if (input.userId) {
     limits.push({ key: analyticsRateLimitHash("user", input.userId), limit: 120 });
   } else {
-    if (input.sessionId) limits.push({ key: analyticsRateLimitHash("session", input.sessionId), limit: 60 });
-    limits.push({
-      key: analyticsRateLimitHash("client-profile", anonymousClientProfile(input.request)),
-      limit: 120,
-    });
     const address = clientNetworkAddress(input.request);
-    if (address) limits.push({ key: analyticsRateLimitHash("network-day", `${day}:${address}`), limit: 300 });
+    if (input.sessionId) {
+      limits.push({
+        key: analyticsRateLimitHash("session", input.sessionId),
+        limit: address ? 60 : 30,
+      });
+    }
+    if (address) {
+      const profile = anonymousClientProfile(input.request);
+      limits.push({
+        key: analyticsRateLimitHash("network-profile", `${day}:${address}:${profile}`),
+        limit: 120,
+      });
+      limits.push({ key: analyticsRateLimitHash("network-day", `${day}:${address}`), limit: 300 });
+    }
   }
   if (limits.length === 0) return false;
   for (const item of limits) {

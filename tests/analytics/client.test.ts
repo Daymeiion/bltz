@@ -81,7 +81,7 @@ describe("analytics client", () => {
     expect(transport).toHaveBeenCalledTimes(1);
   });
 
-  it("does not persist a permanent rejection for later retry", async () => {
+  it("suppresses later delivery attempts after a permanent rejection", async () => {
     const transport = vi.fn<typeof fetch>(async () => new Response(null, { status: 400 }));
     const event = {
       eventName: "locker_viewed" as const,
