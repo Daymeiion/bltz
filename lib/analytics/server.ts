@@ -4,6 +4,7 @@ import {
   hasSensitiveAnalyticsProperty,
   serializedPropertiesSize,
   type AnalyticsEventName,
+  type AnalyticsSource,
 } from "@/lib/analytics/events";
 import { createHmac } from "node:crypto";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -16,7 +17,7 @@ export interface TrustedAnalyticsEvent {
   userId?: string | null;
   athleteId?: string | null;
   sessionId?: string | null;
-  source: "public_locker" | "athlete_dashboard" | "onboarding" | "beta_feedback";
+  source: AnalyticsSource;
   page?: string | null;
   properties?: Record<string, unknown>;
 }

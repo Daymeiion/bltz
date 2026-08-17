@@ -77,8 +77,16 @@ export const analyticsEventRequestSchema = z.object({
 
 export type ProductEventRequest = z.infer<typeof analyticsEventRequestSchema>;
 export type ProductEventInput<Name extends ProductEventName = ProductEventName> = {
-  name: Name;
-  route: string;
+  eventName: Name;
+  /**
+   * Optional caller hint retained for existing instrumentation. Persistence
+   * never trusts or transmits this value; the ingestion route derives source
+   * from the event name and normalized page.
+   */
+  source?: AnalyticsSource;
+  page?: string;
+  route?: string;
+  athleteId?: string | null;
   athleteSlug?: string;
   properties?: Record<string, unknown>;
   dedupeKey?: string;
