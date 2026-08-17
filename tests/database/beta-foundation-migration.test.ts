@@ -50,4 +50,18 @@ describe("beta intelligence migration contract", () => {
     expect(hardening).toContain("get_beta_intelligence_dashboard");
     expect(hardening).toContain("consume_analytics_rate_limit");
   });
+
+  it("filters the aggregate at the participant source and supports athlete drill-down", () => {
+    expect(hardening).toContain("p_since is null or bp.invited_at >= p_since");
+    expect(hardening).toContain("p_cohort is null or bp.cohort = p_cohort");
+    expect(hardening).toContain("p_status is null or bp.status::text = p_status");
+    expect(hardening).toContain("p_athlete_id is null or bp.athlete_id = p_athlete_id");
+  });
+
+  it("reconciles implemented source events into unique-athlete action metrics", () => {
+    expect(hardening).toContain("ae.event_name in ('locker_shared', 'share_link_copied')");
+    expect(hardening).toContain("group by ae.athlete_id");
+    expect(hardening).toContain("select count(*) from enriched where locker_views > 0");
+    expect(hardening).toContain("'denominator', (select count(*) from enriched)");
+  });
 });

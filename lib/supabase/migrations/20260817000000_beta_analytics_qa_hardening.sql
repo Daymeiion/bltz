@@ -132,7 +132,7 @@ event_rollups as (
     count(*) filter (where ae.event_name in ('profile_edit_completed', 'field_edited'))::integer as profile_edits,
     count(*) filter (where ae.event_name = 'correction_requested')::integer as career_corrections,
     count(*) filter (where ae.event_name in ('media_uploaded', 'media_submitted'))::integer as media_uploads,
-    count(*) filter (where ae.event_name = 'locker_shared')::integer as shares,
+    count(*) filter (where ae.event_name in ('locker_shared', 'share_link_copied'))::integer as shares,
     count(*) filter (where ae.event_name = 'social_link_clicked')::integer as social_link_clicks,
     min(ae.occurred_at) filter (where ae.event_name = 'locker_viewed') as locker_viewed_at,
     min(ae.occurred_at) filter (where ae.event_name in ('profile_edit_completed', 'field_edited')) as locker_edited_at,

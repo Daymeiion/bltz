@@ -68,11 +68,11 @@ export interface BetaAthleteSummary {
 }
 
 export interface BetaIntelligenceReadModel {
-  source: "live" | "fixture";
+  source: "live";
   generatedAt: string;
   athletes: BetaAthleteSummary[];
-  summary?: BetaDashboardSummary;
-  recentFeedback?: BetaRecentFeedback[];
+  summary: BetaDashboardSummary;
+  recentFeedback: BetaRecentFeedback[];
 }
 
 export interface BetaActionPercentage {

@@ -12,7 +12,6 @@ import {
   CheckCircle2,
   ChevronRight,
   Clock3,
-  Database,
   Eye,
   FileSearch,
   Filter,
@@ -237,6 +236,8 @@ export function BetaIntelligenceDashboard({ data }: { data: BetaIntelligenceRead
     { label: "Returned", count: athletes.filter((a) => a.activity.returned).length },
   ];
   const feedback = athletes.flatMap((athlete) => athlete.feedback ? [athlete.feedback] : []);
+  const filteredAthleteIds = new Set(athletes.map((athlete) => athlete.id));
+  const recentFeedback = data.recentFeedback.filter((item) => filteredAthleteIds.has(item.athleteId));
   const caseStudies = athletes.filter((athlete) => athlete.caseStudyCandidate);
   const claimRate = percent(funnel[3].count, funnel[0].count);
   const highPriority = insights.filter((item) => item.severity === "high" || item.severity === "critical").length;
@@ -321,13 +322,6 @@ export function BetaIntelligenceDashboard({ data }: { data: BetaIntelligenceRead
           </div>
         </header>
 
-        {data.source === "fixture" && (
-          <div data-reveal role="status" className="mb-8 flex items-start gap-3 rounded-2xl border border-amber-300/70 bg-amber-100/70 px-4 py-3 text-amber-950 dark:border-[#ffbb00]/20 dark:bg-[#ffbb00]/[0.07] dark:text-amber-100">
-            <Database className="mt-0.5 h-4 w-4 shrink-0" />
-            <div><p className="text-xs font-semibold">Fixture preview — not live beta data</p><p className="mt-1 text-[11px] leading-5 opacity-70">The interface is connected through a typed server boundary and is ready for the approved aggregate query.</p></div>
-          </div>
-        )}
-
         {athletes.length === 0 ? <section className={cn(panel, "rounded-3xl")}><EmptyState title="No beta athletes match these filters" description="Adjust the cohort, status, or invite date range to restore the cohort view." /></section> : <>
           <section data-reveal className="grid grid-flow-dense grid-cols-1 gap-3 lg:grid-cols-12" aria-label="Cohort overview">
             <article className={cn(panel, "group relative overflow-hidden rounded-3xl p-6 sm:p-8 lg:col-span-8")}>
@@ -404,6 +398,35 @@ export function BetaIntelligenceDashboard({ data }: { data: BetaIntelligenceRead
                 <div className="mt-auto pt-8"><div className="flex items-center gap-2"><p className="truncate text-base font-semibold">{athlete.name}</p><StatusTag tone={athlete.status === "completed" ? "green" : "neutral"}>{athlete.status}</StatusTag></div><p className="mt-2 text-xs text-neutral-500">{athlete.cohort}</p><div className="mt-4 flex items-center gap-4 border-t border-neutral-200 pt-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-neutral-400 dark:border-neutral-800"><span>{athlete.insights.length} findings</span><span>{athlete.engagementLevel} engagement</span><ChevronRight className="ml-auto h-4 w-4 transition-transform group-hover:translate-x-1" /></div></div>
               </button>)}
             </div>
+          </section>
+
+          <section className="pb-16 sm:pb-24" aria-labelledby="recent-feedback-heading">
+            <div className="mb-8">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">Recent feedback</p>
+              <h2 id="recent-feedback-heading" className="mt-3 text-3xl font-semibold tracking-[-0.04em] sm:text-4xl">Latest cohort signal.</h2>
+            </div>
+            {recentFeedback.length ? (
+              <div className="grid gap-3 lg:grid-cols-2">
+                {recentFeedback.slice(0, 6).map((item) => (
+                  <article key={`${item.athleteId}-${item.completedAt}`} className={cn(panel, "rounded-3xl p-5 sm:p-6")}>
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold">{item.athleteName}</p>
+                        <p className="mt-1 text-[11px] text-neutral-500">Completed {formatDate(item.completedAt)}</p>
+                      </div>
+                      <span className="font-mono text-xs font-semibold text-neutral-500">{item.lockerValueRating ?? "—"}/5 locker value</span>
+                    </div>
+                    <p className="mt-5 text-sm leading-6 text-neutral-600 dark:text-neutral-300">
+                      {item.biggestProblem ?? item.favoriteFeature ?? "No qualitative response provided."}
+                    </p>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <div className={cn(panel, "rounded-3xl")}>
+                <EmptyState title="No recent feedback" description="No completed feedback is available for the selected cohort filters." />
+              </div>
+            )}
           </section>
 
           <section className="pb-8 pt-16 sm:pt-24">
