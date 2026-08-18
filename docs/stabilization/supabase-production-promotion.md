@@ -1,7 +1,8 @@
 # Supabase production migration reconciliation and promotion
 
-Status: procedure only; no production operation has been authorized or performed.  
-Canonical migration directory: `supabase/migrations/`  
+Status: procedure only; no production operation has been authorized or performed.
+
+Canonical migration directory: `supabase/migrations/`
 Baseline migration: `20260701000000_production_schema_baseline.sql`
 
 ## Safety invariant

@@ -1,7 +1,8 @@
 # Agent 1 — production-readiness follow-up completion report
 
-Date: 2026-08-17  
-Branch: `codex/stabilization-agent1-production-readiness`  
+Date: 2026-08-17
+
+Branch: `codex/stabilization-agent1-production-readiness`
 Starting commit: `23c74cf9f3d4c8512c39db4dda385382a7abaedb`
 
 ## 1. Summary
