@@ -1,9 +1,7 @@
 -- =============================================================================
--- 20260718000001_media_rights_requests.sql
+-- 20260718000002_media_rights_requests.sql
 -- Track scraped media candidates and outbound license-request workflow state.
 -- =============================================================================
-
-alter type media_provenance add value if not exists 'scraped_candidate';
 
 alter table media
   add column if not exists license_request_status text not null default 'not_started'
