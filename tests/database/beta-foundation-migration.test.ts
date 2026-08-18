@@ -3,11 +3,11 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const foundation = readFileSync(
-  resolve("lib/supabase/migrations/20260816000000_beta_intelligence_foundation.sql"),
+  resolve("supabase/migrations/20260816000000_beta_intelligence_foundation.sql"),
   "utf8",
 ).toLowerCase();
 const hardening = readFileSync(
-  resolve("lib/supabase/migrations/20260817000000_beta_analytics_qa_hardening.sql"),
+  resolve("supabase/migrations/20260817000000_beta_analytics_qa_hardening.sql"),
   "utf8",
 ).toLowerCase();
 const statements = (sql: string) => sql.split(";").map((value) => value.replace(/\s+/g, " ").trim());

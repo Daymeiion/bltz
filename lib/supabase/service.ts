@@ -1,3 +1,5 @@
+import "server-only";
+
 import { createClient as createSb } from "@supabase/supabase-js";
 
 /**
@@ -8,8 +10,9 @@ import { createClient as createSb } from "@supabase/supabase-js";
  * session) and by the admin claim-tokens endpoint (creates tokens
  * scoped to a particular player without going through RLS).
  *
- * NEVER import this from client code. The build will not statically
- * detect it; the runtime just lacks the env var.
+ * `server-only` makes accidental imports from Client Components a build-time
+ * error. `SUPABASE_SERVICE_ROLE_KEY` may contain either a legacy service-role
+ * JWT or a current `sb_secret_...` key; neither may be exposed to a browser.
  */
 export function createServiceClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;

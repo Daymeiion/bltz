@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const readMigration = (name: string) =>
-  readFileSync(resolve("lib/supabase/migrations", name), "utf8").toLowerCase();
+  readFileSync(resolve("supabase/migrations", name), "utf8").toLowerCase();
 
 describe("migration reproducibility contracts", () => {
   it("keeps every active Supabase migration version unique", () => {
@@ -36,5 +36,20 @@ describe("migration reproducibility contracts", () => {
 
     expect(publishPatch).toContain("jsonb_array_elements_text");
     expect(publishPatch).toContain("array(select");
+  });
+
+  it("provides a pinned isolated reset and lint entry without linked mutations", () => {
+    const validator = readFileSync(
+      resolve("scripts/validate-supabase-foundation.mjs"),
+      "utf8",
+    );
+
+    expect(validator).toContain('const SUPABASE_CLI_VERSION = "2.114.0"');
+    expect(validator).toContain('mkdtempSync(join(tmpdir(), "bltz-supabase-ci-")');
+    expect(validator).toContain('["db", "reset", "--local", "--no-seed"]');
+    expect(validator).toContain('"lint"');
+    expect(validator).toContain('"--fail-on"');
+    expect(validator).not.toContain('"--linked"');
+    expect(validator).not.toContain('"--project-ref"');
   });
 });
