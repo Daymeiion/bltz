@@ -211,15 +211,15 @@ All protected actions must be authorized server-side. Hiding a button is not suf
 Expected entities:
 
 ```text
-users
+auth.users
 profiles
 organizations
 organization_memberships
 teams
 seasons
-athletes
+players (athletes)
 athlete_claims
-lockers
+player_lockers (lockers)
 media_assets
 athlete_media
 rights_records
@@ -244,7 +244,7 @@ Canonical table names differ from product language. See **Canonical Identifiers 
 Architecture decisions for this section are recorded in `docs/media/MEDIA-GRAPH-ROADMAP.md`. The authoritative phase sequence is `docs/BLTZ_BUILD_ORDER.md`.
 
 - `public.players.id` is the canonical athlete identifier. Product copy may say “athlete”; the table remains `players`.
-- `player_lockers` is a presentation and configuration entity with a one-to-one relationship to `players`. Lockers consume media; they do not own media.
+- `player_lockers` is a presentation and configuration entity with at most one row per `players` row. Lockers consume media; they do not own media.
 - `schools` are directory and reference entities. Organizations are separate tenant entities and may reference a school.
 - Existing `teams` retain their UUIDs and require organization context in Phase 2. Do not recreate teams to satisfy tenancy.
 - Phase 2 must introduce stable `seasons`, `sports_events`, and normalized athlete-team-season/roster relationships. Those records are identity and career context, not Media Graph tables.

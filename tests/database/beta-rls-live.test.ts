@@ -7,7 +7,17 @@ const jwtVariables = [
   "RLS_TEST_ATHLETE_A_JWT",
   "RLS_TEST_ATHLETE_B_JWT",
   "RLS_TEST_NON_ADMIN_JWT",
+  "RLS_TEST_LEGACY_ADMIN_JWT",
   "RLS_TEST_PLATFORM_ADMIN_JWT",
+] as const;
+const phase2CareerTables = [
+  "seasons",
+  "team_seasons",
+  "athlete_team_seasons",
+  "athlete_season_stats",
+  "sports_events",
+  "sports_event_teams",
+  "sports_event_athletes",
 ] as const;
 
 function required(name: string): string {
@@ -70,6 +80,22 @@ async function serviceRest(table: string, init?: RequestInit) {
   });
 }
 
+async function rpcBoolean(functionName: string, jwt: string): Promise<boolean> {
+  const response = await fetch(
+    `${required("NEXT_PUBLIC_SUPABASE_URL")}/rest/v1/rpc/${functionName}`,
+    {
+      method: "POST",
+      headers: {
+        ...authHeaders(jwt),
+        "content-type": "application/json",
+      },
+      body: "{}",
+    },
+  );
+  expect(response.status, functionName).toBe(200);
+  return await response.json() as boolean;
+}
+
 describe.skipIf(!enabled)("live Beta Intelligence RLS roles", () => {
   beforeAll(() => {
     required("NEXT_PUBLIC_SUPABASE_URL");
@@ -86,6 +112,7 @@ describe.skipIf(!enabled)("live Beta Intelligence RLS roles", () => {
     ["athlete A", "RLS_TEST_ATHLETE_A_JWT"],
     ["athlete B", "RLS_TEST_ATHLETE_B_JWT"],
     ["authenticated non-admin", "RLS_TEST_NON_ADMIN_JWT"],
+    ["legacy profile admin without assignment", "RLS_TEST_LEGACY_ADMIN_JWT"],
   ] as const)("hides raw analytics from %s", async (_role, jwtVariable) => {
     const response = await rest(
       "analytics_events?select=id&limit=1",
@@ -106,6 +133,29 @@ describe.skipIf(!enabled)("live Beta Intelligence RLS roles", () => {
     expect(await response.json()).toEqual([]);
   });
 
+  it("denies anonymous career-context reads", async () => {
+    for (const table of phase2CareerTables) {
+      const response = await rest(`${table}?select=id&limit=1`);
+      expect(response.ok, table).toBe(false);
+    }
+  });
+
+  it.each([
+    ["athlete A", "RLS_TEST_ATHLETE_A_JWT"],
+    ["athlete B", "RLS_TEST_ATHLETE_B_JWT"],
+    ["authenticated non-admin", "RLS_TEST_NON_ADMIN_JWT"],
+    ["legacy profile admin without assignment", "RLS_TEST_LEGACY_ADMIN_JWT"],
+  ] as const)("hides tenant career context from unassigned %s", async (_role, jwtVariable) => {
+    for (const table of phase2CareerTables) {
+      const response = await rest(
+        `${table}?select=id&limit=1`,
+        required(jwtVariable),
+      );
+      expect(response.status, table).toBe(200);
+      expect(await response.json(), table).toEqual([]);
+    }
+  });
+
   it("blocks anonymous direct analytics inserts", async () => {
     const response = await rest("analytics_events", undefined, {
       method: "POST",
@@ -120,7 +170,12 @@ describe.skipIf(!enabled)("live Beta Intelligence RLS roles", () => {
   });
 
   it("allows the explicit platform-admin fixture to read protected datasets", async () => {
-    for (const table of ["analytics_events", "athlete_feedback", "athlete_insights"]) {
+    for (const table of [
+      "analytics_events",
+      "athlete_feedback",
+      "athlete_insights",
+      ...phase2CareerTables,
+    ]) {
       const response = await rest(
         `${table}?select=id&limit=1`,
         required("RLS_TEST_PLATFORM_ADMIN_JWT"),
@@ -128,6 +183,21 @@ describe.skipIf(!enabled)("live Beta Intelligence RLS roles", () => {
       expect(response.status, table).toBe(200);
       expect(Array.isArray(await response.json()), table).toBe(true);
     }
+  });
+
+  it("derives internal-admin access only from the active platform assignment", async () => {
+    expect(await rpcBoolean(
+      "is_internal_admin",
+      required("RLS_TEST_PLATFORM_ADMIN_JWT"),
+    )).toBe(true);
+    expect(await rpcBoolean(
+      "is_internal_admin",
+      required("RLS_TEST_LEGACY_ADMIN_JWT"),
+    )).toBe(false);
+    expect(await rpcBoolean(
+      "is_internal_admin",
+      required("RLS_TEST_NON_ADMIN_JWT"),
+    )).toBe(false);
   });
 
   it("allows the server-only sb_secret fixture to bypass RLS for a read", async () => {

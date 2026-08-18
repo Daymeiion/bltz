@@ -3,7 +3,8 @@
  *
  * These are intentionally limited to tables inspected through the configured
  * Supabase OpenAPI schema on 2026-07-15, plus migration-verified Phase One
- * analytics contracts on 2026-08-17. They are not a substitute for a full
+ * analytics contracts on 2026-08-17 and the locally replayed Phase Two tenant
+ * authorization foundation on 2026-08-18. They are not a substitute for a full
  * `supabase gen types` snapshot; regenerate after the hardening migration is
  * deployed to an authenticated Supabase project.
  */
@@ -106,6 +107,49 @@ export type BetaParticipantStatus = "invited" | "active" | "completed" | "withdr
 export type CaseStudyPermission = "not_requested" | "pending" | "granted" | "declined" | "revoked";
 export type AthleteInsightSeverity = "low" | "medium" | "high" | "critical";
 export type AthleteInsightStatus = "open" | "monitoring" | "resolved" | "dismissed";
+export type OrganizationStatus =
+  | "draft"
+  | "pending_review"
+  | "approved"
+  | "rejected"
+  | "suspended"
+  | "restricted"
+  | "closed";
+export type OrganizationMembershipRole =
+  | "owner"
+  | "organization_admin"
+  | "media_manager"
+  | "rights_manager"
+  | "analyst"
+  | "viewer";
+export type OrganizationMembershipStatus = "active" | "suspended" | "removed";
+export type PlatformRole =
+  | "support_admin"
+  | "organization_admin"
+  | "identity_admin"
+  | "rights_admin"
+  | "trust_safety_admin"
+  | "finance_admin"
+  | "technical_admin"
+  | "super_admin";
+export type AuditRoleScope = "organization" | "platform" | "system";
+export type AuditRiskLevel = "low" | "medium" | "high" | "critical";
+export type SeasonStatus = "planned" | "active" | "completed" | "archived";
+export type RosterStatus =
+  | "active"
+  | "inactive"
+  | "practice_squad"
+  | "injured"
+  | "transferred"
+  | "released"
+  | "graduated"
+  | "completed";
+export type SportsEventStatus =
+  | "scheduled"
+  | "in_progress"
+  | "completed"
+  | "postponed"
+  | "cancelled";
 
 export interface Media {
   id: string;
@@ -283,6 +327,148 @@ export interface AthleteBaselineSnapshot {
   created_at: string;
 }
 
+export interface Organization {
+  id: string;
+  school_id: string | null;
+  name: string;
+  organization_type: string;
+  status: OrganizationStatus;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OrganizationMembership {
+  id: string;
+  organization_id: string;
+  user_id: string;
+  role: OrganizationMembershipRole;
+  status: OrganizationMembershipStatus;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PlatformRoleAssignment {
+  id: string;
+  user_id: string;
+  role: PlatformRole;
+  assigned_by: string | null;
+  assigned_at: string;
+  assignment_reason: string;
+  revoked_by: string | null;
+  revoked_at: string | null;
+  revocation_reason: string | null;
+}
+
+export interface AuditLog {
+  id: number;
+  organization_id: string | null;
+  actor_user_id: string | null;
+  action: string;
+  entity_type: string;
+  entity_id: string | null;
+  actor_role: string | null;
+  actor_role_scope: AuditRoleScope | null;
+  reason: string | null;
+  risk_level: AuditRiskLevel;
+  correlation_id: string | null;
+  previous_values: Json | null;
+  new_values: Json | null;
+  request_metadata: Json;
+  created_at: string;
+}
+
+export interface Season {
+  id: string;
+  organization_id: string;
+  sport: string;
+  season_code: string;
+  starts_on: string;
+  ends_on: string;
+  status: SeasonStatus;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TeamSeason {
+  id: string;
+  organization_id: string;
+  team_id: string;
+  season_id: string;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AthleteTeamSeason {
+  id: string;
+  organization_id: string;
+  team_season_id: string;
+  player_id: string;
+  roster_status: RosterStatus;
+  jersey_number: string | null;
+  position: string | null;
+  starts_on: string;
+  ends_on: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AthleteSeasonStats {
+  id: string;
+  organization_id: string;
+  athlete_team_season_id: string;
+  source: string;
+  season_phase: string;
+  stats: Json;
+  last_synced_at: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SportsEvent {
+  id: string;
+  steward_organization_id: string | null;
+  sport: string;
+  name: string;
+  event_type: string;
+  starts_at: string;
+  ends_at: string | null;
+  status: SportsEventStatus;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SportsEventTeam {
+  id: string;
+  event_id: string;
+  organization_id: string;
+  team_id: string;
+  team_season_id: string | null;
+  participation_role: string;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SportsEventAthlete {
+  id: string;
+  event_id: string;
+  organization_id: string;
+  team_id: string | null;
+  player_id: string;
+  athlete_team_season_id: string | null;
+  participation_role: string;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -293,10 +479,8 @@ export interface Database {
           email?: string | null;
           display_name?: string | null;
           avatar_url?: string | null;
-          role?: UserRole;
-          player_id?: string | null;
         };
-        Update: Partial<Omit<Profile, "id" | "created_at" | "updated_at">>;
+        Update: Pick<Partial<Profile>, "display_name" | "avatar_url">;
       };
       player_teammates: {
         Row: PlayerTeammate;
@@ -376,8 +560,80 @@ export interface Database {
           Partial<Omit<AthleteBaselineSnapshot, "athlete_id" | "snapshot">>;
         Update: never;
       };
+      organizations: {
+        Row: Organization;
+        Insert: Pick<Organization, "name" | "organization_type"> &
+          Partial<Omit<Organization, "name" | "organization_type" | "created_at" | "updated_at">>;
+        Update: Partial<Omit<Organization, "id" | "created_at" | "updated_at">>;
+      };
+      organization_memberships: {
+        Row: OrganizationMembership;
+        Insert: Pick<OrganizationMembership, "organization_id" | "user_id" | "role"> &
+          Partial<
+            Omit<OrganizationMembership, "organization_id" | "user_id" | "role" | "created_at" | "updated_at">
+          >;
+        Update: Partial<Omit<OrganizationMembership, "id" | "organization_id" | "user_id" | "created_at" | "updated_at">>;
+      };
+      platform_role_assignments: {
+        Row: PlatformRoleAssignment;
+        Insert: Pick<PlatformRoleAssignment, "user_id" | "role" | "assignment_reason"> &
+          Partial<Omit<PlatformRoleAssignment, "user_id" | "role" | "assignment_reason" | "assigned_at">>;
+        Update: Pick<Partial<PlatformRoleAssignment>, "revoked_by" | "revoked_at" | "revocation_reason">;
+      };
+      audit_logs: {
+        Row: AuditLog;
+        Insert: Pick<AuditLog, "action" | "entity_type"> &
+          Partial<Omit<AuditLog, "action" | "entity_type" | "id" | "created_at">>;
+        Update: never;
+      };
+      seasons: {
+        Row: Season;
+        Insert: Pick<Season, "organization_id" | "sport" | "season_code" | "starts_on" | "ends_on"> &
+          Partial<Omit<Season, "organization_id" | "sport" | "season_code" | "starts_on" | "ends_on" | "created_at" | "updated_at">>;
+        Update: Partial<Omit<Season, "id" | "organization_id" | "created_at" | "updated_at">>;
+      };
+      team_seasons: {
+        Row: TeamSeason;
+        Insert: Pick<TeamSeason, "organization_id" | "team_id" | "season_id"> &
+          Partial<Omit<TeamSeason, "organization_id" | "team_id" | "season_id" | "created_at" | "updated_at">>;
+        Update: Partial<Omit<TeamSeason, "id" | "organization_id" | "team_id" | "season_id" | "created_at" | "updated_at">>;
+      };
+      athlete_team_seasons: {
+        Row: AthleteTeamSeason;
+        Insert: Pick<AthleteTeamSeason, "organization_id" | "team_season_id" | "player_id" | "starts_on"> &
+          Partial<Omit<AthleteTeamSeason, "organization_id" | "team_season_id" | "player_id" | "starts_on" | "created_at" | "updated_at">>;
+        Update: Partial<Omit<AthleteTeamSeason, "id" | "organization_id" | "team_season_id" | "player_id" | "created_at" | "updated_at">>;
+      };
+      athlete_season_stats: {
+        Row: AthleteSeasonStats;
+        Insert: Pick<AthleteSeasonStats, "organization_id" | "athlete_team_season_id" | "source" | "season_phase"> &
+          Partial<Omit<AthleteSeasonStats, "organization_id" | "athlete_team_season_id" | "source" | "season_phase" | "created_at" | "updated_at">>;
+        Update: Partial<Omit<AthleteSeasonStats, "id" | "organization_id" | "athlete_team_season_id" | "source" | "season_phase" | "created_at" | "updated_at">>;
+      };
+      sports_events: {
+        Row: SportsEvent;
+        Insert: Pick<SportsEvent, "sport" | "name" | "event_type" | "starts_at"> &
+          Partial<Omit<SportsEvent, "sport" | "name" | "event_type" | "starts_at" | "created_at" | "updated_at">>;
+        Update: Partial<Omit<SportsEvent, "id" | "created_at" | "updated_at">>;
+      };
+      sports_event_teams: {
+        Row: SportsEventTeam;
+        Insert: Pick<SportsEventTeam, "event_id" | "organization_id" | "team_id"> &
+          Partial<Omit<SportsEventTeam, "event_id" | "organization_id" | "team_id" | "created_at" | "updated_at">>;
+        Update: Partial<Omit<SportsEventTeam, "id" | "event_id" | "organization_id" | "team_id" | "created_at" | "updated_at">>;
+      };
+      sports_event_athletes: {
+        Row: SportsEventAthlete;
+        Insert: Pick<SportsEventAthlete, "event_id" | "organization_id" | "player_id"> &
+          Partial<Omit<SportsEventAthlete, "event_id" | "organization_id" | "player_id" | "created_at" | "updated_at">>;
+        Update: Partial<Omit<SportsEventAthlete, "id" | "event_id" | "organization_id" | "player_id" | "created_at" | "updated_at">>;
+      };
     };
     Functions: {
+      is_internal_admin: {
+        Args: Record<string, never>;
+        Returns: boolean;
+      };
       consume_analytics_rate_limit: {
         Args: { p_key_hash: string; p_limit: number; p_window_seconds?: number };
         Returns: boolean;

@@ -1,8 +1,8 @@
 # BLTZ Media Graph Roadmap
 
-**Status:** Phase 1.5 architecture freeze  
-**Date:** August 18, 2026  
-**Authoritative build order:** `docs/BLTZ_BUILD_ORDER.md`  
+**Status:** Phase 1.5 architecture freeze
+**Date:** August 18, 2026
+**Authoritative build order:** `docs/BLTZ_BUILD_ORDER.md`
 **This document is documentation only.** It does not authorize migrations, tables, routes, UI, packages, storage buckets, provider integrations, or product features.
 
 ---
@@ -47,7 +47,7 @@ Product language may say “athlete,” “locker,” and “media asset.” Phy
 | User profile | `public.profiles.id` (= `auth.users.id`) | `profiles.role` is a global enum: `player`, `fan`, `admin`, `publisher` | Profile data only. Organization and platform authorization must not depend on `profiles.role`. |
 | Athlete | `public.players.id` | UUID PK; slug, claim, media, videos, lockers, and awards all FK here | **Canonical athlete identifier.** Do not create a second `athletes` table in Phase 2. |
 | Athlete aliases / provider snapshots | `nfl_players`, `cfb_players`, and future adapter tables | `players.gsis_id`, `players.cfb_team_id`; NFL/CFB rows keyed by provider IDs | External IDs stay on adapter/source records. Do not add Getty or other provider IDs as core columns on `players`. |
-| Locker | `public.player_lockers.id` with unique `player_id` | `player_lockers_player_id_key` UNIQUE; FK to `players.id` | One locker per athlete. Presentation and configuration only. Lockers consume media; they do not own media. |
+| Locker | `public.player_lockers.id` with unique `player_id` | `player_lockers_player_id_key` UNIQUE; FK to `players.id` | At most one locker per athlete; a player is not guaranteed to have one. Presentation and configuration only. Lockers consume media; they do not own media. |
 | School (directory) | `public.schools.id` | Name, slug, logo, city, state | Directory/reference. Not a tenant. |
 | Organization (tenant) | **Does not exist** | No `organizations` or `organization_memberships` table | Phase 2 introduces organizations as tenants. An organization may reference a school. |
 | Team | `public.teams.id` | UUID PK; optional `school_id`; no `organization_id` | **Retain existing team UUIDs.** Phase 2 adds organization context. Do not recreate teams. |
@@ -57,7 +57,7 @@ Product language may say “athlete,” “locker,” and “media asset.” Phy
 | Phase One photo/document media | `public.media.id` | Required `player_id`; URL-centric; license eligibility columns | **Legacy.** Do not extend into the Media Graph. |
 | Phase One video media | `public.videos.id` | Optional `player_id` and `owner_user_id`; `video_tags` for extra athletes | **Legacy.** Do not extend into the Media Graph. |
 | Future media asset | Not created | PRD name `media_assets` | Phase 5 introduces the graph. Name is not a Phase 1.5 table. |
-| Future athlete–media link | Not created | `media.player_id` (1:1 required); `video_tags` (video-only M2M) | Phase 5 join table. Association does not confer ownership or rights. |
+| Future athlete–media link | Not created | `media.player_id` (required many-to-one FK); `video_tags` (video-only M2M) | Phase 5 join table. Association does not confer ownership or rights. |
 | Future rights engine | Not created | `media.license_status`, `license_kind`, `license_request_*`, `public_locker_approved` | Phase 6. Legacy license columns are Locker eligibility fields only. |
 | Migration authority | `supabase/migrations` | `supabase/config.toml` enables db migrations; tests read this directory | Only active migration directory. `lib/supabase/migrations` is legacy and receives no new files. |
 
@@ -187,7 +187,7 @@ Athlete (players.id)
 
 ### Out of the graph
 
-- Rights, attribution, clearance, and approval state (Phase 6).
+- Rights-holder/revenue attribution, clearance, and approval state (Phase 6). Phase 5 still owns descriptive contributor credits and source metadata.
 - Locker theme, bio, and branding (`player_lockers`).
 - Organization membership and platform roles (Phase 2).
 - Campaigns, analytics ledgers, and revenue allocations (later phases).
@@ -262,7 +262,8 @@ Do not collapse these into `media.license_status`.
 | Storage eligibility | Whether bytes are private, signed, or public | Public `headshots` bucket; URL strings | Phase 5 locators |
 | Legacy Locker gate | Phase One photo display check | `license_status`, `public_locker_approved` | Compatibility only |
 | Rights record | Who owns/licenses what use, where, and when | Missing | Phase 6 |
-| Attribution | Who must be credited and who shares proceeds | `media.credits`; `video_tags` comment about revenue | Phase 6 |
+| Contributor/source credit | Who created or supplied the asset and its display credit | `media.credits`, provenance, provider metadata | Phase 5 metadata |
+| Rights/revenue attribution | Who must be credited by contract and who shares proceeds | `video_tags` comment about revenue; otherwise missing | Phase 6 |
 | Clearance | Whether a specific use is allowed now | Missing | Phase 6 |
 | Approval | Athlete/org/rights-holder response | Missing | Phase 6 / Phase 7 |
 | Distribution | Whether the asset is offered on a surface | `players.visibility`; `videos.visibility` | Phase 7 uses Phase 5 distribution records |
@@ -297,6 +298,8 @@ This is a conceptual contract. Phase 1.5 does not specify tables, RPC names, or 
   - `organizationId` when the action is tenant-scoped
   - `territory` / `atTime` when Phase 6 records exist
 
+The server derives authenticated actor identity and verifies organization membership. Browser-supplied actor IDs, platform roles, or organization authorization claims are never trusted as privileged context.
+
 ### Output (conceptual)
 
 - `allowed`: boolean
@@ -317,13 +320,16 @@ Phase 2 builds shared platform foundation. It consumes this freeze; it does not 
 **Required**
 
 - Treat `auth.users` as authentication identity and `profiles` as profile data.
-- Add organizations and `organization_memberships`. Do not authorize from `profiles.role`.
+- Add organizations and `organization_memberships`. Current legacy administrators are individually reviewed and converted to `super_admin`; the `profiles.role = 'admin'` authorization fallback is removed after that verified backfill. The legacy profile field may remain temporarily for non-privileged compatibility only.
 - Keep `public.players.id` as the athlete PK. No `athletes` table.
-- Keep `player_lockers` 1:1 with `players` as presentation/configuration.
+- Keep `player_lockers` at most 1:1 with `players` as presentation/configuration.
 - Keep `schools` as directory entities. Organizations may reference a school.
-- Retain existing `teams.id` values and add organization context.
-- Introduce stable `seasons`, `sports_events`, and normalized athlete-team-season/roster relationships.
-- Protected layouts, organization switcher, server-side authorization, RLS review, audit-log foundation.
+- Retain existing `teams.id` values and add nullable organization context; no production tenant mapping is inferred or applied without explicit approval.
+- Introduce organization-owned seasons identified by organization, sport, and season code, with stats kept separate; `team_seasons`; dated roster stints; shared cross-organization `sports_events`; and explicit event-team and event-athlete associations.
+- Put `organization_id` directly on tenant-owned rows and enforce organization-matching composite FKs. Shared events are the exception because they derive participating tenants through association records.
+- Keep organizations and tenant authorization records private from `anon`.
+- Use restrictive deletion for references to `auth.users.id`; deactivate accounts and suspend/remove access assignments instead of deleting referenced Auth users.
+- Protected route authorization primitives, server organization context, server-side authorization, RLS review, and audit-log foundation. Phase 3 owns the switcher UI.
 
 **Forbidden**
 
@@ -332,6 +338,7 @@ Phase 2 builds shared platform foundation. It consumes this freeze; it does not 
 - New provider IDs on `players`, `player_lockers`, `teams`, or organizations.
 - New storage buckets or Getty/provider integrations.
 - Implementing `resolveMediaPermissions`.
+- Monetization eligibility, entitlements, subscriptions, or billing rules as part of seasons, team seasons, rosters, or events.
 
 Phase 2 may document FK placeholders in prose (“media will later reference `sports_events.id`”). It may not create those media FKs.
 
@@ -347,10 +354,11 @@ Phase 2 may document FK placeholders in prose (“media will later reference `sp
 - Many-to-many athlete associations.
 - Attach assets to Phase 2 organization, team, season, and event IDs.
 - Provenance metadata.
+- Descriptive contributors, photographers, sources/providers, and display credits. These records do not grant rights.
 - Distribution records and activity history.
 - Adapter boundary for external media sources.
 - Forward adaptation of legacy `media` and `videos`.
-- Wire reads that need eligibility through `resolveMediaPermissions` (decisions still come from Phase 6 records once they exist; until then, documented compatibility rules).
+- Define and implement the stable `resolveMediaPermissions` interface plus a legacy compatibility adapter. Phase 6 supplies rights-backed evaluation; until then, documented compatibility rules provide the decision inputs.
 
 ### Phase 6 — Media Rights, Attribution & Clearance Engine
 
@@ -403,7 +411,7 @@ Do not start campaigns or advanced analytics until the publishing workflow works
 
 | Criterion | Result |
 | --- | --- |
-| No schema or application code changed | Met. Only `AGENTS.md`, `docs/BLTZ_BUILD_ORDER.md`, `docs/BLTZ_MASTER_BUILD_ORDER_UPDATED.md`, and this file. |
+| No schema or application code changed at the Phase 1.5 checkpoint | Met. The checkpoint commit changed only `AGENTS.md`, `docs/BLTZ_BUILD_ORDER.md`, `docs/BLTZ_MASTER_BUILD_ORDER_UPDATED.md`, and this file. |
 | Canonical IDs and naming decisions are explicit | Met. Section 3. |
 | Legacy media conflicts are documented | Met. Section 4 and Section 6. |
 | Phase 2 can proceed without designing Phase 5 tables | Met. Section 11. |
@@ -416,13 +424,12 @@ Do not start campaigns or advanced analytics until the publishing workflow works
 
 The following are unresolved on purpose. Phase 1.5 does not pick a schema design where the repository does not already decide one.
 
-1. How existing `teams` without an organization are backfilled when organization context is added.
-2. Whether `teams.school_id` remains after organizations reference schools.
+1. Which approved tenant organization each existing team belongs to. Phase 2 adds nullable `teams.organization_id`, does not infer tenants from school rows, and leaves the column nullable. Any production mapping, backfill, or later `NOT NULL` change requires separate explicit approval.
+2. `teams.school_id` remains as a compatibility/directory FK during Phase 2. Removal, if ever justified, requires a later compatibility audit and separate migration.
 3. Whether legacy `players.gsis_id` and `players.cfb_team_id` move off `players` onto adapter tables.
 4. Physical table names and column lists for the Phase 5 graph and Phase 6 rights engine.
 5. Whether adaptation is a side-by-side mapping table, a view, or a later rewrite of Locker queries.
 6. Storage bucket names, private-vs-public policy for new originals, and transcoding vendor.
 7. Exact TypeScript module path for `resolveMediaPermissions`.
 8. Remaining Player Locker gaps marked `partially_complete` or `blocked` in `docs/player-locker-gap-analysis.md` (explicitly deferred; not reopened here).
-9. `AGENTS.md` expected-entity list still uses product names `athletes` and `lockers`; canonical tables are `players` and `player_lockers`.
-10. CRM PRD data-model names (`athletes`, `lockers`, `media_assets`) remain product language, not Phase 2 DDL.
+9. CRM PRD data-model names (`athletes`, `lockers`, `media_assets`) remain product language, not Phase 2 DDL.

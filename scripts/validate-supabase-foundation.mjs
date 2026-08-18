@@ -18,6 +18,7 @@ const isolatedRoot = mkdtempSync(join(tmpdir(), "bltz-supabase-ci-"));
 const isolatedSupabase = join(isolatedRoot, "supabase");
 const isolatedProjectId = `bltz-foundation-${process.pid}`;
 const npx = process.platform === "win32" ? "npx.cmd" : "npx";
+const docker = process.platform === "win32" ? "docker.exe" : "docker";
 const excludedServices = [
   "gotrue",
   "realtime",
@@ -61,6 +62,41 @@ cpSync(join(sourceRoot, "config.toml"), join(isolatedSupabase, "config.toml"));
 cpSync(join(sourceRoot, "migrations"), join(isolatedSupabase, "migrations"), {
   recursive: true,
 });
+if (existsSync(join(sourceRoot, "tests"))) {
+  cpSync(join(sourceRoot, "tests"), join(isolatedSupabase, "tests"), {
+    recursive: true,
+  });
+}
+
+function runSqlFile(path) {
+  const container = `supabase_db_${isolatedProjectId}`;
+  const result = spawnSync(
+    docker,
+    [
+      "exec",
+      "-i",
+      container,
+      "psql",
+      "-U",
+      "postgres",
+      "-d",
+      "postgres",
+      "-v",
+      "ON_ERROR_STOP=1",
+      "-f",
+      "-",
+    ],
+    {
+      input: readFileSync(path, "utf8"),
+      stdio: ["pipe", "inherit", "inherit"],
+      encoding: "utf8",
+    },
+  );
+  if (result.error) throw result.error;
+  if (result.status !== 0) {
+    throw new Error(`${basename(docker)} psql verification exited ${result.status}`);
+  }
+}
 
 const configPath = join(isolatedSupabase, "config.toml");
 const isolatedConfig = readFileSync(configPath, "utf8")
@@ -99,6 +135,10 @@ try {
   startAttempted = true;
   run(["start", "--exclude", excludedServices]);
   run(["db", "reset", "--local", "--no-seed"]);
+  const phase2RlsTest = join(isolatedSupabase, "tests", "phase2_tenant_rls.sql");
+  if (existsSync(phase2RlsTest)) {
+    runSqlFile(phase2RlsTest);
+  }
   run([
     "db",
     "lint",

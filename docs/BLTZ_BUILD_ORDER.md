@@ -75,6 +75,7 @@ Status: **Completed August 18, 2026.** Architecture decisions are recorded in `d
 ## Phase 2 — Shared Platform Foundation
 
 Follow `docs/media/MEDIA-GRAPH-ROADMAP.md`. Do not design Phase 5 Media Graph tables.
+The ordered implementation and verification slices are defined in `docs/platform/PHASE-2-FOUNDATION-PLAN.md`.
 
 - Users and profiles (`auth.users` identity; `profiles` profile data; do not authorize from `profiles.role`)
 - Organizations and organization memberships
@@ -82,10 +83,10 @@ Follow `docs/media/MEDIA-GRAPH-ROADMAP.md`. Do not design Phase 5 Media Graph ta
 - Existing teams retain their UUIDs and gain organization context
 - Seasons, `sports_events`, and normalized athlete-team-season/roster relationships
 - Canonical athlete identifier remains `public.players.id`; do not create a second `athletes` table
-- `player_lockers` remain 1:1 presentation/configuration and do not own media
+- `player_lockers` remain at most 1:1 presentation/configuration and do not own media
 - Organization roles and platform roles
-- Protected route layouts
-- Organization switcher
+- Protected route authorization primitives and layouts
+- Server organization-context primitive (the CRM switcher UI belongs to Phase 3)
 - Server-side authorization
 - RLS review
 - Audit-log foundation
@@ -93,7 +94,7 @@ Follow `docs/media/MEDIA-GRAPH-ROADMAP.md`. Do not design Phase 5 Media Graph ta
 ## Phase 3 — School/Team CRM Shell
 
 - CRM route layout and navigation
-- Organization switcher
+- Organization switcher UI using the Phase 2 organization-context primitive
 - Team and season filters
 - Dashboard shell
 - Member access
@@ -103,7 +104,7 @@ Follow `docs/media/MEDIA-GRAPH-ROADMAP.md`. Do not design Phase 5 Media Graph ta
 
 - Athlete list, search, and filters
 - Athlete detail
-- Team and season relationships
+- Roster-management UX over the Phase 2 team, season, and athlete-history schema
 - Locker and claim status
 - Manual creation and CSV import
 - Duplicate warnings

@@ -2,7 +2,7 @@
 
 Updated: August 6, 2026
 
-This document tracks Phase 1 of `BLTZ_MASTER_BUILD_ORDER_UPDATED.md`. Status values are limited to `complete`, `partially_complete`, `not_started`, `broken`, `blocked`, and `out_of_scope`.
+This document tracks Phase 1 of `docs/BLTZ_BUILD_ORDER.md`. Status values are limited to `complete`, `partially_complete`, `not_started`, `broken`, `blocked`, and `out_of_scope`.
 
 ## Current Status
 
@@ -15,7 +15,7 @@ This document tracks Phase 1 of `BLTZ_MASTER_BUILD_ORDER_UPDATED.md`. Status val
 | Individual video page | complete | `/player/[slug]/videos/[videoId]` validates public player ownership and public video visibility, then loads playback, metadata, tags, archive navigation, sharing, and view totals. |
 | Legacy watch links | complete | `/watch/[id]` now redirects eligible public records to the canonical Locker video route. It no longer exposes arbitrary video rows or fabricated production fallback content. |
 | Photos and photo rights gate | partially_complete | Public Locker photos require approved license status and public approval. Full organization rights workflow belongs to later phases. |
-| Video rights enforcement | blocked | The current `videos` contract has visibility but no canonical link to `media` rights records. A migration must follow the Phase 8–10 media and rights sequence rather than introducing a parallel Phase 1 model. |
+| Video rights enforcement | blocked | The current `videos` contract has visibility but no canonical link to rights records. Adaptation must follow the authoritative Phase 5 Media Graph, Phase 6 rights engine, and Phase 7 publishing sequence rather than introducing a parallel Phase 1 model. |
 | Awards and achievements | partially_complete | Verified rows load, but richer images and source evidence remain incomplete. |
 | Career statistics | partially_complete | Public presentation exists; several metrics and game-log values remain placeholders until canonical sport-specific data contracts are approved. |
 | Interviews, podcasts, and social content | partially_complete | Public states and fallbacks exist; provider ingestion and athlete account connections are deferred. |

@@ -62,7 +62,6 @@ export async function getCurrentUserProfile(): Promise<UserProfile | null> {
         id: user.id,
         email: user.email ?? null,
         display_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
-        role: "fan",
         avatar_url: user.user_metadata?.avatar_url || null
       })
       .select("id, email, display_name, avatar_url, role, player_id")

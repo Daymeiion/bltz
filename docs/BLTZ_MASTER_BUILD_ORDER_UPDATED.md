@@ -8,9 +8,9 @@
 
 ## Purpose
 
-This file defines the required implementation order, parallel-agent operating model, integration sequence, and release gates for BLTZ.
+This file preserves an earlier implementation order, parallel-agent operating model, integration sequence, and release-gate proposal for historical context.
 
-Codex must follow this plan unless a task explicitly overrides it. Do not begin a later dependency-bound phase until the current phase meets its acceptance criteria or blockers are documented.
+Do not use the instructions below as current execution authority. Current work follows `docs/BLTZ_BUILD_ORDER.md`.
 
 BLTZ is now being developed as three connected product layers:
 
