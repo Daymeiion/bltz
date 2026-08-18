@@ -1,5 +1,11 @@
 # BLTZ Master Build Order
 
+> **Historical planning artifact.** This file is not the authoritative implementation sequence.
+>
+> Use `docs/BLTZ_BUILD_ORDER.md` for current phase status, numbering, and priority. Use `docs/media/MEDIA-GRAPH-ROADMAP.md` for Media Graph architecture.
+>
+> Phase numbers in this document do not match the live sequence. In particular, this file’s Phase 5 and Phase 6 describe Digital Intelligence work. The authoritative Phase 5 is **BLTZ Media Graph** and Phase 6 is **Media Rights, Attribution & Clearance Engine**. The Current Priority section below is frozen as of this historical plan.
+
 ## Purpose
 
 This file defines the required implementation order, parallel-agent operating model, integration sequence, and release gates for BLTZ.

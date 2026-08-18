@@ -2,7 +2,9 @@
 
 ## Purpose
 
-This file defines the required implementation order for BLTZ. Codex must follow this sequence unless a task explicitly overrides it. Do not begin a later phase until the current phase meets its acceptance criteria or blockers are documented.
+This file is the **authoritative implementation sequence** for BLTZ. Codex must follow this sequence unless a task explicitly overrides it. Do not begin a later phase until the current phase meets its acceptance criteria or blockers are documented.
+
+`docs/BLTZ_MASTER_BUILD_ORDER_UPDATED.md` is a historical planning artifact. Do not use its phase numbers or Current Priority section for new work. Media Graph architecture decisions live in `docs/media/MEDIA-GRAPH-ROADMAP.md`.
 
 ## Phase 0 — Repository Audit and Stable Baseline
 
@@ -45,12 +47,42 @@ Deliver `docs/player-locker-gap-analysis.md` and classify each feature as:
 
 Exit criteria: the public Locker loads real data, works on desktop and mobile, renders eligible media, protects private data, includes required states, and passes type checking and production build validation.
 
+Status: **Completed August 18, 2026.** The public Locker loads real data, works on desktop and mobile, renders eligible media, and protects private data. Remaining Locker items in `docs/player-locker-gap-analysis.md` are explicitly deferred and are not Phase 2 blockers.
+
+## Phase 1.5 — Media Graph Architecture Preparation
+
+Documentation-only architecture freeze. Do not add migrations, tables, application routes, UI, packages, storage buckets, provider integrations, or product features.
+
+- Record canonical identifiers and naming decisions.
+- Document current media, video, locker, team, school, and authorization conflicts.
+- Define future Media Graph boundaries without designing Phase 5 tables.
+- Separate legacy `media`/`videos` models from the future graph.
+- Separate legacy license eligibility fields from the future rights engine.
+- Require a centralized permission resolver for later media work.
+- Deliver `docs/media/MEDIA-GRAPH-ROADMAP.md`.
+
+Exit criteria:
+
+- No schema or application code changed.
+- Canonical IDs and naming decisions are explicit.
+- Legacy media conflicts are documented.
+- Phase 2 can proceed without designing Phase 5 tables.
+- No provider-specific dependency is introduced.
+- This file is the unambiguous authoritative build-order document.
+
+Status: **Completed August 18, 2026.** Architecture decisions are recorded in `docs/media/MEDIA-GRAPH-ROADMAP.md` and the Media Graph guardrails in `AGENTS.md`.
+
 ## Phase 2 — Shared Platform Foundation
 
-- Users and profiles
+Follow `docs/media/MEDIA-GRAPH-ROADMAP.md`. Do not design Phase 5 Media Graph tables.
+
+- Users and profiles (`auth.users` identity; `profiles` profile data; do not authorize from `profiles.role`)
 - Organizations and organization memberships
-- Teams and seasons
-- Athletes and canonical Locker relationships
+- Schools remain directory entities; organizations may reference a school
+- Existing teams retain their UUIDs and gain organization context
+- Seasons, `sports_events`, and normalized athlete-team-season/roster relationships
+- Canonical athlete identifier remains `public.players.id`; do not create a second `athletes` table
+- `player_lockers` remain 1:1 presentation/configuration and do not own media
 - Organization roles and platform roles
 - Protected route layouts
 - Organization switcher
@@ -77,23 +109,30 @@ Exit criteria: the public Locker loads real data, works on desktop and mobile, r
 - Duplicate warnings
 - Locker preview
 
-## Phase 5 — Media Library and Athlete Associations
+## Phase 5 — BLTZ Media Graph
 
-- Media library and media detail
+Follow `docs/media/MEDIA-GRAPH-ROADMAP.md`. Do not extend legacy `media` or `videos` tables into this graph.
+
+- Canonical media-asset identity, storage locators, and derivatives
+- Media library and media detail against the new graph
 - Upload or authorized URL workflow
 - Media metadata and types
 - Many-to-many athlete-media relationships
-- Event, team, and season relationships
+- Association to Phase 2 organization, team, season, and event records
 - Publication status and activity history
+- Provider adapters for external media sources
 
-## Phase 6 — Rights and Approval Workflows
+## Phase 6 — Media Rights, Attribution & Clearance Engine
+
+Follow `docs/media/MEDIA-GRAPH-ROADMAP.md`. Do not treat legacy `media.license_*` fields as this engine.
 
 - Rights records and statuses
-- Usage restrictions and expiration dates
+- Attribution of rights holders and stakeholders
+- Clearance, usage restrictions, and expiration dates
 - Supporting documents
 - Athlete, organization, and rights approvals
 - Approval responses
-- Publication-blocking rules
+- Publication-blocking rules enforced through `resolveMediaPermissions(asset, usageContext)`
 - Audit history
 
 ## Phase 7 — Locker Publishing Workflow
@@ -192,6 +231,6 @@ For every task:
 
 ## Current Priority
 
-`Phase 1 — Player Locker Gap Analysis and Completion`.
+`Phase 2 — Shared Platform Foundation`.
 
-Do not begin the CRM until critical Locker gaps are completed or explicitly deferred.
+Phase 1 is complete, with remaining Locker items explicitly deferred. Phase 1.5 is complete. Do not design Phase 5 Media Graph tables during Phase 2. Do not begin the CRM shell until the shared identity, organization, membership, team, season, and event foundation exists.
