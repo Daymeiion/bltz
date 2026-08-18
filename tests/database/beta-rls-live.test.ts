@@ -38,7 +38,10 @@ function serviceHeaders(options?: { browserOrigin?: boolean }): Record<string, s
   return {
     apikey: key,
     ...(!key.startsWith("sb_secret_") ? { authorization: `Bearer ${key}` } : {}),
-    ...(options?.browserOrigin ? { origin: "http://localhost:3000" } : {}),
+    ...(options?.browserOrigin ? {
+      origin: "http://localhost:3000",
+      "user-agent": "Mozilla/5.0 Chrome/127.0.0.0 Safari/537.36",
+    } : {}),
   };
 }
 

@@ -1,4 +1,13 @@
-import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -6,6 +15,7 @@ import { spawnSync } from "node:child_process";
 const SUPABASE_CLI_VERSION = "2.114.0";
 const sourceRoot = resolve("supabase");
 const isolatedRoot = mkdtempSync(join(tmpdir(), "bltz-supabase-ci-"));
+const isolatedSupabase = join(isolatedRoot, "supabase");
 const isolatedProjectId = `bltz-foundation-${process.pid}`;
 const npx = process.platform === "win32" ? "npx.cmd" : "npx";
 const excludedServices = [
@@ -46,17 +56,42 @@ if (!readFileSync(join(sourceRoot, "config.toml"), "utf8").includes('[db.migrati
   throw new Error("supabase/config.toml is missing the migration configuration");
 }
 
-cpSync(join(sourceRoot, "config.toml"), join(isolatedRoot, "config.toml"));
-cpSync(join(sourceRoot, "migrations"), join(isolatedRoot, "migrations"), {
+mkdirSync(isolatedSupabase);
+cpSync(join(sourceRoot, "config.toml"), join(isolatedSupabase, "config.toml"));
+cpSync(join(sourceRoot, "migrations"), join(isolatedSupabase, "migrations"), {
   recursive: true,
 });
 
-const configPath = join(isolatedRoot, "config.toml");
+const configPath = join(isolatedSupabase, "config.toml");
 const isolatedConfig = readFileSync(configPath, "utf8")
   .replace(/^project_id\s*=.*$/m, `project_id = "${isolatedProjectId}"`)
   .replace(/(\[db\][\s\S]*?\nport\s*=\s*)\d+/, `$1${25000 + (process.pid % 1000)}`)
   .replace(/(shadow_port\s*=\s*)\d+/, `$1${26000 + (process.pid % 1000)}`);
 writeFileSync(configPath, isolatedConfig, "utf8");
+
+function verifyIsolatedLayout() {
+  const migrationPath = join(isolatedSupabase, "migrations");
+  if (!existsSync(configPath) || !existsSync(migrationPath)) {
+    throw new Error("isolated Supabase workspace is missing config.toml or migrations");
+  }
+  const sourceMigrations = readdirSync(join(sourceRoot, "migrations"))
+    .filter((name) => name.endsWith(".sql"))
+    .sort();
+  const isolatedMigrations = readdirSync(migrationPath)
+    .filter((name) => name.endsWith(".sql"))
+    .sort();
+  if (JSON.stringify(sourceMigrations) !== JSON.stringify(isolatedMigrations)) {
+    throw new Error("isolated migration copy does not match canonical migrations");
+  }
+}
+
+verifyIsolatedLayout();
+
+if (process.argv.includes("--verify-layout")) {
+  rmSync(isolatedRoot, { recursive: true, force: true });
+  console.log("Isolated Supabase workspace layout verified");
+  process.exit(0);
+}
 
 let startAttempted = false;
 let failure;

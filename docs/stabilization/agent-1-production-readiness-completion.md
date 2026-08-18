@@ -13,7 +13,7 @@ The staging OpenAPI schema was verified through an explicitly non-browser `sb_se
 ## 2. Files changed
 
 - `lib/supabase/service.ts` — adds the `server-only` boundary and documents current secret-key support.
-- `scripts/validate-supabase-foundation.mjs` — pinned, isolated local reset and lint entry for CI.
+- `scripts/validate-supabase-foundation.mjs` — pinned, isolated local reset and lint entry for CI, with a no-Docker layout verification mode.
 - `tests/supabase/service-client.test.ts` — verifies protected `sb_secret_` construction and missing-secret failure.
 - `tests/database/beta-rls-live.test.ts` — explicit anon, athlete, non-admin, admin, service, and browser-rejection readiness.
 - `tests/database/beta-foundation-migration.test.ts` — validates the canonical active migration directory.
@@ -70,7 +70,8 @@ The broad grants present in the production baseline remain subject to the privil
 ## 8. Tests run
 
 - `node --check scripts/validate-supabase-foundation.mjs` — PASS after the Windows launcher correction.
-- `npm test -- tests/database/migration-reproducibility.test.ts tests/database/beta-foundation-migration.test.ts tests/database/beta-rls-live.test.ts tests/supabase/service-client.test.ts` — PASS for 17 tests; 12 live RLS tests explicitly SKIPPED because role JWT fixtures were not supplied.
+- `node scripts/validate-supabase-foundation.mjs --verify-layout` — PASS; canonical config and migrations were copied to the CLI-required `<temporary-workspace>/supabase/` layout without Docker.
+- `npm test -- tests/database/migration-reproducibility.test.ts tests/database/beta-foundation-migration.test.ts tests/database/beta-rls-live.test.ts tests/supabase/service-client.test.ts` — PASS for 18 tests; 12 live RLS tests explicitly SKIPPED because role JWT fixtures were not supplied.
 - `npx tsc --noEmit` — PASS, zero diagnostics.
 - `npx eslint lib/supabase/service.ts tests/supabase/service-client.test.ts tests/database/beta-rls-live.test.ts tests/database/beta-foundation-migration.test.ts tests/database/migration-reproducibility.test.ts scripts/validate-supabase-foundation.mjs --no-error-on-unmatched-pattern` — PASS, zero output.
 - `npx supabase gen types typescript --project-id <staging> --schema public` — BLOCKED twice by `LegacyGenTypesNetworkError: TransportError`; no generated file was accepted or committed.
@@ -84,7 +85,7 @@ The broad grants present in the production baseline remain subject to the privil
 - Compared staging OpenAPI columns for `analytics_events`, `analytics_rate_limit_buckets`, `beta_participants`, `athlete_feedback`, `athlete_insights`, and `athlete_baseline_snapshots` with `types/database.ts`.
 - Confirmed `consume_analytics_rate_limit` and `get_beta_intelligence_dashboard` are present in staging OpenAPI.
 - Confirmed the privileged client uses `@supabase/supabase-js`, never the browser SSR factory, disables session persistence/refresh, and is now guarded by `server-only`.
-- Confirmed the isolated validator copies only canonical config/migrations to a unique temporary workspace, changes the local project identity and database ports, never uses `--linked`, disables seed data during reset, stops without backup, and removes the temporary directory.
+- Confirmed the isolated validator copies only canonical config/migrations to `<temporary-workspace>/supabase/`, changes the local project identity and database ports, never uses `--linked`, disables seed data during reset, stops without backup, and removes the temporary directory. Its no-Docker regression test executes `--verify-layout` and checks the copied migration set.
 
 ## 10. Known limitations
 

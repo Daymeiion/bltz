@@ -1,4 +1,5 @@
 import { readFileSync, readdirSync } from "node:fs";
+import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -46,10 +47,23 @@ describe("migration reproducibility contracts", () => {
 
     expect(validator).toContain('const SUPABASE_CLI_VERSION = "2.114.0"');
     expect(validator).toContain('mkdtempSync(join(tmpdir(), "bltz-supabase-ci-")');
+    expect(validator).toContain('const isolatedSupabase = join(isolatedRoot, "supabase")');
+    expect(validator).toContain('join(isolatedSupabase, "config.toml")');
     expect(validator).toContain('["db", "reset", "--local", "--no-seed"]');
     expect(validator).toContain('"lint"');
     expect(validator).toContain('"--fail-on"');
     expect(validator).not.toContain('"--linked"');
     expect(validator).not.toContain('"--project-ref"');
+  });
+
+  it("materializes the CLI project under the isolated supabase directory without Docker", () => {
+    const result = spawnSync(
+      process.execPath,
+      [resolve("scripts/validate-supabase-foundation.mjs"), "--verify-layout"],
+      { cwd: resolve("."), encoding: "utf8" },
+    );
+
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.stdout).toContain("Isolated Supabase workspace layout verified");
   });
 });
