@@ -65,6 +65,7 @@ export default function PhotoRoomView({ data }: { data: PhotoRoomData }) {
       eventName: "photo_gallery_opened",
       source: "public_locker",
       athleteId: data.athleteId,
+      athleteSlug: data.slug,
       properties: { photo_count: data.images.length },
       dedupeKey: `photo_gallery_opened:${data.slug}:${window.location.pathname}`,
     });
@@ -184,6 +185,7 @@ export default function PhotoRoomView({ data }: { data: PhotoRoomData }) {
       eventName: "media_viewed",
       source: "public_locker",
       athleteId: data.athleteId,
+      athleteSlug: data.slug,
       properties: { media_id: id, media_type: "photo", section: activeFilter },
       dedupeKey: `media_viewed:photo:${id}`,
     });

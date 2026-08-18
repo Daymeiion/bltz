@@ -27,7 +27,7 @@ export default async function AdminLoginPage({
   const message = error ? errorMessages[error] ?? "Administrator sign in failed." : null;
 
   return (
-    <main className="flex min-h-[calc(100svh-3.5rem)] items-center justify-center bg-[#05070b] px-4 py-10 text-white">
+    <main className="flex min-h-svh items-center justify-center bg-[#05070b] px-4 py-10 text-white">
       <div className="w-full max-w-md">
         <div className="mb-6 flex items-center justify-between">
           <Link href="/" aria-label="Back to BLTZ home">

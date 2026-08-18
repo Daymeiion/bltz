@@ -1,3 +1,5 @@
+// @vitest-environment node
+
 import { beforeAll, describe, expect, it } from "vitest";
 
 const enabled = process.env.RUN_LIVE_RLS_TESTS === "1";

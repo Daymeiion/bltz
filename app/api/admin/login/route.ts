@@ -49,7 +49,16 @@ export async function POST(request: NextRequest) {
   );
 
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error || !data.user) return adminLoginRedirect(request, "invalid_credentials");
+  if (error || !data.user) {
+    console.warn("admin_login_failed", {
+      reason: error?.code ?? "missing_user",
+      status: error?.status ?? null,
+      message: error?.message ?? null,
+      emailLength: email.length,
+      passwordLength: password.length,
+    });
+    return adminLoginRedirect(request, "invalid_credentials");
+  }
 
   const { data: profile, error: profileError } = await supabase
     .from("profiles")

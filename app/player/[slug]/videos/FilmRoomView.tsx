@@ -186,6 +186,7 @@ export default function FilmRoomView({ data }: { data: FilmRoomData }) {
       eventName: "film_room_opened",
       source: "public_locker",
       athleteId: data.athleteId,
+      athleteSlug: data.slug,
       properties: { video_count: data.videos.length },
       dedupeKey: `film_room_opened:${data.slug}:${window.location.pathname}`,
     });
@@ -334,6 +335,7 @@ export default function FilmRoomView({ data }: { data: FilmRoomData }) {
       eventName: "media_viewed",
       source: "public_locker",
       athleteId: data.athleteId,
+      athleteSlug: data.slug,
       properties: { media_id: id, media_type: "video", section: "film_room" },
       dedupeKey: `media_viewed:video:${id}`,
     });

@@ -45,6 +45,10 @@ Design and product debt deferred from /plan-design-review on 2026-04-24.
 
 ## Engineering
 
+### Agent 4 QA — 2026-08-18 (`codex/stabilization-2026-08-16`)
+- **Done:** Public Locker views pass `athleteSlug`. `/auth/*` hides the global navbar. Staging live `/admin/beta` and live RLS (12/12, leftover 0) passed. Cycle is READY TO MERGE; production promotion is a separate Agent 1 approval.
+
+
 ### OG card template
 - **Status:** SCOPED FOR MVP (week 1) — moved out of TODOs into design doc.
 

@@ -231,6 +231,7 @@ export default function LockerView({
       eventName: "locker_viewed",
       source: "public_locker",
       athleteId: data.athleteId,
+      athleteSlug: data.slug,
       properties: { source, viewer_mode: viewerMode },
       dedupeKey: `locker_viewed:${data.slug}:${viewerMode}:${window.location.pathname}`,
     });

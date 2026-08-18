@@ -156,6 +156,7 @@ export default function VideoDetailView({ data }: { data: VideoDetailData }) {
       eventName: "media_viewed",
       source: "public_locker",
       athleteId: data.playerId,
+      athleteSlug: data.slug,
       properties: { media_id: data.video.id, media_type: "video", section: "video_detail" },
       dedupeKey: `media_viewed:video:${data.video.id}`,
     });
@@ -170,12 +171,14 @@ export default function VideoDetailView({ data }: { data: VideoDetailData }) {
         eventName: "share_link_copied",
         source: "public_locker",
         athleteId: data.playerId,
+        athleteSlug: data.slug,
         properties: { surface: "locker_share_modal" },
       });
       void trackProductEvent({
         eventName: "locker_shared",
         source: "public_locker",
         athleteId: data.playerId,
+        athleteSlug: data.slug,
         properties: { mechanism: "clipboard" },
       });
     } catch {

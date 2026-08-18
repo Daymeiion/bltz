@@ -5,9 +5,9 @@ import { describe, expect, it } from "vitest";
 const page = readFileSync(resolve("app/auth/admin/page.tsx"), "utf8");
 
 describe("admin login responsive shell", () => {
-  it("subtracts the persistent 56px navigation from the viewport height", () => {
-    expect(page).toContain("min-h-[calc(100svh-3.5rem)]");
-    expect(page).not.toContain('className="flex min-h-svh items-center');
+  it("fills the viewport after auth routes hide the global navbar", () => {
+    expect(page).toContain("min-h-svh");
+    expect(page).not.toContain("min-h-[calc(100svh-3.5rem)]");
   });
 
   it("keeps description text clear of the CardHeader border", () => {
