@@ -106,6 +106,15 @@ Exit criteria:
 - Add protected route layouts without building CRM screens.
 - Phase 3 will add the visible organization switcher and CRM navigation.
 
+Implementation status: **Implemented locally on 2026-08-18.** The server-only
+organization resolver derives the user from the authenticated Supabase session,
+requires an active organization membership or the database-backed
+`is_internal_admin()` predicate, restricts CRM context to approved/restricted
+organizations, and never accepts a browser-supplied user or role. The protected
+`/organization/[organizationId]` layout fails closed before any Phase 3 screen
+renders. Visible navigation, organization switching, and dashboard content
+remain Phase 3 work.
+
 Exit criteria:
 
 - Protected actions verify membership and platform roles server-side.
