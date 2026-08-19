@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { getUserStats } from "@/lib/queries/analytics";
-import { getCurrentUserProfile } from "@/lib/rbac";
+import { getCurrentAuthorizationProfile } from "@/lib/rbac";
 
 export async function GET() {
   try {
-    const profile = await getCurrentUserProfile();
+    const profile = await getCurrentAuthorizationProfile();
 
     if (!profile || profile.role !== "admin") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });

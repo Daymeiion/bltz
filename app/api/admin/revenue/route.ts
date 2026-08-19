@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getCurrentUserProfile } from "@/lib/rbac";
+import { getCurrentAuthorizationProfile } from "@/lib/rbac";
 import { getAdminRevenueSummary, getPlatformTotalRevenue } from "@/lib/queries/revenue";
 import { createClient } from "@/lib/supabase/server";
 
@@ -9,7 +9,7 @@ import { createClient } from "@/lib/supabase/server";
  */
 export async function GET(request: Request) {
   try {
-    const profile = await getCurrentUserProfile();
+    const profile = await getCurrentAuthorizationProfile();
     
     // Check if user is admin
     if (!profile || profile.role !== 'admin') {
@@ -92,7 +92,7 @@ export async function GET(request: Request) {
  */
 export async function POST(request: Request) {
   try {
-    const profile = await getCurrentUserProfile();
+    const profile = await getCurrentAuthorizationProfile();
     
     if (!profile || profile.role !== 'admin') {
       return NextResponse.json({ error: "Admin access required" }, { status: 403 });

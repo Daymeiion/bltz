@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUserProfile } from "@/lib/rbac";
+import { getCurrentAuthorizationProfile } from "@/lib/rbac";
 import { createClient } from "@/lib/supabase/server";
 
 export async function PATCH(
@@ -7,7 +7,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const profile = await getCurrentUserProfile();
+    const profile = await getCurrentAuthorizationProfile();
     if (!profile || profile.role !== "admin") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
@@ -44,7 +44,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const profile = await getCurrentUserProfile();
+    const profile = await getCurrentAuthorizationProfile();
     if (!profile || profile.role !== "admin") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }

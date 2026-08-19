@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 
 const getCurrentUserProfile = vi.fn();
+const getCurrentAuthorizationProfile = vi.fn();
+const isInternalAdmin = vi.fn();
 const createServiceClient = vi.fn();
 const createClient = vi.fn();
 const createVideo = vi.fn();
@@ -10,7 +12,11 @@ const updateVideo = vi.fn();
 const deleteVideo = vi.fn();
 const calculateVideoRevenue = vi.fn();
 
-vi.mock('@/lib/rbac', () => ({ getCurrentUserProfile }));
+vi.mock('@/lib/rbac', () => ({
+  getCurrentUserProfile,
+  getCurrentAuthorizationProfile,
+  isInternalAdmin,
+}));
 vi.mock('@/lib/supabase/service', () => ({ createServiceClient }));
 vi.mock('@/lib/supabase/server', () => ({ createClient }));
 vi.mock('@/lib/queries/videos', () => ({
@@ -46,10 +52,12 @@ describe('Phase 0 API authorization', () => {
   beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
+    getCurrentAuthorizationProfile.mockResolvedValue(null);
+    isInternalAdmin.mockResolvedValue(false);
   });
 
   it('rejects unauthenticated pending-award reads before creating a service client', async () => {
-    getCurrentUserProfile.mockResolvedValue(null);
+    getCurrentAuthorizationProfile.mockResolvedValue(null);
     const { GET } = await import('@/app/api/admin/awards/pending/route');
 
     const response = await GET();
@@ -59,7 +67,7 @@ describe('Phase 0 API authorization', () => {
   });
 
   it('rejects non-admin award mutations before creating a service client', async () => {
-    getCurrentUserProfile.mockResolvedValue(playerProfile);
+    getCurrentAuthorizationProfile.mockResolvedValue({ ...playerProfile, role: "fan" });
     const { PATCH } = await import('@/app/api/admin/awards/[id]/route');
 
     const response = await PATCH(
@@ -126,7 +134,7 @@ describe('Phase 0 API authorization', () => {
   });
 
   it('limits revenue recalculation to admins', async () => {
-    getCurrentUserProfile.mockResolvedValue(playerProfile);
+    getCurrentAuthorizationProfile.mockResolvedValue({ ...playerProfile, role: "fan" });
     const { POST } = await import('@/app/api/revenue/calculate/route');
 
     const response = await POST(

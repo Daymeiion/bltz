@@ -1,7 +1,7 @@
 import "server-only";
 
 import type { BetaIntelligenceReadModel } from "./contracts";
-import { requireRole } from "@/lib/rbac";
+import { requireInternalAdmin } from "@/lib/rbac";
 import { createServiceClient } from "@/lib/supabase/service";
 
 const activityKeys = [
@@ -27,7 +27,7 @@ export interface BetaIntelligenceQueryFilters {
 export async function getBetaIntelligenceDashboard(
   filters: BetaIntelligenceQueryFilters = {},
 ): Promise<BetaIntelligenceReadModel> {
-  await requireRole("admin");
+  await requireInternalAdmin();
   const { data, error } = await createServiceClient().rpc("get_beta_intelligence_dashboard", {
     p_since: filters.since ?? null,
     p_cohort: filters.cohort ?? null,

@@ -128,6 +128,16 @@ Exit criteria:
 - Verify anonymous, athlete A, athlete B, authenticated non-admin, organization roles, and platform-admin scenarios.
 - Retain `profiles.role` only for non-privileged legacy profile compatibility if callers still need it; it must have no admin authorization fallback after the reviewed `super_admin` backfill.
 
+Implementation status: **Server authorization cutover implemented locally on
+2026-08-18.** Admin layouts, Admin APIs, the dedicated Admin login, Beta
+Intelligence service-role queries, claim-token minting, revenue recalculation,
+message attachment override access, and cross-owner video management now derive
+platform administration through `is_internal_admin()`. The shared profile helper
+maps a legacy profile-only `admin` value to non-admin compatibility behavior and
+maps an active assignment to the existing `admin` presentation alias. Remaining
+non-privileged `player`, `fan`, and `publisher` compatibility uses require a later
+product-role migration and do not grant platform administration.
+
 Exit criteria:
 
 - No protected decision depends only on `profiles.role` or mutable browser metadata.

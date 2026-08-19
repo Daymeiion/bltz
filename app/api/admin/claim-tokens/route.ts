@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { randomBytes } from "node:crypto";
 import { createServiceClient } from "@/lib/supabase/service";
-import { hasRole } from "@/lib/rbac";
+import { isInternalAdmin } from "@/lib/rbac";
 
 export const runtime = "nodejs";
 
@@ -16,7 +16,7 @@ const Body = z.object({
  * Admins-only. The athlete redeems it by visiting `/onboarding/claim/[token]`.
  */
 export async function POST(req: Request) {
-  if (!(await hasRole(["admin", "publisher"]))) {
+  if (!(await isInternalAdmin())) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 

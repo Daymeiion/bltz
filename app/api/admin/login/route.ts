@@ -60,14 +60,12 @@ export async function POST(request: NextRequest) {
     return adminLoginRedirect(request, "invalid_credentials");
   }
 
-  const { data: profile, error: profileError } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", data.user.id)
-    .maybeSingle();
+  const { data: isAdmin, error: authorizationError } = await supabase.rpc(
+    "is_internal_admin",
+  );
 
-  if (profileError) return adminLoginRedirect(request, "profile_unavailable");
-  if (profile?.role !== "admin") return adminLoginRedirect(request, "not_admin");
+  if (authorizationError) return adminLoginRedirect(request, "authorization_unavailable");
+  if (isAdmin !== true) return adminLoginRedirect(request, "not_admin");
 
   const response = NextResponse.redirect(new URL("/admin/beta", request.url), 303);
   cookieResponse.cookies.getAll().forEach((cookie) => response.cookies.set(cookie));
