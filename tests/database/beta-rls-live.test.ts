@@ -107,16 +107,20 @@ describe.skipIf(!enabled)("live Beta Intelligence RLS roles", () => {
     for (const name of jwtVariables) required(name);
   });
 
+  it("rejects anonymous raw-analytics reads at the table privilege boundary", async () => {
+    const response = await rest("analytics_events?select=id&limit=1");
+    expect(response.status).toBe(401);
+  });
+
   it.each([
-    ["anonymous", undefined],
     ["athlete A", "RLS_TEST_ATHLETE_A_JWT"],
     ["athlete B", "RLS_TEST_ATHLETE_B_JWT"],
     ["authenticated non-admin", "RLS_TEST_NON_ADMIN_JWT"],
     ["legacy profile admin without assignment", "RLS_TEST_LEGACY_ADMIN_JWT"],
-  ] as const)("hides raw analytics from %s", async (_role, jwtVariable) => {
+  ] as const)("hides raw analytics from authenticated %s", async (_role, jwtVariable) => {
     const response = await rest(
       "analytics_events?select=id&limit=1",
-      jwtVariable ? required(jwtVariable) : undefined,
+      required(jwtVariable),
     );
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual([]);
