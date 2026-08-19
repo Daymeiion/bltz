@@ -214,6 +214,43 @@ Review at minimum:
 
 The checked-in file contains application-facing aliases and may not be structurally identical to raw CLI output. Reconcile differences deliberately, run typecheck/tests/build again, and commit any accepted type correction as a new immutable candidate. If generation fails twice for the same transport/TLS condition, stop repeating it, record the blocker, and do not claim authoritative types are current.
 
+### 2026-08-18 staging type evidence
+
+Authoritative generation completed after migrations `20260818000000` through
+`20260818000003` were applied and the target-bound post-deployment check reported
+project reference `yevihzsgqagvuulymqum`. The raw CLI output is checked in as
+`types/database.generated.ts`; `types/database.ts` re-exports its schema types
+and retains application-facing domain aliases. Do not hand-edit the generated
+snapshot.
+
+The reviewed snapshot includes all Phase 2 authorization and career tables,
+nullable `teams.organization_id`, the composite tenant foreign-key relationships,
+and the deployed `is_internal_admin`, `consume_analytics_rate_limit`, and
+`get_beta_intelligence_dashboard` function signatures.
+
+The shared legacy Supabase client factories remain unparameterized for this
+release. A trial global `Database` generic correctly exposed pre-existing drift:
+legacy routes reference `moderations`, `daily_quotes`, and
+`get_video_revenue_stats`, which are absent from the approved staging schema,
+and several revenue/media consumers assume nullability or numeric shapes that
+do not match the generated contract. Resolve those callers incrementally before
+enabling the generated type across every shared client; do not weaken or
+hand-augment the authoritative snapshot to silence the errors.
+
+```text
+types/database.generated.ts SHA-256
+EF1C5EAB3343AA9191956B60DC284A1860FE46F0CC38E02C2E6CCD3F61ACAE9C
+```
+
+For the next schema change, regenerate from the independently verified linked
+project and review the snapshot before replacing it:
+
+```powershell
+npx supabase@2.114.0 gen types typescript --linked --schema public | Set-Content -Encoding utf8 types/database.generated.ts
+npx tsc --noEmit
+npm test -- tests/database/generated-types-contract.test.ts
+```
+
 ## 6. Staging smoke tests
 
 Run after migration, admin verification, and type review:
@@ -379,7 +416,7 @@ Phase 2 is deployment-ready only when all boxes are true:
 - [ ] Staging dry-run and applied migration order exactly match `00000`–`00003`.
 - [ ] Admin backfill and removal of the legacy authorization fallback are verified.
 - [ ] All staging RLS identities execute with no skipped role.
-- [ ] Generated types are reviewed and reconciled.
+- [x] Generated types are reviewed and reconciled (staging snapshot, 2026-08-18).
 - [ ] Staging smoke tests and existing Locker/Beta/onboarding regressions pass.
 - [ ] Team mapping remains nullable and no unapproved production mapping is applied.
 - [ ] Production schema/history reconciliation, backup/PITR, operators, and change window are approved.
