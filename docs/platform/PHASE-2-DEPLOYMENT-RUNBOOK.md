@@ -168,8 +168,7 @@ For the existing analytics/Beta regression harness, keep these values only in th
 NEXT_PUBLIC_SUPABASE_URL
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY
 SUPABASE_SERVICE_ROLE_KEY
-RLS_TEST_PLATFORM_ADMIN_EMAIL
-RLS_TEST_PLATFORM_ADMIN_PASSWORD
+PHASE2_EXPECTED_SUPER_ADMIN_USER_ID
 ```
 
 Then an approved operator may run:
@@ -178,7 +177,7 @@ Then an approved operator may run:
 node scripts/verify-staging-beta-rls.mjs
 ```
 
-That script validates the approved staging project reference, creates disposable athlete/non-admin fixtures, signs in the pre-assigned platform admin, runs `tests/database/beta-rls-live.test.ts`, and attempts cleanup. It is a regression proof for the existing Beta data boundary, not a substitute for the Phase 2 tenant-role matrix.
+That script validates the approved staging project reference, creates disposable athlete/non-admin fixtures, generates and consumes a one-time magic-link session for the pre-assigned platform-admin UUID without sending email or changing its password, runs `tests/database/beta-rls-live.test.ts`, revokes only that test session, and attempts fixture cleanup. It never logs the generated token. It is a regression proof for the existing Beta data boundary, not a substitute for the Phase 2 tenant-role matrix.
 
 The staging harness also checks table-level anonymous denial, empty results for unassigned users, profile-only-admin denial, the assigned-super-admin predicate, and successful assigned-super-admin queries for the Phase 2 career tables. Empty career tables cannot prove row-level visibility or isolation. The harness does not create disposable organizations because organization hard deletion is intentionally forbidden. Until approved persistent staging organizations, memberships, identities, and protected canary rows exist for organization A, organization B, owner, `organization_admin`, suspended-member, and cross-tenant checks, the full remote tenant-role matrix remains a deployment blocker rather than a skipped success.
 

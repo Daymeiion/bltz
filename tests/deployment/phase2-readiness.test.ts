@@ -41,13 +41,18 @@ describe("Phase 2 deployment readiness", () => {
     expect(script).toContain("20260818000002_phase2_legacy_admin_super_admin_transition");
   });
 
-  it("scrubs sign-in credentials before child tests and fails on cleanup errors", () => {
-    const credentialScrub = stagingVerifier.indexOf(
-      "delete process.env.RLS_TEST_PLATFORM_ADMIN_PASSWORD",
-    );
+  it("uses a one-time admin session without a password and fails on cleanup errors", () => {
+    const generatedSession = stagingVerifier.indexOf("admin.auth.admin.generateLink");
     const testSpawn = stagingVerifier.indexOf("spawnSync(process.execPath");
-    expect(credentialScrub).toBeGreaterThan(-1);
-    expect(testSpawn).toBeGreaterThan(credentialScrub);
+    expect(generatedSession).toBeGreaterThan(-1);
+    expect(testSpawn).toBeGreaterThan(generatedSession);
+    expect(stagingVerifier).toContain("browser.auth.verifyOtp");
+    expect(stagingVerifier).toContain('admin.auth.admin.signOut(platformAdminJwt, "local")');
+    expect(stagingVerifier).toContain("PHASE2_EXPECTED_SUPER_ADMIN_USER_ID");
+    expect(stagingVerifier).not.toContain("RLS_TEST_PLATFORM_ADMIN_PASSWORD");
+    expect(stagingVerifier).not.toContain(
+      "process.env.RLS_TEST_PLATFORM_ADMIN_EMAIL",
+    );
     expect(stagingVerifier).toContain("cleanupErrors");
     expect(stagingVerifier).toContain("evidence.cleanupErrors.length !== 0");
     expect(stagingVerifier).toContain("profile cleanup verification");

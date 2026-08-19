@@ -21,8 +21,7 @@ const required = [
   "NEXT_PUBLIC_SUPABASE_URL",
   "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY",
   "SUPABASE_SERVICE_ROLE_KEY",
-  "RLS_TEST_PLATFORM_ADMIN_EMAIL",
-  "RLS_TEST_PLATFORM_ADMIN_PASSWORD",
+  "PHASE2_EXPECTED_SUPER_ADMIN_USER_ID",
 ];
 
 for (const name of Object.keys(process.env)) {
@@ -66,9 +65,16 @@ const fixtures = [
 ];
 
 const created = [];
+let platformAdminJwt;
 
 async function cleanup() {
   const errors = [];
+  if (platformAdminJwt) {
+    const sessionRevoke = await admin.auth.admin.signOut(platformAdminJwt, "local");
+    if (sessionRevoke.error) {
+      errors.push(`platformAdmin session revoke: ${sessionRevoke.error.message}`);
+    }
+  }
   for (const row of created) {
     const profileDelete = await admin.from("profiles").delete().eq("id", row.id);
     if (profileDelete.error) {
@@ -135,16 +141,42 @@ async function createFixture(spec) {
 }
 
 async function signInAssignedPlatformAdmin() {
-  const email = process.env.RLS_TEST_PLATFORM_ADMIN_EMAIL;
-  const password = process.env.RLS_TEST_PLATFORM_ADMIN_PASSWORD;
-  const session = await browser.auth.signInWithPassword({ email, password });
-  const user = session.data.user;
-  const token = session.data.session?.access_token;
-  if (session.error || !user || !token) {
+  const expectedUserId = process.env.PHASE2_EXPECTED_SUPER_ADMIN_USER_ID;
+  const userLookup = await admin.auth.admin.getUserById(expectedUserId);
+  const expectedUser = userLookup.data.user;
+  if (userLookup.error || !expectedUser?.email) {
     throw new Error(
-      `Failed to sign in assigned platform admin: ${session.error?.message ?? "missing session"}`,
+      `Failed to load assigned platform admin: ${userLookup.error?.message ?? "missing email"}`,
     );
   }
+
+  const generatedLink = await admin.auth.admin.generateLink({
+    type: "magiclink",
+    email: expectedUser.email,
+  });
+  const tokenHash = generatedLink.data.properties?.hashed_token;
+  if (
+    generatedLink.error
+    || generatedLink.data.user?.id !== expectedUserId
+    || !tokenHash
+  ) {
+    throw new Error(
+      `Failed to generate assigned platform admin session: ${generatedLink.error?.message ?? "identity mismatch"}`,
+    );
+  }
+
+  const session = await browser.auth.verifyOtp({
+    token_hash: tokenHash,
+    type: "magiclink",
+  });
+  const user = session.data.user;
+  const token = session.data.session?.access_token;
+  if (session.error || user?.id !== expectedUserId || !token) {
+    throw new Error(
+      `Failed to verify assigned platform admin session: ${session.error?.message ?? "identity mismatch"}`,
+    );
+  }
+  platformAdminJwt = token;
 
   const assignment = await admin
     .from("platform_role_assignments")
@@ -159,8 +191,7 @@ async function signInAssignedPlatformAdmin() {
     );
   }
 
-  process.env.RLS_TEST_PLATFORM_ADMIN_JWT = token;
-  await browser.auth.signOut();
+  process.env.RLS_TEST_PLATFORM_ADMIN_JWT = platformAdminJwt;
   return {
     label: "platformAdmin",
     role: "super_admin",
@@ -176,8 +207,6 @@ try {
   identities = [];
   for (const spec of fixtures) identities.push(await createFixture(spec));
   identities.push(await signInAssignedPlatformAdmin());
-  delete process.env.RLS_TEST_PLATFORM_ADMIN_EMAIL;
-  delete process.env.RLS_TEST_PLATFORM_ADMIN_PASSWORD;
 
   process.env.RUN_LIVE_RLS_TESTS = "1";
   process.env.NODE_OPTIONS = [process.env.NODE_OPTIONS, "--use-system-ca"].filter(Boolean).join(" ");
