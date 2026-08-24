@@ -2,7 +2,7 @@
 
 **Branch:** `codex/crm-foundation-executive`  
 **Worktree:** `C:\Users\Administrator\bltz-worktrees\crm-foundation-executive`  
-**Start from:** `3163464949f5b0e4fb3e2afdf05c9a91d75adfdf` on `codex/crm-integration-executive`
+**Start from:** immutable tag `crm-executive-wave1-base` on `codex/crm-integration-executive`; verify its commit against the Coordinator launch handoff
 
 ## Required outcome
 
