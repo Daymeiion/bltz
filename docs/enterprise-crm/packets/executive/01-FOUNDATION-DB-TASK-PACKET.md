@@ -2,7 +2,7 @@
 
 **Branch:** `codex/crm-foundation-executive`  
 **Worktree:** `C:\Users\Administrator\bltz-worktrees\crm-foundation-executive`  
-**Start from:** the Coordinator-designated commit on `codex/crm-integration-executive`
+**Start from:** `3163464949f5b0e4fb3e2afdf05c9a91d75adfdf` on `codex/crm-integration-executive`
 
 ## Required outcome
 
@@ -76,4 +76,3 @@ Report:
 - exact test commands and pass/fail/skipped results;
 - screenshots as `not applicable` unless a diagnostic UI was explicitly authorized;
 - blockers, assumptions, gaps, and next-owner notes.
-

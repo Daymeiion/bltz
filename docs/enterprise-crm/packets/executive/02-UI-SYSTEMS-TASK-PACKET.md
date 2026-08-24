@@ -2,7 +2,7 @@
 
 **Branch:** `codex/crm-ui-system-executive`  
 **Worktree:** `C:\Users\Administrator\bltz-worktrees\crm-ui-system-executive`  
-**Start from:** the Coordinator-designated commit on `codex/crm-integration-executive`
+**Start from:** `3163464949f5b0e4fb3e2afdf05c9a91d75adfdf` on `codex/crm-integration-executive`
 
 ## Required outcome
 
@@ -74,4 +74,3 @@ Report:
 - exact test commands and pass/fail/skipped results;
 - screenshot paths with viewport, state, and theme;
 - blockers, assumptions, gaps, and precise Feature usage notes.
-

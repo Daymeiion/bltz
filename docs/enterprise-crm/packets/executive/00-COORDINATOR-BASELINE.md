@@ -23,6 +23,7 @@ The CRM design specification is the approved presentation authority for `/organi
 - The source worktree contains user-owned tracked and untracked changes. Agents must not use it as a shared implementation directory.
 - Coordinator integration branch: `codex/crm-integration-executive`
 - Integration worktree: `C:\Users\Administrator\bltz-worktrees\crm-integration-executive`
+- Authorized Wave 1 integration commit: `3163464949f5b0e4fb3e2afdf05c9a91d75adfdf`
 - Agent worktrees are siblings under `C:\Users\Administrator\bltz-worktrees\`; never nest them in the source worktree.
 
 ## Verified protected baseline
@@ -82,4 +83,3 @@ The Coordinator must record all of the following before creating the Feature wor
 - passing targeted tests and protected regression tests;
 - required UI screenshots and accessibility evidence;
 - no unresolved critical/high defect, authorization leak, shared-file collision, hidden TODO, or unapproved domain vocabulary.
-
