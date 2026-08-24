@@ -2,48 +2,70 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
-export type OrganizationThemeMode = "reference" | "light" | "dark" | "team";
+export type OrganizationThemeMode = "bltz" | "school";
 export type OrganizationThemeTone = "light" | "dark" | "team";
 
 type OrganizationThemeValue = {
   mode: OrganizationThemeMode;
   tone: OrganizationThemeTone;
   accent: string;
+  highlight: string;
   setMode: (mode: OrganizationThemeMode) => void;
   setReferenceTone: (tone: Exclude<OrganizationThemeTone, "team">) => void;
 };
 
+const BLTZ_ACCENT = "#2952ff";
+const SAFE_SCHOOL_ACCENT = "#d6a500";
+
 const fallback: OrganizationThemeValue = {
-  mode: "reference",
+  mode: "bltz",
   tone: "light",
-  accent: "#ffbb00",
+  accent: BLTZ_ACCENT,
+  highlight: SAFE_SCHOOL_ACCENT,
   setMode: () => undefined,
   setReferenceTone: () => undefined,
 };
 
 const OrganizationThemeContext = createContext<OrganizationThemeValue>(fallback);
 
-export function OrganizationThemeProvider({ children, initialTone }: { children: ReactNode; initialTone: "light" | "dark" }) {
-  const [mode, setModeState] = useState<OrganizationThemeMode>("reference");
+function safeColor(value: string | undefined, fallbackColor: string) {
+  return value && /^#[0-9a-f]{6}$/i.test(value) ? value : fallbackColor;
+}
+
+export function OrganizationThemeProvider({
+  children,
+  initialTone = "light",
+  schoolAccent,
+  schoolHighlight,
+}: {
+  children: ReactNode;
+  initialTone?: "light" | "dark";
+  schoolAccent?: string;
+  schoolHighlight?: string;
+}) {
+  const [mode, setModeState] = useState<OrganizationThemeMode>("bltz");
   const [referenceTone, setReferenceTone] = useState<"light" | "dark">(initialTone);
 
   useEffect(() => {
-    const saved = window.localStorage.getItem("bltz-organization-theme");
-    if (saved === "reference" || saved === "light" || saved === "dark" || saved === "team") setModeState(saved);
+    const saved = window.localStorage.getItem("bltz-enterprise-theme");
+    if (saved === "bltz" || saved === "school") setModeState(saved);
   }, []);
 
   const setMode = useCallback((nextMode: OrganizationThemeMode) => {
     setModeState(nextMode);
-    window.localStorage.setItem("bltz-organization-theme", nextMode);
+    window.localStorage.setItem("bltz-enterprise-theme", nextMode);
   }, []);
 
+  const accent = mode === "school" ? safeColor(schoolAccent, SAFE_SCHOOL_ACCENT) : BLTZ_ACCENT;
+  const highlight = mode === "school" ? safeColor(schoolHighlight, SAFE_SCHOOL_ACCENT) : SAFE_SCHOOL_ACCENT;
   const value = useMemo<OrganizationThemeValue>(() => ({
     mode,
-    tone: mode === "reference" ? referenceTone : mode,
-    accent: "#ffbb00",
+    tone: referenceTone,
+    accent,
+    highlight,
     setMode,
     setReferenceTone,
-  }), [mode, referenceTone, setMode]);
+  }), [accent, highlight, mode, referenceTone, setMode]);
 
   return <OrganizationThemeContext.Provider value={value}>{children}</OrganizationThemeContext.Provider>;
 }
@@ -55,5 +77,5 @@ export function useOrganizationTheme() {
 export function useReferencePageTone(tone: "light" | "dark") {
   const { mode, setReferenceTone, tone: activeTone } = useOrganizationTheme();
   useEffect(() => setReferenceTone(tone), [setReferenceTone, tone]);
-  return mode === "reference" ? tone : activeTone;
+  return mode === "bltz" ? tone : activeTone;
 }

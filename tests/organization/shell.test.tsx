@@ -67,7 +67,7 @@ function renderShell(options: OrganizationWorkspaceOptions = { teams: [], season
   });
 }
 
-describe("Phase 3 organization shell", () => {
+describe("Enterprise CRM organization shell", () => {
   beforeEach(() => {
     navigation.pathname = `/organization/${ORGANIZATION_ID}/dashboard`;
     container = document.createElement("div");
@@ -81,47 +81,45 @@ describe("Phase 3 organization shell", () => {
     vi.clearAllMocks();
   });
 
-  it("renders the authorized organization, current role, and active overview destination", () => {
+  it("renders the authorized organization, current role, and active Home destination", () => {
     renderShell();
 
     expect(container.textContent).toContain("BLTZ Test Organization");
     expect(container.textContent).toContain("Media Manager");
     expect(container.textContent).toContain("Authorized workspace content");
-    expect(container.querySelector('a[aria-current="page"]')?.getAttribute("aria-label")).toBe("Overview");
+    expect(container.querySelector('a[aria-current="page"]')?.textContent).toContain("Home");
     expect(container.querySelector('button[aria-label="Switch organization"]')).not.toBeNull();
+    expect(container.querySelector('[data-product="enterprise-crm"]')).not.toBeNull();
   });
 
-  it("keeps future modules non-interactive instead of linking to missing routes", () => {
+  it("uses the exact canonical labels and keeps future modules non-interactive", () => {
     renderShell();
 
     const unavailable = [...container.querySelectorAll('[aria-disabled="true"]')];
-    expect(unavailable).toHaveLength(4);
-    expect(container.querySelector(`a[href="/organization/${ORGANIZATION_ID}/players"]`)).toBeNull();
-    expect(container.querySelector('[aria-label="Players — coming soon"]')).not.toBeNull();
-    expect(container.querySelector('[aria-label="Finance — coming soon"]')).not.toBeNull();
+    expect(unavailable).toHaveLength(7);
+    expect(container.querySelector(`a[href="/organization/${ORGANIZATION_ID}/athletes"]`)).toBeNull();
+    for (const label of ["Athletes", "Media", "Opportunities", "Activations", "Intelligence", "Analytics", "Organization"]) {
+      expect(container.querySelector(`[aria-label="${label} — unavailable"]`), label).not.toBeNull();
+    }
   });
 
-  it("renders the five-link preview navigation and marks finance active", () => {
-    navigation.pathname = "/organization/preview/revenue";
+  it("renders the labelled preview destinations and marks Home active", () => {
+    navigation.pathname = "/organization/preview/executive";
     renderShell();
 
     const destinations = [
-      ["Overview", "/organization/preview"],
-      ["Players", "/organization/preview/players"],
+      ["Home", "/organization/preview/executive"],
+      ["Athletes", "/organization/preview/athletes"],
       ["Media", "/organization/preview/media"],
-      ["Agreements", "/organization/preview/agreements"],
-      ["Finance", "/organization/preview/revenue"],
+      ["Analytics", "/organization/preview/analytics"],
     ];
 
     for (const [label, href] of destinations) {
-      const link = container.querySelector(`a[href="${href}"][aria-label="${label}"]`);
+      const link = container.querySelector(`a[href="${href}"]`);
       expect(link, label).not.toBeNull();
-      expect(link?.getAttribute("aria-label"), label).toBe(label);
     }
-    expect(container.querySelector('a[aria-current="page"]')?.getAttribute("aria-label")).toBe("Finance");
-    expect(container.querySelector('a[aria-label="Rights"]')).toBeNull();
-    expect(container.querySelector('a[aria-label="Reports"]')).toBeNull();
-    expect(container.querySelector('[aria-disabled="true"]')).toBeNull();
+    expect(container.querySelector('a[aria-current="page"]')?.textContent).toContain("Home");
+    expect(container.querySelector('[aria-label="Opportunities — unavailable"]')).not.toBeNull();
   });
 
   it("exposes a labeled mobile navigation control and disables empty filters", () => {
@@ -129,7 +127,7 @@ describe("Phase 3 organization shell", () => {
 
     expect(container.querySelector('button[aria-label="Open workspace navigation"]')).not.toBeNull();
     const filters = [...container.querySelectorAll("select")];
-    expect(filters).toHaveLength(2);
+    expect(filters).toHaveLength(1);
     expect(filters.every((filter) => filter.disabled)).toBe(true);
   });
 
@@ -140,8 +138,8 @@ describe("Phase 3 organization shell", () => {
     });
 
     const options = [...container.querySelectorAll("option")].map((option) => option.textContent);
-    expect(options).toContain("Varsity Football (Football)");
-    expect(options).toContain("2026 (Football)");
+    expect(options).toContain("All Athletics");
+    expect(options).toContain("Varsity Football · Football");
     expect([...container.querySelectorAll("select")].every((filter) => !filter.disabled)).toBe(true);
   });
 });
