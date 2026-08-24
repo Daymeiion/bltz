@@ -74,6 +74,16 @@ describe("scope-safe cache identity", () => {
       createEnterpriseCacheKey("overview", reordered, { a: 1, b: 2 }),
     );
   });
+
+  it("changes when the trusted authorization snapshot version changes", () => {
+    const base = EXECUTIVE_AUTHORIZATION_FIXTURES.organizationExecutive;
+    expect(createEnterpriseCacheKey("overview", base)).not.toBe(
+      createEnterpriseCacheKey("overview", {
+        ...base,
+        authorizationVersion: "fixture-v2",
+      }),
+    );
+  });
 });
 
 describe("financial omission", () => {

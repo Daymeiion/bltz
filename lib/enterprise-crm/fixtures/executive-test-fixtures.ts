@@ -32,6 +32,7 @@ export const EXECUTIVE_AUTHORIZATION_FIXTURES = {
       "workload.read",
       "member.read",
     ],
+    authorizationVersion: "fixture-v1",
   },
   teamOperator: {
     actorUserId: EXECUTIVE_TEST_IDS.teamOperator,
@@ -43,6 +44,7 @@ export const EXECUTIVE_AUTHORIZATION_FIXTURES = {
       teamId: EXECUTIVE_TEST_IDS.team,
     },
     permissions: ["executive.overview.read", "athlete.read"],
+    authorizationVersion: "fixture-v1",
   },
   executiveWithoutFinance: {
     actorUserId: EXECUTIVE_TEST_IDS.financeDenied,
@@ -53,6 +55,7 @@ export const EXECUTIVE_AUTHORIZATION_FIXTURES = {
       organizationId: EXECUTIVE_TEST_IDS.organization,
     },
     permissions: ["executive.overview.read"],
+    authorizationVersion: "fixture-v1",
   },
   organizationAdmin: {
     actorUserId: EXECUTIVE_TEST_IDS.administrator,
@@ -63,6 +66,7 @@ export const EXECUTIVE_AUTHORIZATION_FIXTURES = {
       organizationId: EXECUTIVE_TEST_IDS.organization,
     },
     permissions: ["theme.administer"],
+    authorizationVersion: "fixture-v1",
   },
   mediaRightsOperator: {
     actorUserId: EXECUTIVE_TEST_IDS.mediaRightsOperator,
@@ -74,6 +78,7 @@ export const EXECUTIVE_AUTHORIZATION_FIXTURES = {
       teamId: EXECUTIVE_TEST_IDS.team,
     },
     permissions: ["rights.read", "rights.review", "assignment.create"],
+    authorizationVersion: "fixture-v1",
   },
   financeOperator: {
     actorUserId: EXECUTIVE_TEST_IDS.financeOperator,
@@ -84,6 +89,7 @@ export const EXECUTIVE_AUTHORIZATION_FIXTURES = {
       organizationId: EXECUTIVE_TEST_IDS.organization,
     },
     permissions: ["financial.summary.read", "financial.exception.read"],
+    authorizationVersion: "fixture-v1",
   },
   outOfScopeMember: {
     actorUserId: EXECUTIVE_TEST_IDS.unauthorized,
@@ -94,6 +100,7 @@ export const EXECUTIVE_AUTHORIZATION_FIXTURES = {
       organizationId: EXECUTIVE_TEST_IDS.otherOrganization,
     },
     permissions: ["executive.overview.read"],
+    authorizationVersion: "fixture-v1",
   },
 } as const satisfies Record<string, ResolvedEnterpriseGrants>;
 

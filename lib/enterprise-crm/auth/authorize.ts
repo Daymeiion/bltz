@@ -20,6 +20,7 @@ export interface ResolvedEnterpriseGrants {
   source: "canonical_membership" | "trusted_internal_adapter";
   scope: EnterpriseScope;
   permissions: readonly ExecutivePermission[];
+  authorizationVersion: string;
 }
 
 export interface EnterpriseAuthorizationRequest {
@@ -47,6 +48,7 @@ export function authorizeEnterpriseRequest(
   if (
     !hasNonBlankValue(grants.actorUserId) ||
     !hasNonBlankValue(grants.scope.organizationId) ||
+    !hasNonBlankValue(grants.authorizationVersion) ||
     !hasNonBlankValue(request.organizationId) ||
     (grants.source === "canonical_membership" && !hasNonBlankValue(grants.membershipId))
   ) {

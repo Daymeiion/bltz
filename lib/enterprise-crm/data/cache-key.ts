@@ -43,6 +43,7 @@ export function createEnterpriseCacheKey(
     actorUserId: grants.actorUserId,
     organizationId: grants.scope.organizationId,
     scope,
+    authorizationVersion: grants.authorizationVersion,
     permissions: enterprisePermissionFingerprint(grants.permissions),
     filters: stableFilters(filters),
   });
