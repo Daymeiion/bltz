@@ -35,10 +35,11 @@ export function AssignmentDrawer({ open, onOpenChange, sourceTitle, sourceContex
   const requestOpenChange = (next: boolean) => { if (!next && dirty && state !== "success") { setDiscardPrompt(true); return; } onOpenChange(next); };
   const submit = (event: FormEvent) => { event.preventDefault(); if (!draft.memberId || !draft.priority) { setValidation("Choose an eligible member and priority."); return; } onSubmit(draft); };
   const discard = () => { setDirty(false); setDiscardPrompt(false); onOpenChange(false); };
+  const keepEditing = () => { setDiscardPrompt(false); firstField.current?.focus(); };
 
   return (
     <Sheet open={open} onOpenChange={requestOpenChange}>
-      <SheetContent side="right" className="crm-assignment-drawer" onOpenAutoFocus={(event) => { event.preventDefault(); returnFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; firstField.current?.focus(); }} onCloseAutoFocus={(event) => { event.preventDefault(); returnFocus.current?.focus(); }}>
+      <SheetContent side="right" className="crm-assignment-drawer" onOpenAutoFocus={(event) => { event.preventDefault(); returnFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; const target = firstField.current && !firstField.current.disabled ? firstField.current : event.currentTarget.querySelector<HTMLButtonElement>("button:not([disabled])"); target?.focus(); }} onCloseAutoFocus={(event) => { event.preventDefault(); returnFocus.current?.focus(); }}>
         <SheetHeader className="crm-assignment-drawer__header"><p className="crm-eyebrow">Delegation</p><SheetTitle>Assign owner</SheetTitle><SheetDescription>Choose an eligible member and add the context needed to continue the source work.</SheetDescription></SheetHeader>
         <form className="crm-assignment-form" onSubmit={submit}>
           <div className="crm-assignment-source"><span>Source</span><strong>{sourceTitle}</strong>{sourceContext ? <div>{sourceContext}</div> : null}</div>
@@ -50,7 +51,7 @@ export function AssignmentDrawer({ open, onOpenChange, sourceTitle, sourceContex
             {validation ? <div className="crm-inline-state crm-inline-state--error" role="alert"><IconAlertTriangle aria-hidden />{validation}</div> : null}
             {state === "error" ? <div className="crm-inline-state crm-inline-state--error" role="alert"><IconAlertTriangle aria-hidden />{errorMessage ?? "Assignment could not be saved. Review the details and try again."}</div> : null}
             {state === "success" ? <div className="crm-inline-state crm-inline-state--success" role="status"><IconCheck aria-hidden />Owner assigned. The source can now refresh.</div> : null}
-            {discardPrompt ? <div className="crm-unsaved-warning" role="alertdialog" aria-label="Unsaved assignment changes"><div><strong>Discard unsaved changes?</strong><span>Your assignment details have not been submitted.</span></div><div><button type="button" className="crm-button crm-button--secondary" onClick={() => setDiscardPrompt(false)}>Keep editing</button><button type="button" className="crm-button crm-button--destructive" onClick={discard}>Discard changes</button></div></div> : null}
+            {discardPrompt ? <div className="crm-unsaved-warning" role="alertdialog" aria-label="Unsaved assignment changes"><div><strong>Discard unsaved changes?</strong><span>Your assignment details have not been submitted.</span></div><div><button type="button" className="crm-button crm-button--secondary" onClick={keepEditing}>Keep editing</button><button type="button" className="crm-button crm-button--destructive" onClick={discard}>Discard changes</button></div></div> : null}
           </>}
           <SheetFooter className="crm-assignment-drawer__footer"><button type="button" className="crm-button crm-button--secondary" onClick={() => requestOpenChange(false)} disabled={busy}>Cancel</button>{state !== "restricted" ? <button type="submit" className="crm-button crm-button--primary" disabled={busy || state === "success"}>{busy ? "Assigning…" : state === "success" ? "Assigned" : "Assign"}</button> : null}</SheetFooter>
         </form>
