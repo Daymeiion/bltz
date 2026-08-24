@@ -28,7 +28,7 @@ describe("AssignmentDrawer interaction contract", () => {
     owner.value = "member-1"; act(() => owner.dispatchEvent(new Event("change", { bubbles: true })));
     const close = [...dialog.querySelectorAll("button")].find((button) => button.textContent === "Close")!; click(close);
     expect(document.querySelector('[role="alertdialog"]')?.textContent).toContain("Discard unsaved changes");
-    click([...dialog.querySelectorAll("button")].find((button) => button.textContent === "Keep editing")!); expect(document.querySelector('[role="dialog"]')).not.toBeNull();
+    click([...dialog.querySelectorAll("button")].find((button) => button.textContent === "Keep editing")!); await act(async () => undefined); expect(document.querySelector('[role="dialog"]')).not.toBeNull(); expect(document.activeElement).toBe(owner);
     click(close); click([...dialog.querySelectorAll("button")].find((button) => button.textContent === "Discard changes")!);
     await act(async () => undefined);
     expect(document.querySelector('[role="dialog"]')).toBeNull(); expect(document.activeElement).toBe(trigger);
@@ -47,6 +47,42 @@ describe("AssignmentDrawer interaction contract", () => {
     render(<AssignmentDrawer open onOpenChange={() => undefined} sourceTitle="Source" members={members} priorities={priorities} state="success" onSubmit={() => undefined} />); await act(async () => undefined); expect(document.body.textContent).toContain("Owner assigned");
     render(<AssignmentDrawer open onOpenChange={() => undefined} sourceTitle="Source" members={members} priorities={priorities} state="submitting" onSubmit={() => undefined} />); await act(async () => undefined); expect(document.body.textContent).toContain("Assigning…");
     render(<AssignmentDrawer open onOpenChange={() => undefined} sourceTitle="Source" members={members} priorities={priorities} state="restricted" onSubmit={() => undefined} />); await act(async () => undefined); expect(document.body.textContent).toContain("Assignment is not available"); expect([...document.querySelectorAll("button")].some((button) => button.textContent === "Assign")).toBe(false);
+  });
+
+  it("shows source context and optional caller fields while keeping an error retry-ready", async () => {
+    render(<AssignmentDrawer open onOpenChange={() => undefined} sourceTitle="Fictional source" sourceContext={<span>Caller context</span>} members={members} priorities={priorities} initialValue={{ memberId: "member-1", priority: "caller-priority", dueDate: "2026-08-29", comment: "Caller comment" }} state="error" errorMessage="Recoverable caller conflict" onSubmit={() => undefined} />);
+    await act(async () => undefined);
+    const dialog = document.querySelector<HTMLElement>('[role="dialog"]')!;
+    expect(dialog.contains(document.activeElement)).toBe(true);
+    expect(dialog.textContent).toContain("Fictional source");
+    expect(dialog.textContent).toContain("Caller context");
+    expect((dialog.querySelector('input[type="date"]') as HTMLInputElement).value).toBe("2026-08-29");
+    expect((dialog.querySelector("textarea") as HTMLTextAreaElement).value).toBe("Caller comment");
+    expect(dialog.querySelector('[role="alert"]')?.textContent).toContain("Recoverable caller conflict");
+    expect([...dialog.querySelectorAll("select, input, textarea, button")].filter((control) => !(control as HTMLButtonElement).disabled).length).toBeGreaterThan(4);
+    expect(dialog.textContent).not.toContain("authorized");
+  });
+
+  it("disables mutation fields while submitting and retains a deterministic enabled close path", async () => {
+    render(<Harness state="submitting" />); const trigger = container.querySelector("button")!; trigger.focus(); click(trigger); await act(async () => undefined);
+    const dialog = document.querySelector<HTMLElement>('[role="dialog"]')!;
+    expect(dialog.contains(document.activeElement)).toBe(true);
+    expect([...dialog.querySelectorAll("select, input, textarea")].every((control) => (control as HTMLInputElement).disabled)).toBe(true);
+    expect([...dialog.querySelectorAll("button")].find((button) => button.textContent === "Cancel")?.disabled).toBe(true);
+    expect([...dialog.querySelectorAll("button")].find((button) => button.textContent === "Assigning…")?.disabled).toBe(true);
+    const close = [...dialog.querySelectorAll("button")].find((button) => button.textContent === "Close")!;
+    expect(close.disabled).toBe(false);
+    click(close); await act(async () => undefined);
+    expect(document.querySelector('[role="dialog"]')).toBeNull();
+  });
+
+  it.each(["success", "restricted"] as const)("keeps a deterministic close path for %s", async (state) => {
+    render(<Harness state={state} />); const trigger = container.querySelector("button")!; trigger.focus(); click(trigger); await act(async () => undefined);
+    const dialog = document.querySelector<HTMLElement>('[role="dialog"]')!;
+    expect(dialog.contains(document.activeElement)).toBe(true);
+    const close = [...dialog.querySelectorAll("button")].find((button) => button.textContent === "Close")!;
+    expect(close).toBeTruthy(); click(close); await act(async () => undefined);
+    expect(document.querySelector('[role="dialog"]')).toBeNull(); expect(trigger.isConnected).toBe(true);
   });
 });
 
