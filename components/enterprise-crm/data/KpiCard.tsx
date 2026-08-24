@@ -11,7 +11,8 @@ export type MetricDeltaProps = {
 
 export function MetricDelta({ value, direction = "flat", sentiment = "neutral", context }: MetricDeltaProps) {
   const Icon = direction === "up" ? IconArrowUpRight : direction === "down" ? IconArrowDownRight : IconArrowRight;
-  return <span className={cn("crm-metric-delta", `crm-metric-delta--${sentiment}`)}><Icon aria-hidden /><strong>{value}</strong><span>{context}</span></span>;
+  const meaning = `${direction.charAt(0).toUpperCase() + direction.slice(1)}, ${sentiment}`;
+  return <span className={cn("crm-metric-delta", `crm-metric-delta--${sentiment}`)}><Icon aria-hidden /><span className="sr-only">{meaning}</span><strong>{value}</strong><span>{context}</span></span>;
 }
 
 export type KpiCardProps = {
