@@ -106,22 +106,53 @@ describe("financial omission", () => {
 });
 
 describe("existing audit contract safety", () => {
-  it("removes sensitive metadata and bounds retained values", () => {
+  it("keeps only explicitly allowed, schema-valid scalar metadata", () => {
     const metadata = sanitizeExistingAuditMetadata({
       source: "assignment",
       teamId: EXECUTIVE_TEST_IDS.team,
+      arbitrary: "would have passed the former blacklist",
       comment: "private detail",
       revenueValue: 12345,
       nested: { status: "changed", email: "person@example.test" },
-      long: "x".repeat(300),
     });
 
     expect(metadata).toEqual({
       source: "assignment",
       teamId: EXECUTIVE_TEST_IDS.team,
-      nested: { status: "changed" },
-      long: "x".repeat(256),
     });
+  });
+
+  it("omits unknown and sensitive keys even when their values look safe", () => {
+    expect(
+      sanitizeExistingAuditMetadata({
+        status: "changed",
+        email: "safe-looking-token",
+        comment: "brief",
+        amount: 1,
+        actorUserId: EXECUTIVE_TEST_IDS.executive,
+      }),
+    ).toEqual({});
+  });
+
+  it("rejects nested payloads and invalid values for allowed keys", () => {
+    expect(
+      sanitizeExistingAuditMetadata({
+        source: { value: "assignment" },
+        teamId: { value: EXECUTIVE_TEST_IDS.team },
+      }),
+    ).toEqual({});
+    expect(
+      sanitizeExistingAuditMetadata({
+        source: "Assignment contains spaces",
+        teamId: "not-a-uuid",
+      }),
+    ).toEqual({});
+    expect(
+      sanitizeExistingAuditMetadata({
+        source: ["assignment"],
+        teamId: [EXECUTIVE_TEST_IDS.team],
+      }),
+    ).toEqual({});
   });
 
   it("rejects non-object roots", () => {
