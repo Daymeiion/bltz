@@ -1,5 +1,10 @@
 import { notFound, redirect } from "next/navigation";
-import { resolveOrganizationContext } from "@/lib/organization/context";
+import { OrganizationShell } from "@/components/organization/OrganizationShell";
+import {
+  listAccessibleOrganizations,
+  listOrganizationWorkspaceOptions,
+  resolveOrganizationContext,
+} from "@/lib/organization/context";
 
 export default async function OrganizationLayout({
   children,
@@ -20,5 +25,28 @@ export default async function OrganizationLayout({
     notFound();
   }
 
-  return children;
+  const [directory, options] = await Promise.all([
+    listAccessibleOrganizations(),
+    listOrganizationWorkspaceOptions(result.context.organization.id),
+  ]);
+
+  if (!directory.ok) {
+    redirect(`/auth/login?next=${encodeURIComponent(`/organization/${organizationId}/dashboard`)}`);
+  }
+
+  const organizations = directory.organizations.some(
+    (entry) => entry.organization.id === result.context.organization.id,
+  )
+    ? directory.organizations
+    : [{ organization: result.context.organization, access: result.context.access }, ...directory.organizations];
+
+  return (
+    <OrganizationShell
+      context={result.context}
+      organizations={organizations}
+      options={options}
+    >
+      {children}
+    </OrganizationShell>
+  );
 }

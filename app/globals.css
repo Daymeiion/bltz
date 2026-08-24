@@ -139,6 +139,58 @@
   }
 }
 
+/* Organization preview themes keep the selected reference compositions intact
+   while translating their document surfaces into the navy team palette. */
+:is([data-organization-tone="dark"], [data-organization-tone="team"]) #organization-workspace :is(
+  [class~="bg-white"],
+  [class~="bg-[#f7f6f2]"],
+  [class~="bg-[#f8f7f3]"],
+  [class~="bg-[#faf9f5]"],
+  [class~="bg-[#fff9e7]"]
+) {
+  background-color: #0b213d !important;
+}
+
+:is([data-organization-tone="dark"], [data-organization-tone="team"]) #organization-workspace :is(
+  [class~="bg-[#fff8df]"],
+  [class~="bg-[#fff4c7]"]
+) {
+  background-color: rgb(255 187 0 / 12%) !important;
+}
+
+:is([data-organization-tone="dark"], [data-organization-tone="team"]) #organization-workspace :is(
+  [class~="text-[#0d213f]"],
+  [class~="text-[#17191c]"]
+) {
+  color: #ffffff !important;
+}
+
+:is([data-organization-tone="dark"], [data-organization-tone="team"]) #organization-workspace :is(
+  [class~="text-[#4f5865]"],
+  [class~="text-[#5e6672]"],
+  [class~="text-[#5f6672]"],
+  [class~="text-[#69717d]"],
+  [class~="text-[#737984]"],
+  [class~="text-[#777d87]"],
+  [class~="text-[#858b95]"],
+  [class~="text-[#8a8f98]"],
+  [class~="text-[#9297a0]"]
+) {
+  color: #9fb0c5 !important;
+}
+
+:is([data-organization-tone="dark"], [data-organization-tone="team"]) #organization-workspace :is(
+  [class~="border-[#d5d5ce]"],
+  [class~="border-[#d7d5cc]"],
+  [class~="border-[#d8d7d0]"],
+  [class~="border-[#d9d7cf]"],
+  [class~="border-[#dedcd4]"],
+  [class~="border-[#e0ded6]"],
+  [class~="border-[#ebe9e2]"]
+) {
+  border-color: #29425f !important;
+}
+
 @layer base {
   * {
     @apply border-border;

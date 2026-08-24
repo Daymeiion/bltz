@@ -1,387 +1,131 @@
-# AGENTS.md
+# BLTZ Enterprise CRM — Agent Operating Contract
 
-## Project Overview
+## Repository context
 
-BLTZ is athlete media infrastructure that transforms fragmented athlete career content into measurable, monetizable, long-term digital assets.
+This workspace is the local mirror of the ChatGPT project **Blitz**.
 
-BLTZ is not:
+- Treat every file under `sources/` as read-only reference material. Do not edit, rename, move, or delete it.
+- One project source could not be synced. Do not assume the mirror is complete.
+- Phases 1, 1.5, and 2 are complete. Do not rewrite, rename, re-platform, or “clean them up” unless the Coordinator records a blocking incompatibility and the user approves it.
+- The next production phase is the Enterprise CRM shell. Work proceeds one canonical user journey at a time.
 
-- A generic NIL marketplace
-- A traditional athlete social network
-- A simple video-hosting product
-- A white-glove marketing agency
-- An AI wrapper
+## Required reading order
 
-BLTZ uses AI as enabling technology, not as the core product.
+Before planning or coding, every agent must read:
 
-The platform includes four connected surfaces:
+1. `AGENTS.md`
+2. `docs/enterprise-crm/MASTER-BUILD-ORDER.md`
+3. `docs/enterprise-crm/BLTZ-ENTERPRISE-DESIGN-SPEC.md` (or the Coordinator-designated equivalent)
+4. The active journey specification; first: `docs/enterprise-crm/journeys/EXECUTIVE-JOURNEY-SPEC.md`
+5. Existing schema, migrations, route conventions, tests, and component documentation touching the assigned scope
 
-1. Public Player Lockers
-2. Athlete dashboards
-3. School and team media CRM
-4. BLTZ internal administration
+If the design specification is absent, incomplete, or conflicts with these documents, stop at the planning boundary and report the exact gap. Do not invent a substitute direction.
 
-The Player Locker is the athlete-facing identity and media layer. The School/Team CRM is the organization-facing operating layer. The BLTZ Admin platform is the governance, trust, rights, and platform-operations layer.
+## Canonical journeys and order
 
-## Core Product Thesis
+Only one journey may be active for feature implementation at a time:
 
-Sports organizations, athletes, and rights holders possess valuable content that is fragmented across broadcasts, archives, social platforms, school websites, personal devices, Hudl, interviews, and legacy media libraries.
+1. Executive Action Center: oversight → review → assign/delegate → resolve
+2. Archive → Athlete → Locker
+3. Archive → Opportunity → Activation
+4. AI Signal → Alumni Opportunity
+5. Athlete-Originated Opportunity
+6. Brand → Multi-Athlete Activation
 
-BLTZ organizes this content around the athlete, verifies its permissions, distributes it through Player Lockers, measures its performance, and attributes revenue to the appropriate stakeholders.
+Foundation and shared-component work may precede a journey only when required by `docs/enterprise-crm/MASTER-BUILD-ORDER.md`. Never partially build a later journey “while the files are open.”
 
-The primary product loop is:
+## Team topology and ownership
 
-1. A school or team manages its roster.
-2. The organization adds or selects a media asset.
-3. Athletes are associated with that asset.
-4. Rights and permissions are recorded.
-5. Required approvals are collected.
-6. Approved content is published to Player Lockers.
-7. Fans engage with the content.
-8. Performance and revenue are measured.
-9. Revenue is attributed to organizations, athletes, and BLTZ.
+### Coordinator
 
-## Repository Goals
+Owns sequencing, scope, architecture decisions, branch/worktree coordination, dependency resolution, gate sign-off, and integration. Creates bounded packets, assigns file/migration ownership, prevents concurrent edits, records deviations, and integrates only with complete evidence.
 
-The repository should support one connected platform with shared authentication, shared data, shared permissions, and shared design foundations.
+### Foundation / Database agent
 
-Preferred route structure:
+Owns schema review, additive migrations, seed/fixture contracts, authorization primitives, server data access, audit events, and data-integrity tests. Does not own layout, visual polish, or product flows.
 
-```text
-/
-├── locker/[athleteSlug]       Public Player Locker
-├── athlete/                   Athlete dashboard
-├── organization/              School/team CRM
-└── admin/                     BLTZ internal admin
-```
+### UI Systems agent
 
-Do not create disconnected applications or duplicate backends unless explicitly approved.
+Owns design tokens, theme resolution, accessibility primitives, shell, navigation, shared states, and reusable components. Does not create business rules or substitute client visibility for server authorization.
 
-## Technology Stack
+### Feature / Journey agent
 
-Preserve the existing project stack unless a documented architectural change is approved.
+Owns active-journey routes, composition, queries/mutations, adapters, state transitions, and journey tests. Consumes approved components/contracts. Does not add a parallel design system, duplicate entities, or begin a later journey.
 
-Expected stack:
+### QA agent
 
-- Next.js
-- TypeScript
-- Supabase
-- PostgreSQL
-- Supabase Auth
-- Supabase Storage or approved object storage
-- Vercel
-- Existing package manager and repository conventions
+Owns independent acceptance, regression, permission-matrix, accessibility, responsive/visual checks, screenshots, defects, and gate recommendation. May improve assigned tests but returns product defects to the owning agent instead of silently redesigning behavior.
 
-Before structural changes, inspect and document the framework version, routing model, authentication, Supabase clients, generated database types, migrations, components, deployment configuration, environment variables, and tests.
+## Branches, worktrees, and handoffs
 
-## Development Principles
+- Every agent uses a separate Git worktree and dedicated `codex/` branch.
+- Suggested names: `codex/crm-foundation`, `codex/crm-ui-system`, `codex/journey-executive`, `codex/qa-executive`.
+- Never share an uncommitted directory or edit another agent’s worktree.
+- Rebase or merge the Coordinator-designated integration base before handoff; never force-push shared branches.
+- Each handoff reports scope, files, migrations, tests/results, screenshots with viewport/state, blockers, assumptions, gaps, and next-owner notes.
+- Failing required tests, unexplained snapshots, missing migration notes, or hidden TODOs make a handoff incomplete.
 
-### Preserve working code
+## Do-not-improvise rules
 
-Do not replace working architecture merely because another approach appears cleaner.
+Agents must not invent or silently change:
 
-Prefer incremental changes, reusable components, small feature branches, version-controlled migrations, and backward-compatible changes.
+- navigation labels, route hierarchy, journey order, or entity names;
+- roles, permission semantics, organization/team scope, or financial visibility;
+- database entities/columns when a canonical model can be extended;
+- stages, statuses, approvals, rights meanings, or audit behavior;
+- action/semantic colors, spacing, radii, density, table behavior, or one-off controls;
+- AI confidence, provenance, or detected/inferred/recommended/verified distinctions;
+- destructive behavior, integrations, analytics formulas, or production seed data.
 
-Avoid full rewrites without approval, duplicate Supabase clients, duplicate components, parallel data models, and production shortcuts that weaken security.
+Inspect established code and documents first. If no canonical answer exists, submit a decision request with context, options, recommendation, affected files/data, and reversibility. Continue only on unrelated in-scope work.
 
-### Build one workflow at a time
+## UI and design-system rules
 
-Do not attempt to build the entire CRM or Admin platform in one task.
+- This is modern enterprise CRM, not an enlarged Player Locker: data-led, calm, precise, and suitable for repeated professional use.
+- Use a light/neutral workspace, restrained product chrome, generous whitespace, large rounded section containers, thin quiet borders, and restrained elevation. Media may use darker previews but must not dominate operational pages.
+- Use file-style pill subnavigation. One shared component supplies active, hover, focus, disabled, overflow, keyboard, and responsive behavior.
+- BLTZ controls primary actions (`Create`, `Save`, `Approve`, `Publish`, `Submit`, `Continue`, `Confirm`, `Complete`, `Assign`), destructive actions, warnings, semantic states, typography, spacing, radius, elevation, and interaction behavior.
+- School theming is presentation only. It may affect identity, logo, navigation selection, scope accents, non-semantic highlights, team marks, and accessible chart accents—never permissions, workflow, data, semantic status, destructive treatment, or primary-action meaning.
+- Resolve school identity from the existing Division I/II logo/color dataset. Do not create another school directory or duplicate brand fields. Authorized admins may select School Theme or BLTZ Default; missing branding falls back safely.
+- Use canonical tokens only—no arbitrary page-local colors, spacing, radii, shadows, or z-index values.
+- Reuse approved button, input, badge, entity-reference, table, card, drawer, modal, filter, chart, and state families.
+- Major surfaces need default, loading, empty, filtered-empty where relevant, error, restricted, disabled, and success/processing states.
+- Meet WCAG 2.2 AA: visible focus, keyboard access, semantic names, non-color status cues, contrast, reduced motion, and usable zoom/reflow.
+- Align Figma/design and code component names wherever practical.
 
-Each task should define scope, exclusions, routes, schema changes, permissions, acceptance criteria, and manual verification steps.
+## Database and RBAC rules
 
-### Product behavior before polish
+- Existing schema is authoritative. Prefer additive, backward-compatible migrations with rollback/forward-fix notes.
+- Every tenant record has an organization boundary. Team records preserve team scope; cross-team access needs explicit permission.
+- Enforce authorization server-side for reads, writes, exports, search, counts, aggregates, and jobs. Hidden controls are not authorization.
+- Roles are permission bundles, not hard-coded UI conditionals. Use canonical memberships and distinguish organization-wide from team-limited scope.
+- Minimum Executive domains: overview read, athlete read, opportunity read/manage/approve, activation read/manage, rights read/review, assignment create/manage, workload read, financial summary/exception read, intelligence read, member read, and theme administer.
+- Financial values/exceptions require explicit permission. Users cannot infer restricted data through counts, charts, search, errors, or exports.
+- Athlete-private and media/rights constraints remain active even for broad executives.
+- Scope changes re-authorize on the server and never reuse stale broader-scope data.
+- Assignment, approval/decline, rights decision, conversion, theme change, and financial resolution emit immutable audit events with actor, organization, target, action, timestamp, and safe metadata.
+- State transitions are server-validated, concurrency-safe, and idempotent where retryable. Use database constraints for invariants.
+- Fixtures are deterministic, non-production, rights-safe, and representative. Never copy private production data into tests.
+- Migrations need schema/authorization tests and backfill, deployment-order, compatibility, and recovery notes.
 
-The PRD controls product behavior. Wireframes and reference images control layout intent. Existing design tokens and components control implementation consistency.
+## Journey-by-journey execution
 
-When these conflict:
+The Coordinator packet defines outcome, actor, entry/exit, routes, components, data contracts, permissions, transitions, audit/analytics events, fixtures, and out-of-scope items.
 
-1. Security and permissions take priority.
-2. PRD-defined behavior takes priority.
-3. Existing reusable patterns take priority.
-4. Wireframes guide hierarchy.
-5. Visual polish comes last.
+1. Baseline: verify prior gates and tests/screenshots.
+2. Contract: Foundation/DB confirms data and authorization.
+3. System: UI Systems builds only missing approved primitives.
+4. Vertical slice: Feature implements the smallest complete durable outcome.
+5. Hardening: all states, accessibility, responsiveness, observability, audit, and tests.
+6. Independent QA: fresh roles and fixtures.
+7. Gate: Coordinator accepts evidence and records integration.
 
-## Wireframe-First Workflow
+Do not start the next journey until criteria pass or a user-approved waiver records owner and expiry.
 
-Full Figma designs are not required for every page.
+## QA workflow and gate
 
-Create a low-cost wireframe before building a complex screen when page hierarchy, primary action, table columns, content grouping, modal behavior, mobile behavior, navigation, empty states, approval steps, or analytics hierarchy are unclear.
+QA tests at least an organization executive, team-limited operator, domain operator without financial access, organization admin, and unauthorized/out-of-scope user.
 
-Wireframes may be hand sketches, screenshots with annotations, grayscale Figma frames, Markdown diagrams, or static HTML mockups.
+Required evidence: unit/component tests; data/RBAC/audit/transition integration tests; end-to-end happy path plus denial and recovery; screenshots at required widths and for loading/empty/error/restricted; keyboard and accessibility results; migration verification; and affected completed-phase regression results.
 
-Store approved references in:
-
-```text
-/docs/design-reference/
-```
-
-Suggested files:
-
-```text
-crm-dashboard-wireframe.png
-crm-media-library-wireframe.png
-crm-athlete-detail-wireframe.png
-admin-rights-queue-wireframe.png
-admin-organization-review-wireframe.png
-```
-
-Each wireframe should include:
-
-```markdown
-# Page intent
-Primary user:
-Primary action:
-Secondary actions:
-Critical information:
-Mobile priority:
-Known exclusions:
-```
-
-Do not spend tokens generating detailed visual design before the workflow is understood.
-
-## Product Boundaries
-
-### Player Locker
-
-The Locker is public-facing and athlete-centered. It may include athlete identity, career statistics, awards, game footage, highlights, interviews, postgame media, merchandise, brand integrations, fan engagement, teammate connections, alumni connections, school history, and provenance labels.
-
-The Locker must not expose internal rights records, disputes, private notes, or confidential revenue terms.
-
-### Athlete Dashboard
-
-Athletes may claim or manage their Locker, edit permitted fields, review associated content, approve or decline content, request changes, view performance, and view revenue records.
-
-### School/Team CRM
-
-Organizations manage roster, athlete records, media, athlete tagging, rights metadata, approvals, publishing, campaigns, analytics, revenue attribution, and organization settings.
-
-### BLTZ Admin
-
-BLTZ Admin governs organization approval, user access, athlete identity conflicts, duplicate records, Locker claims, rights exceptions, takedowns, trust and safety, financial disputes, settings, audit logs, and system health.
-
-Admin should handle exceptions, not duplicate ordinary organization workflows.
-
-## Roles and Permissions
-
-Organization roles:
-
-```text
-owner
-organization_admin
-media_manager
-rights_manager
-analyst
-viewer
-```
-
-Platform roles:
-
-```text
-user
-support_admin
-organization_admin
-identity_admin
-rights_admin
-trust_safety_admin
-finance_admin
-technical_admin
-super_admin
-```
-
-A user may hold multiple roles in different contexts. Do not rely on one global role field for organization permissions. `auth.users` is authentication identity. `profiles` is user profile data. Organization membership and platform authorization must not depend on `profiles.role`.
-
-Use an organization membership model:
-
-```text
-organization_memberships
-- id
-- organization_id
-- user_id
-- role
-- status
-- created_at
-- updated_at
-```
-
-All protected actions must be authorized server-side. Hiding a button is not sufficient access control.
-
-## Shared Data Model
-
-Expected entities:
-
-```text
-auth.users
-profiles
-organizations
-organization_memberships
-teams
-seasons
-players (athletes)
-athlete_claims
-player_lockers (lockers)
-media_assets
-athlete_media
-rights_records
-approval_requests
-campaigns
-campaign_assets
-campaign_athletes
-analytics_events
-revenue_records
-revenue_allocations
-disputes
-audit_logs
-notifications
-```
-
-One media asset may be connected to multiple athletes. Use a join table rather than an array of athlete IDs.
-
-Canonical table names differ from product language. See **Canonical Identifiers and Media Graph Guardrails** below. Do not create a second `athletes` table during Phase 2.
-
-## Canonical Identifiers and Media Graph Guardrails
-
-Architecture decisions for this section are recorded in `docs/media/MEDIA-GRAPH-ROADMAP.md`. The authoritative phase sequence is `docs/BLTZ_BUILD_ORDER.md`.
-
-- `public.players.id` is the canonical athlete identifier. Product copy may say “athlete”; the table remains `players`.
-- `player_lockers` is a presentation and configuration entity with at most one row per `players` row. Lockers consume media; they do not own media.
-- `schools` are directory and reference entities. Organizations are separate tenant entities and may reference a school.
-- Existing `teams` retain their UUIDs and require organization context in Phase 2. Do not recreate teams to satisfy tenancy.
-- Phase 2 must introduce stable `seasons`, `sports_events`, and normalized athlete-team-season/roster relationships. Those records are identity and career context, not Media Graph tables.
-- Existing `media` and `videos` tables are legacy Phase One models. Do not extend them into the future Media Graph. Phase 5 adapts or migrates them at a documented boundary.
-- Existing license fields on `media` (`license_status`, `license_kind`, `license_request_*`, `public_locker_approved`, and related columns) are legacy Locker eligibility fields. They must not become the Phase 6 rights engine.
-- Provider integrations use adapters. Getty IDs and other provider-specific fields must not become core columns on athletes (`players`), Lockers (`player_lockers`), teams, or organizations.
-- Phase 5 is **BLTZ Media Graph**. Phase 6 is **Media Rights, Attribution & Clearance Engine**. Phase 2 must not design Phase 5 tables.
-- All media eligibility checks must go through one conceptual permission API: `resolveMediaPermissions(asset, usageContext)`. Do not scatter `license_status` or equivalent checks across Locker, CRM, Admin, or campaign surfaces.
-
-## Media and Rights Rules
-
-Every media asset should support source, type, organization, team, season, event, athletes, rights owner, license type, monetization permission, editing permission, territory, dates, approval requirements, and publication status.
-
-Rights statuses:
-
-```text
-unverified
-pending_review
-approved
-restricted
-expired
-revoked
-```
-
-Publication must be blocked when required rights or approvals are missing. Rights and publication changes must create audit-log entries.
-
-## Security Requirements
-
-- Never expose Supabase service-role credentials to the browser.
-- Never commit secrets.
-- Use environment variables.
-- Enforce Row Level Security where applicable.
-- Verify organization membership server-side.
-- Verify Admin permissions server-side.
-- Validate uploads and restrict file type and size.
-- Use signed URLs for private media where required.
-- Protect internal notes and disputes.
-- Log sensitive actions.
-- Treat financial changes as auditable events.
-- Do not permanently delete legal, financial, or rights history without a retention policy.
-
-## Database Rules
-
-- All schema changes require migrations.
-- Do not manually edit production tables without a migration.
-- Regenerate TypeScript database types after schema changes.
-- Add indexes for common filters.
-- Use foreign keys.
-- Prefer soft deletion for legal, financial, or audit-significant records.
-- Preserve created_at and updated_at.
-- Document destructive changes before execution.
-- `supabase/migrations` is the only authoritative active migration directory. `lib/supabase/migrations` is legacy and must receive no new migrations.
-
-## Design System
-
-BLTZ should feel athletic, editorial, premium, precise, media-first, and professional.
-
-The CRM should feel like an internal sports-media operations product, not a generic sales CRM.
-
-Preferred direction:
-
-- Dark mode
-- Deep navy and black surfaces
-- Gold accent `#ffbb00`
-- Strong blue secondary accents
-- Barlow sime-Condensed for display headings
-- Roboto Condensed or the current body font
-- JetBrains Mono for metadata where appropriate
-- Strong hierarchy
-- Clear tables
-- Media thumbnails
-- Compact status indicators
-- Minimal decorative styling
-
-Avoid excessive pills, bubble layouts, decorative blobs, wavy separators, generic SaaS illustrations, excess gradients, emojis, operational carousels, unnecessary animation, and replacing the Locker design without instruction.
-
-## Accessibility
-
-Maintain contrast, keyboard navigation, visible focus states, semantic headings, clear form labels, text-plus-color statuses, alt text, and responsive alternatives for wide tables.
-
-## Testing and Validation
-
-Before marking work complete, run available linting, type checking, unit tests, integration tests, and production build validation.
-
-At minimum verify authorized and unauthorized behavior, loading, empty and error states, mobile usability, audit creation, persistence, and that public pages do not expose private data.
-
-## Required Completion Report
-
-Every task must report:
-
-1. Summary
-2. Files changed
-3. Routes changed
-4. Database changes
-5. Migrations
-6. Environment variables
-7. Permission changes
-8. Tests run
-9. Manual verification
-10. Known limitations
-11. Deferred work
-
-## Agent Task Template
-
-```markdown
-## Objective
-## PRD reference
-## Included
-## Excluded
-## Required routes
-## Required data
-## Required permissions
-## Acceptance criteria
-## Validation commands
-```
-
-Before coding, inspect relevant files, identify reusable components, assess schema impact, provide a concise file-change plan, and avoid unrelated edits.
-
-After coding, run validation, report failures honestly, document manual steps, and do not claim completion when acceptance criteria are unmet.
-
-## Current Build Order
-
-The authoritative phase sequence is `docs/BLTZ_BUILD_ORDER.md`. Phase 1 and Phase 1.5 are complete. Phase 5 is BLTZ Media Graph. Phase 6 is Media Rights, Attribution & Clearance Engine.
-
-The product-work sequence after that architecture freeze remains:
-
-1. Repository audit
-2. Authentication and role cleanup
-3. Organization and membership foundation
-4. CRM shell
-5. Roster and athlete records
-6. Media library
-7. Rights and approvals
-8. Locker publishing workflow
-9. Admin review queues
-10. Campaigns
-11. Analytics
-12. Revenue attribution
-
-Do not skip the shared foundation to build visually complete dashboards first. Do not design Phase 5 Media Graph tables during organization, membership, roster, season, or event foundation work.
+A journey passes only with no open critical/high defects, required tests passing, no known authorization leak, design-spec conformance, verified audit events, and a reproducible end-to-end handoff.
