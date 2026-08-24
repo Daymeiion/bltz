@@ -39,7 +39,7 @@ export function AssignmentDrawer({ open, onOpenChange, sourceTitle, sourceContex
 
   return (
     <Sheet open={open} onOpenChange={requestOpenChange}>
-      <SheetContent side="right" className="crm-assignment-drawer" onOpenAutoFocus={(event) => { event.preventDefault(); returnFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; const target = firstField.current && !firstField.current.disabled ? firstField.current : event.currentTarget.querySelector<HTMLButtonElement>("button:not([disabled])"); target?.focus(); }} onCloseAutoFocus={(event) => { event.preventDefault(); returnFocus.current?.focus(); }}>
+      <SheetContent side="right" className="crm-assignment-drawer" onOpenAutoFocus={(event) => { event.preventDefault(); returnFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; const target = firstField.current && !firstField.current.disabled ? firstField.current : document.querySelector<HTMLButtonElement>('[data-slot="sheet-content"][data-state="open"] button:not([disabled])'); target?.focus(); }} onCloseAutoFocus={(event) => { event.preventDefault(); returnFocus.current?.focus(); }}>
         <SheetHeader className="crm-assignment-drawer__header"><p className="crm-eyebrow">Delegation</p><SheetTitle>Assign owner</SheetTitle><SheetDescription>Choose an eligible member and add the context needed to continue the source work.</SheetDescription></SheetHeader>
         <form className="crm-assignment-form" onSubmit={submit}>
           <div className="crm-assignment-source"><span>Source</span><strong>{sourceTitle}</strong>{sourceContext ? <div>{sourceContext}</div> : null}</div>
