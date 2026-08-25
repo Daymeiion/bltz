@@ -2,9 +2,15 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import type { GtmContactRow } from "@/lib/gtm/server";
 
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
+
 vi.mock("@/app/admin/gtm/actions", () => ({
   addGtmNote: vi.fn(),
+  commitGtmCsv: vi.fn(),
+  createGtmContact: vi.fn(),
   logGtmInteraction: vi.fn(),
+  previewGtmCsv: vi.fn(),
+  searchGtmPlayers: vi.fn(),
 }));
 
 import {
@@ -101,6 +107,8 @@ describe("GTM contacts workspace", () => {
     expect(markup).toContain("Schedule discovery call");
     expect(markup).toContain("Do not automate");
     expect(markup).toContain("Private data remains within the authenticated Admin boundary");
+    expect(markup).toContain("Import CSV");
+    expect(markup).toContain("Add contact / player");
   });
 
   it("keeps every filter inside the constrained 1024px admin workspace", () => {

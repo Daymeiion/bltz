@@ -18,8 +18,9 @@ import {
   IconUsersGroup,
   IconX,
 } from "@tabler/icons-react";
-import { startTransition, useMemo, useState } from "react";
+import { startTransition, useEffect, useMemo, useState } from "react";
 import { addGtmNote, logGtmInteraction } from "@/app/admin/gtm/actions";
+import { GtmContactIntake } from "@/components/admin/gtm/GtmContactIntake";
 import type { GtmContactRow, GtmContactsReadModel } from "@/lib/gtm/server";
 import { cn } from "@/lib/utils";
 
@@ -266,6 +267,8 @@ export function GtmContactsWorkspace({ data }: { data: GtmContactsReadModel }) {
   const handleSort = (key: SortKey) => { if (key === sortKey) setSortDirection((current) => current === "asc" ? "desc" : "asc"); else { setSortKey(key); setSortDirection("asc"); } };
   const updateContact = (next: GtmContactRow) => setContacts((current) => current.map((contact) => contact.id === next.id ? next : contact));
 
+  useEffect(() => setContacts(data.contacts), [data.contacts]);
+
   if (data.state === "restricted") {
     return <div className="mx-auto flex min-h-[65vh] max-w-[1600px] items-center justify-center px-6"><div className="max-w-lg rounded-2xl border border-neutral-300 bg-white p-8 text-center dark:border-neutral-700 dark:bg-neutral-900"><IconShieldLock className="mx-auto h-7 w-7" /><h1 className="mt-4 text-2xl font-semibold">GTM access is restricted</h1><p className="mt-2 text-sm leading-6 text-neutral-600 dark:text-neutral-300">Your session cannot read private relationship intelligence. Contact a platform administrator if your role has changed.</p></div></div>;
   }
@@ -274,7 +277,7 @@ export function GtmContactsWorkspace({ data }: { data: GtmContactsReadModel }) {
     <div className="mx-auto max-w-[1600px] px-4 pb-16 pt-6 sm:px-8 sm:pt-8">
       <header className="flex flex-col justify-between gap-4 border-b border-neutral-300 pb-6 sm:flex-row sm:items-end dark:border-neutral-800">
         <div><p className="text-xs font-semibold uppercase tracking-[0.12em] text-neutral-500">GTM relationship management</p><h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em] sm:text-4xl">Contacts</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-600 dark:text-neutral-300">Prioritize trusted relationships, preserve context, and keep the next action visible.</p></div>
-        <div className="text-left sm:text-right"><p className="font-mono text-2xl font-semibold">{data.state === "ready" ? contacts.length : "–"}</p><p className="text-xs text-neutral-500">authorized contacts</p></div>
+        <div className="flex flex-col items-start gap-3 sm:items-end"><div className="text-left sm:text-right"><p className="font-mono text-2xl font-semibold">{data.state === "ready" ? contacts.length : "–"}</p><p className="text-xs text-neutral-500">authorized contacts</p></div><GtmContactIntake /></div>
       </header>
 
       <div className="mt-6 rounded-2xl border border-neutral-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
