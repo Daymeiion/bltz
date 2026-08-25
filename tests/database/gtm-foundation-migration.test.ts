@@ -71,6 +71,7 @@ describe("GTM relationship intelligence migration contract", () => {
     expect(normalized).toContain("timing_score smallint");
     expect(normalized).toContain("priority_model = 'enterprise_v1'");
     expect(normalized).toContain("next_action_at timestamptz");
+    expect(normalized).toContain("constraint gtm_contacts_next_action_pair_check");
     expect(normalized).toContain("gtm_contacts_follow_up_idx");
   });
 
@@ -101,6 +102,11 @@ describe("GTM relationship intelligence migration contract", () => {
       "unique (source_contact_id, target_contact_id, relationship_type)",
     );
     expect(normalized).toContain("directed relationship edges");
+  });
+
+  it("uses non-colliding names for multi-column follow-up invariants", () => {
+    expect(normalized).toContain("constraint gtm_contacts_next_action_pair_check");
+    expect(normalized).toContain("constraint gtm_opportunities_next_step_pair_check");
   });
 
   it("persists safe import history and idempotency without raw CSV rows", () => {

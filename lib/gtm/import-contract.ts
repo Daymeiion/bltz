@@ -5,8 +5,8 @@ export const GTM_CSV_MAX_ROWS = 2_000;
 
 export const GTM_IMPORT_FIELDS = [
   "displayName", "firstName", "lastName", "email", "linkedinUrl",
-  "currentCompany", "currentTitle", "contactType", "sport", "leagueLevel",
-  "doNotAutomate", "sourceRecordId",
+  "currentCompany", "currentTitle", "connectedOn", "contactType", "sport",
+  "leagueLevel", "doNotAutomate", "sourceRecordId",
 ] as const;
 
 export type GtmImportField = (typeof GTM_IMPORT_FIELDS)[number];
@@ -21,6 +21,7 @@ export interface NormalizedGtmImportRow {
   linkedinUrl: string;
   currentCompany: string;
   currentTitle: string;
+  connectedOn: string;
   contactType: GtmContactType;
   sport: string;
   leagueLevel: string;

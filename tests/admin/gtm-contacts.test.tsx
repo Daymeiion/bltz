@@ -50,6 +50,7 @@ function contact(overrides: Partial<GtmContactRow> = {}): GtmContactRow {
     playerMatch: null,
     notes: [],
     interactions: [],
+    discoveries: [],
     ...overrides,
   };
 }

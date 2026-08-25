@@ -20,6 +20,28 @@ export interface GtmContactInteraction {
   interactionAt: string;
 }
 
+export interface GtmCustomerDiscoveryRecord {
+  id: string;
+  interactionId: string | null;
+  organizationId: string | null;
+  problemDiscussed: string | null;
+  currentSolution: string | null;
+  painLevel: number | null;
+  primaryBltzUseCase: string | null;
+  featureRequested: string | null;
+  wouldUse: boolean | null;
+  wouldPilot: boolean | null;
+  wouldPay: boolean | null;
+  expectedBuyer: string | null;
+  expectedBudgetRange: string | null;
+  primaryObjection: string | null;
+  introductionOffered: boolean | null;
+  introductionTarget: string | null;
+  additionalContext: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface GtmContactRow {
   id: string;
   displayName: string;
@@ -49,6 +71,21 @@ export interface GtmContactRow {
   playerMatch: { playerId: string; verified: boolean } | null;
   notes: GtmContactNote[];
   interactions: GtmContactInteraction[];
+  discoveries: GtmCustomerDiscoveryRecord[];
+}
+
+export interface GtmFoundationMetrics {
+  generatedAt: string;
+  since: string;
+  activeContacts: number;
+  linkedinContacts: number;
+  classifiedContacts: number;
+  priorityContacts: number;
+  engagedContacts: number;
+  overdueNextActions: number;
+  stageCounts: Record<string, number>;
+  discoveryRecords: number;
+  interactions: number;
 }
 
 export type GtmContactsReadModel =
@@ -93,12 +130,14 @@ export async function getGtmContacts(): Promise<GtmContactsReadModel> {
   const matchesByContact = new Map<string, { playerId: string; verified: boolean }>();
   const notesByContact = new Map<string, GtmContactNote[]>();
   const interactionsByContact = new Map<string, GtmContactInteraction[]>();
+  const discoveriesByContact = new Map<string, GtmCustomerDiscoveryRecord[]>();
 
   if (contactIds.length > 0) {
-    const [matchesResult, notesResult, interactionsResult] = await Promise.all([
+    const [matchesResult, notesResult, interactionsResult, discoveryResult] = await Promise.all([
       gtm.from("gtm_contact_players").select("contact_id,player_id,verified").in("contact_id", contactIds),
       gtm.from("gtm_notes").select("id,contact_id,note_type,body,created_at").in("contact_id", contactIds).order("created_at", { ascending: false }).limit(1000),
       gtm.from("gtm_interactions").select("id,contact_id,interaction_type,direction,subject,summary,interaction_at").in("contact_id", contactIds).order("interaction_at", { ascending: false }).limit(1000),
+      gtm.from("gtm_customer_discovery").select("id,contact_id,interaction_id,organization_id,problem_discussed,current_solution,pain_level,primary_bltz_use_case,feature_requested,would_use,would_pilot,would_pay,expected_buyer,expected_budget_range,primary_objection,introduction_offered,introduction_target,additional_context,created_at,updated_at").in("contact_id", contactIds).order("created_at", { ascending: false }).limit(1000),
     ]);
 
     for (const match of matchesResult.error ? [] : (matchesResult.data ?? [])) {
@@ -127,6 +166,32 @@ export async function getGtmContacts(): Promise<GtmContactsReadModel> {
         interactionAt: interaction.interaction_at as string,
       });
       interactionsByContact.set(contactId, interactions);
+    }
+    for (const discovery of discoveryResult.error ? [] : (discoveryResult.data ?? [])) {
+      const contactId = discovery.contact_id as string;
+      const discoveries = discoveriesByContact.get(contactId) ?? [];
+      discoveries.push({
+        id: discovery.id as string,
+        interactionId: discovery.interaction_id as string | null,
+        organizationId: discovery.organization_id as string | null,
+        problemDiscussed: discovery.problem_discussed as string | null,
+        currentSolution: discovery.current_solution as string | null,
+        painLevel: discovery.pain_level as number | null,
+        primaryBltzUseCase: discovery.primary_bltz_use_case as string | null,
+        featureRequested: discovery.feature_requested as string | null,
+        wouldUse: discovery.would_use as boolean | null,
+        wouldPilot: discovery.would_pilot as boolean | null,
+        wouldPay: discovery.would_pay as boolean | null,
+        expectedBuyer: discovery.expected_buyer as string | null,
+        expectedBudgetRange: discovery.expected_budget_range as string | null,
+        primaryObjection: discovery.primary_objection as string | null,
+        introductionOffered: discovery.introduction_offered as boolean | null,
+        introductionTarget: discovery.introduction_target as string | null,
+        additionalContext: discovery.additional_context as string | null,
+        createdAt: discovery.created_at as string,
+        updatedAt: discovery.updated_at as string,
+      });
+      discoveriesByContact.set(contactId, discoveries);
     }
   }
 
@@ -161,7 +226,23 @@ export async function getGtmContacts(): Promise<GtmContactsReadModel> {
     playerMatch: matchesByContact.get(contact.id as string) ?? null,
     notes: notesByContact.get(contact.id as string) ?? [],
     interactions: interactionsByContact.get(contact.id as string) ?? [],
+    discoveries: discoveriesByContact.get(contact.id as string) ?? [],
   }));
 
   return { state: "ready", contacts, generatedAt };
+}
+
+/** RLS-protected aggregate projection; it never materializes private metrics. */
+export async function getGtmFoundationMetrics(since?: string | null): Promise<GtmFoundationMetrics> {
+  await requireInternalAdmin();
+  const supabase = await createClient();
+  const gtm = supabase as unknown as SupabaseClient;
+  const { data, error } = await gtm.rpc("get_gtm_foundation_metrics", {
+    p_since: since ?? null,
+  });
+  if (error) throw new Error(`gtm_metrics_query_failed:${error.code ?? "unknown"}`);
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
+    throw new Error("gtm_metrics_query_invalid_payload");
+  }
+  return data as unknown as GtmFoundationMetrics;
 }

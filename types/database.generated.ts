@@ -7,8 +7,9 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  // Preserve the deployed PostgREST compatibility metadata. Local generation
+  // does not emit this block, but the application client uses the staging
+  // version to select the correct PostgREST typing behavior.
   __InternalSupabase: {
     PostgrestVersion: "14.15"
   }
@@ -1249,6 +1250,685 @@ export type Database = {
           welcome_email_enabled?: boolean
         }
         Relationships: []
+      }
+      gtm_contact_players: {
+        Row: {
+          contact_id: string
+          created_at: string
+          created_by: string
+          id: string
+          match_confidence: number
+          match_type: string
+          player_id: string
+          updated_at: string
+          verified: boolean
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          contact_id: string
+          created_at?: string
+          created_by: string
+          id?: string
+          match_confidence: number
+          match_type: string
+          player_id: string
+          updated_at?: string
+          verified?: boolean
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          contact_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          match_confidence?: number
+          match_type?: string
+          player_id?: string
+          updated_at?: string
+          verified?: boolean
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gtm_contact_players_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "gtm_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gtm_contact_players_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gtm_contacts: {
+        Row: {
+          archived: boolean
+          bltz_relevance: number | null
+          buying_authority: number | null
+          contact_type: string
+          created_at: string
+          created_by: string
+          current_company: string | null
+          current_title: string | null
+          display_name: string
+          do_not_automate: boolean
+          email: string | null
+          first_name: string | null
+          geography: string | null
+          id: string
+          introduction_potential: number | null
+          is_priority: boolean
+          last_interaction_at: string | null
+          last_name: string | null
+          league_level: string | null
+          linkedin_connected_on: string | null
+          linkedin_url: string | null
+          network_leverage: number | null
+          next_action: string | null
+          next_action_at: string | null
+          organization_id: string | null
+          phone: string | null
+          pipeline_stage: string
+          priority_model: string | null
+          priority_score: number | null
+          priority_tier: string | null
+          relationship_strength: number | null
+          segment: string | null
+          source: string | null
+          source_record_id: string | null
+          sport: string | null
+          timing_score: number | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          archived?: boolean
+          bltz_relevance?: number | null
+          buying_authority?: number | null
+          contact_type?: string
+          created_at?: string
+          created_by: string
+          current_company?: string | null
+          current_title?: string | null
+          display_name: string
+          do_not_automate?: boolean
+          email?: string | null
+          first_name?: string | null
+          geography?: string | null
+          id?: string
+          introduction_potential?: number | null
+          is_priority?: boolean
+          last_interaction_at?: string | null
+          last_name?: string | null
+          league_level?: string | null
+          linkedin_connected_on?: string | null
+          linkedin_url?: string | null
+          network_leverage?: number | null
+          next_action?: string | null
+          next_action_at?: string | null
+          organization_id?: string | null
+          phone?: string | null
+          pipeline_stage?: string
+          priority_model?: string | null
+          priority_score?: number | null
+          priority_tier?: string | null
+          relationship_strength?: number | null
+          segment?: string | null
+          source?: string | null
+          source_record_id?: string | null
+          sport?: string | null
+          timing_score?: number | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          archived?: boolean
+          bltz_relevance?: number | null
+          buying_authority?: number | null
+          contact_type?: string
+          created_at?: string
+          created_by?: string
+          current_company?: string | null
+          current_title?: string | null
+          display_name?: string
+          do_not_automate?: boolean
+          email?: string | null
+          first_name?: string | null
+          geography?: string | null
+          id?: string
+          introduction_potential?: number | null
+          is_priority?: boolean
+          last_interaction_at?: string | null
+          last_name?: string | null
+          league_level?: string | null
+          linkedin_connected_on?: string | null
+          linkedin_url?: string | null
+          network_leverage?: number | null
+          next_action?: string | null
+          next_action_at?: string | null
+          organization_id?: string | null
+          phone?: string | null
+          pipeline_stage?: string
+          priority_model?: string | null
+          priority_score?: number | null
+          priority_tier?: string | null
+          relationship_strength?: number | null
+          segment?: string | null
+          source?: string | null
+          source_record_id?: string | null
+          sport?: string | null
+          timing_score?: number | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gtm_contacts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "gtm_organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gtm_customer_discovery: {
+        Row: {
+          additional_context: string | null
+          contact_id: string
+          created_at: string
+          created_by: string
+          current_solution: string | null
+          expected_budget_range: string | null
+          expected_buyer: string | null
+          feature_requested: string | null
+          id: string
+          interaction_id: string | null
+          introduction_offered: boolean | null
+          introduction_target: string | null
+          organization_id: string | null
+          pain_level: number | null
+          primary_bltz_use_case: string | null
+          primary_objection: string | null
+          problem_discussed: string | null
+          updated_at: string
+          updated_by: string | null
+          would_pay: boolean | null
+          would_pilot: boolean | null
+          would_use: boolean | null
+        }
+        Insert: {
+          additional_context?: string | null
+          contact_id: string
+          created_at?: string
+          created_by: string
+          current_solution?: string | null
+          expected_budget_range?: string | null
+          expected_buyer?: string | null
+          feature_requested?: string | null
+          id?: string
+          interaction_id?: string | null
+          introduction_offered?: boolean | null
+          introduction_target?: string | null
+          organization_id?: string | null
+          pain_level?: number | null
+          primary_bltz_use_case?: string | null
+          primary_objection?: string | null
+          problem_discussed?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          would_pay?: boolean | null
+          would_pilot?: boolean | null
+          would_use?: boolean | null
+        }
+        Update: {
+          additional_context?: string | null
+          contact_id?: string
+          created_at?: string
+          created_by?: string
+          current_solution?: string | null
+          expected_budget_range?: string | null
+          expected_buyer?: string | null
+          feature_requested?: string | null
+          id?: string
+          interaction_id?: string | null
+          introduction_offered?: boolean | null
+          introduction_target?: string | null
+          organization_id?: string | null
+          pain_level?: number | null
+          primary_bltz_use_case?: string | null
+          primary_objection?: string | null
+          problem_discussed?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          would_pay?: boolean | null
+          would_pilot?: boolean | null
+          would_use?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gtm_customer_discovery_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "gtm_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gtm_customer_discovery_interaction_contact_fkey"
+            columns: ["interaction_id", "contact_id"]
+            isOneToOne: false
+            referencedRelation: "gtm_interactions"
+            referencedColumns: ["id", "contact_id"]
+          },
+          {
+            foreignKeyName: "gtm_customer_discovery_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "gtm_organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gtm_import_jobs: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          completed_at: string | null
+          content_sha256: string
+          created_at: string
+          error_summary: string | null
+          field_mapping: Json
+          filename: string
+          id: string
+          idempotency_key: string
+          import_type: string
+          potential_matches: number
+          preview_summary: Json
+          rows_created: number
+          rows_duplicated: number
+          rows_failed: number
+          rows_found: number
+          rows_updated: number
+          started_at: string | null
+          status: string
+          updated_at: string
+          uploaded_by: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          completed_at?: string | null
+          content_sha256: string
+          created_at?: string
+          error_summary?: string | null
+          field_mapping?: Json
+          filename: string
+          id?: string
+          idempotency_key: string
+          import_type: string
+          potential_matches?: number
+          preview_summary?: Json
+          rows_created?: number
+          rows_duplicated?: number
+          rows_failed?: number
+          rows_found?: number
+          rows_updated?: number
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+          uploaded_by: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          completed_at?: string | null
+          content_sha256?: string
+          created_at?: string
+          error_summary?: string | null
+          field_mapping?: Json
+          filename?: string
+          id?: string
+          idempotency_key?: string
+          import_type?: string
+          potential_matches?: number
+          preview_summary?: Json
+          rows_created?: number
+          rows_duplicated?: number
+          rows_failed?: number
+          rows_found?: number
+          rows_updated?: number
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+          uploaded_by?: string
+        }
+        Relationships: []
+      }
+      gtm_interactions: {
+        Row: {
+          contact_id: string
+          created_at: string
+          created_by: string
+          direction: string
+          id: string
+          interaction_at: string
+          interaction_type: string
+          opportunity_id: string | null
+          organization_id: string | null
+          subject: string | null
+          summary: string | null
+          updated_at: string
+        }
+        Insert: {
+          contact_id: string
+          created_at?: string
+          created_by: string
+          direction: string
+          id?: string
+          interaction_at: string
+          interaction_type: string
+          opportunity_id?: string | null
+          organization_id?: string | null
+          subject?: string | null
+          summary?: string | null
+          updated_at?: string
+        }
+        Update: {
+          contact_id?: string
+          created_at?: string
+          created_by?: string
+          direction?: string
+          id?: string
+          interaction_at?: string
+          interaction_type?: string
+          opportunity_id?: string | null
+          organization_id?: string | null
+          subject?: string | null
+          summary?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gtm_interactions_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "gtm_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gtm_interactions_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "gtm_opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gtm_interactions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "gtm_organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gtm_notes: {
+        Row: {
+          body: string
+          contact_id: string
+          created_at: string
+          created_by: string
+          id: string
+          interaction_id: string | null
+          note_type: string
+          updated_at: string
+        }
+        Insert: {
+          body: string
+          contact_id: string
+          created_at?: string
+          created_by: string
+          id?: string
+          interaction_id?: string | null
+          note_type: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          contact_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          interaction_id?: string | null
+          note_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gtm_notes_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "gtm_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gtm_notes_interaction_contact_fkey"
+            columns: ["interaction_id", "contact_id"]
+            isOneToOne: false
+            referencedRelation: "gtm_interactions"
+            referencedColumns: ["id", "contact_id"]
+          },
+        ]
+      }
+      gtm_opportunities: {
+        Row: {
+          created_at: string
+          created_by: string
+          estimated_value: number | null
+          id: string
+          name: string
+          next_step: string | null
+          next_step_at: string | null
+          opportunity_type: string
+          organization_id: string | null
+          owner: string | null
+          primary_contact_id: string | null
+          probability: number | null
+          stage: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          estimated_value?: number | null
+          id?: string
+          name: string
+          next_step?: string | null
+          next_step_at?: string | null
+          opportunity_type: string
+          organization_id?: string | null
+          owner?: string | null
+          primary_contact_id?: string | null
+          probability?: number | null
+          stage?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          estimated_value?: number | null
+          id?: string
+          name?: string
+          next_step?: string | null
+          next_step_at?: string | null
+          opportunity_type?: string
+          organization_id?: string | null
+          owner?: string | null
+          primary_contact_id?: string | null
+          probability?: number | null
+          stage?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gtm_opportunities_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "gtm_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gtm_opportunities_primary_contact_id_fkey"
+            columns: ["primary_contact_id"]
+            isOneToOne: false
+            referencedRelation: "gtm_contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gtm_organizations: {
+        Row: {
+          archived: boolean
+          canonical_organization_id: string | null
+          city: string | null
+          conference: string | null
+          created_at: string
+          created_by: string
+          division: string | null
+          id: string
+          linkedin_url: string | null
+          logo_url: string | null
+          name: string | null
+          organization_type: string | null
+          owner: string | null
+          pipeline_stage: string
+          priority: number | null
+          school_id: string | null
+          sport: string | null
+          state: string | null
+          updated_at: string
+          updated_by: string | null
+          website: string | null
+        }
+        Insert: {
+          archived?: boolean
+          canonical_organization_id?: string | null
+          city?: string | null
+          conference?: string | null
+          created_at?: string
+          created_by: string
+          division?: string | null
+          id?: string
+          linkedin_url?: string | null
+          logo_url?: string | null
+          name?: string | null
+          organization_type?: string | null
+          owner?: string | null
+          pipeline_stage?: string
+          priority?: number | null
+          school_id?: string | null
+          sport?: string | null
+          state?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          website?: string | null
+        }
+        Update: {
+          archived?: boolean
+          canonical_organization_id?: string | null
+          city?: string | null
+          conference?: string | null
+          created_at?: string
+          created_by?: string
+          division?: string | null
+          id?: string
+          linkedin_url?: string | null
+          logo_url?: string | null
+          name?: string | null
+          organization_type?: string | null
+          owner?: string | null
+          pipeline_stage?: string
+          priority?: number | null
+          school_id?: string | null
+          sport?: string | null
+          state?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gtm_organizations_canonical_organization_id_fkey"
+            columns: ["canonical_organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gtm_organizations_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gtm_relationships: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          notes: string | null
+          relationship_strength: number | null
+          relationship_type: string
+          source_contact_id: string
+          target_contact_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          notes?: string | null
+          relationship_strength?: number | null
+          relationship_type: string
+          source_contact_id: string
+          target_contact_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          notes?: string | null
+          relationship_strength?: number | null
+          relationship_type?: string
+          source_contact_id?: string
+          target_contact_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gtm_relationships_source_contact_id_fkey"
+            columns: ["source_contact_id"]
+            isOneToOne: false
+            referencedRelation: "gtm_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gtm_relationships_target_contact_id_fkey"
+            columns: ["target_contact_id"]
+            isOneToOne: false
+            referencedRelation: "gtm_contacts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       integration_settings: {
         Row: {
@@ -3799,6 +4479,119 @@ export type Database = {
         Args: { p_key_hash: string; p_limit: number; p_window_seconds?: number }
         Returns: boolean
       }
+      create_gtm_contact: {
+        Args: {
+          p_contact_type?: string
+          p_current_company?: string
+          p_current_title?: string
+          p_display_name: string
+          p_do_not_automate?: boolean
+          p_email?: string
+          p_first_name?: string
+          p_last_name?: string
+          p_league_level?: string
+          p_linkedin_url?: string
+          p_player_id?: string
+          p_sport?: string
+        }
+        Returns: {
+          archived: boolean
+          bltz_relevance: number | null
+          buying_authority: number | null
+          contact_type: string
+          created_at: string
+          created_by: string
+          current_company: string | null
+          current_title: string | null
+          display_name: string
+          do_not_automate: boolean
+          email: string | null
+          first_name: string | null
+          geography: string | null
+          id: string
+          introduction_potential: number | null
+          is_priority: boolean
+          last_interaction_at: string | null
+          last_name: string | null
+          league_level: string | null
+          linkedin_connected_on: string | null
+          linkedin_url: string | null
+          network_leverage: number | null
+          next_action: string | null
+          next_action_at: string | null
+          organization_id: string | null
+          phone: string | null
+          pipeline_stage: string
+          priority_model: string | null
+          priority_score: number | null
+          priority_tier: string | null
+          relationship_strength: number | null
+          segment: string | null
+          source: string | null
+          source_record_id: string | null
+          sport: string | null
+          timing_score: number | null
+          updated_at: string
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "gtm_contacts"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      create_gtm_customer_discovery: {
+        Args: {
+          p_additional_context?: string
+          p_contact_id: string
+          p_current_solution?: string
+          p_expected_budget_range?: string
+          p_expected_buyer?: string
+          p_feature_requested?: string
+          p_interaction_id?: string
+          p_introduction_offered?: boolean
+          p_introduction_target?: string
+          p_organization_id?: string
+          p_pain_level?: number
+          p_primary_bltz_use_case?: string
+          p_primary_objection?: string
+          p_problem_discussed?: string
+          p_would_pay?: boolean
+          p_would_pilot?: boolean
+          p_would_use?: boolean
+        }
+        Returns: {
+          additional_context: string | null
+          contact_id: string
+          created_at: string
+          created_by: string
+          current_solution: string | null
+          expected_budget_range: string | null
+          expected_buyer: string | null
+          feature_requested: string | null
+          id: string
+          interaction_id: string | null
+          introduction_offered: boolean | null
+          introduction_target: string | null
+          organization_id: string | null
+          pain_level: number | null
+          primary_bltz_use_case: string | null
+          primary_objection: string | null
+          problem_discussed: string | null
+          updated_at: string
+          updated_by: string | null
+          would_pay: boolean | null
+          would_pilot: boolean | null
+          would_use: boolean | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "gtm_customer_discovery"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       generate_slug: { Args: { input_name: string }; Returns: string }
       get_beta_intelligence_dashboard: {
         Args: {
@@ -3809,7 +4602,128 @@ export type Database = {
         }
         Returns: Json
       }
+      get_gtm_foundation_metrics: { Args: { p_since?: string }; Returns: Json }
+      import_gtm_contacts: {
+        Args: {
+          p_content_sha256: string
+          p_duplicate_count?: number
+          p_field_mapping: Json
+          p_filename: string
+          p_idempotency_key: string
+          p_invalid_count?: number
+          p_preview_summary: Json
+          p_rows: Json
+        }
+        Returns: {
+          approved_at: string | null
+          approved_by: string | null
+          completed_at: string | null
+          content_sha256: string
+          created_at: string
+          error_summary: string | null
+          field_mapping: Json
+          filename: string
+          id: string
+          idempotency_key: string
+          import_type: string
+          potential_matches: number
+          preview_summary: Json
+          rows_created: number
+          rows_duplicated: number
+          rows_failed: number
+          rows_found: number
+          rows_updated: number
+          started_at: string | null
+          status: string
+          updated_at: string
+          uploaded_by: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "gtm_import_jobs"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       is_internal_admin: { Args: never; Returns: boolean }
+      log_gtm_interaction: {
+        Args: {
+          p_contact_id: string
+          p_direction: string
+          p_interaction_at: string
+          p_interaction_type: string
+          p_next_action?: string
+          p_next_action_at?: string
+          p_opportunity_id?: string
+          p_organization_id?: string
+          p_subject?: string
+          p_summary?: string
+        }
+        Returns: {
+          contact_id: string
+          created_at: string
+          created_by: string
+          direction: string
+          id: string
+          interaction_at: string
+          interaction_type: string
+          opportunity_id: string | null
+          organization_id: string | null
+          subject: string | null
+          summary: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "gtm_interactions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      prepare_gtm_import_job: {
+        Args: {
+          p_content_sha256: string
+          p_field_mapping: Json
+          p_filename: string
+          p_idempotency_key: string
+          p_import_type: string
+          p_potential_matches?: number
+          p_preview_summary: Json
+          p_rows_duplicated?: number
+          p_rows_failed?: number
+          p_rows_found: number
+        }
+        Returns: {
+          approved_at: string | null
+          approved_by: string | null
+          completed_at: string | null
+          content_sha256: string
+          created_at: string
+          error_summary: string | null
+          field_mapping: Json
+          filename: string
+          id: string
+          idempotency_key: string
+          import_type: string
+          potential_matches: number
+          preview_summary: Json
+          rows_created: number
+          rows_duplicated: number
+          rows_failed: number
+          rows_found: number
+          rows_updated: number
+          started_at: string | null
+          status: string
+          updated_at: string
+          uploaded_by: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "gtm_import_jobs"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       publish_onboarding_run: {
         Args: {
           p_awards?: Json

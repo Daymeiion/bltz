@@ -383,6 +383,117 @@ export interface AuditLog {
   created_at: string;
 }
 
+export type GtmContactType = "enterprise" | "athlete" | "multiplier" | "unclassified";
+export type GtmPriorityTier = "A" | "B" | "C" | "D";
+export type GtmPipelineStage =
+  | "unqualified" | "identified" | "qualified" | "discovery" | "demo"
+  | "pilot" | "proposal" | "negotiation" | "won" | "lost";
+
+export interface GtmContact {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  display_name: string;
+  linkedin_url: string | null;
+  email: string | null;
+  phone: string | null;
+  organization_id: string | null;
+  current_company: string | null;
+  current_title: string | null;
+  contact_type: GtmContactType;
+  segment: string | null;
+  sport: string | null;
+  league_level: string | null;
+  geography: string | null;
+  relationship_strength: number | null;
+  network_leverage: number | null;
+  bltz_relevance: number | null;
+  buying_authority: number | null;
+  introduction_potential: number | null;
+  timing_score: number | null;
+  priority_score: number | null;
+  priority_tier: GtmPriorityTier | null;
+  priority_model: "enterprise_v1" | null;
+  pipeline_stage: GtmPipelineStage;
+  source: string | null;
+  source_record_id: string | null;
+  linkedin_connected_on: string | null;
+  do_not_automate: boolean;
+  is_priority: boolean;
+  archived: boolean;
+  last_interaction_at: string | null;
+  next_action: string | null;
+  next_action_at: string | null;
+  created_by: string;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GtmContactPlayer {
+  id: string;
+  contact_id: string;
+  player_id: string;
+  match_type: string;
+  match_confidence: number;
+  verified: boolean;
+  verified_by: string | null;
+  verified_at: string | null;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GtmCustomerDiscovery {
+  id: string;
+  contact_id: string;
+  interaction_id: string | null;
+  organization_id: string | null;
+  problem_discussed: string | null;
+  current_solution: string | null;
+  pain_level: number | null;
+  primary_bltz_use_case: string | null;
+  feature_requested: string | null;
+  would_use: boolean | null;
+  would_pilot: boolean | null;
+  would_pay: boolean | null;
+  expected_buyer: string | null;
+  expected_budget_range: string | null;
+  primary_objection: string | null;
+  introduction_offered: boolean | null;
+  introduction_target: string | null;
+  additional_context: string | null;
+  created_by: string;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GtmImportJob {
+  id: string;
+  import_type: string;
+  filename: string;
+  content_sha256: string;
+  idempotency_key: string;
+  status: string;
+  field_mapping: Json;
+  preview_summary: Json;
+  rows_found: number;
+  rows_created: number;
+  rows_updated: number;
+  rows_duplicated: number;
+  rows_failed: number;
+  potential_matches: number;
+  error_summary: string | null;
+  uploaded_by: string;
+  approved_by: string | null;
+  created_at: string;
+  started_at: string | null;
+  approved_at: string | null;
+  completed_at: string | null;
+  updated_at: string;
+}
+
 export interface Season {
   id: string;
   organization_id: string;

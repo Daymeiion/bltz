@@ -42,7 +42,7 @@ const builtInViews = [
   "No Contact Yet", "Locker Candidates",
 ] as const;
 
-const noteTypes = ["general", "call", "meeting", "linkedin", "email", "introduction", "research", "personal_context", "opportunity"] as const;
+const noteTypes = ["general", "call", "meeting", "linkedin", "email", "introduction", "research", "personal_context", "opportunity", "discovery"] as const;
 const interactionTypes = ["linkedin", "email", "phone", "video_call", "meeting", "event", "introduction", "other"] as const;
 
 function normalize(value: string | null | undefined) {

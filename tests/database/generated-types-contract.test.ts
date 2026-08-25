@@ -28,7 +28,14 @@ describe("authoritative generated database contract", () => {
     "sports_events",
     "sports_event_teams",
     "sports_event_athletes",
-  ])("contains the deployed Phase 2 %s table", (table) => {
+    "gtm_organizations",
+    "gtm_contacts",
+    "gtm_contact_players",
+    "gtm_notes",
+    "gtm_interactions",
+    "gtm_customer_discovery",
+    "gtm_import_jobs",
+  ])("contains the required generated %s table", (table) => {
     expect(generated).toMatch(new RegExp(`^      ${table}: \\{`, "m"));
   });
 
@@ -54,6 +61,10 @@ describe("authoritative generated database contract", () => {
     );
     expect(generated).toContain("get_beta_intelligence_dashboard: {");
     expect(generated).toContain("is_internal_admin: { Args: never; Returns: boolean }");
+    expect(generated).toContain("create_gtm_customer_discovery: {");
+    expect(generated).toContain("get_gtm_foundation_metrics: {");
+    expect(generated).toContain("import_gtm_contacts: {");
+    expect(generated).toContain("prepare_gtm_import_job: {");
   });
 
   it("contains schema shape only, without project binding or credential values", () => {

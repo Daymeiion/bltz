@@ -134,7 +134,7 @@ create table if not exists public.gtm_contacts (
     (source is null and source_record_id is null)
     or (source is not null and source_record_id is not null)
   ),
-  constraint gtm_contacts_next_action_check check (
+  constraint gtm_contacts_next_action_pair_check check (
     next_action_at is null or next_action is not null
   ),
   constraint gtm_contacts_enterprise_score_check check (
@@ -238,7 +238,7 @@ create table if not exists public.gtm_opportunities (
   updated_by uuid references auth.users(id) on delete set null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  constraint gtm_opportunities_next_step_check check (
+  constraint gtm_opportunities_next_step_pair_check check (
     next_step_at is null or next_step is not null
   )
 );

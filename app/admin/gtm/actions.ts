@@ -13,7 +13,7 @@ import { createClient } from "@/lib/supabase/server";
 
 const addNoteSchema = z.object({
   contactId: z.string().uuid(),
-  noteType: z.enum(["general", "call", "meeting", "linkedin", "email", "introduction", "research", "personal_context", "opportunity"]),
+  noteType: z.enum(["general", "call", "meeting", "linkedin", "email", "introduction", "research", "personal_context", "opportunity", "discovery"]),
   body: z.string().trim().min(1).max(5000),
 });
 
@@ -88,26 +88,60 @@ function parseMapping(value: FormDataEntryValue | null): GtmFieldMapping {
 async function readCsv(formData: FormData) {
   const file = formData.get("file");
   if (!(file instanceof File) || !file.name.toLowerCase().endsWith(".csv")) throw new Error("Choose a CSV file.");
+  if (file.type && !["text/csv", "application/csv", "application/vnd.ms-excel"].includes(file.type)) throw new Error("Choose a CSV file.");
   if (file.size > GTM_CSV_MAX_BYTES) throw new Error("CSV files must be smaller than 750 KB.");
   return { file, parsed: parseGtmCsv(Buffer.from(await file.arrayBuffer()), parseMapping(formData.get("mapping"))) };
 }
 
+type ExistingIdentityIndex = {
+  source: Map<string, Set<string>>;
+  linkedin: Map<string, Set<string>>;
+  email: Map<string, Set<string>>;
+};
+
+function addIdentity(index: Map<string, Set<string>>, key: unknown, id: unknown) {
+  if (!key || !id) return;
+  const normalized = String(key).trim().toLowerCase();
+  const ids = index.get(normalized) ?? new Set<string>();
+  ids.add(String(id));
+  index.set(normalized, ids);
+}
+
+function existingOutcome(index: ExistingIdentityIndex, row: NormalizedGtmImportRow): "create" | "update" | "skip" {
+  const signals = [
+    index.linkedin.get(row.linkedinUrl.toLowerCase()),
+    index.email.get(row.email.toLowerCase()),
+    index.source.get(row.sourceRecordId.toLowerCase()),
+  ].filter(Boolean) as Set<string>[];
+  const ids = new Set(signals.flatMap((values) => [...values]));
+  return ids.size === 0 ? "create" : ids.size === 1 ? "update" : "skip";
+}
+
 async function analyzeExisting(gtm: SupabaseClient, rows: NormalizedGtmImportRow[]) {
-  const sourceIds = new Set<string>();
-  const identityIds = new Set<string>();
+  const index: ExistingIdentityIndex = {
+    source: new Map(),
+    linkedin: new Map(),
+    email: new Map(),
+  };
   for (let offset = 0; offset < rows.length; offset += 100) {
     const batch = rows.slice(offset, offset + 100);
+    const linkedinUrls = batch.map((row) => row.linkedinUrl).filter(Boolean);
+    const emails = batch.map((row) => row.email).filter(Boolean);
     const [sourceResult, linkedinResult, emailResult] = await Promise.all([
-      gtm.from("gtm_contacts").select("source_record_id").eq("source", "contacts_csv").in("source_record_id", batch.map((row) => row.sourceRecordId)),
-      gtm.from("gtm_contacts").select("linkedin_url").in("linkedin_url", batch.map((row) => row.linkedinUrl).filter(Boolean)),
-      gtm.from("gtm_contacts").select("email").in("email", batch.map((row) => row.email).filter(Boolean)),
+      gtm.from("gtm_contacts").select("id,source_record_id").in("source", ["linkedin_connections", "contacts_csv"]).in("source_record_id", batch.map((row) => row.sourceRecordId)),
+      linkedinUrls.length
+        ? gtm.from("gtm_contacts").select("id,linkedin_url").eq("archived", false).in("linkedin_url", linkedinUrls)
+        : Promise.resolve({ data: [], error: null }),
+      emails.length
+        ? gtm.from("gtm_contacts").select("id,email").eq("archived", false).in("email", emails)
+        : Promise.resolve({ data: [], error: null }),
     ]);
     if (sourceResult.error || linkedinResult.error || emailResult.error) throw sourceResult.error ?? linkedinResult.error ?? emailResult.error;
-    for (const item of sourceResult.data ?? []) if (item.source_record_id) sourceIds.add(String(item.source_record_id));
-    for (const item of linkedinResult.data ?? []) if (item.linkedin_url) identityIds.add(String(item.linkedin_url).toLowerCase());
-    for (const item of emailResult.data ?? []) if (item.email) identityIds.add(String(item.email).toLowerCase());
+    for (const item of sourceResult.data ?? []) addIdentity(index.source, item.source_record_id, item.id);
+    for (const item of linkedinResult.data ?? []) addIdentity(index.linkedin, item.linkedin_url, item.id);
+    for (const item of emailResult.data ?? []) addIdentity(index.email, item.email, item.id);
   }
-  return { sourceIds, identityIds };
+  return index;
 }
 
 async function findPotentialPlayerMatches(gtm: SupabaseClient, rows: NormalizedGtmImportRow[]) {
@@ -116,9 +150,9 @@ async function findPotentialPlayerMatches(gtm: SupabaseClient, rows: NormalizedG
   for (let offset = 0; offset < athleteRows.length; offset += 75) {
     const names = [...new Set(athleteRows.slice(offset, offset + 75).map((row) => row.displayName))];
     const results = await Promise.all([
-      gtm.from("players").select("id,name,full_name,display_name,team,position,level").in("name", names),
-      gtm.from("players").select("id,name,full_name,display_name,team,position,level").in("full_name", names),
-      gtm.from("players").select("id,name,full_name,display_name,team,position,level").in("display_name", names),
+      gtm.from("players").select("id,name,full_name,display_name,team,school,college,position,level").in("name", names),
+      gtm.from("players").select("id,name,full_name,display_name,team,school,college,position,level").in("full_name", names),
+      gtm.from("players").select("id,name,full_name,display_name,team,school,college,position,level").in("display_name", names),
     ]);
     for (const result of results) {
       if (result.error) continue;
@@ -129,6 +163,8 @@ async function findPotentialPlayerMatches(gtm: SupabaseClient, rows: NormalizedG
           fullName: player.full_name as string | null,
           displayName: player.display_name as string | null,
           team: player.team as string | null,
+          school: player.school as string | null,
+          college: player.college as string[] | null,
           position: player.position as string | null,
           level: player.level as string | null,
         });
@@ -275,21 +311,40 @@ export async function previewGtmCsv(formData: FormData): Promise<GtmMutationResu
     let collision = 0;
     const outcomes = new Map<string, "create" | "update" | "skip">();
     for (const row of parsed.rows) {
-      if (existing.sourceIds.has(row.sourceRecordId)) { update += 1; outcomes.set(row.sourceRecordId, "update"); }
-      else if ((row.linkedinUrl && existing.identityIds.has(row.linkedinUrl)) || (row.email && existing.identityIds.has(row.email))) { collision += 1; outcomes.set(row.sourceRecordId, "skip"); }
-      else { create += 1; outcomes.set(row.sourceRecordId, "create"); }
+      const outcome = existingOutcome(existing, row);
+      outcomes.set(row.sourceRecordId, outcome);
+      if (outcome === "update") update += 1;
+      else if (outcome === "skip") collision += 1;
+      else create += 1;
     }
+    const idempotencyKey = crypto.randomUUID();
+    const mapping = { ...parsed.suggestedMapping, ...parseMapping(formData.get("mapping")) };
+    const counts = { found: parsed.rows.length + parsed.issues.length + parsed.duplicateCount, create, update, duplicate: parsed.duplicateCount + collision, invalid: parsed.issues.length, potentialPlayerMatches: playerMatches.size };
+    const previewSummary = { valid: create + update, invalid: counts.invalid, duplicates: counts.duplicate, potentialMatches: counts.potentialPlayerMatches };
+    const { error: prepareError } = await gtm.rpc("prepare_gtm_import_job", {
+      p_filename: file.name,
+      p_import_type: "linkedin_connections",
+      p_content_sha256: parsed.contentSha256,
+      p_idempotency_key: idempotencyKey,
+      p_field_mapping: mapping,
+      p_preview_summary: previewSummary,
+      p_rows_found: counts.found,
+      p_rows_duplicated: counts.duplicate,
+      p_rows_failed: counts.invalid,
+      p_potential_matches: counts.potentialPlayerMatches,
+    });
+    if (prepareError) throw prepareError;
     return { ok: true, value: {
       filename: file.name,
-      idempotencyKey: crypto.randomUUID(),
+      idempotencyKey,
       headers: parsed.headers,
-      mapping: { ...parsed.suggestedMapping, ...parseMapping(formData.get("mapping")) },
-      counts: { found: parsed.rows.length + parsed.issues.length + parsed.duplicateCount, create, update, duplicate: parsed.duplicateCount + collision, invalid: parsed.issues.length, potentialPlayerMatches: playerMatches.size },
+      mapping,
+      counts,
       sample: parsed.rows.slice(0, 8).map((row) => ({ rowNumber: row.rowNumber, displayName: row.displayName, email: row.email, currentCompany: row.currentCompany, contactType: row.contactType, outcome: outcomes.get(row.sourceRecordId) ?? "create", potentialPlayerName: playerMatches.get(row.sourceRecordId)?.name ?? null })),
       issues: parsed.issues.slice(0, 20),
     } };
   } catch (error) {
-    const unavailable = error && typeof error === "object" && "code" in error && (["42P01", "PGRST205"] as unknown[]).includes(error.code);
+    const unavailable = error && typeof error === "object" && "code" in error && (["42P01", "42883", "PGRST202", "PGRST205"] as unknown[]).includes(error.code);
     return { ok: false, code: unavailable ? "unavailable" : "invalid", message: unavailable ? "CSV imports are not available until the GTM database migration is deployed." : error instanceof Error ? error.message : "The CSV could not be read." };
   }
 }
@@ -304,18 +359,25 @@ export async function commitGtmCsv(formData: FormData): Promise<GtmMutationResul
     const { file, parsed } = await readCsv(formData);
     const gtm = authorization.supabase as unknown as SupabaseClient;
     const [existing, playerMatches] = await Promise.all([analyzeExisting(gtm, parsed.rows), findPotentialPlayerMatches(gtm, parsed.rows)]);
-    const accepted = parsed.rows.filter((row) => existing.sourceIds.has(row.sourceRecordId)
-      || !((row.linkedinUrl && existing.identityIds.has(row.linkedinUrl)) || (row.email && existing.identityIds.has(row.email))));
+    const accepted = parsed.rows.filter((row) => existingOutcome(existing, row) !== "skip");
     const collisionCount = parsed.rows.length - accepted.length;
     const mapping = { ...parsed.suggestedMapping, ...parseMapping(formData.get("mapping")) };
-    const previewSummary = { valid: accepted.length, invalid: parsed.issues.length, duplicates: parsed.duplicateCount + collisionCount };
+    const previewSummary = { valid: accepted.length, invalid: parsed.issues.length, duplicates: parsed.duplicateCount + collisionCount, potentialMatches: playerMatches.size };
     const { data, error } = await gtm.rpc("import_gtm_contacts", {
       p_filename: file.name,
       p_content_sha256: parsed.contentSha256,
       p_idempotency_key: idempotencyKey,
       p_field_mapping: mapping,
       p_preview_summary: previewSummary,
-      p_rows: accepted.map(({ rowNumber: _rowNumber, ...row }) => ({ ...row, playerId: playerMatches.get(row.sourceRecordId)?.id ?? null })),
+      p_rows: accepted.map(({ rowNumber: _rowNumber, ...row }) => {
+        const match = playerMatches.get(row.sourceRecordId);
+        return {
+          ...row,
+          playerId: match?.id ?? null,
+          playerMatchType: match?.matchType ?? null,
+          playerMatchConfidence: match?.confidence ?? null,
+        };
+      }),
       p_duplicate_count: parsed.duplicateCount + collisionCount,
       p_invalid_count: parsed.issues.length,
     });

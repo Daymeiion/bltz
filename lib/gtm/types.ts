@@ -36,6 +36,7 @@ export const GTM_NOTE_TYPES = [
   "research",
   "personal_context",
   "opportunity",
+  "discovery",
 ] as const;
 
 export type GtmNoteType = (typeof GTM_NOTE_TYPES)[number];
@@ -96,6 +97,7 @@ export type GtmOpportunityType = (typeof GTM_OPPORTUNITY_TYPES)[number];
 export const GTM_IMPORT_TYPES = [
   "linkedin_connections",
   "player_master",
+  "contacts_csv",
 ] as const;
 
 export type GtmImportType = (typeof GTM_IMPORT_TYPES)[number];

@@ -22,6 +22,7 @@ const fieldLabels: Record<GtmImportField, string> = {
   linkedinUrl: "LinkedIn URL",
   currentCompany: "Company",
   currentTitle: "Title",
+  connectedOn: "Connected on",
   contactType: "Contact type",
   sport: "Sport",
   leagueLevel: "League / level",

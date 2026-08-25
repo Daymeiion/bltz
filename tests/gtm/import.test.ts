@@ -4,8 +4,8 @@ import { parseGtmCsv } from "@/lib/gtm/import";
 describe("GTM CSV normalization", () => {
   it("detects common headers and creates stable, normalized identities", () => {
     const csv = Buffer.from([
-      "First Name,Last Name,Email Address,Company,LinkedIn URL,Contact Type,Do Not Automate",
-      "Jordan,Reed,JORDAN@example.com,North Coast,linkedin.com/in/jordan-reed,Athlete,yes",
+      "First Name,Last Name,Email Address,Company,LinkedIn URL,Connected On,Contact Type,Do Not Automate",
+      "Jordan,Reed,JORDAN@example.com,North Coast,linkedin.com/in/jordan-reed,2025-08-14,Athlete,yes",
     ].join("\n"));
     const result = parseGtmCsv(csv);
 
@@ -15,10 +15,35 @@ describe("GTM CSV normalization", () => {
       displayName: "Jordan Reed",
       email: "jordan@example.com",
       linkedinUrl: "https://www.linkedin.com/in/jordan-reed",
+      connectedOn: "2025-08-14",
       contactType: "athlete",
       doNotAutomate: true,
     });
     expect(result.rows[0].sourceRecordId).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it("parses a LinkedIn connections export preamble and maps its date column", () => {
+    const csv = Buffer.from([
+      "Notes:",
+      "When exporting your connection data, some email addresses may be missing.",
+      "First Name,Last Name,URL,Email Address,Company,Position,Connected On",
+      "Taylor,Lane,https://www.linkedin.com/in/taylor-lane,taylor@example.com,Acme,VP Partnerships,17 Aug 2024",
+    ].join("\n"));
+
+    const result = parseGtmCsv(csv);
+    expect(result.rows).toHaveLength(1);
+    expect(result.suggestedMapping.connectedOn).toBe("Connected On");
+    expect(result.rows[0]).toMatchObject({ displayName: "Taylor Lane", connectedOn: "2024-08-17" });
+  });
+
+  it("rejects invalid connection dates instead of silently inventing one", () => {
+    const result = parseGtmCsv(Buffer.from("Name,Connected On\nTaylor Lane,not-a-date"));
+    expect(result.rows).toEqual([]);
+    expect(result.issues).toEqual([{ rowNumber: 2, message: "LinkedIn connection date is not valid." }]);
+  });
+
+  it("rejects an Excel workbook disguised with a CSV extension", () => {
+    expect(() => parseGtmCsv(Buffer.from([0x50, 0x4b, 0x03, 0x04]))).toThrow("not an Excel workbook");
   });
 
   it("supports explicit field mapping and rejects invalid rows before commit", () => {
@@ -51,6 +76,14 @@ describe("GTM CSV normalization", () => {
 
     expect(result.rows).toHaveLength(1);
     expect(result.duplicateCount).toBe(1);
+  });
+
+  it("does not collapse name-only rows into one contact identity", () => {
+    const result = parseGtmCsv(Buffer.from("Name,Company,Title\nAlex Smith,Acme,Director\nAlex Smith,Acme,Director"));
+
+    expect(result.rows).toHaveLength(2);
+    expect(result.duplicateCount).toBe(0);
+    expect(result.rows[0].sourceRecordId).not.toBe(result.rows[1].sourceRecordId);
   });
 
   it("enforces the server-side row limit", () => {

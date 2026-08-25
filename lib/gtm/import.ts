@@ -22,6 +22,7 @@ const headerAliases: Record<GtmImportField, string[]> = {
   linkedinUrl: ["linkedin", "linkedin url", "linkedin profile", "profile url", "url"],
   currentCompany: ["company", "current company", "organization", "organisation"],
   currentTitle: ["title", "position", "job title", "role"],
+  connectedOn: ["connected on", "connection date", "connected_on", "connected date"],
   contactType: ["contact type", "type", "category"],
   sport: ["sport"],
   leagueLevel: ["league", "league level", "level"],
@@ -56,6 +57,35 @@ function truthy(value: string) {
   return ["1", "true", "yes", "y", "do not automate"].includes(value.trim().toLowerCase());
 }
 
+function normalizeDate(value: string) {
+  if (!value) return "";
+  const isoMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (isoMatch) {
+    const date = new Date(`${value}T00:00:00.000Z`);
+    return Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== value
+      ? ""
+      : value;
+  }
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "";
+  const year = parsed.getFullYear();
+  const month = String(parsed.getMonth() + 1).padStart(2, "0");
+  const day = String(parsed.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function withoutLinkedInPreamble(buffer: Buffer) {
+  const text = buffer.toString("utf8").replace(/^\uFEFF/, "");
+  const lines = text.split(/\r?\n/);
+  const headerIndex = lines.findIndex((line) => {
+    const normalized = line.toLowerCase();
+    return normalized.includes("first name")
+      && normalized.includes("last name")
+      && (normalized.includes("url") || normalized.includes("linkedin"));
+  });
+  return headerIndex > 0 ? Buffer.from(lines.slice(headerIndex).join("\n")) : buffer;
+}
+
 function suggestMapping(headers: string[]): GtmFieldMapping {
   const normalized = new Map(headers.map((header) => [normalizedHeader(header), header]));
   const result: GtmFieldMapping = {};
@@ -71,17 +101,25 @@ function getValue(row: Record<string, unknown>, mapping: GtmFieldMapping, field:
   return header ? clean(row[header], maxLength) : "";
 }
 
-function sourceIdentity(row: Omit<NormalizedGtmImportRow, "sourceRecordId">, explicitId: string) {
+function sourceIdentity(
+  row: Omit<NormalizedGtmImportRow, "sourceRecordId">,
+  explicitId: string,
+  uploadRowIdentity: string,
+) {
   const seed = explicitId || row.linkedinUrl || row.email
-    || [row.displayName, row.currentCompany, row.currentTitle].map((value) => value.toLowerCase()).join("|");
+    || uploadRowIdentity;
   return createHash("sha256").update(seed).digest("hex");
 }
 
 export function parseGtmCsv(buffer: Buffer, mappingOverride?: GtmFieldMapping): ParsedGtmImport {
   if (buffer.byteLength === 0) throw new Error("Choose a non-empty CSV file.");
   if (buffer.byteLength > GTM_CSV_MAX_BYTES) throw new Error("CSV files must be smaller than 750 KB.");
+  if (buffer[0] === 0x50 && buffer[1] === 0x4b) throw new Error("Choose a CSV file, not an Excel workbook.");
+  const contentSha256 = createHash("sha256").update(buffer).digest("hex");
 
-  const workbook = XLSX.read(buffer, { type: "buffer", raw: false });
+  // CSV identity/date fields must remain textual. SheetJS otherwise coerces
+  // ISO dates through the machine timezone and can shift Connected On by a day.
+  const workbook = XLSX.read(withoutLinkedInPreamble(buffer), { type: "buffer", raw: true });
   const sheetName = workbook.SheetNames[0];
   if (!sheetName) throw new Error("The CSV does not contain a worksheet.");
   const rawRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(workbook.Sheets[sheetName], { defval: "", raw: false });
@@ -105,6 +143,8 @@ export function parseGtmCsv(buffer: Buffer, mappingOverride?: GtmFieldMapping): 
     const rawLinkedIn = getValue(raw, mapping, "linkedinUrl", 500);
     const linkedinUrl = normalizeLinkedIn(rawLinkedIn);
     const email = getValue(raw, mapping, "email", 320).toLowerCase();
+    const rawConnectedOn = getValue(raw, mapping, "connectedOn", 80);
+    const connectedOn = normalizeDate(rawConnectedOn);
     const rawType = getValue(raw, mapping, "contactType", 40).toLowerCase().replace(/\s+/g, "_");
     const contactType = (GTM_CONTACT_TYPES as readonly string[]).includes(rawType) ? rawType as GtmContactType : "unclassified";
     const base = {
@@ -116,6 +156,7 @@ export function parseGtmCsv(buffer: Buffer, mappingOverride?: GtmFieldMapping): 
       linkedinUrl,
       currentCompany: getValue(raw, mapping, "currentCompany", 200),
       currentTitle: getValue(raw, mapping, "currentTitle", 200),
+      connectedOn,
       contactType,
       sport: getValue(raw, mapping, "sport", 80),
       leagueLevel: getValue(raw, mapping, "leagueLevel", 80),
@@ -134,8 +175,16 @@ export function parseGtmCsv(buffer: Buffer, mappingOverride?: GtmFieldMapping): 
       issues.push({ rowNumber, message: "LinkedIn URL is not valid." });
       return;
     }
+    if (rawConnectedOn && !connectedOn) {
+      issues.push({ rowNumber, message: "LinkedIn connection date is not valid." });
+      return;
+    }
 
-    const sourceRecordId = sourceIdentity(base, getValue(raw, mapping, "sourceRecordId", 255));
+    const sourceRecordId = sourceIdentity(
+      base,
+      getValue(raw, mapping, "sourceRecordId", 255),
+      `${contentSha256}:${rowNumber}`,
+    );
     const identityKeys = [linkedinUrl && `linkedin:${linkedinUrl}`, email && `email:${email}`].filter(Boolean) as string[];
     if (seen.has(sourceRecordId) || identityKeys.some((key) => seenIdentities.has(key))) {
       duplicateCount += 1;
@@ -152,6 +201,6 @@ export function parseGtmCsv(buffer: Buffer, mappingOverride?: GtmFieldMapping): 
     rows,
     issues,
     duplicateCount,
-    contentSha256: createHash("sha256").update(buffer).digest("hex"),
+    contentSha256,
   };
 }
