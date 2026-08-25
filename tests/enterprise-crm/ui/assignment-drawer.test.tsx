@@ -27,11 +27,32 @@ describe("AssignmentDrawer interaction contract", () => {
     const owner = dialog.querySelector("select") as HTMLSelectElement; expect(document.activeElement).toBe(owner);
     owner.value = "member-1"; act(() => owner.dispatchEvent(new Event("change", { bubbles: true })));
     const close = [...dialog.querySelectorAll("button")].find((button) => button.textContent === "Close")!; click(close);
-    expect(document.querySelector('[role="alertdialog"]')?.textContent).toContain("Discard unsaved changes");
-    click([...dialog.querySelectorAll("button")].find((button) => button.textContent === "Keep editing")!); await act(async () => undefined); expect(document.querySelector('[role="dialog"]')).not.toBeNull(); expect(document.activeElement).toBe(owner);
+    const confirmation = document.querySelector<HTMLElement>('[role="alertdialog"]')!;
+    expect(confirmation.textContent).toContain("Discard unsaved changes");
+    expect(confirmation.getAttribute("aria-modal")).toBe("true");
+    expect(confirmation.getAttribute("aria-labelledby")).toBeTruthy();
+    expect(confirmation.getAttribute("aria-describedby")).toBeTruthy();
+    expect(confirmation.contains(document.activeElement)).toBe(true);
+    expect(document.activeElement?.textContent).toBe("Keep editing");
+    click([...confirmation.querySelectorAll("button")].find((button) => button.textContent === "Keep editing")!); await act(async () => undefined); expect(document.querySelector('[role="dialog"]')).not.toBeNull(); expect(document.activeElement).toBe(owner);
     click(close); click([...dialog.querySelectorAll("button")].find((button) => button.textContent === "Discard changes")!);
     await act(async () => undefined);
     expect(document.querySelector('[role="dialog"]')).toBeNull(); expect(document.activeElement).toBe(trigger);
+  });
+
+  it("closes dirty confirmation with Escape, preserves the draft, and restores owner focus", async () => {
+    render(<Harness />);
+    const trigger = container.querySelector("button")!; trigger.focus(); click(trigger); await act(async () => undefined);
+    const dialog = document.querySelector<HTMLElement>('[role="dialog"]')!;
+    const owner = dialog.querySelector("select") as HTMLSelectElement;
+    owner.value = "member-1"; act(() => owner.dispatchEvent(new Event("change", { bubbles: true })));
+    click([...dialog.querySelectorAll("button")].find((button) => button.textContent === "Close")!);
+    const confirmation = document.querySelector<HTMLElement>('[role="alertdialog"]')!;
+    act(() => confirmation.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
+    await act(async () => undefined);
+    expect(document.querySelector('[role="alertdialog"]')).toBeNull();
+    expect(owner.value).toBe("member-1");
+    expect(document.activeElement).toBe(owner);
   });
 
   it("validates caller-required selections and emits only the typed callback draft", async () => {
