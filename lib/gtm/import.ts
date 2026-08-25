@@ -136,13 +136,13 @@ export function parseGtmCsv(buffer: Buffer, mappingOverride?: GtmFieldMapping): 
     }
 
     const sourceRecordId = sourceIdentity(base, getValue(raw, mapping, "sourceRecordId", 255));
-    const identityKey = linkedinUrl ? `linkedin:${linkedinUrl}` : email ? `email:${email}` : "";
-    if (seen.has(sourceRecordId) || (identityKey && seenIdentities.has(identityKey))) {
+    const identityKeys = [linkedinUrl && `linkedin:${linkedinUrl}`, email && `email:${email}`].filter(Boolean) as string[];
+    if (seen.has(sourceRecordId) || identityKeys.some((key) => seenIdentities.has(key))) {
       duplicateCount += 1;
       return;
     }
     seen.add(sourceRecordId);
-    if (identityKey) seenIdentities.add(identityKey);
+    identityKeys.forEach((key) => seenIdentities.add(key));
     rows.push({ ...base, sourceRecordId });
   });
 

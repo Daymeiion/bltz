@@ -7,6 +7,7 @@ import {
   parseGtmCsv,
 } from "@/lib/gtm/import";
 import { GTM_CSV_MAX_BYTES, GTM_IMPORT_FIELDS, type GtmFieldMapping, type NormalizedGtmImportRow } from "@/lib/gtm/import-contract";
+import { buildUniquePlayerMatchMap, type CanonicalPlayerCandidate } from "@/lib/gtm/player-matching";
 import { requireInternalAdmin } from "@/lib/rbac";
 import { createClient } from "@/lib/supabase/server";
 
@@ -109,13 +110,9 @@ async function analyzeExisting(gtm: SupabaseClient, rows: NormalizedGtmImportRow
   return { sourceIds, identityIds };
 }
 
-function normalizedName(value: string) {
-  return value.trim().toLowerCase().replace(/\s+/g, " ");
-}
-
 async function findPotentialPlayerMatches(gtm: SupabaseClient, rows: NormalizedGtmImportRow[]) {
   const athleteRows = rows.filter((row) => row.contactType === "athlete");
-  const playersByName = new Map<string, GtmPlayerOption[]>();
+  const playersById = new Map<string, CanonicalPlayerCandidate>();
   for (let offset = 0; offset < athleteRows.length; offset += 75) {
     const names = [...new Set(athleteRows.slice(offset, offset + 75).map((row) => row.displayName))];
     const results = await Promise.all([
@@ -126,18 +123,19 @@ async function findPotentialPlayerMatches(gtm: SupabaseClient, rows: NormalizedG
     for (const result of results) {
       if (result.error) continue;
       for (const player of result.data ?? []) {
-        const option: GtmPlayerOption = { id: String(player.id), name: String(player.display_name || player.full_name || player.name), team: player.team as string | null, position: player.position as string | null, level: player.level as string | null };
-        const key = normalizedName(option.name);
-        const current = playersByName.get(key) ?? [];
-        if (!current.some((item) => item.id === option.id)) current.push(option);
-        playersByName.set(key, current);
+        playersById.set(String(player.id), {
+          id: String(player.id),
+          name: player.name as string | null,
+          fullName: player.full_name as string | null,
+          displayName: player.display_name as string | null,
+          team: player.team as string | null,
+          position: player.position as string | null,
+          level: player.level as string | null,
+        });
       }
     }
   }
-  return new Map(athleteRows.flatMap((row) => {
-    const candidates = playersByName.get(normalizedName(row.displayName)) ?? [];
-    return candidates.length === 1 ? [[row.sourceRecordId, candidates[0]] as const] : [];
-  }));
+  return buildUniquePlayerMatchMap(rows, [...playersById.values()]);
 }
 
 function refreshGtmPaths() {

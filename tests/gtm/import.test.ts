@@ -45,6 +45,14 @@ describe("GTM CSV normalization", () => {
     expect(result.duplicateCount).toBe(1);
   });
 
+  it("checks email duplication even when both rows have different LinkedIn URLs", () => {
+    const csv = Buffer.from("Name,Email,LinkedIn,Record ID\nA Person,a@example.com,https://linkedin.com/in/a-one,one\nA Person,a@example.com,https://linkedin.com/in/a-two,two");
+    const result = parseGtmCsv(csv, { displayName: "Name", email: "Email", linkedinUrl: "LinkedIn", sourceRecordId: "Record ID" });
+
+    expect(result.rows).toHaveLength(1);
+    expect(result.duplicateCount).toBe(1);
+  });
+
   it("enforces the server-side row limit", () => {
     const body = ["Name", ...Array.from({ length: 2001 }, (_, index) => `Person ${index}`)].join("\n");
     expect(() => parseGtmCsv(Buffer.from(body))).toThrow("at most 2,000 rows");
