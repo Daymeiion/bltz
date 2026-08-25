@@ -30,6 +30,20 @@ Each interaction can preserve zero or more universal outcomes in a constrained t
 
 V2 contact-creation and interaction-logging RPCs accept the addendum fields while retaining the V1 RPCs for compatibility. Both remain security-invoker functions with explicit internal-admin checks and grants.
 
+## Prompt 3 core workflows
+
+Migration `20260825202830_implement_gtm_core_workflows.sql` completes the first operable Admin vertical slice without changing `public.players` or introducing parallel contact, athlete, organization, or metrics tables.
+
+- Contact pipeline stages are now `identified`, `connected`, `engaged`, `discovery`, `demo_candidate`, `pilot_candidate`, `active_pilot`, `converted`, `nurture`, and `not_now`. The migration maps superseded foundation stages before replacing the constraint.
+- Contact editing, classification, segmentation, enterprise scoring, automation protection, priority marking, stage, next action/date, trigger, and archive state remain on `gtm_contacts` under its existing RLS and audit trigger.
+- `log_gtm_interaction_v3` adds persistent `follow_up_required` intent while atomically advancing contact interaction and follow-up state. V1/V2 signatures remain for rolling-deployment compatibility.
+- `match_gtm_contact_player` writes only `gtm_contact_players`. A contact has at most one verified canonical Player match; potential historical matches may remain unverified.
+- `create_gtm_customer_discovery` remains the structured, partial-answer discovery boundary. Null continues to mean unknown or not discussed.
+- `get_gtm_metrics_v1` derives authorized counts and exact-value discovery frequencies directly from source records. It does not materialize a second analytics source and performs no AI summarization.
+- The migration repairs the shared child-audit dispatcher so table-specific fields are not dereferenced for the wrong trigger table. Audit metadata still excludes note bodies, interaction summaries, and discovery prose.
+
+Deployment order is Foundation V1 → Phase 2 addendum → Prompt 3 core workflows → generated types → application. The migration is forward-fix oriented: history rows are preserved, legacy pipeline values are mapped, and older interaction functions remain callable.
+
 ## CSV import state machine
 
 The Admin server parses the uploaded CSV in memory, tolerates LinkedIn preamble text, suggests aliases instead of assuming one header shape, normalizes values, validates rows, and previews canonical contact and Player matches. It persists only filename, hash, mapping, counts, summary, and uploader—not raw CSV rows.

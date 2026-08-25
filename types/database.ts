@@ -398,8 +398,9 @@ export type GtmConversationOutcome =
   | "partnership" | "future_follow_up" | "no_fit";
 export type GtmPriorityTier = "A" | "B" | "C" | "D";
 export type GtmPipelineStage =
-  | "unqualified" | "identified" | "qualified" | "discovery" | "demo"
-  | "pilot" | "proposal" | "negotiation" | "won" | "lost";
+  | "identified" | "connected" | "engaged" | "discovery"
+  | "demo_candidate" | "pilot_candidate" | "active_pilot" | "converted"
+  | "nurture" | "not_now";
 
 export interface GtmContact {
   id: string;
@@ -477,6 +478,7 @@ export interface GtmInteraction {
   interaction_at: string;
   outcomes: GtmConversationOutcome[];
   next_trigger: string | null;
+  follow_up_required: boolean;
   created_by: string;
   created_at: string;
   updated_at: string;

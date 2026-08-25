@@ -11,6 +11,7 @@ import { buildUniquePlayerMatchMap, type CanonicalPlayerCandidate } from "@/lib/
 import {
   GTM_CONTACT_TYPES,
   GTM_CONVERSATION_OUTCOMES,
+  GTM_PIPELINE_STAGES,
   GTM_INVESTOR_RELATIONSHIP_STAGES,
   GTM_INVESTOR_TYPES,
 } from "@/lib/gtm/types";
@@ -36,6 +37,82 @@ const logInteractionSchema = z.object({
     .refine((values) => new Set(values).size === values.length, "Choose each outcome once.")
     .default([]),
   nextTrigger: z.string().trim().max(2000).nullable().default(null),
+  followUpRequired: z.boolean().default(false),
+});
+
+const nullableText = (maximum: number) => z.string().trim().max(maximum).nullable();
+const nullableScore = z.number().int().min(0).max(5).nullable();
+
+const editContactSchema = z.object({
+  contactId: z.string().uuid(),
+  displayName: z.string().trim().min(1).max(240),
+  firstName: nullableText(120),
+  lastName: nullableText(120),
+  email: z.string().trim().email().max(320).nullable(),
+  phone: nullableText(40),
+  linkedinUrl: z.string().trim().url().max(500).refine((value) => /(^|\.)linkedin\.com$/i.test(new URL(value).hostname), "Use a LinkedIn URL.").nullable(),
+  currentCompany: nullableText(200),
+  currentTitle: nullableText(200),
+  contactType: z.enum(GTM_CONTACT_TYPES),
+  segment: nullableText(120),
+  sport: nullableText(80),
+  leagueLevel: nullableText(80),
+  geography: nullableText(160),
+  relationshipStrength: nullableScore,
+  bltzRelevance: nullableScore,
+  buyingAuthority: nullableScore,
+  networkLeverage: nullableScore,
+  timingScore: nullableScore,
+  doNotAutomate: z.boolean(),
+  investorType: z.enum(GTM_INVESTOR_TYPES).nullable(),
+  investorRelationshipStage: z.enum(GTM_INVESTOR_RELATIONSHIP_STAGES).nullable(),
+  whatTheyNeedToSee: nullableText(10_000),
+  investorThesisFeedback: nullableText(10_000),
+  historicalSignal: nullableText(5000),
+  futureTrigger: nullableText(2000),
+  priorOutcome: nullableText(5000),
+  relationshipSource: nullableText(1000),
+}).superRefine((value, context) => {
+  const scores = [value.relationshipStrength, value.bltzRelevance, value.buyingAuthority, value.networkLeverage, value.timingScore];
+  if (value.contactType !== "enterprise" && scores.some((score) => score !== null)) {
+    context.addIssue({ code: "custom", message: "Enterprise scoring factors require an enterprise contact." });
+  }
+  const investorFields = [value.investorType, value.investorRelationshipStage, value.whatTheyNeedToSee, value.investorThesisFeedback, value.historicalSignal, value.futureTrigger, value.priorOutcome, value.relationshipSource];
+  if (value.contactType !== "investor" && investorFields.some((field) => field !== null)) {
+    context.addIssue({ code: "custom", message: "Investor fields require an investor contact." });
+  }
+});
+
+const nextActionSchema = z.object({
+  contactId: z.string().uuid(),
+  nextAction: nullableText(1000),
+  nextActionAt: z.string().datetime({ offset: true }).nullable(),
+  nextTrigger: nullableText(2000),
+}).superRefine((value, context) => {
+  if (value.nextActionAt && !value.nextAction) context.addIssue({ code: "custom", message: "Enter a next action before assigning a date." });
+});
+
+const discoverySchema = z.object({
+  contactId: z.string().uuid(),
+  interactionId: z.string().uuid().nullable(),
+  problemDiscussed: nullableText(10_000),
+  currentSolution: nullableText(10_000),
+  painLevel: z.number().int().min(1).max(5).nullable(),
+  primaryBltzUseCase: nullableText(5000),
+  featureRequested: nullableText(10_000),
+  wouldUse: z.boolean().nullable(),
+  wouldPilot: z.boolean().nullable(),
+  wouldPay: z.boolean().nullable(),
+  expectedBuyer: nullableText(1000),
+  expectedBudgetRange: nullableText(500),
+  primaryObjection: nullableText(10_000),
+  introductionOffered: z.boolean().nullable(),
+  introductionTarget: nullableText(2000),
+  additionalContext: nullableText(20_000),
+}).superRefine((value, context) => {
+  const findings = Object.entries(value).filter(([key]) => !["contactId", "interactionId"].includes(key)).map(([, item]) => item);
+  if (findings.every((item) => item === null)) context.addIssue({ code: "custom", message: "Record at least one discovery finding." });
+  if (value.introductionTarget && value.introductionOffered === false) context.addIssue({ code: "custom", message: "An introduction target requires an offered or unknown introduction status." });
 });
 
 const createContactSchema = z.object({
@@ -236,7 +313,7 @@ export async function addGtmNote(input: unknown): Promise<GtmMutationResult<{ id
   return { ok: true, value: { id: data.id as string, noteType: data.note_type as string, body: data.body as string, createdAt: data.created_at as string } };
 }
 
-export async function logGtmInteraction(input: unknown): Promise<GtmMutationResult<{ id: string; interactionAt: string; outcomes: string[]; nextTrigger: string | null }>> {
+export async function logGtmInteraction(input: unknown): Promise<GtmMutationResult<{ id: string; interactionAt: string; outcomes: string[]; nextTrigger: string | null; followUpRequired: boolean }>> {
   const parsed = logInteractionSchema.safeParse(input);
   if (!parsed.success) return { ok: false, code: "invalid", message: "Complete the required interaction fields." };
 
@@ -248,7 +325,7 @@ export async function logGtmInteraction(input: unknown): Promise<GtmMutationResu
   }
 
   const gtm = authorization.supabase as unknown as SupabaseClient;
-  const { data, error } = await gtm.rpc("log_gtm_interaction_v2", {
+  const { data, error } = await gtm.rpc("log_gtm_interaction_v3", {
     p_contact_id: parsed.data.contactId,
     p_interaction_type: parsed.data.interactionType,
     p_direction: parsed.data.direction,
@@ -261,6 +338,7 @@ export async function logGtmInteraction(input: unknown): Promise<GtmMutationResu
     p_next_action_at: parsed.data.nextActionAt || null,
     p_outcomes: parsed.data.outcomes,
     p_next_trigger: parsed.data.nextTrigger || null,
+    p_follow_up_required: parsed.data.followUpRequired,
   });
 
   if (error || !data) {
@@ -277,6 +355,7 @@ export async function logGtmInteraction(input: unknown): Promise<GtmMutationResu
       interactionAt: String(row.interaction_at),
       outcomes: Array.isArray(row.outcomes) ? row.outcomes.map(String) : [],
       nextTrigger: row.next_trigger ? String(row.next_trigger) : null,
+      followUpRequired: row.follow_up_required === true,
     },
   };
 }
@@ -346,6 +425,189 @@ export async function createGtmContact(input: unknown): Promise<GtmMutationResul
   refreshGtmPaths();
   const row = Array.isArray(data) ? data[0] : data;
   return { ok: true, value: { id: String(row.id) } };
+}
+
+export async function editGtmContact(input: unknown): Promise<GtmMutationResult<{ priorityScore: number | null; priorityTier: string | null }>> {
+  const parsed = editContactSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, code: "invalid", message: parsed.error.issues[0]?.message ?? "Review the contact details." };
+  let authorization;
+  try { authorization = await getAuthorizedClient(); }
+  catch { return { ok: false, code: "unauthorized", message: "Your administrator access could not be verified." }; }
+
+  const value = parsed.data;
+  const gtm = authorization.supabase as unknown as SupabaseClient;
+  const { data, error } = await gtm.rpc("update_gtm_contact_v1", {
+    p_contact_id: value.contactId,
+    p_display_name: value.displayName,
+    p_first_name: value.firstName,
+    p_last_name: value.lastName,
+    p_email: value.email?.toLowerCase() ?? null,
+    p_phone: value.phone,
+    p_linkedin_url: value.linkedinUrl?.toLowerCase() ?? null,
+    p_current_company: value.currentCompany,
+    p_current_title: value.currentTitle,
+    p_contact_type: value.contactType,
+    p_segment: value.segment,
+    p_sport: value.sport,
+    p_league_level: value.leagueLevel,
+    p_geography: value.geography,
+    p_relationship_strength: value.relationshipStrength,
+    p_bltz_relevance: value.bltzRelevance,
+    p_buying_authority: value.buyingAuthority,
+    p_network_leverage: value.networkLeverage,
+    p_timing_score: value.timingScore,
+    p_do_not_automate: value.doNotAutomate,
+    p_investor_type: value.contactType === "investor" ? value.investorType : null,
+    p_investor_relationship_stage: value.contactType === "investor" ? value.investorRelationshipStage : null,
+    p_what_they_need_to_see: value.contactType === "investor" ? value.whatTheyNeedToSee : null,
+    p_investor_thesis_feedback: value.contactType === "investor" ? value.investorThesisFeedback : null,
+    p_historical_signal: value.contactType === "investor" ? value.historicalSignal : null,
+    p_future_trigger: value.contactType === "investor" ? value.futureTrigger : null,
+    p_prior_outcome: value.contactType === "investor" ? value.priorOutcome : null,
+    p_relationship_source: value.contactType === "investor" ? value.relationshipSource : null,
+  });
+  if (error || !data) {
+    const duplicate = error?.code === "23505";
+    return { ok: false, code: "failed", message: duplicate ? "Another active contact already uses that LinkedIn URL." : "The contact could not be updated. Try again." };
+  }
+  const row = Array.isArray(data) ? data[0] : data;
+  refreshGtmPaths();
+  return { ok: true, value: {
+    priorityScore: row.priority_score == null ? null : Number(row.priority_score),
+    priorityTier: row.priority_tier == null ? null : String(row.priority_tier),
+  } };
+}
+
+async function updateContactWorkflow(contactId: string, patch: Record<string, unknown>): Promise<GtmMutationResult<{ id: string }>> {
+  let authorization;
+  try { authorization = await getAuthorizedClient(); }
+  catch { return { ok: false, code: "unauthorized", message: "Your administrator access could not be verified." }; }
+  const { data, error } = await authorization.supabase.from("gtm_contacts")
+    .update({ ...patch, updated_by: authorization.userId })
+    .eq("id", contactId).eq("archived", false).select("id").single();
+  if (error || !data) return { ok: false, code: "failed", message: "The contact workflow could not be updated. Refresh and try again." };
+  refreshGtmPaths();
+  return { ok: true, value: { id: String(data.id) } };
+}
+
+export async function setGtmPipelineStage(input: unknown): Promise<GtmMutationResult<{ id: string }>> {
+  const parsed = z.object({ contactId: z.string().uuid(), pipelineStage: z.enum(GTM_PIPELINE_STAGES) }).safeParse(input);
+  if (!parsed.success) return { ok: false, code: "invalid", message: "Choose a valid pipeline stage." };
+  return updateContactWorkflow(parsed.data.contactId, { pipeline_stage: parsed.data.pipelineStage });
+}
+
+export async function setGtmNextAction(input: unknown): Promise<GtmMutationResult<{ id: string }>> {
+  const parsed = nextActionSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, code: "invalid", message: parsed.error.issues[0]?.message ?? "Review the next action." };
+  return updateContactWorkflow(parsed.data.contactId, {
+    next_action: parsed.data.nextAction,
+    next_action_at: parsed.data.nextActionAt,
+    next_trigger: parsed.data.nextTrigger,
+  });
+}
+
+export async function setGtmPriority(input: unknown): Promise<GtmMutationResult<{ id: string }>> {
+  const parsed = z.object({ contactId: z.string().uuid(), isPriority: z.boolean() }).safeParse(input);
+  if (!parsed.success) return { ok: false, code: "invalid", message: "Choose a valid priority state." };
+  return updateContactWorkflow(parsed.data.contactId, { is_priority: parsed.data.isPriority });
+}
+
+export async function archiveGtmContact(input: unknown): Promise<GtmMutationResult<{ id: string }>> {
+  const parsed = z.object({ contactId: z.string().uuid(), confirmed: z.literal(true) }).safeParse(input);
+  if (!parsed.success) return { ok: false, code: "invalid", message: "Confirm the archive action." };
+  return updateContactWorkflow(parsed.data.contactId, { archived: true });
+}
+
+export async function matchGtmContactPlayer(input: unknown): Promise<GtmMutationResult<GtmPlayerOption>> {
+  const parsed = z.object({ contactId: z.string().uuid(), playerId: z.string().uuid() }).safeParse(input);
+  if (!parsed.success) return { ok: false, code: "invalid", message: "Choose a valid Player record." };
+  let authorization;
+  try { authorization = await getAuthorizedClient(); }
+  catch { return { ok: false, code: "unauthorized", message: "Your administrator access could not be verified." }; }
+  const gtm = authorization.supabase as unknown as SupabaseClient;
+  const { error } = await gtm.rpc("match_gtm_contact_player", { p_contact_id: parsed.data.contactId, p_player_id: parsed.data.playerId });
+  if (error) return { ok: false, code: "failed", message: error.code === "23514" ? "Only an active athlete contact can be matched to a Player." : "The Player match could not be saved." };
+  const { data: player, error: playerError } = await gtm.from("players").select("id,name,full_name,display_name,team,position,level").eq("id", parsed.data.playerId).single();
+  if (playerError || !player) return { ok: false, code: "failed", message: "The match was saved, but the Player summary could not be refreshed." };
+  refreshGtmPaths();
+  return { ok: true, value: {
+    id: String(player.id),
+    name: String(player.display_name || player.full_name || player.name),
+    team: player.team as string | null,
+    position: player.position as string | null,
+    level: player.level as string | null,
+  } };
+}
+
+export async function addGtmDiscoveryInsight(input: unknown): Promise<GtmMutationResult<{
+  id: string;
+  interactionId: string | null;
+  problemDiscussed: string | null;
+  currentSolution: string | null;
+  painLevel: number | null;
+  primaryBltzUseCase: string | null;
+  featureRequested: string | null;
+  wouldUse: boolean | null;
+  wouldPilot: boolean | null;
+  wouldPay: boolean | null;
+  expectedBuyer: string | null;
+  expectedBudgetRange: string | null;
+  primaryObjection: string | null;
+  introductionOffered: boolean | null;
+  introductionTarget: string | null;
+  additionalContext: string | null;
+  createdAt: string;
+  updatedAt: string;
+}>> {
+  const parsed = discoverySchema.safeParse(input);
+  if (!parsed.success) return { ok: false, code: "invalid", message: parsed.error.issues[0]?.message ?? "Record at least one discovery finding." };
+  let authorization;
+  try { authorization = await getAuthorizedClient(); }
+  catch { return { ok: false, code: "unauthorized", message: "Your administrator access could not be verified." }; }
+  const gtm = authorization.supabase as unknown as SupabaseClient;
+  const value = parsed.data;
+  const { data, error } = await gtm.rpc("create_gtm_customer_discovery", {
+    p_contact_id: value.contactId,
+    p_interaction_id: value.interactionId,
+    p_organization_id: null,
+    p_problem_discussed: value.problemDiscussed,
+    p_current_solution: value.currentSolution,
+    p_pain_level: value.painLevel,
+    p_primary_bltz_use_case: value.primaryBltzUseCase,
+    p_feature_requested: value.featureRequested,
+    p_would_use: value.wouldUse,
+    p_would_pilot: value.wouldPilot,
+    p_would_pay: value.wouldPay,
+    p_expected_buyer: value.expectedBuyer,
+    p_expected_budget_range: value.expectedBudgetRange,
+    p_primary_objection: value.primaryObjection,
+    p_introduction_offered: value.introductionOffered,
+    p_introduction_target: value.introductionTarget,
+    p_additional_context: value.additionalContext,
+  });
+  if (error || !data) return { ok: false, code: "failed", message: "The discovery insight could not be saved. Try again." };
+  const row = Array.isArray(data) ? data[0] : data;
+  refreshGtmPaths();
+  return { ok: true, value: {
+    id: String(row.id),
+    interactionId: row.interaction_id ? String(row.interaction_id) : null,
+    problemDiscussed: row.problem_discussed ? String(row.problem_discussed) : null,
+    currentSolution: row.current_solution ? String(row.current_solution) : null,
+    painLevel: row.pain_level == null ? null : Number(row.pain_level),
+    primaryBltzUseCase: row.primary_bltz_use_case ? String(row.primary_bltz_use_case) : null,
+    featureRequested: row.feature_requested ? String(row.feature_requested) : null,
+    wouldUse: row.would_use == null ? null : row.would_use === true,
+    wouldPilot: row.would_pilot == null ? null : row.would_pilot === true,
+    wouldPay: row.would_pay == null ? null : row.would_pay === true,
+    expectedBuyer: row.expected_buyer ? String(row.expected_buyer) : null,
+    expectedBudgetRange: row.expected_budget_range ? String(row.expected_budget_range) : null,
+    primaryObjection: row.primary_objection ? String(row.primary_objection) : null,
+    introductionOffered: row.introduction_offered == null ? null : row.introduction_offered === true,
+    introductionTarget: row.introduction_target ? String(row.introduction_target) : null,
+    additionalContext: row.additional_context ? String(row.additional_context) : null,
+    createdAt: String(row.created_at),
+    updatedAt: String(row.updated_at),
+  } };
 }
 
 export async function previewGtmCsv(formData: FormData): Promise<GtmMutationResult<GtmCsvPreview>> {

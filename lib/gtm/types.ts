@@ -61,16 +61,16 @@ export const GTM_PRIORITY_TIERS = ["A", "B", "C", "D"] as const;
 export type GtmPriorityTier = (typeof GTM_PRIORITY_TIERS)[number];
 
 export const GTM_PIPELINE_STAGES = [
-  "unqualified",
   "identified",
-  "qualified",
+  "connected",
+  "engaged",
   "discovery",
-  "demo",
-  "pilot",
-  "proposal",
-  "negotiation",
-  "won",
-  "lost",
+  "demo_candidate",
+  "pilot_candidate",
+  "active_pilot",
+  "converted",
+  "nurture",
+  "not_now",
 ] as const;
 
 export type GtmPipelineStage = (typeof GTM_PIPELINE_STAGES)[number];

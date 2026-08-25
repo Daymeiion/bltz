@@ -1,16 +1,23 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import type { GtmContactRow } from "@/lib/gtm/server";
+import type { GtmContactRow, GtmMetrics } from "@/lib/gtm/server";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 
 vi.mock("@/app/admin/gtm/actions", () => ({
+  addGtmDiscoveryInsight: vi.fn(),
   addGtmNote: vi.fn(),
+  archiveGtmContact: vi.fn(),
   commitGtmCsv: vi.fn(),
   createGtmContact: vi.fn(),
+  editGtmContact: vi.fn(),
   logGtmInteraction: vi.fn(),
+  matchGtmContactPlayer: vi.fn(),
   previewGtmCsv: vi.fn(),
   searchGtmPlayers: vi.fn(),
+  setGtmNextAction: vi.fn(),
+  setGtmPipelineStage: vi.fn(),
+  setGtmPriority: vi.fn(),
 }));
 
 import {
@@ -26,6 +33,9 @@ function contact(overrides: Partial<GtmContactRow> = {}): GtmContactRow {
     displayName: "Jordan Reed",
     firstName: "Jordan",
     lastName: "Reed",
+    email: "jordan@example.com",
+    phone: null,
+    geography: "California",
     currentCompany: "North Coast Athletics",
     currentTitle: "Athletic Director",
     contactType: "enterprise",
@@ -39,7 +49,7 @@ function contact(overrides: Partial<GtmContactRow> = {}): GtmContactRow {
     timingScore: 3,
     priorityScore: 86,
     priorityTier: "A",
-    pipelineStage: "qualified",
+    pipelineStage: "engaged",
     source: "linkedin_csv",
     linkedinUrl: "https://www.linkedin.com/in/jordan-reed",
     doNotAutomate: true,
@@ -73,6 +83,36 @@ const baseFilters: GtmContactFilters = {
   savedView: "All contacts",
 };
 
+const metrics: GtmMetrics = {
+  generatedAt: "2026-08-24T12:00:00.000Z",
+  since: "2026-07-25T12:00:00.000Z",
+  totalContacts: 12,
+  contactTypeCounts: { enterprise: 5, athlete: 3, multiplier: 2, investor: 2 },
+  segmentCounts: { athletic_department: 4 },
+  tierAContacts: 3,
+  tierBContacts: 4,
+  priorityContacts: 5,
+  enterpriseContacts: 5,
+  athleteContacts: 3,
+  multiplierContacts: 2,
+  activeConversations: 7,
+  contactsNeedingFollowUp: 2,
+  discoveryConversations: 4,
+  demoCandidates: 2,
+  pilotCandidates: 1,
+  activePilots: 1,
+  conversions: 1,
+  playerLinkedContacts: 3,
+  discoveryAnalysis: {
+    problems: [{ value: "Fragmented athlete media", count: 3 }],
+    useCases: [{ value: "Player Locker", count: 2 }],
+    features: [{ value: "Archive search", count: 2 }],
+    objections: [{ value: "Budget timing", count: 1 }],
+    pilotIntent: { yes: 3, no: 1, unknown: 2 },
+    willingnessToPay: { yes: 2, no: 1, unknown: 3 },
+  },
+};
+
 describe("GTM contacts workspace", () => {
   it("searches across identity and organization fields and combines explicit filters", () => {
     const contacts = [
@@ -97,6 +137,7 @@ describe("GTM contacts workspace", () => {
         interactionAt: "2026-08-20T12:00:00.000Z",
         outcomes: ["capital", "strategic_insight"],
         nextTrigger: "Reconnect after 250 activated athletes",
+        followUpRequired: true,
       }],
     });
     const enterprise = contact({ id: "1c1ccff9-bfa0-40e7-8654-bbda8d999711" });
@@ -119,6 +160,7 @@ describe("GTM contacts workspace", () => {
         interactionAt: "2026-08-20T12:00:00.000Z",
         outcomes: ["capital", "strategic_insight"],
         nextTrigger: "Reconnect after 250 activated athletes",
+        followUpRequired: true,
       }],
     });
     const markup = renderToStaticMarkup(<GtmContactsWorkspace data={{ state: "ready", contacts: [investor], generatedAt: "2026-08-24T12:00:00.000Z" }} />);
@@ -175,5 +217,15 @@ describe("GTM contacts workspace", () => {
     expect(markup).toContain("xl:grid-cols-[minmax(14rem,1fr)_12rem_repeat(4,minmax(8rem,10rem))]");
     expect(markup).not.toContain("lg:grid-cols-[minmax(16rem,1fr)_14rem_repeat(3,minmax(9rem,12rem))]");
     expect(markup).toContain("Pipeline stage");
+  });
+
+  it("renders reliable pipeline and discovery instrumentation", () => {
+    const markup = renderToStaticMarkup(<GtmContactsWorkspace data={{ state: "ready", contacts: [contact()], generatedAt: metrics.generatedAt }} metrics={metrics} />);
+
+    expect(markup).toContain("GTM metrics");
+    expect(markup).toContain("Active conversations");
+    expect(markup).toContain("Player-linked");
+    expect(markup).toContain("Fragmented athlete media");
+    expect(markup).toContain("Would pilot · Yes");
   });
 });

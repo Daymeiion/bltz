@@ -1,5 +1,5 @@
 import { GtmContactsWorkspace } from "@/components/admin/gtm/GtmContactsWorkspace";
-import { getGtmContacts } from "@/lib/gtm/server";
+import { getGtmContacts, getGtmMetrics } from "@/lib/gtm/server";
 
 export const metadata = {
   title: "GTM Contacts | BLTZ Admin",
@@ -7,6 +7,6 @@ export const metadata = {
 };
 
 export default async function GtmContactsPage() {
-  const data = await getGtmContacts();
-  return <GtmContactsWorkspace data={data} />;
+  const [data, metrics] = await Promise.all([getGtmContacts(), getGtmMetrics()]);
+  return <GtmContactsWorkspace data={data} metrics={metrics} />;
 }

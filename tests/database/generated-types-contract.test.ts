@@ -67,6 +67,18 @@ describe("authoritative generated database contract", () => {
     expect(generated).toContain("prepare_gtm_import_job: {");
     expect(generated).toContain("create_gtm_contact_v2: {");
     expect(generated).toContain("log_gtm_interaction_v2: {");
+    expect(generated).toContain("log_gtm_interaction_v3: {");
+    expect(generated).toContain("match_gtm_contact_player: {");
+    expect(generated).toContain("update_gtm_contact_v1: {");
+    expect(generated).toContain("get_gtm_metrics_v1: {");
+  });
+
+  it("contains the GTM Prompt 3 workflow fields", () => {
+    expect(generated).toMatch(/gtm_interactions: \{[\s\S]*?follow_up_required: boolean/);
+    expect(generated).toContain("p_follow_up_required?: boolean");
+    expect(facade).toContain('"demo_candidate"');
+    expect(facade).toContain('"active_pilot"');
+    expect(facade).toContain('"converted"');
   });
 
   it("contains the GTM Phase 2 investor and conversation addendum", () => {
