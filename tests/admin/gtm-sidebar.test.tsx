@@ -1,4 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
+import { act } from "react";
+import { createRoot } from "react-dom/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 let pathname = "/admin";
@@ -72,5 +74,36 @@ describe("AdminSidebar GTM destination", () => {
     const toggle = document.querySelector('button[aria-controls="admin-mobile-navigation"]');
     expect(toggle?.getAttribute("aria-label")).toBe("Open navigation");
     expect(toggle?.getAttribute("aria-expanded")).toBe("false");
+    expect(toggle?.getAttribute("aria-haspopup")).toBe("dialog");
+    expect(toggle?.classList.contains("h-11")).toBe(true);
+    expect(toggle?.classList.contains("w-11")).toBe(true);
+  });
+
+  it("contains mobile focus and restores it to the toggle when Escape closes the dialog", () => {
+    const container = document.createElement("div");
+    document.body.replaceChildren(container);
+    const root = createRoot(container);
+
+    act(() => root.render(<AdminSidebar />));
+
+    const toggle = document.querySelector<HTMLButtonElement>('button[aria-controls="admin-mobile-navigation"]');
+    expect(toggle).not.toBeNull();
+
+    act(() => toggle?.click());
+
+    const dialog = document.querySelector<HTMLElement>('[role="dialog"][aria-modal="true"]');
+    expect(dialog?.getAttribute("aria-label")).toBe("Admin navigation");
+    expect(document.activeElement).toBe(dialog?.querySelector("a"));
+
+    const lastFocusable = dialog?.querySelector<HTMLButtonElement>("button:last-of-type");
+    lastFocusable?.focus();
+    act(() => document.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", bubbles: true })));
+    expect(document.activeElement).toBe(dialog?.querySelector("a"));
+
+    act(() => document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
+    expect(document.querySelector('[role="dialog"]')).toBeNull();
+    expect(document.activeElement).toBe(toggle);
+
+    act(() => root.unmount());
   });
 });
