@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { NormalizedGtmImportRow } from "@/lib/gtm/import-contract";
-import { buildUniquePlayerMatchMap } from "@/lib/gtm/player-matching";
+import { buildPlayerMatchReviewMap, buildUniquePlayerMatchMap } from "@/lib/gtm/player-matching";
 
 function athlete(displayName: string): NormalizedGtmImportRow {
   return { rowNumber: 2, displayName, firstName: "", lastName: "", email: "", linkedinUrl: "", currentCompany: "", currentTitle: "", connectedOn: "", contactType: "athlete", sport: "", leagueLevel: "", doNotAutomate: false, sourceRecordId: "row-1" };
@@ -45,5 +45,25 @@ describe("GTM canonical Player matching", () => {
     ]);
 
     expect(matches.get("row-1")).toMatchObject({ id: "one", matchType: "name_and_college", confidence: 0.9 });
+  });
+
+  it("returns every same-name candidate for manual review without choosing one", () => {
+    const reviews = buildPlayerMatchReviewMap([athlete("Alex Smith")], [
+      { id: "one", name: "Alex Smith", fullName: null, displayName: null, team: "Denver", school: null, college: null, position: "QB", level: "pro" },
+      { id: "two", name: "Alex Smith", fullName: null, displayName: null, team: "Atlanta", school: null, college: null, position: "WR", level: "pro" },
+    ]);
+
+    expect(reviews.get("row-1")).toMatchObject({ strength: "ambiguous" });
+    expect(reviews.get("row-1")?.candidates.map((candidate) => candidate.id)).toEqual(["one", "two"]);
+  });
+
+  it("marks a unique contextual candidate strong while preserving alternatives for review", () => {
+    const reviews = buildPlayerMatchReviewMap([{ ...athlete("Alex Smith"), currentCompany: "Denver" }], [
+      { id: "one", name: "Alex Smith", fullName: null, displayName: null, team: "Denver", school: null, college: null, position: "QB", level: "pro" },
+      { id: "two", name: "Alex Smith", fullName: null, displayName: null, team: "Atlanta", school: null, college: null, position: "WR", level: "pro" },
+    ]);
+
+    expect(reviews.get("row-1")).toMatchObject({ strength: "strong" });
+    expect(reviews.get("row-1")?.candidates[0]).toMatchObject({ id: "one", matchType: "name_and_team", confidence: 0.92 });
   });
 });

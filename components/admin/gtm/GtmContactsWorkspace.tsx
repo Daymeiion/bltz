@@ -7,6 +7,7 @@ import {
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
 import { GtmContactIntake } from "@/components/admin/gtm/GtmContactIntake";
+import { GtmNavigation } from "@/components/admin/gtm/GtmNavigation";
 import type { GtmContactRow, GtmContactsReadModel, GtmMetrics } from "@/lib/gtm/server";
 import { GTM_CONVERSATION_OUTCOMES, GTM_PIPELINE_STAGES } from "@/lib/gtm/types";
 import { cn } from "@/lib/utils";
@@ -16,7 +17,7 @@ const GtmContactDrawer = dynamic(
   { ssr: false },
 );
 
-type SortKey = "displayName" | "currentCompany" | "contactType" | "priorityScore" | "priorityTier" | "pipelineStage" | "lastInteractionAt" | "nextActionAt";
+type SortKey = "displayName" | "currentCompany" | "contactType" | "currentTitle" | "priorityScore" | "priorityTier" | "pipelineStage" | "lastInteractionAt" | "nextAction" | "nextActionAt";
 type SortDirection = "asc" | "desc";
 
 export interface GtmContactFilters {
@@ -25,8 +26,23 @@ export interface GtmContactFilters {
   priorityTier: string;
   pipelineStage: string;
   conversationOutcome: string;
+  segment: string;
+  organization: string;
+  sport: string;
+  leagueLevel: string;
+  source: string;
+  doNotAutomate: string;
+  hasPlayerMatch: string;
+  needsFollowUp: string;
   savedView: string;
 }
+
+const initialFilters: GtmContactFilters = {
+  search: "", contactType: "all", priorityTier: "all", pipelineStage: "all",
+  conversationOutcome: "all", segment: "all", organization: "all", sport: "all",
+  leagueLevel: "all", source: "all", doNotAutomate: "all", hasPlayerMatch: "all",
+  needsFollowUp: "all", savedView: "All contacts",
+};
 
 const builtInViews = [
   "All contacts", "My Top 50", "Needs Follow-Up", "New LinkedIn Connections",
@@ -60,6 +76,15 @@ export function filterGtmContacts(contacts: GtmContactRow[], filters: GtmContact
     if (filters.priorityTier !== "all" && contact.priorityTier !== filters.priorityTier) return false;
     if (filters.pipelineStage !== "all" && contact.pipelineStage !== filters.pipelineStage) return false;
     if (filters.conversationOutcome !== "all" && !contact.interactions.some((interaction) => interaction.outcomes.includes(filters.conversationOutcome))) return false;
+    if (filters.segment !== "all" && normalize(contact.segment) !== filters.segment) return false;
+    if (filters.organization !== "all" && normalize(contact.currentCompany) !== filters.organization) return false;
+    if (filters.sport !== "all" && normalize(contact.sport) !== filters.sport) return false;
+    if (filters.leagueLevel !== "all" && normalize(contact.leagueLevel) !== filters.leagueLevel) return false;
+    if (filters.source !== "all" && normalize(contact.source) !== filters.source) return false;
+    if (filters.doNotAutomate !== "all" && contact.doNotAutomate !== (filters.doNotAutomate === "yes")) return false;
+    if (filters.hasPlayerMatch !== "all" && Boolean(contact.playerMatch) !== (filters.hasPlayerMatch === "yes")) return false;
+    const needsFollowUp = Boolean(contact.nextActionAt && new Date(contact.nextActionAt) <= now);
+    if (filters.needsFollowUp !== "all" && needsFollowUp !== (filters.needsFollowUp === "yes")) return false;
     switch (filters.savedView) {
       case "My Top 50": return contact.isPriority || (contact.priorityScore ?? -1) >= 80;
       case "Needs Follow-Up": return Boolean(contact.nextActionAt && new Date(contact.nextActionAt) <= now);
@@ -166,37 +191,66 @@ function MetricsSummary({ metrics }: { metrics: GtmMetrics | null }) {
   );
 }
 
-export function GtmContactsWorkspace({ data, metrics = null }: { data: GtmContactsReadModel; metrics?: GtmMetrics | null }) {
+function distinctOptions(contacts: GtmContactRow[], field: "segment" | "currentCompany" | "sport" | "leagueLevel" | "source") {
+  return [...new Map(contacts.flatMap((contact) => {
+    const value = contact[field]?.trim();
+    return value ? [[normalize(value), value] as const] : [];
+  })).entries()].sort((left, right) => left[1].localeCompare(right[1]));
+}
+
+function FilterSelect({ value, onChange, label: filterLabel, children }: { value: string; onChange: (value: string) => void; label: string; children: React.ReactNode }) {
+  return <label><span className="sr-only">{filterLabel}</span><select aria-label={filterLabel} value={value} onChange={(event) => onChange(event.target.value)} className="min-h-11 w-full rounded-xl border border-neutral-300 bg-white px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ffbb00] dark:border-neutral-700 dark:bg-neutral-950">{children}</select></label>;
+}
+
+export function GtmContactsWorkspace({ data, metrics = null, initialContactId = null }: { data: GtmContactsReadModel; metrics?: GtmMetrics | null; initialContactId?: string | null }) {
   const [contacts, setContacts] = useState<GtmContactRow[]>(data.contacts);
-  const [filters, setFilters] = useState<GtmContactFilters>({ search: "", contactType: "all", priorityTier: "all", pipelineStage: "all", conversationOutcome: "all", savedView: "All contacts" });
+  const [filters, setFilters] = useState<GtmContactFilters>(initialFilters);
   const [sortKey, setSortKey] = useState<SortKey>("priorityScore");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(() => data.contacts.some((contact) => contact.id === initialContactId) ? initialContactId : null);
   const filtered = useMemo(() => sortGtmContacts(filterGtmContacts(contacts, filters), sortKey, sortDirection), [contacts, filters, sortKey, sortDirection]);
   const selectedContact = contacts.find((contact) => contact.id === selectedId) ?? null;
-  const hasFilters = filters.search !== "" || filters.contactType !== "all" || filters.priorityTier !== "all" || filters.pipelineStage !== "all" || filters.conversationOutcome !== "all" || filters.savedView !== "All contacts";
-  const resetFilters = () => setFilters({ search: "", contactType: "all", priorityTier: "all", pipelineStage: "all", conversationOutcome: "all", savedView: "All contacts" });
+  const hasFilters = Object.entries(filters).some(([key, value]) => key === "savedView" ? value !== "All contacts" : value !== "all" && value !== "");
+  const resetFilters = () => setFilters(initialFilters);
   const updateFilter = (key: keyof GtmContactFilters, value: string) => setFilters((current) => ({ ...current, [key]: value }));
   const handleSort = (key: SortKey) => { if (key === sortKey) setSortDirection((current) => current === "asc" ? "desc" : "asc"); else { setSortKey(key); setSortDirection("asc"); } };
   const updateContact = (next: GtmContactRow) => setContacts((current) => current.map((contact) => contact.id === next.id ? next : contact));
   const removeContact = (contactId: string) => { setContacts((current) => current.filter((contact) => contact.id !== contactId)); setSelectedId(null); };
+  const optionSets = useMemo(() => ({
+    segments: distinctOptions(contacts, "segment"), organizations: distinctOptions(contacts, "currentCompany"),
+    sports: distinctOptions(contacts, "sport"), leagues: distinctOptions(contacts, "leagueLevel"),
+    sources: distinctOptions(contacts, "source"),
+  }), [contacts]);
   useEffect(() => setContacts(data.contacts), [data.contacts]);
 
   if (data.state === "restricted") return <div className="mx-auto flex min-h-[65vh] max-w-[1600px] items-center justify-center px-6"><div className="max-w-lg rounded-2xl border border-neutral-300 bg-white p-8 text-center dark:border-neutral-700 dark:bg-neutral-900"><IconShieldLock className="mx-auto h-7 w-7" /><h1 className="mt-4 text-2xl font-semibold">GTM access is restricted</h1><p className="mt-2 text-sm leading-6 text-neutral-600 dark:text-neutral-300">Your session cannot read private relationship intelligence. Contact a platform administrator if your role has changed.</p></div></div>;
 
   return (
     <div className="mx-auto max-w-[1600px] px-4 pb-16 pt-6 sm:px-8 sm:pt-8">
-      <header className="flex flex-col justify-between gap-4 border-b border-neutral-300 pb-6 sm:flex-row sm:items-end dark:border-neutral-800"><div><p className="text-xs font-semibold uppercase tracking-[0.12em] text-neutral-500">GTM relationship management</p><h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em] sm:text-4xl">Contacts</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-600 dark:text-neutral-300">Prioritize trusted relationships, preserve discovery intelligence, and keep the next action visible.</p></div><div className="flex flex-col items-start gap-3 sm:items-end"><div className="text-left sm:text-right"><p className="font-mono text-2xl font-semibold">{data.state === "ready" ? contacts.length : "–"}</p><p className="text-xs text-neutral-500">authorized contacts</p></div><GtmContactIntake /></div></header>
+      <header className="flex flex-col justify-between gap-5 border-b border-neutral-300 pb-6 lg:flex-row lg:items-end dark:border-neutral-800"><div><p className="text-xs font-semibold uppercase tracking-[0.12em] text-neutral-500">GTM relationship management</p><h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em] sm:text-4xl">Contacts</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-600 dark:text-neutral-300">Prioritize trusted relationships, preserve discovery intelligence, and keep the next action visible.</p></div><div className="flex flex-col items-start gap-3 lg:items-end"><GtmNavigation /><div className="flex flex-wrap items-center gap-3"><span className="font-mono text-sm font-semibold">{data.state === "ready" ? contacts.length : "–"} contacts</span><GtmContactIntake /></div></div></header>
       {data.state === "ready" && <MetricsSummary metrics={metrics} />}
       <div className="mt-6 rounded-2xl border border-neutral-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
         <div className="grid gap-3 border-b border-neutral-200 p-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[minmax(14rem,1fr)_12rem_repeat(4,minmax(8rem,10rem))] dark:border-neutral-800">
           <label className="relative block"><span className="sr-only">Search contacts</span><IconSearch className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-neutral-500" /><input value={filters.search} onChange={(event) => updateFilter("search", event.target.value)} placeholder="Search name, company, role, sport…" className="min-h-11 w-full rounded-xl border border-neutral-300 bg-white pl-10 pr-3 text-sm dark:border-neutral-700 dark:bg-neutral-950" /></label>
-          <label><span className="sr-only">Saved view</span><select value={filters.savedView} onChange={(event) => updateFilter("savedView", event.target.value)} className="min-h-11 w-full rounded-xl border border-neutral-300 bg-white px-3 text-sm dark:border-neutral-700 dark:bg-neutral-950">{builtInViews.map((view) => <option key={view}>{view}</option>)}</select></label>
-          <label><span className="sr-only">Contact type</span><select value={filters.contactType} onChange={(event) => updateFilter("contactType", event.target.value)} className="min-h-11 w-full rounded-xl border border-neutral-300 bg-white px-3 text-sm dark:border-neutral-700 dark:bg-neutral-950"><option value="all">All contact types</option>{["enterprise", "athlete", "multiplier", "investor", "unclassified"].map((type) => <option key={type} value={type}>{label(type)}</option>)}</select></label>
-          <label><span className="sr-only">Priority tier</span><select value={filters.priorityTier} onChange={(event) => updateFilter("priorityTier", event.target.value)} className="min-h-11 w-full rounded-xl border border-neutral-300 bg-white px-3 text-sm dark:border-neutral-700 dark:bg-neutral-950"><option value="all">All tiers</option>{["A", "B", "C", "D"].map((tier) => <option key={tier}>{tier}</option>)}</select></label>
-          <label><span className="sr-only">Pipeline stage</span><select value={filters.pipelineStage} onChange={(event) => updateFilter("pipelineStage", event.target.value)} className="min-h-11 w-full rounded-xl border border-neutral-300 bg-white px-3 text-sm dark:border-neutral-700 dark:bg-neutral-950"><option value="all">All stages</option>{GTM_PIPELINE_STAGES.map((stage) => <option key={stage} value={stage}>{label(stage)}</option>)}</select></label>
-          <label><span className="sr-only">Conversation outcome</span><select value={filters.conversationOutcome} onChange={(event) => updateFilter("conversationOutcome", event.target.value)} className="min-h-11 w-full rounded-xl border border-neutral-300 bg-white px-3 text-sm dark:border-neutral-700 dark:bg-neutral-950"><option value="all">All outcomes</option>{GTM_CONVERSATION_OUTCOMES.map((outcome) => <option key={outcome} value={outcome}>{label(outcome)}</option>)}</select></label>
+          <FilterSelect label="Saved view" value={filters.savedView} onChange={(value) => updateFilter("savedView", value)}>{builtInViews.map((view) => <option key={view}>{view}</option>)}</FilterSelect>
+          <FilterSelect label="Contact type" value={filters.contactType} onChange={(value) => updateFilter("contactType", value)}><option value="all">All contact types</option>{["enterprise", "athlete", "multiplier", "investor", "unclassified"].map((type) => <option key={type} value={type}>{label(type)}</option>)}</FilterSelect>
+          <FilterSelect label="Priority tier" value={filters.priorityTier} onChange={(value) => updateFilter("priorityTier", value)}><option value="all">All priority tiers</option>{["A", "B", "C", "D"].map((tier) => <option key={tier}>{tier}</option>)}</FilterSelect>
+          <FilterSelect label="Pipeline stage" value={filters.pipelineStage} onChange={(value) => updateFilter("pipelineStage", value)}><option value="all">All pipeline stages</option>{GTM_PIPELINE_STAGES.map((stage) => <option key={stage} value={stage}>{label(stage)}</option>)}</FilterSelect>
+          <FilterSelect label="Needs follow-up" value={filters.needsFollowUp} onChange={(value) => updateFilter("needsFollowUp", value)}><option value="all">Any follow-up status</option><option value="yes">Needs follow-up</option><option value="no">No follow-up due</option></FilterSelect>
         </div>
+        <details className="border-b border-neutral-200 px-4 py-3 dark:border-neutral-800">
+          <summary className="cursor-pointer text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ffbb00]">More filters</summary>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <FilterSelect label="Segment" value={filters.segment} onChange={(value) => updateFilter("segment", value)}><option value="all">All segments</option>{optionSets.segments.map(([value, text]) => <option key={value} value={value}>{text}</option>)}</FilterSelect>
+            <FilterSelect label="Organization" value={filters.organization} onChange={(value) => updateFilter("organization", value)}><option value="all">All organizations</option>{optionSets.organizations.map(([value, text]) => <option key={value} value={value}>{text}</option>)}</FilterSelect>
+            <FilterSelect label="Sport" value={filters.sport} onChange={(value) => updateFilter("sport", value)}><option value="all">All sports</option>{optionSets.sports.map(([value, text]) => <option key={value} value={value}>{text}</option>)}</FilterSelect>
+            <FilterSelect label="League or level" value={filters.leagueLevel} onChange={(value) => updateFilter("leagueLevel", value)}><option value="all">All leagues / levels</option>{optionSets.leagues.map(([value, text]) => <option key={value} value={value}>{text}</option>)}</FilterSelect>
+            <FilterSelect label="Source" value={filters.source} onChange={(value) => updateFilter("source", value)}><option value="all">All sources</option>{optionSets.sources.map(([value, text]) => <option key={value} value={value}>{label(text)}</option>)}</FilterSelect>
+            <FilterSelect label="Automation status" value={filters.doNotAutomate} onChange={(value) => updateFilter("doNotAutomate", value)}><option value="all">Any automation status</option><option value="yes">Do not automate</option><option value="no">Automation permitted</option></FilterSelect>
+            <FilterSelect label="Player match" value={filters.hasPlayerMatch} onChange={(value) => updateFilter("hasPlayerMatch", value)}><option value="all">Any Player-match status</option><option value="yes">Has Player match</option><option value="no">No Player match</option></FilterSelect>
+            <FilterSelect label="Conversation outcome" value={filters.conversationOutcome} onChange={(value) => updateFilter("conversationOutcome", value)}><option value="all">All conversation outcomes</option>{GTM_CONVERSATION_OUTCOMES.map((outcome) => <option key={outcome} value={outcome}>{label(outcome)}</option>)}</FilterSelect>
+          </div>
+        </details>
         {hasFilters && <div className="flex items-center justify-between gap-4 border-b border-neutral-200 px-4 py-3 text-xs text-neutral-500 dark:border-neutral-800"><span className="inline-flex items-center gap-2"><IconFilter className="h-4 w-4" />{filtered.length} of {contacts.length} contacts</span><button type="button" onClick={resetFilters} className="min-h-11 rounded-xl px-3 font-semibold">Reset filters</button></div>}
         {data.state === "not_configured" || filtered.length === 0 ? <EmptySurface configured={data.state === "ready"} filtered={data.state === "ready" && hasFilters} onReset={resetFilters} /> : <ContactResults contacts={filtered} sortKey={sortKey} sortDirection={sortDirection} onSort={handleSort} onSelect={setSelectedId} />}
       </div>
@@ -210,6 +264,6 @@ function ContactResults({ contacts, sortKey, sortDirection, onSort, onSelect }: 
   contacts: GtmContactRow[]; sortKey: SortKey; sortDirection: SortDirection;
   onSort: (key: SortKey) => void; onSelect: (id: string) => void;
 }) {
-  const headings: Array<[string, SortKey | null]> = [["Contact", "displayName"], ["Organization", "currentCompany"], ["Type", "contactType"], ["Role", null], ["Score", "priorityScore"], ["Tier", "priorityTier"], ["Stage", "pipelineStage"], ["Last interaction", "lastInteractionAt"], ["Next action", null], ["Due", "nextActionAt"]];
-  return <><div className="hidden overflow-x-auto lg:block"><table className="w-full min-w-[1220px] border-collapse text-left text-sm"><thead className="bg-neutral-50 text-[11px] uppercase tracking-[0.08em] text-neutral-500 dark:bg-neutral-950"><tr>{headings.map(([title, key]) => <th key={title} className="whitespace-nowrap px-4 py-3">{key ? <SortButton title={title} sortKey={key} currentKey={sortKey} direction={sortDirection} onSort={onSort} /> : title}</th>)}</tr></thead><tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">{contacts.map((contact) => <tr key={contact.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-800/50"><td className="px-4 py-3"><button type="button" onClick={() => onSelect(contact.id)} className="group flex min-h-11 items-center gap-3 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ffbb00]"><span className="flex h-9 w-9 items-center justify-center rounded-lg bg-neutral-950 text-xs font-semibold text-white dark:bg-white dark:text-black">{contact.displayName.split(/\s+/).slice(0, 2).map((part) => part[0]).join("")}</span><span><span className="flex items-center gap-1.5 font-semibold group-hover:underline">{contact.displayName}{contact.doNotAutomate && <IconShieldLock className="h-3.5 w-3.5 text-amber-700" aria-label="Do not automate" />}</span><span className="block text-xs text-neutral-500">{contact.segment ?? contact.source ?? "No segment"}</span></span></button></td><td className="max-w-44 px-4 py-3"><span className="line-clamp-2">{contact.currentCompany ?? "Not linked"}</span></td><td className="px-4 py-3"><StatusBadge value={contact.contactType} /></td><td className="max-w-48 px-4 py-3 text-neutral-600 dark:text-neutral-300">{contact.currentTitle ?? "Not recorded"}</td><td className="px-4 py-3 font-mono font-semibold">{contact.priorityScore ?? "–"}</td><td className="px-4 py-3"><StatusBadge value={contact.priorityTier} fallback="–" /></td><td className="px-4 py-3"><StatusBadge value={contact.pipelineStage} /></td><td className="whitespace-nowrap px-4 py-3 font-mono text-xs text-neutral-500">{formatDate(contact.lastInteractionAt)}</td><td className="max-w-52 px-4 py-3">{contact.nextAction ?? "No action"}</td><td className="whitespace-nowrap px-4 py-3 font-mono text-xs text-neutral-500">{formatDate(contact.nextActionAt)}</td></tr>)}</tbody></table></div><div className="divide-y divide-neutral-200 lg:hidden dark:divide-neutral-800">{contacts.map((contact) => <button key={contact.id} type="button" onClick={() => onSelect(contact.id)} className="flex min-h-24 w-full items-center gap-3 p-4 text-left"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-neutral-950 text-xs font-semibold text-white dark:bg-white dark:text-black">{contact.displayName.split(/\s+/).slice(0, 2).map((part) => part[0]).join("")}</span><span className="min-w-0 flex-1"><span className="block font-semibold">{contact.displayName}</span><span className="mt-1 block truncate text-sm text-neutral-500">{contact.currentTitle ?? "Role not recorded"}{contact.currentCompany ? ` · ${contact.currentCompany}` : ""}</span><span className="mt-2 flex flex-wrap gap-2"><StatusBadge value={contact.contactType} /><StatusBadge value={contact.pipelineStage} /></span></span><IconChevronRight className="h-5 w-5 shrink-0 text-neutral-400" /></button>)}</div></>;
+  const headings: Array<[string, SortKey | null]> = [["Contact", "displayName"], ["Organization", "currentCompany"], ["Type", "contactType"], ["Role", "currentTitle"], ["Score", "priorityScore"], ["Tier", "priorityTier"], ["Stage", "pipelineStage"], ["Last interaction", "lastInteractionAt"], ["Next action", "nextAction"], ["Next action date", "nextActionAt"], ["Actions", null]];
+  return <><div className="hidden overflow-x-auto lg:block"><table className="w-full min-w-[1320px] border-collapse text-left text-sm"><thead className="bg-neutral-50 text-[11px] uppercase tracking-[0.08em] text-neutral-500 dark:bg-neutral-950"><tr>{headings.map(([title, key]) => <th key={title} className="whitespace-nowrap px-4 py-3">{key ? <SortButton title={title} sortKey={key} currentKey={sortKey} direction={sortDirection} onSort={onSort} /> : title}</th>)}</tr></thead><tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">{contacts.map((contact) => <tr key={contact.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-800/50"><td className="px-4 py-3"><button type="button" onClick={() => onSelect(contact.id)} className="group flex min-h-11 items-center gap-3 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ffbb00]"><span className="flex h-9 w-9 items-center justify-center rounded-lg bg-neutral-950 text-xs font-semibold text-white dark:bg-white dark:text-black">{contact.displayName.split(/\s+/).slice(0, 2).map((part) => part[0]).join("")}</span><span><span className="flex items-center gap-1.5 font-semibold group-hover:underline">{contact.displayName}{contact.doNotAutomate && <IconShieldLock className="h-3.5 w-3.5 text-amber-700" aria-label="Do not automate" />}</span><span className="block text-xs text-neutral-500">{contact.segment ?? contact.source ?? "No segment"}</span></span></button></td><td className="max-w-44 px-4 py-3"><span className="line-clamp-2">{contact.currentCompany ?? "Not linked"}</span></td><td className="px-4 py-3"><StatusBadge value={contact.contactType} /></td><td className="max-w-48 px-4 py-3 text-neutral-600 dark:text-neutral-300">{contact.currentTitle ?? "Not recorded"}</td><td className="px-4 py-3 font-mono font-semibold">{contact.priorityScore ?? "–"}</td><td className="px-4 py-3"><StatusBadge value={contact.priorityTier} fallback="–" /></td><td className="px-4 py-3"><StatusBadge value={contact.pipelineStage} /></td><td className="whitespace-nowrap px-4 py-3 font-mono text-xs text-neutral-500">{formatDate(contact.lastInteractionAt)}</td><td className="max-w-52 px-4 py-3">{contact.nextAction ?? "No action"}</td><td className="whitespace-nowrap px-4 py-3 font-mono text-xs text-neutral-500">{formatDate(contact.nextActionAt)}</td><td className="px-4 py-3"><button type="button" onClick={() => onSelect(contact.id)} className="min-h-10 rounded-lg border border-neutral-300 px-3 text-xs font-semibold transition-colors hover:bg-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ffbb00] dark:border-neutral-700 dark:hover:bg-neutral-800">Open</button></td></tr>)}</tbody></table></div><div className="divide-y divide-neutral-200 lg:hidden dark:divide-neutral-800">{contacts.map((contact) => <button key={contact.id} type="button" onClick={() => onSelect(contact.id)} className="flex min-h-24 w-full items-center gap-3 p-4 text-left transition-colors hover:bg-neutral-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#ffbb00] dark:hover:bg-neutral-800"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-neutral-950 text-xs font-semibold text-white dark:bg-white dark:text-black">{contact.displayName.split(/\s+/).slice(0, 2).map((part) => part[0]).join("")}</span><span className="min-w-0 flex-1"><span className="block font-semibold">{contact.displayName}</span><span className="mt-1 block truncate text-sm text-neutral-500">{contact.currentTitle ?? "Role not recorded"}{contact.currentCompany ? ` · ${contact.currentCompany}` : ""}</span><span className="mt-2 flex flex-wrap gap-2"><StatusBadge value={contact.contactType} /><StatusBadge value={contact.pipelineStage} /><span className="font-mono text-xs text-neutral-500">Score {contact.priorityScore ?? "–"}</span></span>{contact.nextAction && <span className="mt-2 block truncate text-xs text-neutral-500">Next: {contact.nextAction} · {formatDate(contact.nextActionAt)}</span>}</span><IconChevronRight className="h-5 w-5 shrink-0 text-neutral-400" /></button>)}</div></>;
 }

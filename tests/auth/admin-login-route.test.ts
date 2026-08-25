@@ -22,6 +22,7 @@ function supabaseFor(isInternalAdmin: boolean) {
   return {
     auth: {
       signInWithPassword: vi.fn(async () => ({ data: { user: { id: "user-1" } }, error: null })),
+      signOut: vi.fn(async () => ({ error: null })),
     },
     rpc: vi.fn(async () => ({ data: isInternalAdmin, error: null })),
   };
@@ -38,11 +39,13 @@ describe("dedicated admin login", () => {
   });
 
   it("rejects authenticated users without an active platform assignment", async () => {
-    createServerClient.mockReturnValue(supabaseFor(false));
+    const supabase = supabaseFor(false);
+    createServerClient.mockReturnValue(supabase);
     const { POST } = await import("@/app/api/admin/login/route");
     const response = await POST(request("email=player%40bltz.test&password=secret"));
     expect(response.status).toBe(303);
     expect(response.headers.get("location")).toBe("http://localhost/auth/admin?error=not_admin");
+    expect(supabase.auth.signOut).toHaveBeenCalledWith({ scope: "local" });
   });
 
   it("redirects an assigned platform admin to Beta Intelligence", async () => {

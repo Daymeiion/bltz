@@ -97,4 +97,24 @@ describe("GTM CSV normalization", () => {
     const body = ["Name", ...Array.from({ length: 2001 }, (_, index) => `Person ${index}`)].join("\n");
     expect(() => parseGtmCsv(Buffer.from(body))).toThrow("at most 2,000 rows");
   });
+
+  it("accepts the maximum supported large import", () => {
+    const body = ["Name", ...Array.from({ length: 2000 }, (_, index) => `Person ${index}`)].join("\n");
+    expect(parseGtmCsv(Buffer.from(body)).rows).toHaveLength(2000);
+  });
+
+  it("allows unexpected headers to be mapped explicitly", () => {
+    const result = parseGtmCsv(Buffer.from("Human,Network Profile\nTaylor Lane,https://linkedin.com/in/taylor-lane"), {
+      displayName: "Human",
+      linkedinUrl: "Network Profile",
+    });
+    expect(result.headers).toEqual(["Human", "Network Profile"]);
+    expect(result.rows[0]).toMatchObject({ displayName: "Taylor Lane", linkedinUrl: "https://www.linkedin.com/in/taylor-lane" });
+  });
+
+  it("reports a row missing every supported name field", () => {
+    const result = parseGtmCsv(Buffer.from("Email,Company\nno-name@example.com,North Coast"));
+    expect(result.rows).toEqual([]);
+    expect(result.issues[0]).toEqual({ rowNumber: 2, message: "A display name or first and last name is required." });
+  });
 });

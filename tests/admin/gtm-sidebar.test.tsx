@@ -106,4 +106,13 @@ describe("AdminSidebar GTM destination", () => {
 
     act(() => root.unmount());
   });
+
+  it("posts logout through the server authorization boundary", () => {
+    renderSidebar();
+    const forms = document.querySelectorAll('form[action="/api/admin/logout"][method="post"]');
+    expect(forms).toHaveLength(1);
+    for (const form of forms) {
+      expect(form.querySelector('button[type="submit"]')?.textContent).toContain("Logout");
+    }
+  });
 });

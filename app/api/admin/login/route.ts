@@ -48,6 +48,16 @@ export async function POST(request: NextRequest) {
     },
   );
 
+  const rejectLogin = async (error: string) => {
+    // A rejected re-authentication attempt must not leave a previously issued
+    // administrator session active in the browser.
+    await supabase.auth.signOut({ scope: "local" });
+    const response = adminLoginRedirect(request, error);
+    cookieResponse.cookies.getAll().forEach((cookie) => response.cookies.set(cookie));
+    response.cookies.delete(TEST_AUTH_COOKIE);
+    return response;
+  };
+
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error || !data.user) {
     console.warn("admin_login_failed", {
@@ -57,15 +67,15 @@ export async function POST(request: NextRequest) {
       emailLength: email.length,
       passwordLength: password.length,
     });
-    return adminLoginRedirect(request, "invalid_credentials");
+    return rejectLogin("invalid_credentials");
   }
 
   const { data: isAdmin, error: authorizationError } = await supabase.rpc(
     "is_internal_admin",
   );
 
-  if (authorizationError) return adminLoginRedirect(request, "authorization_unavailable");
-  if (isAdmin !== true) return adminLoginRedirect(request, "not_admin");
+  if (authorizationError) return rejectLogin("authorization_unavailable");
+  if (isAdmin !== true) return rejectLogin("not_admin");
 
   const response = NextResponse.redirect(new URL("/admin/beta", request.url), 303);
   cookieResponse.cookies.getAll().forEach((cookie) => response.cookies.set(cookie));

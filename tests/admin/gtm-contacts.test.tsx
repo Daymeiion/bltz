@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import type { GtmContactRow, GtmMetrics } from "@/lib/gtm/server";
 
-vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
+vi.mock("next/navigation", () => ({ usePathname: () => "/admin/gtm/contacts", useRouter: () => ({ refresh: vi.fn() }) }));
 
 vi.mock("@/app/admin/gtm/actions", () => ({
   addGtmDiscoveryInsight: vi.fn(),
@@ -11,6 +11,8 @@ vi.mock("@/app/admin/gtm/actions", () => ({
   commitGtmCsv: vi.fn(),
   createGtmContact: vi.fn(),
   editGtmContact: vi.fn(),
+  editGtmNote: vi.fn(),
+  inspectGtmCsv: vi.fn(),
   logGtmInteraction: vi.fn(),
   matchGtmContactPlayer: vi.fn(),
   previewGtmCsv: vi.fn(),
@@ -80,6 +82,14 @@ const baseFilters: GtmContactFilters = {
   priorityTier: "all",
   pipelineStage: "all",
   conversationOutcome: "all",
+  segment: "all",
+  organization: "all",
+  sport: "all",
+  leagueLevel: "all",
+  source: "all",
+  doNotAutomate: "all",
+  hasPlayerMatch: "all",
+  needsFollowUp: "all",
   savedView: "All contacts",
 };
 
@@ -121,6 +131,22 @@ describe("GTM contacts workspace", () => {
     ];
 
     expect(filterGtmContacts(contacts, { ...baseFilters, search: "north coast", contactType: "enterprise", priorityTier: "A" })).toEqual([contacts[0]]);
+  });
+
+  it("combines the operational organization, sport, automation, Player, and follow-up filters", () => {
+    const due = contact({ playerMatch: { playerId: "8b148fe2-5e87-4a42-9b69-74341f75854a", playerName: "Jordan Reed", team: "North Coast", position: "QB", level: "college", verified: true } });
+    const other = contact({ id: "1c1ccff9-bfa0-40e7-8654-bbda8d999711", currentCompany: "BLTZ", sport: "basketball", doNotAutomate: false, nextActionAt: null });
+    const now = new Date("2026-08-24T12:00:00.000Z");
+
+    expect(filterGtmContacts([due, other], {
+      ...baseFilters,
+      organization: "north coast athletics",
+      sport: "football",
+      leagueLevel: "ncaa",
+      doNotAutomate: "yes",
+      hasPlayerMatch: "yes",
+      needsFollowUp: "yes",
+    }, now)).toEqual([due]);
   });
 
   it("filters investor contacts and non-binary conversation outcomes", () => {
@@ -166,7 +192,7 @@ describe("GTM contacts workspace", () => {
     const markup = renderToStaticMarkup(<GtmContactsWorkspace data={{ state: "ready", contacts: [investor], generatedAt: "2026-08-24T12:00:00.000Z" }} />);
 
     expect(markup).toContain("Investor");
-    expect(markup).toContain("All outcomes");
+    expect(markup).toContain("All conversation outcomes");
     expect(markup).toContain("Strategic Insight");
   });
 
@@ -217,6 +243,10 @@ describe("GTM contacts workspace", () => {
     expect(markup).toContain("xl:grid-cols-[minmax(14rem,1fr)_12rem_repeat(4,minmax(8rem,10rem))]");
     expect(markup).not.toContain("lg:grid-cols-[minmax(16rem,1fr)_14rem_repeat(3,minmax(9rem,12rem))]");
     expect(markup).toContain("Pipeline stage");
+    expect(markup).toContain("More filters");
+    expect(markup).toContain("All organizations");
+    expect(markup).toContain("Any Player-match status");
+    expect(markup).toContain("Actions");
   });
 
   it("renders reliable pipeline and discovery instrumentation", () => {

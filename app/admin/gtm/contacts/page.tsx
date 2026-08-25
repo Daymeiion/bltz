@@ -6,7 +6,8 @@ export const metadata = {
   description: "Private relationship intelligence for authorized BLTZ administrators.",
 };
 
-export default async function GtmContactsPage() {
+export default async function GtmContactsPage({ searchParams }: { searchParams: Promise<{ contact?: string }> }) {
+  const { contact } = await searchParams;
   const [data, metrics] = await Promise.all([getGtmContacts(), getGtmMetrics()]);
-  return <GtmContactsWorkspace data={data} metrics={metrics} />;
+  return <GtmContactsWorkspace data={data} metrics={metrics} initialContactId={contact ?? null} />;
 }

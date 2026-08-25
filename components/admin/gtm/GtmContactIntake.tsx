@@ -2,34 +2,15 @@
 
 import * as Dialog from "@radix-ui/react-dialog";
 import { IconFileUpload, IconSearch, IconUserPlus, IconX } from "@tabler/icons-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { startTransition, useState } from "react";
 import {
-  commitGtmCsv,
   createGtmContact,
-  previewGtmCsv,
   searchGtmPlayers,
-  type GtmCsvPreview,
   type GtmPlayerOption,
 } from "@/app/admin/gtm/actions";
-import { GTM_CSV_MAX_BYTES, GTM_IMPORT_FIELDS, type GtmFieldMapping, type GtmImportField } from "@/lib/gtm/import-contract";
 import { GTM_INVESTOR_RELATIONSHIP_STAGES, GTM_INVESTOR_TYPES } from "@/lib/gtm/types";
-
-const fieldLabels: Record<GtmImportField, string> = {
-  displayName: "Display name",
-  firstName: "First name",
-  lastName: "Last name",
-  email: "Email",
-  linkedinUrl: "LinkedIn URL",
-  currentCompany: "Company",
-  currentTitle: "Title",
-  connectedOn: "Connected on",
-  contactType: "Contact type",
-  sport: "Sport",
-  leagueLevel: "League / level",
-  doNotAutomate: "Do not automate",
-  sourceRecordId: "Source record ID",
-};
 
 const inputClass = "mt-2 min-h-11 w-full rounded-xl border border-neutral-300 bg-white px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ffbb00] dark:border-neutral-700 dark:bg-neutral-950";
 const secondaryButton = "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-neutral-300 bg-white px-4 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ffbb00] disabled:opacity-50 dark:border-neutral-700 dark:bg-neutral-950";
@@ -160,78 +141,8 @@ function AddContactDialog({ onComplete }: { onComplete: () => void }) {
   );
 }
 
-function ImportCsvDialog({ onComplete }: { onComplete: () => void }) {
-  const [open, setOpen] = useState(false);
-  const [file, setFile] = useState<File | null>(null);
-  const [mapping, setMapping] = useState<GtmFieldMapping>({});
-  const [preview, setPreview] = useState<GtmCsvPreview | null>(null);
-  const [pending, setPending] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
-  const [complete, setComplete] = useState<string | null>(null);
-  const [previewStale, setPreviewStale] = useState(false);
-
-  const formDataFor = () => {
-    const formData = new FormData();
-    if (file) formData.set("file", file);
-    formData.set("mapping", JSON.stringify(mapping));
-    if (preview) formData.set("idempotencyKey", preview.idempotencyKey);
-    return formData;
-  };
-
-  const review = () => {
-    if (!file) { setNotice("Choose a CSV file first."); return; }
-    setPending(true); setNotice(null); setComplete(null);
-    startTransition(async () => {
-      const result = await previewGtmCsv(formDataFor());
-      setPending(false);
-      if (!result.ok) { setNotice(result.message); return; }
-      setPreview(result.value);
-      setMapping(result.value.mapping);
-      setPreviewStale(false);
-    });
-  };
-
-  const commit = () => {
-    if (!file || !preview) return;
-    setPending(true); setNotice(null);
-    startTransition(async () => {
-      const result = await commitGtmCsv(formDataFor());
-      setPending(false);
-      if (!result.ok) { setNotice(result.message); return; }
-      setComplete(`${result.value.created} created, ${result.value.updated} updated, ${result.value.skipped} skipped, ${result.value.failed} failed.`);
-      onComplete();
-    });
-  };
-
-  return (
-    <Dialog.Root open={open} onOpenChange={(next) => { setOpen(next); if (!next) { setNotice(null); setComplete(null); } }}>
-      <Dialog.Trigger className={secondaryButton}><IconFileUpload className="h-4 w-4" />Import CSV</Dialog.Trigger>
-      <ModalShell title="Import contacts from CSV" description="Upload, map, and preview before committing. Existing imported contacts are updated; duplicate identities and invalid rows are skipped. Raw CSV rows are never retained.">
-        <div className="mt-6 space-y-5">
-          {notice && <p role="alert" className="rounded-xl border border-neutral-300 bg-white px-4 py-3 text-sm dark:border-neutral-700 dark:bg-neutral-900">{notice}</p>}
-          {previewStale && <p role="status" className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100">Field mapping changed. Refresh the preview before importing.</p>}
-          {complete && <p role="status" className="rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-100"><span className="font-semibold">Import complete.</span> {complete}</p>}
-          <label className="block rounded-2xl border border-dashed border-neutral-300 bg-white p-5 text-sm dark:border-neutral-700 dark:bg-neutral-900"><span className="font-semibold">CSV file</span><input type="file" accept=".csv,text/csv" className="mt-3 block w-full text-sm file:mr-4 file:min-h-11 file:rounded-xl file:border-0 file:bg-neutral-950 file:px-4 file:text-sm file:font-semibold file:text-white dark:file:bg-white dark:file:text-black" onChange={(event) => { const next = event.target.files?.[0] ?? null; setFile(next); setPreview(null); setMapping({}); setComplete(null); setPreviewStale(false); }} /><span className="mt-2 block text-xs text-neutral-500">Maximum {(GTM_CSV_MAX_BYTES / 1000).toFixed(0)} KB and 2,000 rows.</span></label>
-
-          {preview && (
-            <>
-              <section aria-labelledby="field-mapping"><div className="flex items-end justify-between"><div><h3 id="field-mapping" className="font-semibold">Field mapping</h3><p className="mt-1 text-xs text-neutral-500">Confirm the detected headers, then refresh the preview if you change them.</p></div></div><div className="mt-3 grid gap-3 sm:grid-cols-2">{GTM_IMPORT_FIELDS.map((field) => <label key={field} className="text-sm font-medium">{fieldLabels[field]}<select value={mapping[field] ?? ""} onChange={(event) => { setMapping((current) => ({ ...current, [field]: event.target.value || undefined })); setPreviewStale(true); }} className={inputClass}><option value="">Not mapped</option>{preview.headers.map((header) => <option key={header} value={header}>{header}</option>)}</select></label>)}</div></section>
-              <section aria-labelledby="import-preview"><h3 id="import-preview" className="font-semibold">Preview</h3><div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">{[["Rows", preview.counts.found], ["Create", preview.counts.create], ["Update", preview.counts.update], ["Skip", preview.counts.duplicate], ["Invalid", preview.counts.invalid], ["Player matches", preview.counts.potentialPlayerMatches]].map(([name, value]) => <div key={String(name)} className="rounded-xl border border-neutral-200 bg-white p-3 dark:border-neutral-800 dark:bg-neutral-900"><p className="text-xs text-neutral-500">{name}</p><p className="mt-1 font-mono text-xl font-semibold">{value}</p></div>)}</div>
-                <div className="mt-3 overflow-x-auto rounded-xl border border-neutral-200 dark:border-neutral-800"><table className="w-full min-w-[42rem] text-left text-sm"><thead className="bg-neutral-100 text-xs text-neutral-500 dark:bg-neutral-900"><tr><th className="px-3 py-2">Row</th><th className="px-3 py-2">Contact</th><th className="px-3 py-2">Company</th><th className="px-3 py-2">Type</th><th className="px-3 py-2">Player match</th><th className="px-3 py-2">Outcome</th></tr></thead><tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">{preview.sample.map((row) => <tr key={row.rowNumber}><td className="px-3 py-2 font-mono">{row.rowNumber}</td><td className="px-3 py-2"><span className="font-semibold">{row.displayName}</span>{row.email && <span className="block text-xs text-neutral-500">{row.email}</span>}</td><td className="px-3 py-2">{row.currentCompany || "—"}</td><td className="px-3 py-2 capitalize">{row.contactType}</td><td className="px-3 py-2">{row.potentialPlayerName ? `${row.potentialPlayerName} · review` : "—"}</td><td className="px-3 py-2 capitalize">{row.outcome}</td></tr>)}</tbody></table></div>
-                {preview.issues.length > 0 && <details className="mt-3 rounded-xl border border-neutral-200 bg-white p-3 text-sm dark:border-neutral-800 dark:bg-neutral-900"><summary className="cursor-pointer font-semibold">Review invalid rows ({preview.counts.invalid})</summary><ul className="mt-2 space-y-1 text-neutral-600 dark:text-neutral-300">{preview.issues.map((issue) => <li key={`${issue.rowNumber}-${issue.message}`}>Row {issue.rowNumber}: {issue.message}</li>)}</ul></details>}
-              </section>
-            </>
-          )}
-
-          <div className="flex flex-wrap justify-end gap-2"><Dialog.Close type="button" className={secondaryButton}>{complete ? "Close" : "Cancel"}</Dialog.Close>{!complete && <button type="button" onClick={review} disabled={pending || !file} className={secondaryButton}>{pending ? "Reading…" : preview ? "Refresh preview" : "Review import"}</button>}{preview && !complete && <button type="button" onClick={commit} disabled={pending || previewStale || preview.counts.create + preview.counts.update === 0} className={primaryButton}>{pending ? "Importing…" : previewStale ? "Refresh preview to import" : `Import ${preview.counts.create + preview.counts.update} contacts`}</button>}</div>
-        </div>
-      </ModalShell>
-    </Dialog.Root>
-  );
-}
-
 export function GtmContactIntake() {
   const router = useRouter();
   const onComplete = () => router.refresh();
-  return <div className="flex flex-wrap gap-2"><ImportCsvDialog onComplete={onComplete} /><AddContactDialog onComplete={onComplete} /></div>;
+  return <div className="flex flex-wrap gap-2"><Link href="/admin/gtm/imports" className={secondaryButton}><IconFileUpload className="h-4 w-4" />Import CSV</Link><AddContactDialog onComplete={onComplete} /></div>;
 }

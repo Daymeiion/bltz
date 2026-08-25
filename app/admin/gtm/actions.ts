@@ -7,7 +7,7 @@ import {
   parseGtmCsv,
 } from "@/lib/gtm/import";
 import { GTM_CSV_MAX_BYTES, GTM_IMPORT_FIELDS, type GtmFieldMapping, type NormalizedGtmImportRow } from "@/lib/gtm/import-contract";
-import { buildUniquePlayerMatchMap, type CanonicalPlayerCandidate } from "@/lib/gtm/player-matching";
+import { buildPlayerMatchReviewMap, type CanonicalPlayerCandidate, type PlayerMatchReview } from "@/lib/gtm/player-matching";
 import {
   GTM_CONTACT_TYPES,
   GTM_CONVERSATION_OUTCOMES,
@@ -23,6 +23,8 @@ const addNoteSchema = z.object({
   noteType: z.enum(["general", "call", "meeting", "linkedin", "email", "introduction", "research", "personal_context", "opportunity", "discovery"]),
   body: z.string().trim().min(1).max(5000),
 });
+
+const editNoteSchema = addNoteSchema.extend({ noteId: z.string().uuid() });
 
 const logInteractionSchema = z.object({
   contactId: z.string().uuid(),
@@ -165,9 +167,18 @@ export interface GtmCsvPreview {
   idempotencyKey: string;
   headers: string[];
   mapping: GtmFieldMapping;
-  counts: { found: number; create: number; update: number; duplicate: number; invalid: number; potentialPlayerMatches: number };
-  sample: Array<Pick<NormalizedGtmImportRow, "rowNumber" | "displayName" | "email" | "currentCompany" | "contactType"> & { outcome: "create" | "update" | "skip"; potentialPlayerName: string | null }>;
+  counts: { found: number; newContacts: number; existingContacts: number; updates: number; duplicate: number; matchedPlayers: number; possiblePlayerMatches: number; invalid: number };
+  sample: Array<Pick<NormalizedGtmImportRow, "rowNumber" | "displayName" | "email" | "currentCompany" | "contactType"> & { outcome: "create" | "update" | "skip"; playerMatchStatus: string | null }>;
+  playerReviews: PlayerMatchReview[];
   issues: Array<{ rowNumber: number; message: string }>;
+}
+
+export interface GtmCsvInspection {
+  filename: string;
+  headers: string[];
+  mapping: GtmFieldMapping;
+  rowsFound: number;
+  invalidRows: number;
 }
 
 export type GtmMutationResult<T> =
@@ -190,6 +201,18 @@ function parseMapping(value: FormDataEntryValue | null): GtmFieldMapping {
       ? [[field, candidate[field] as string]]
       : []),
   ) as GtmFieldMapping;
+}
+
+function parsePlayerMatchDecisions(value: FormDataEntryValue | null) {
+  if (typeof value !== "string" || !value) return new Map<string, string | null>();
+  const candidate = JSON.parse(value) as Record<string, unknown>;
+  const decisions = new Map<string, string | null>();
+  for (const [sourceRecordId, playerId] of Object.entries(candidate)) {
+    if (!/^[a-f0-9]{64}$/.test(sourceRecordId)) continue;
+    if (playerId === null) decisions.set(sourceRecordId, null);
+    else if (typeof playerId === "string" && z.string().uuid().safeParse(playerId).success) decisions.set(sourceRecordId, playerId);
+  }
+  return decisions;
 }
 
 async function readCsv(formData: FormData) {
@@ -251,7 +274,7 @@ async function analyzeExisting(gtm: SupabaseClient, rows: NormalizedGtmImportRow
   return index;
 }
 
-async function findPotentialPlayerMatches(gtm: SupabaseClient, rows: NormalizedGtmImportRow[]) {
+async function findPlayerMatchReviews(gtm: SupabaseClient, rows: NormalizedGtmImportRow[]) {
   const athleteRows = rows.filter((row) => row.contactType === "athlete");
   const playersById = new Map<string, CanonicalPlayerCandidate>();
   for (let offset = 0; offset < athleteRows.length; offset += 75) {
@@ -278,7 +301,7 @@ async function findPotentialPlayerMatches(gtm: SupabaseClient, rows: NormalizedG
       }
     }
   }
-  return buildUniquePlayerMatchMap(rows, [...playersById.values()]);
+  return buildPlayerMatchReviewMap(rows, [...playersById.values()]);
 }
 
 function refreshGtmPaths() {
@@ -610,6 +633,40 @@ export async function addGtmDiscoveryInsight(input: unknown): Promise<GtmMutatio
   } };
 }
 
+export async function editGtmNote(input: unknown): Promise<GtmMutationResult<{ id: string; noteType: string; body: string; createdAt: string }>> {
+  const parsed = editNoteSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, code: "invalid", message: "Choose a note type and enter a note." };
+  let authorization;
+  try { authorization = await getAuthorizedClient(); }
+  catch { return { ok: false, code: "unauthorized", message: "Your administrator access could not be verified." }; }
+  const { data, error } = await authorization.supabase.from("gtm_notes")
+    .update({ note_type: parsed.data.noteType, body: parsed.data.body })
+    .eq("id", parsed.data.noteId)
+    .eq("contact_id", parsed.data.contactId)
+    .select("id,note_type,body,created_at")
+    .single();
+  if (error || !data) return { ok: false, code: "failed", message: "The note could not be updated. Try again." };
+  refreshGtmPaths();
+  return { ok: true, value: { id: data.id, noteType: data.note_type, body: data.body, createdAt: data.created_at } };
+}
+
+export async function inspectGtmCsv(formData: FormData): Promise<GtmMutationResult<GtmCsvInspection>> {
+  try { await getAuthorizedClient(); }
+  catch { return { ok: false, code: "unauthorized", message: "Your administrator access could not be verified." }; }
+  try {
+    const { file, parsed } = await readCsv(formData);
+    return { ok: true, value: {
+      filename: file.name,
+      headers: parsed.headers,
+      mapping: { ...parsed.suggestedMapping, ...parseMapping(formData.get("mapping")) },
+      rowsFound: parsed.rows.length + parsed.issues.length + parsed.duplicateCount,
+      invalidRows: parsed.issues.length,
+    } };
+  } catch (error) {
+    return { ok: false, code: "invalid", message: error instanceof Error ? error.message : "The CSV could not be read." };
+  }
+}
+
 export async function previewGtmCsv(formData: FormData): Promise<GtmMutationResult<GtmCsvPreview>> {
   let authorization;
   try { authorization = await getAuthorizedClient(); }
@@ -617,7 +674,7 @@ export async function previewGtmCsv(formData: FormData): Promise<GtmMutationResu
   try {
     const { file, parsed } = await readCsv(formData);
     const gtm = authorization.supabase as unknown as SupabaseClient;
-    const [existing, playerMatches] = await Promise.all([analyzeExisting(gtm, parsed.rows), findPotentialPlayerMatches(gtm, parsed.rows)]);
+    const [existing, playerReviews] = await Promise.all([analyzeExisting(gtm, parsed.rows), findPlayerMatchReviews(gtm, parsed.rows)]);
     let create = 0;
     let update = 0;
     let collision = 0;
@@ -631,8 +688,20 @@ export async function previewGtmCsv(formData: FormData): Promise<GtmMutationResu
     }
     const idempotencyKey = crypto.randomUUID();
     const mapping = { ...parsed.suggestedMapping, ...parseMapping(formData.get("mapping")) };
-    const counts = { found: parsed.rows.length + parsed.issues.length + parsed.duplicateCount, create, update, duplicate: parsed.duplicateCount + collision, invalid: parsed.issues.length, potentialPlayerMatches: playerMatches.size };
-    const previewSummary = { valid: create + update, invalid: counts.invalid, duplicates: counts.duplicate, potentialMatches: counts.potentialPlayerMatches };
+    const reviews = [...playerReviews.values()];
+    const matchedPlayers = reviews.filter((review) => review.strength === "strong").length;
+    const possiblePlayerMatches = reviews.length - matchedPlayers;
+    const counts = {
+      found: parsed.rows.length + parsed.issues.length + parsed.duplicateCount,
+      newContacts: create,
+      existingContacts: update + collision,
+      updates: update,
+      duplicate: parsed.duplicateCount + collision,
+      matchedPlayers,
+      possiblePlayerMatches,
+      invalid: parsed.issues.length,
+    };
+    const previewSummary = { valid: create + update, invalid: counts.invalid, duplicates: counts.duplicate, potentialMatches: reviews.length };
     const { error: prepareError } = await gtm.rpc("prepare_gtm_import_job", {
       p_filename: file.name,
       p_import_type: "linkedin_connections",
@@ -643,7 +712,7 @@ export async function previewGtmCsv(formData: FormData): Promise<GtmMutationResu
       p_rows_found: counts.found,
       p_rows_duplicated: counts.duplicate,
       p_rows_failed: counts.invalid,
-      p_potential_matches: counts.potentialPlayerMatches,
+      p_potential_matches: reviews.length,
     });
     if (prepareError) throw prepareError;
     return { ok: true, value: {
@@ -652,7 +721,16 @@ export async function previewGtmCsv(formData: FormData): Promise<GtmMutationResu
       headers: parsed.headers,
       mapping,
       counts,
-      sample: parsed.rows.slice(0, 8).map((row) => ({ rowNumber: row.rowNumber, displayName: row.displayName, email: row.email, currentCompany: row.currentCompany, contactType: row.contactType, outcome: outcomes.get(row.sourceRecordId) ?? "create", potentialPlayerName: playerMatches.get(row.sourceRecordId)?.name ?? null })),
+      sample: parsed.rows.slice(0, 50).map((row) => ({
+        rowNumber: row.rowNumber,
+        displayName: row.displayName,
+        email: row.email,
+        currentCompany: row.currentCompany,
+        contactType: row.contactType,
+        outcome: outcomes.get(row.sourceRecordId) ?? "create",
+        playerMatchStatus: playerReviews.get(row.sourceRecordId)?.strength ?? null,
+      })),
+      playerReviews: reviews,
       issues: parsed.issues.slice(0, 20),
     } };
   } catch (error) {
@@ -670,11 +748,12 @@ export async function commitGtmCsv(formData: FormData): Promise<GtmMutationResul
   try {
     const { file, parsed } = await readCsv(formData);
     const gtm = authorization.supabase as unknown as SupabaseClient;
-    const [existing, playerMatches] = await Promise.all([analyzeExisting(gtm, parsed.rows), findPotentialPlayerMatches(gtm, parsed.rows)]);
+    const [existing, playerReviews] = await Promise.all([analyzeExisting(gtm, parsed.rows), findPlayerMatchReviews(gtm, parsed.rows)]);
     const accepted = parsed.rows.filter((row) => existingOutcome(existing, row) !== "skip");
     const collisionCount = parsed.rows.length - accepted.length;
     const mapping = { ...parsed.suggestedMapping, ...parseMapping(formData.get("mapping")) };
-    const previewSummary = { valid: accepted.length, invalid: parsed.issues.length, duplicates: parsed.duplicateCount + collisionCount, potentialMatches: playerMatches.size };
+    const previewSummary = { valid: accepted.length, invalid: parsed.issues.length, duplicates: parsed.duplicateCount + collisionCount, potentialMatches: playerReviews.size };
+    const matchDecisions = parsePlayerMatchDecisions(formData.get("playerMatchDecisions"));
     const { data, error } = await gtm.rpc("import_gtm_contacts", {
       p_filename: file.name,
       p_content_sha256: parsed.contentSha256,
@@ -682,12 +761,18 @@ export async function commitGtmCsv(formData: FormData): Promise<GtmMutationResul
       p_field_mapping: mapping,
       p_preview_summary: previewSummary,
       p_rows: accepted.map(({ rowNumber: _rowNumber, ...row }) => {
-        const match = playerMatches.get(row.sourceRecordId);
+        const review = playerReviews.get(row.sourceRecordId);
+        const hasDecision = matchDecisions.has(row.sourceRecordId);
+        const selectedId = hasDecision
+          ? matchDecisions.get(row.sourceRecordId)
+          : review?.strength === "strong" ? review.candidates[0]?.id : null;
+        const match = selectedId ? review?.candidates.find((candidate) => candidate.id === selectedId) : null;
+        if (selectedId && !match) throw new Error(`Player match review for ${row.displayName} is no longer valid. Preview the import again.`);
         return {
           ...row,
           playerId: match?.id ?? null,
-          playerMatchType: match?.matchType ?? null,
-          playerMatchConfidence: match?.confidence ?? null,
+          playerMatchType: hasDecision && match ? "manual" : match?.matchType ?? null,
+          playerMatchConfidence: hasDecision && match ? 1 : match?.confidence ?? null,
         };
       }),
       p_duplicate_count: parsed.duplicateCount + collisionCount,

@@ -20,6 +20,7 @@ import {
   addGtmNote,
   archiveGtmContact,
   editGtmContact,
+  editGtmNote,
   logGtmInteraction,
   matchGtmContactPlayer,
   searchGtmPlayers,
@@ -143,6 +144,7 @@ function ActiveGtmContactDrawer({
   const [playerResults, setPlayerResults] = useState<GtmPlayerOption[]>([]);
   const [discoveryInteractionId, setDiscoveryInteractionId] = useState<string | null>(null);
   const [lastLoggedInteractionId, setLastLoggedInteractionId] = useState<string | null>(null);
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
 
   useEffect(() => {
     setMode(null);
@@ -153,6 +155,7 @@ function ActiveGtmContactDrawer({
     setPlayerResults([]);
     setDiscoveryInteractionId(null);
     setLastLoggedInteractionId(null);
+    setEditingNoteId(null);
   }, [contact.id, contact.contactType]);
 
   const openMode = (nextMode: DrawerMode, interactionId: string | null = null) => {
@@ -169,6 +172,18 @@ function ActiveGtmContactDrawer({
       if (!result.ok) return setNotice(result.message);
       onContactUpdate({ ...contact, notes: [result.value, ...contact.notes] });
       setMode(null); setNotice("Note saved.");
+    });
+  }
+
+  function submitNoteEdit(formData: FormData) {
+    if (!editingNoteId) return;
+    setPending(true); setNotice(null);
+    startTransition(async () => {
+      const result = await editGtmNote({ noteId: editingNoteId, contactId: contact.id, noteType: formData.get("noteType"), body: formData.get("body") });
+      setPending(false);
+      if (!result.ok) return setNotice(result.message);
+      onContactUpdate({ ...contact, notes: contact.notes.map((note) => note.id === editingNoteId ? result.value : note) });
+      setEditingNoteId(null); setNotice("Note updated.");
     });
   }
 
@@ -406,7 +421,7 @@ function ActiveGtmContactDrawer({
 
           <section className="mt-8"><div className="flex items-center justify-between"><h3 className="text-lg font-semibold">Matched Player</h3>{contact.contactType === "athlete" && <button type="button" onClick={() => openMode("player")} className="min-h-11 text-sm font-semibold underline">Match Player</button>}</div><div className="mt-3 rounded-xl border border-neutral-200 bg-white p-4 text-sm dark:border-neutral-800 dark:bg-neutral-900">{contact.playerMatch ? <div className="flex items-start gap-3"><IconUserCheck className="mt-0.5 h-5 w-5" /><div><p className="font-semibold">{contact.playerMatch.playerName}</p><p className="mt-1 text-xs text-neutral-500">{[contact.playerMatch.position, contact.playerMatch.team, contact.playerMatch.level].filter(Boolean).join(" · ") || "Canonical Player record"}</p><p className="mt-1 text-xs font-semibold text-emerald-700 dark:text-emerald-300">{contact.playerMatch.verified ? "Verified match" : "Potential match"}</p></div></div> : "No Player match"}</div></section>
 
-          <section className="mt-8"><div className="flex items-center justify-between"><h3 className="text-lg font-semibold">Notes</h3><span className="font-mono text-xs text-neutral-500">{contact.notes.length}</span></div><div className="mt-3 space-y-3">{contact.notes.length ? contact.notes.map((note) => <article key={note.id} className="rounded-xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900"><div className="flex justify-between gap-3 text-xs text-neutral-500"><span>{label(note.noteType)}</span><time>{formatDate(note.createdAt, true)}</time></div><p className="mt-2 whitespace-pre-wrap text-sm leading-6">{note.body}</p></article>) : <p className="rounded-xl border border-dashed border-neutral-300 p-4 text-sm text-neutral-500">No notes recorded yet.</p>}</div></section>
+          <section className="mt-8"><div className="flex items-center justify-between"><h3 className="text-lg font-semibold">Notes</h3><span className="font-mono text-xs text-neutral-500">{contact.notes.length}</span></div><div className="mt-3 space-y-3">{contact.notes.length ? contact.notes.map((note) => <article key={note.id} className="rounded-xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">{editingNoteId === note.id ? <form action={submitNoteEdit} className="space-y-3"><label className="block text-sm font-medium">Note type<select name="noteType" defaultValue={note.noteType} className={inputClass}>{GTM_NOTE_TYPES.map((type) => <option key={type} value={type}>{label(type)}</option>)}</select></label><label className="block text-sm font-medium">Note<textarea name="body" required defaultValue={note.body} maxLength={5000} rows={4} className={textareaClass} /></label><FormActions pending={pending} submitLabel="Update note" onCancel={() => setEditingNoteId(null)} /></form> : <><div className="flex items-start justify-between gap-3 text-xs text-neutral-500"><span>{label(note.noteType)}</span><div className="flex items-center gap-3"><time>{formatDate(note.createdAt, true)}</time><button type="button" onClick={() => setEditingNoteId(note.id)} className="min-h-10 rounded-lg px-2 font-semibold text-neutral-700 underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ffbb00] dark:text-neutral-200">Edit</button></div></div><p className="mt-2 whitespace-pre-wrap text-sm leading-6">{note.body}</p></>}</article>) : <p className="rounded-xl border border-dashed border-neutral-300 p-4 text-sm text-neutral-500">No notes recorded yet.</p>}</div></section>
 
           <section className="mt-8"><div className="flex items-center justify-between"><h3 className="text-lg font-semibold">Interactions</h3><span className="font-mono text-xs text-neutral-500">{contact.interactions.length}</span></div><div className="mt-3 space-y-3">{contact.interactions.length ? contact.interactions.map((item) => <article key={item.id} className="rounded-xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900"><div className="flex justify-between gap-3 text-xs text-neutral-500"><span>{label(item.interactionType)} · {label(item.direction)}</span><time>{formatDate(item.interactionAt, true)}</time></div><p className="mt-2 text-sm font-medium">{item.subject ?? "Interaction"}</p>{item.summary && <p className="mt-1 text-sm leading-6 text-neutral-600 dark:text-neutral-300">{item.summary}</p>}{item.followUpRequired && <p className="mt-2 text-xs font-semibold text-amber-800 dark:text-amber-300">Follow-up required</p>}{item.outcomes.length > 0 && <div className="mt-3 flex flex-wrap gap-2">{item.outcomes.map((outcome) => <StatusBadge key={outcome} value={outcome} />)}</div>}{item.nextTrigger && <p className="mt-3 rounded-lg bg-neutral-100 px-3 py-2 text-xs dark:bg-neutral-800"><span className="font-semibold">Next trigger:</span> {item.nextTrigger}</p>}<button type="button" onClick={() => openMode("discovery", item.id)} className="mt-3 min-h-11 text-sm font-semibold underline">Add Discovery Insight</button></article>) : <p className="rounded-xl border border-dashed border-neutral-300 p-4 text-sm text-neutral-500">No interactions recorded yet.</p>}</div></section>
 

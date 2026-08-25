@@ -186,22 +186,25 @@ export function AdminSidebar() {
         </nav>
 
         {/* Logout */}
-        <button
-          className={cn(
-            "mt-auto flex items-center gap-3 rounded-xl px-3 py-3 text-neutral-500 transition-all duration-200 hover:bg-red-50 hover:text-red-700 dark:text-neutral-400 dark:hover:bg-red-500/10 dark:hover:text-red-300"
-          )}
-        >
-          <IconLogout className="h-5 w-5 flex-shrink-0" />
-          <motion.span
-            animate={{
-              opacity: desktopOpen ? 1 : 0,
-              display: desktopOpen ? "inline-block" : "none",
-            }}
-            className="text-sm font-medium whitespace-nowrap"
+        <form action="/api/admin/logout" method="post" className="mt-auto">
+          <button
+            type="submit"
+            className={cn(
+              "flex w-full items-center gap-3 rounded-xl px-3 py-3 text-neutral-500 transition-all duration-200 hover:bg-red-50 hover:text-red-700 dark:text-neutral-400 dark:hover:bg-red-500/10 dark:hover:text-red-300"
+            )}
           >
-            Logout
-          </motion.span>
-        </button>
+            <IconLogout className="h-5 w-5 flex-shrink-0" />
+            <motion.span
+              animate={{
+                opacity: desktopOpen ? 1 : 0,
+                display: desktopOpen ? "inline-block" : "none",
+              }}
+              className="text-sm font-medium whitespace-nowrap"
+            >
+              Logout
+            </motion.span>
+          </button>
+        </form>
       </motion.div>
 
       {/* Mobile Sidebar */}
@@ -259,10 +262,15 @@ export function AdminSidebar() {
                 </Link>
               );
             })}
-            <button className="flex items-center gap-3 px-4 py-3 rounded-lg text-neutral-400 hover:text-red-400 hover:bg-neutral-800/50 transition-all mt-8">
-              <IconLogout className="h-5 w-5" />
-              <span className="text-sm font-medium">Logout</span>
-            </button>
+            <form action="/api/admin/logout" method="post" className="mt-8">
+              <button
+                type="submit"
+                className="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-neutral-400 transition-all hover:bg-neutral-800/50 hover:text-red-400"
+              >
+                <IconLogout className="h-5 w-5" />
+                <span className="text-sm font-medium">Logout</span>
+              </button>
+            </form>
           </nav>
         </motion.div>
       )}
