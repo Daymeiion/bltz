@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { IconArrowRight, IconRefresh } from "@tabler/icons-react";
 import { Breadcrumb, DateRangeSelector, FilterBar, PageHeader, PillTabs, SearchInput } from "@/components/enterprise-crm/navigation";
-import { DataTable, EntityReference, KpiCard, Pagination, Sparkline, StatusBadge, type DataTableSort } from "@/components/enterprise-crm/data";
-import { ActivityFeed, ApprovalRow, AssignmentDrawer, AttentionRow, CommentThread, ExecutiveAttentionCard, MemberWorkload, NotificationItem, TaskRow, WorkloadLegend, type AssignmentDrawerState } from "@/components/enterprise-crm/workflow";
-import { ActivationSummaryRow, OpportunityRow, PartnerReference, RightsSummary } from "@/components/enterprise-crm/domain";
-import { IntelligenceCard, RecommendedAction, SourceIndicator } from "@/components/enterprise-crm/intelligence";
+import { AvatarGroup, DataTable, EntityReference, KpiCard, MetricDelta, Pagination, Sparkline, StatusBadge, type DataTableSort } from "@/components/enterprise-crm/data";
+import { ActivityFeed, ApprovalRow, AssignmentDrawer, AttentionRow, CommentThread, ExecutiveAttentionCard, MemberPicker, MemberWorkload, NotificationItem, TaskRow, WorkloadLegend, type AssignmentDrawerState } from "@/components/enterprise-crm/workflow";
+import { ActivationSummaryRow, OpportunityRow, ParticipantGroup, PartnerReference, RightsSummary } from "@/components/enterprise-crm/domain";
+import { ConfidenceScore, IntelligenceCard, RecommendedAction, SourceIndicator } from "@/components/enterprise-crm/intelligence";
 import { EmptyState, ErrorState, FilteredEmptyState, LoadingState, ProcessingState, RestrictedState, SuccessState } from "@/components/enterprise-crm/states";
 
 const tabs = [
@@ -19,6 +20,7 @@ const tabs = [
 ] as const;
 
 export function ExecutiveSystemPreview() {
+  const evidenceScene = useSearchParams().get("evidence");
   const [activeTab, setActiveTab] = useState("overview");
   const [range, setRange] = useState("30d");
   const [search, setSearch] = useState("");
@@ -30,6 +32,7 @@ export function ExecutiveSystemPreview() {
     { id: "preview-1", owner: "Morgan Lee", role: "Rights manager", attention: 4 },
     { id: "preview-2", owner: "Liam Patel", role: "Media manager", attention: 2 },
   ];
+  if (evidenceScene) return <Gate3CEvidencePreview scene={evidenceScene} />;
   return (
     <div className="crm-system-preview">
       <div className="crm-preview-banner"><strong>Fictional component preview</strong><span>Values and actions demonstrate presentation only. Nothing here is live or persisted.</span></div>
@@ -117,4 +120,47 @@ export function ExecutiveSystemPreview() {
       <button type="button" className="crm-button crm-button--secondary crm-preview-focus-target"><IconRefresh aria-hidden />Focus evidence target</button>
     </div>
   );
+}
+
+const evidenceRows = [
+  { id: "preview-1", owner: "Morgan Lee", role: "Rights manager", attention: 4 },
+  { id: "preview-2", owner: "Liam Patel", role: "Media manager", attention: 2 },
+];
+
+function EvidenceBanner({ scene }: { scene: string }) {
+  return <div className="crm-preview-banner"><strong>Gate 3C evidence: {scene}</strong><span>Fictional isolated component state. Values and actions are not live or persisted.</span></div>;
+}
+
+function EvidenceTable({ state = "default" }: { state?: "default" | "loading" | "empty" | "filtered-empty" | "error" | "restricted" }) {
+  const [sort, setSort] = useState<DataTableSort>({ columnId: "owner", direction: "ascending" });
+  return <DataTable caption="Fictional member workload" rows={state === "default" ? evidenceRows : []} rowKey={(row) => row.id} state={state} sort={sort} onSort={setSort} onResetFilters={() => undefined} onRetry={() => undefined} columns={[
+    { id: "owner", header: "Owner", sortable: true, cell: (row) => <EntityReference label={row.owner} context={row.role} /> },
+    { id: "attention", header: "Needs attention", sortable: true, align: "end", cell: (row) => row.attention },
+    { id: "status", header: "Status", cell: (row) => <StatusBadge label={row.attention > 2 ? "Review workload" : "Available"} variant={row.attention > 2 ? "attention" : "positive"} /> },
+  ]} rowActionLabel={(row) => `View ${row.owner}`} onRowAction={() => undefined} />;
+}
+
+function Gate3CEvidencePreview({ scene }: { scene: string }) {
+  const [search, setSearch] = useState(scene.includes("long-labels") ? "A deliberately long fictional rights and provenance query" : "rights");
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const drawerState: AssignmentDrawerState = scene.includes("submitting") ? "submitting" : scene.includes("error") ? "error" : scene.includes("success") ? "success" : scene.includes("restricted") ? "restricted" : "default";
+  const tableState = scene.includes("loading") ? "loading" : scene.includes("filtered-empty") ? "filtered-empty" : scene.includes("empty") ? "empty" : scene.includes("error") ? "error" : scene.includes("restricted") ? "restricted" : "default";
+  const navigation = scene.startsWith("navigation-");
+  const data = scene.startsWith("data-table-");
+  const workflow = scene.startsWith("workflow-");
+  const drawer = scene.startsWith("assignment-drawer-");
+  const domain = scene.startsWith("domain-");
+  const intelligence = scene.startsWith("intelligence-");
+
+  return <main className="crm-system-preview" aria-labelledby="gate-3c-scene-title">
+    <h1 id="gate-3c-scene-title" className="sr-only">Gate 3C isolated evidence</h1>
+    <EvidenceBanner scene={scene} />
+    {navigation ? <section className="crm-preview-section" aria-labelledby="evidence-navigation-title"><header className="crm-preview-section__heading"><div><h2 id="evidence-navigation-title">Navigation, filters, and search</h2><p>Long labels remain complete and controls retain their accessible names.</p></div></header><Breadcrumb items={[{ label: "Home", href: "/organization" }, { label: scene.includes("long-labels") ? "A deliberately long fictional rights, provenance, and assignment review workspace" : "Executive Action Center" }]} /><FilterBar activeCount={search ? 1 : 0} resultSummary="2 fictional results" onReset={() => setSearch("")}><SearchInput value={search} onChange={setSearch} label="Search fictional records" resultCount={2} /><label className="crm-select-field">Fictional workload<select><option>All levels</option></select></label></FilterBar></section> : null}
+    {data ? <section className="crm-preview-section" aria-labelledby="evidence-table-title"><header className="crm-preview-section__heading"><div><h2 id="evidence-table-title">Data table: {tableState}</h2><p>Fictional responsive state with local table behavior only.</p></div></header><EvidenceTable state={tableState} />{tableState === "default" ? <Pagination page={2} pageCount={3} onPageChange={() => undefined} /> : null}</section> : null}
+    {workflow ? <section className="crm-preview-section" aria-labelledby="evidence-workflow-title"><header className="crm-preview-section__heading"><div><h2 id="evidence-workflow-title">Workflow lists and actions</h2><p>Visible status, timestamps, priority, unread, and keyboard-native actions.</p></div></header><MemberPicker value="" onChange={() => undefined} members={[{ id: "one", label: "Morgan Lee", context: "Fictional eligible member" }]} /><WorkloadLegend items={[{ label: "High", count: 1, variant: "high" }, { label: "Delegated", count: 2, variant: "delegated" }]} /><TaskRow title="Review fictional source" status="Needs review" statusVariant="review" priority="high" due="Aug 26" action={<button type="button" className="crm-button crm-button--secondary">Open task</button>} /><ApprovalRow title="Approve fictional source" status="Pending review" approver="Taylor Reed" due="Aug 29" action={<button type="button" className="crm-button crm-button--secondary">Open approval</button>} /><div className="crm-preview-wave2-grid"><ActivityFeed items={[{ id: "one", actor: "Morgan Lee", action: "reviewed fictional context", timestamp: "Today, 8:42 AM" }]} /><CommentThread comments={[]} onSubmit={() => undefined} /></div><NotificationItem title="Owner assigned" context="Fictional permission-safe notification." timestamp="2 minutes ago" unread action={<button type="button" className="crm-button crm-button--secondary">View source</button>} /></section> : null}
+    {drawer ? <section className="crm-preview-section" aria-labelledby="evidence-drawer-title"><header className="crm-preview-section__heading"><div><h2 id="evidence-drawer-title">Assignment drawer: {drawerState}</h2><p>Use the trigger to record focus entry, wrapping, protection, and exact return.</p></div></header><button type="button" className="crm-button crm-button--primary" data-evidence-drawer-trigger onClick={() => setDrawerOpen(true)}>Open assignment drawer</button><AssignmentDrawer open={drawerOpen} onOpenChange={setDrawerOpen} sourceTitle="Fictional media rights review" sourceContext={<span>Gate 3C evidence: {scene}<br />Women’s Basketball · preview only</span>} members={[{ id: "morgan", label: "Morgan Lee", context: "Fictional rights manager" }, { id: "liam", label: "Liam Patel", context: "Fictional media manager" }]} priorities={[{ value: "caller-option-a", label: "Caller-supplied priority A" }]} state={drawerState} errorMessage="Fictional recoverable conflict. Review and try again." onSubmit={() => undefined} /></section> : null}
+    {domain ? <section className="crm-preview-section" aria-labelledby="evidence-domain-title"><header className="crm-preview-section__heading"><div><h2 id="evidence-domain-title">Domain primitives</h2><p>All stages, statuses, dates, and values are caller-supplied fictional labels.</p></div></header><OpportunityRow title="Regional campaign review" partner={<PartnerReference label="Northstar Foods" context="Fictional partner" />} stageLabel="Caller stage" value={<span>$45K fictional preview</span>} decisionDate="Caller date" /><ActivationSummaryRow title="Fall launch" status="Caller status" owner={<EntityReference label="Liam Patel" context="Fictional owner" />} participants={[{ id: "one", label: "Maya Johnson" }, { id: "two", label: "Ari Thomas" }]} rights={<StatusBadge label="Rights review" variant="attention" />} due="Caller due" /><RightsSummary label="Media usage rights" status="Blocked: review required" statusVariant="blocked" context="Fictional evidence requires a human decision." /><ParticipantGroup participants={[]} label="Empty fictional participants" /></section> : null}
+    {intelligence ? scene.includes("restricted") ? <IntelligenceCard title="Hidden fictional signal" meaning="detected" reason="Hidden" confidence={91} freshness="Hidden" sources={<span>Hidden source</span>} state="restricted" /> : <section className="crm-preview-wave2-grid" aria-label="Intelligence meanings and provenance">{(["detected", "inferred", "recommended", "verified"] as const).map((meaning, index) => <IntelligenceCard key={meaning} title={`${meaning} fictional signal`} meaning={meaning} reason="Fictional reason requiring human review." confidence={55 + index * 10} coverage={`${index + 2} of 5 fictional sources`} freshness="Updated 18 minutes ago" sources={<SourceIndicator label="Archive source" detail="Fictional provenance" freshness="12 minutes ago" />} action={<RecommendedAction label="Review analysis" onAction={() => undefined} context="A person controls every downstream action." />} />)}</section> : null}
+    {scene.startsWith("component-board-") ? <section className="crm-preview-section" aria-labelledby="evidence-board-title"><header className="crm-preview-section__heading"><div><h2 id="evidence-board-title">Responsive component board</h2><p>BLTZ actions remain primary; school accent is presentation-only.</p></div></header><Breadcrumb items={[{ label: "Home", href: "/organization" }, { label: "A long fictional Executive component evidence workspace" }]} /><FilterBar activeCount={1} resultSummary="2 fictional results" onReset={() => undefined}><SearchInput value="rights" onChange={() => undefined} label="Search fictional records" resultCount={2} /></FilterBar><EvidenceTable /><div className="crm-preview-wave2-grid"><div><MetricDelta value="3" direction="up" sentiment="positive" context="fictional change" /><AvatarGroup items={[{ id: "one", label: "Morgan Lee" }, { id: "two", label: "Liam Patel" }]} max={1} /></div><div><ConfidenceScore value={78} coverage="4 of 5 fictional sources" /><RecommendedAction label="Review analysis" onAction={() => undefined} context="Human-controlled action." /></div></div></section> : null}
+  </main>;
 }
