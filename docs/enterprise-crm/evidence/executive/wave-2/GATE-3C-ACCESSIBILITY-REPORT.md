@@ -7,7 +7,7 @@
 
 ## Result
 
-Gate 3C evidence is complete. All 25 required lossless PNG files were captured and visually inspected. The focused component suite passes 41 tests, and the full/protected checks listed below pass. Four defects found during evidence collection were fixed test-first. No critical or high accessibility defect remains in this packet scope.
+Gate 3C evidence is complete after the narrow dirty-confirmation correction requested by the integration review. All 25 original required lossless PNG files and two focused correction PNGs were captured and visually inspected. The focused component suite passes 42 tests, and the full/protected checks listed below pass. Five defects found during evidence and integration review were fixed test-first. No critical or high accessibility defect remains in this packet scope.
 
 This report supports the Gate 3C decision; it does not claim whole-product WCAG conformance.
 
@@ -27,7 +27,10 @@ This report supports the Gate 3C decision; it does not claim whole-product WCAG 
 - Forward Tab stays inside the drawer through owner, priority, date controls, notes, Cancel, Assign, and Close.
 - Reverse Shift+Tab stays inside the drawer and wraps from the first control to Close, then Assign.
 - Escape with a dirty draft opens the unsaved-changes warning without clearing the selected fictional owner.
+- The dirty warning is a nested modal `alertdialog`. Focus enters **Keep editing**, while its accessible title and description announce “Discard unsaved changes?” and “Your assignment details have not been submitted.”
+- Forward and reverse Tab wrap between **Keep editing** and **Discard changes** and cannot return to the underlying drawer while the confirmation is open.
 - **Keep editing** closes the warning and restores focus to the owner selector.
+- Escape closes only the confirmation, preserves the selected owner, and restores owner-selector focus.
 - **Discard changes** closes the drawer and restores focus to the exact `Open assignment drawer` trigger.
 - Submitting state disables mutation controls and places focus on an enabled in-drawer Close control.
 - Success and restricted states retain an enabled in-drawer focus target; closing restores the exact trigger.
@@ -64,6 +67,7 @@ Computed text/background contrast samples:
 | Drawer protected/submitting states could lose a reliable in-drawer focus target | `9e27769` | Restored focus across warning states and added enabled fallbacks; `2baa98d`, typed in `4e13e0b` |
 | Component board overflowed at 320 px | `4098f10` | Added canonical responsive min-width, grid, breadcrumb, and filter reflow rules; `8bd086a` |
 | Reduced-motion rule did not cover the portalled drawer/modal | `8f3a50d` | Extended reduced-motion behavior to the portalled UI root; `48f3714` |
+| Dirty-draft `alertdialog` did not receive or contain focus and was not deterministically announced | `b017922` | Replaced the inline warning with the existing nested modal alert-dialog primitive, added deliberate entry/close focus, and preserved draft/opener behavior; `c3560fc` |
 
 ## Screenshot inventory
 
@@ -89,6 +93,8 @@ All paths are under `output/enterprise-crm/ui-system-wave2/gate-3c-evidence/`.
 | `assignment-drawer-error-1440-bltz.png` | 1440, recoverable error | 1440 x 1000 |
 | `assignment-drawer-success-1440-bltz.png` | 1440, success | 1440 x 1000 |
 | `assignment-drawer-restricted-375-bltz.png` | 375, restricted | 375 x 900 |
+| `assignment-drawer-dirty-confirmation-focus-375-bltz.png` | 375, modal initial focus and wrap | 375 x 900 |
+| `assignment-drawer-dirty-confirmation-announcement-1440-bltz.png` | 1440, labelled/described modal announcement | 1440 x 1000 |
 | `domain-primitives-default-1440-bltz.png` | 1440, default | 1440 x 1009 |
 | `domain-primitives-responsive-375-bltz.png` | 375, responsive | 375 x 1116 |
 | `intelligence-meanings-provenance-1440-bltz.png` | 1440, four meanings | 1440 x 1214 |
@@ -103,6 +109,7 @@ The capture scripts hide only the Next.js development indicator; they do not cha
 
 - `capture-gate3c-evidence.js` captures the 17 navigation, data, workflow, domain, intelligence, theme, and 320px files.
 - `capture-drawer-focus-evidence.js` exercises focus behavior and captures the seven drawer files.
+- `capture-dirty-confirmation-correction.js` asserts modal entry, labelled/described announcement, Tab/Shift+Tab containment, Escape, draft preservation, Keep Editing restoration, exact opener return, and captures the two correction files.
 - `capture-zoom-device-evidence.js` uses a dedicated fresh browser session for the 200% page-scale file.
 - `inspect-reflow.js` and `inspect-accessibility.js` assert reflow, zoom, focus, reduced motion, touch size, and computed accessibility evidence.
 
@@ -112,10 +119,10 @@ The capture scripts hide only the Next.js development indicator; they do not cha
 | --- | --- |
 | `npx tsc --noEmit` | Pass |
 | Focused changed-file ESLint | Pass, zero warnings/errors |
-| `npm test -- tests/enterprise-crm/ui` | 7 files, 41 tests passed |
-| `npm test -- tests/enterprise-crm tests/organization` | 19 files, 118 tests passed |
+| `npm test -- tests/enterprise-crm/ui` | 7 files, 42 tests passed |
+| `npm test -- tests/enterprise-crm tests/organization` | 19 files, 119 tests passed |
 | Protected Phase 2 regression command | 13 files, 107 tests passed |
-| `npm test` | 51 files/337 tests passed; 2 files/24 tests intentionally skipped |
+| `npm test` | 51 files/338 tests passed; 2 files/24 tests intentionally skipped |
 | `npm run lint` | Pass with the unchanged repository baseline of 204 warnings and zero errors |
 | `npm run build` | Turbopack cannot follow this worktree's external `node_modules` junction |
 | `NODE_OPTIONS=--use-system-ca npm run build -- --webpack` | Pass; 82 static pages generated |
