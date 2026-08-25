@@ -71,4 +71,3 @@ export function calculateEnterprisePriority(
 
   return { score, tier: priorityTierForScore(score) };
 }
-

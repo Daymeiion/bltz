@@ -138,4 +138,3 @@ export interface GtmContactSummary {
   nextAction: string | null;
   nextActionAt: string | null;
 }
-
