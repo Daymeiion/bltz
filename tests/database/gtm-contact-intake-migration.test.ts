@@ -27,6 +27,14 @@ describe("GTM contact intake migration", () => {
     expect(migration).not.toContain("raw_rows");
   });
 
+  it("preserves manual enrichment and creates only unverified potential Player links", () => {
+    expect(migration).toContain("do_not_automate = public.gtm_contacts.do_not_automate or excluded.do_not_automate");
+    expect(migration).toContain("coalesce(excluded.current_company, public.gtm_contacts.current_company)");
+    expect(migration).toContain("when excluded.contact_type = 'unclassified' then public.gtm_contacts.contact_type");
+    expect(migration).toContain("insert into public.gtm_contact_players");
+    expect(migration).toContain("'name_only', 0.8000, false, v_actor");
+  });
+
   it("keeps browser execution authenticated and explicitly granted", () => {
     expect(migration).toContain("from public, anon");
     expect(migration).toContain("to authenticated, service_role");

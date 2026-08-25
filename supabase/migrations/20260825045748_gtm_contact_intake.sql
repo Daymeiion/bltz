@@ -104,6 +104,7 @@ declare
   v_job public.gtm_import_jobs;
   v_row jsonb;
   v_existing_id uuid;
+  v_contact_id uuid;
   v_created integer := 0;
   v_updated integer := 0;
   v_failed integer := greatest(p_invalid_count, 0);
@@ -158,17 +159,26 @@ begin
       )
       on conflict (source, source_record_id) do update set
         display_name = excluded.display_name,
-        first_name = excluded.first_name,
-        last_name = excluded.last_name,
-        email = excluded.email,
-        linkedin_url = excluded.linkedin_url,
-        current_company = excluded.current_company,
-        current_title = excluded.current_title,
-        contact_type = excluded.contact_type,
-        sport = excluded.sport,
-        league_level = excluded.league_level,
-        do_not_automate = excluded.do_not_automate,
-        updated_by = v_actor;
+        first_name = coalesce(excluded.first_name, public.gtm_contacts.first_name),
+        last_name = coalesce(excluded.last_name, public.gtm_contacts.last_name),
+        email = coalesce(excluded.email, public.gtm_contacts.email),
+        linkedin_url = coalesce(excluded.linkedin_url, public.gtm_contacts.linkedin_url),
+        current_company = coalesce(excluded.current_company, public.gtm_contacts.current_company),
+        current_title = coalesce(excluded.current_title, public.gtm_contacts.current_title),
+        contact_type = case when excluded.contact_type = 'unclassified' then public.gtm_contacts.contact_type else excluded.contact_type end,
+        sport = coalesce(excluded.sport, public.gtm_contacts.sport),
+        league_level = coalesce(excluded.league_level, public.gtm_contacts.league_level),
+        do_not_automate = public.gtm_contacts.do_not_automate or excluded.do_not_automate,
+        updated_by = v_actor
+      returning id into v_contact_id;
+
+      if nullif(v_row->>'playerId', '') is not null and v_row->>'contactType' = 'athlete' then
+        insert into public.gtm_contact_players (
+          contact_id, player_id, match_type, match_confidence, verified, created_by
+        ) values (
+          v_contact_id, (v_row->>'playerId')::uuid, 'name_only', 0.8000, false, v_actor
+        ) on conflict (contact_id, player_id) do nothing;
+      end if;
 
       if v_existing_id is null then
         v_created := v_created + 1;

@@ -37,6 +37,14 @@ describe("GTM CSV normalization", () => {
     expect(result.duplicateCount).toBe(1);
   });
 
+  it("deduplicates repeated emails even when source record IDs differ", () => {
+    const csv = Buffer.from("Name,Email,Record ID\nA Person,a@example.com,one\nA Person,a@example.com,two");
+    const result = parseGtmCsv(csv, { displayName: "Name", email: "Email", sourceRecordId: "Record ID" });
+
+    expect(result.rows).toHaveLength(1);
+    expect(result.duplicateCount).toBe(1);
+  });
+
   it("enforces the server-side row limit", () => {
     const body = ["Name", ...Array.from({ length: 2001 }, (_, index) => `Person ${index}`)].join("\n");
     expect(() => parseGtmCsv(Buffer.from(body))).toThrow("at most 2,000 rows");

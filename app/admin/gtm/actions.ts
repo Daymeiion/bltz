@@ -57,8 +57,8 @@ export interface GtmCsvPreview {
   idempotencyKey: string;
   headers: string[];
   mapping: GtmFieldMapping;
-  counts: { found: number; create: number; update: number; duplicate: number; invalid: number };
-  sample: Array<Pick<NormalizedGtmImportRow, "rowNumber" | "displayName" | "email" | "currentCompany" | "contactType"> & { outcome: "create" | "update" | "skip" }>;
+  counts: { found: number; create: number; update: number; duplicate: number; invalid: number; potentialPlayerMatches: number };
+  sample: Array<Pick<NormalizedGtmImportRow, "rowNumber" | "displayName" | "email" | "currentCompany" | "contactType"> & { outcome: "create" | "update" | "skip"; potentialPlayerName: string | null }>;
   issues: Array<{ rowNumber: number; message: string }>;
 }
 
@@ -107,6 +107,37 @@ async function analyzeExisting(gtm: SupabaseClient, rows: NormalizedGtmImportRow
     for (const item of emailResult.data ?? []) if (item.email) identityIds.add(String(item.email).toLowerCase());
   }
   return { sourceIds, identityIds };
+}
+
+function normalizedName(value: string) {
+  return value.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+async function findPotentialPlayerMatches(gtm: SupabaseClient, rows: NormalizedGtmImportRow[]) {
+  const athleteRows = rows.filter((row) => row.contactType === "athlete");
+  const playersByName = new Map<string, GtmPlayerOption[]>();
+  for (let offset = 0; offset < athleteRows.length; offset += 75) {
+    const names = [...new Set(athleteRows.slice(offset, offset + 75).map((row) => row.displayName))];
+    const results = await Promise.all([
+      gtm.from("players").select("id,name,full_name,display_name,team,position,level").in("name", names),
+      gtm.from("players").select("id,name,full_name,display_name,team,position,level").in("full_name", names),
+      gtm.from("players").select("id,name,full_name,display_name,team,position,level").in("display_name", names),
+    ]);
+    for (const result of results) {
+      if (result.error) continue;
+      for (const player of result.data ?? []) {
+        const option: GtmPlayerOption = { id: String(player.id), name: String(player.display_name || player.full_name || player.name), team: player.team as string | null, position: player.position as string | null, level: player.level as string | null };
+        const key = normalizedName(option.name);
+        const current = playersByName.get(key) ?? [];
+        if (!current.some((item) => item.id === option.id)) current.push(option);
+        playersByName.set(key, current);
+      }
+    }
+  }
+  return new Map(athleteRows.flatMap((row) => {
+    const candidates = playersByName.get(normalizedName(row.displayName)) ?? [];
+    return candidates.length === 1 ? [[row.sourceRecordId, candidates[0]] as const] : [];
+  }));
 }
 
 function refreshGtmPaths() {
@@ -240,7 +271,7 @@ export async function previewGtmCsv(formData: FormData): Promise<GtmMutationResu
   try {
     const { file, parsed } = await readCsv(formData);
     const gtm = authorization.supabase as unknown as SupabaseClient;
-    const existing = await analyzeExisting(gtm, parsed.rows);
+    const [existing, playerMatches] = await Promise.all([analyzeExisting(gtm, parsed.rows), findPotentialPlayerMatches(gtm, parsed.rows)]);
     let create = 0;
     let update = 0;
     let collision = 0;
@@ -255,8 +286,8 @@ export async function previewGtmCsv(formData: FormData): Promise<GtmMutationResu
       idempotencyKey: crypto.randomUUID(),
       headers: parsed.headers,
       mapping: { ...parsed.suggestedMapping, ...parseMapping(formData.get("mapping")) },
-      counts: { found: parsed.rows.length + parsed.issues.length + parsed.duplicateCount, create, update, duplicate: parsed.duplicateCount + collision, invalid: parsed.issues.length },
-      sample: parsed.rows.slice(0, 8).map((row) => ({ rowNumber: row.rowNumber, displayName: row.displayName, email: row.email, currentCompany: row.currentCompany, contactType: row.contactType, outcome: outcomes.get(row.sourceRecordId) ?? "create" })),
+      counts: { found: parsed.rows.length + parsed.issues.length + parsed.duplicateCount, create, update, duplicate: parsed.duplicateCount + collision, invalid: parsed.issues.length, potentialPlayerMatches: playerMatches.size },
+      sample: parsed.rows.slice(0, 8).map((row) => ({ rowNumber: row.rowNumber, displayName: row.displayName, email: row.email, currentCompany: row.currentCompany, contactType: row.contactType, outcome: outcomes.get(row.sourceRecordId) ?? "create", potentialPlayerName: playerMatches.get(row.sourceRecordId)?.name ?? null })),
       issues: parsed.issues.slice(0, 20),
     } };
   } catch (error) {
@@ -274,7 +305,7 @@ export async function commitGtmCsv(formData: FormData): Promise<GtmMutationResul
   try {
     const { file, parsed } = await readCsv(formData);
     const gtm = authorization.supabase as unknown as SupabaseClient;
-    const existing = await analyzeExisting(gtm, parsed.rows);
+    const [existing, playerMatches] = await Promise.all([analyzeExisting(gtm, parsed.rows), findPotentialPlayerMatches(gtm, parsed.rows)]);
     const accepted = parsed.rows.filter((row) => existing.sourceIds.has(row.sourceRecordId)
       || !((row.linkedinUrl && existing.identityIds.has(row.linkedinUrl)) || (row.email && existing.identityIds.has(row.email))));
     const collisionCount = parsed.rows.length - accepted.length;
@@ -286,7 +317,7 @@ export async function commitGtmCsv(formData: FormData): Promise<GtmMutationResul
       p_idempotency_key: idempotencyKey,
       p_field_mapping: mapping,
       p_preview_summary: previewSummary,
-      p_rows: accepted.map(({ rowNumber: _rowNumber, ...row }) => row),
+      p_rows: accepted.map(({ rowNumber: _rowNumber, ...row }) => ({ ...row, playerId: playerMatches.get(row.sourceRecordId)?.id ?? null })),
       p_duplicate_count: parsed.duplicateCount + collisionCount,
       p_invalid_count: parsed.issues.length,
     });

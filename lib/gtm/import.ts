@@ -94,6 +94,7 @@ export function parseGtmCsv(buffer: Buffer, mappingOverride?: GtmFieldMapping): 
   const rows: NormalizedGtmImportRow[] = [];
   const issues: GtmImportRowIssue[] = [];
   const seen = new Set<string>();
+  const seenIdentities = new Set<string>();
   let duplicateCount = 0;
 
   rawRows.forEach((raw, index) => {
@@ -135,11 +136,13 @@ export function parseGtmCsv(buffer: Buffer, mappingOverride?: GtmFieldMapping): 
     }
 
     const sourceRecordId = sourceIdentity(base, getValue(raw, mapping, "sourceRecordId", 255));
-    if (seen.has(sourceRecordId)) {
+    const identityKey = linkedinUrl ? `linkedin:${linkedinUrl}` : email ? `email:${email}` : "";
+    if (seen.has(sourceRecordId) || (identityKey && seenIdentities.has(identityKey))) {
       duplicateCount += 1;
       return;
     }
     seen.add(sourceRecordId);
+    if (identityKey) seenIdentities.add(identityKey);
     rows.push({ ...base, sourceRecordId });
   });
 
