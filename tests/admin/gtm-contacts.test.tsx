@@ -102,4 +102,14 @@ describe("GTM contacts workspace", () => {
     expect(markup).toContain("Do not automate");
     expect(markup).toContain("Private data remains within the authenticated Admin boundary");
   });
+
+  it("keeps every filter inside the constrained 1024px admin workspace", () => {
+    const markup = renderToStaticMarkup(<GtmContactsWorkspace data={{ state: "ready", contacts: [contact()], generatedAt: "2026-08-24T12:00:00.000Z" }} />);
+
+    expect(markup).toContain("md:grid-cols-2");
+    expect(markup).toContain("lg:grid-cols-3");
+    expect(markup).toContain("xl:grid-cols-[minmax(14rem,1fr)_12rem_repeat(3,minmax(8rem,10rem))]");
+    expect(markup).not.toContain("lg:grid-cols-[minmax(16rem,1fr)_14rem_repeat(3,minmax(9rem,12rem))]");
+    expect(markup).toContain("Pipeline stage");
+  });
 });
