@@ -383,7 +383,19 @@ export interface AuditLog {
   created_at: string;
 }
 
-export type GtmContactType = "enterprise" | "athlete" | "multiplier" | "unclassified";
+export type GtmContactType = "enterprise" | "athlete" | "multiplier" | "investor" | "unclassified";
+export type GtmInvestorType =
+  | "angel" | "athlete_angel" | "operator_angel" | "pre_seed_vc"
+  | "seed_vc" | "sports_vc" | "consumer_vc" | "media_vc"
+  | "strategic_corporate_vc" | "family_office";
+export type GtmInvestorRelationshipStage =
+  | "existing_relationship" | "introduction" | "discovery" | "product_shown"
+  | "interested" | "milestone_follow_up" | "intro_offered" | "potential_check"
+  | "diligence" | "passed" | "future_round";
+export type GtmConversationOutcome =
+  | "user_conversion" | "pilot_opportunity" | "capital" | "referral"
+  | "strategic_insight" | "product_validation" | "distribution_opportunity"
+  | "partnership" | "future_follow_up" | "no_fit";
 export type GtmPriorityTier = "A" | "B" | "C" | "D";
 export type GtmPipelineStage =
   | "unqualified" | "identified" | "qualified" | "discovery" | "demo"
@@ -424,6 +436,15 @@ export interface GtmContact {
   last_interaction_at: string | null;
   next_action: string | null;
   next_action_at: string | null;
+  investor_type: GtmInvestorType | null;
+  investor_relationship_stage: GtmInvestorRelationshipStage | null;
+  what_they_need_to_see: string | null;
+  investor_thesis_feedback: string | null;
+  historical_signal: string | null;
+  future_trigger: string | null;
+  prior_outcome: string | null;
+  relationship_source: string | null;
+  next_trigger: string | null;
   created_by: string;
   updated_by: string | null;
   created_at: string;
@@ -439,6 +460,23 @@ export interface GtmContactPlayer {
   verified: boolean;
   verified_by: string | null;
   verified_at: string | null;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GtmInteraction {
+  id: string;
+  contact_id: string;
+  organization_id: string | null;
+  opportunity_id: string | null;
+  interaction_type: string;
+  direction: string;
+  subject: string | null;
+  summary: string | null;
+  interaction_at: string;
+  outcomes: GtmConversationOutcome[];
+  next_trigger: string | null;
   created_by: string;
   created_at: string;
   updated_at: string;

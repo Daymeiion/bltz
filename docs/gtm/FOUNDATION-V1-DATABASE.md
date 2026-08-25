@@ -22,6 +22,14 @@ The foundation migration also gives the multi-column contact next-action and opp
 
 Enterprise scoring stays database-maintained and applies only to enterprise contacts: relationship strength 25%, BLTZ relevance 25%, buying authority 20%, network leverage 15%, and timing 15%. Five input factors on a 0–5 scale normalize to 0–100. Tiers are A 80–100, B 60–79, C 40–59, and D 0–39. The model is named `enterprise_v1`; athlete scoring is deliberately absent.
 
+## Phase 2 investor and conversation addendum
+
+Migration `20260825165631_extend_gtm_investor_conversation_foundation.sql` adds `investor` to the existing contact classification. Investor type, relationship stage, evidence needed, thesis feedback, historical signal, future trigger, prior outcome, and relationship source remain nullable and are constrained to investor contacts. They do not create a separate investor entity, dashboard, pipeline, or automation system. Enterprise priority scoring remains enterprise-only.
+
+Each interaction can preserve zero or more universal outcomes in a constrained text array: user conversion, pilot opportunity, capital, referral, strategic insight, product validation, distribution opportunity, partnership, future follow-up, and no fit. A GIN index supports outcome filtering. `next_trigger` is recorded on the interaction for conversation history and projected onto the contact as the current condition for re-engagement. This keeps next trigger distinct from the scheduled `next_action` and `next_action_at` fields.
+
+V2 contact-creation and interaction-logging RPCs accept the addendum fields while retaining the V1 RPCs for compatibility. Both remain security-invoker functions with explicit internal-admin checks and grants.
+
 ## CSV import state machine
 
 The Admin server parses the uploaded CSV in memory, tolerates LinkedIn preamble text, suggests aliases instead of assuming one header shape, normalizes values, validates rows, and previews canonical contact and Player matches. It persists only filename, hash, mapping, counts, summary, and uploader—not raw CSV rows.

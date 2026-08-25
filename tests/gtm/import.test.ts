@@ -86,6 +86,13 @@ describe("GTM CSV normalization", () => {
     expect(result.rows[0].sourceRecordId).not.toBe(result.rows[1].sourceRecordId);
   });
 
+  it("recognizes investor contacts without requiring investor-only fields in CSV", () => {
+    const result = parseGtmCsv(Buffer.from("Name,Contact Type,LinkedIn\nTaylor Lane,Investor,https://linkedin.com/in/taylor-lane"));
+
+    expect(result.rows).toHaveLength(1);
+    expect(result.rows[0].contactType).toBe("investor");
+  });
+
   it("enforces the server-side row limit", () => {
     const body = ["Name", ...Array.from({ length: 2001 }, (_, index) => `Person ${index}`)].join("\n");
     expect(() => parseGtmCsv(Buffer.from(body))).toThrow("at most 2,000 rows");

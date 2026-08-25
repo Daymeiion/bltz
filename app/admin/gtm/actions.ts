@@ -8,6 +8,12 @@ import {
 } from "@/lib/gtm/import";
 import { GTM_CSV_MAX_BYTES, GTM_IMPORT_FIELDS, type GtmFieldMapping, type NormalizedGtmImportRow } from "@/lib/gtm/import-contract";
 import { buildUniquePlayerMatchMap, type CanonicalPlayerCandidate } from "@/lib/gtm/player-matching";
+import {
+  GTM_CONTACT_TYPES,
+  GTM_CONVERSATION_OUTCOMES,
+  GTM_INVESTOR_RELATIONSHIP_STAGES,
+  GTM_INVESTOR_TYPES,
+} from "@/lib/gtm/types";
 import { requireInternalAdmin } from "@/lib/rbac";
 import { createClient } from "@/lib/supabase/server";
 
@@ -26,6 +32,10 @@ const logInteractionSchema = z.object({
   summary: z.string().trim().max(5000).nullable(),
   nextAction: z.string().trim().max(500).nullable(),
   nextActionAt: z.string().datetime({ offset: true }).nullable(),
+  outcomes: z.array(z.enum(GTM_CONVERSATION_OUTCOMES)).max(10)
+    .refine((values) => new Set(values).size === values.length, "Choose each outcome once.")
+    .default([]),
+  nextTrigger: z.string().trim().max(2000).nullable().default(null),
 });
 
 const createContactSchema = z.object({
@@ -36,13 +46,33 @@ const createContactSchema = z.object({
   linkedinUrl: z.string().trim().url().max(500).refine((value) => /(^|\.)linkedin\.com$/i.test(new URL(value).hostname), "Use a LinkedIn URL.").nullable(),
   currentCompany: z.string().trim().max(200).nullable(),
   currentTitle: z.string().trim().max(200).nullable(),
-  contactType: z.enum(["enterprise", "athlete", "multiplier", "unclassified"]),
+  contactType: z.enum(GTM_CONTACT_TYPES),
   sport: z.string().trim().max(80).nullable(),
   leagueLevel: z.string().trim().max(80).nullable(),
   doNotAutomate: z.boolean(),
   playerId: z.string().uuid().nullable(),
-}).refine((value) => !value.playerId || value.contactType === "athlete", {
-  message: "A canonical Player can only be linked to an athlete contact.",
+  investorType: z.enum(GTM_INVESTOR_TYPES).nullable().default(null),
+  investorRelationshipStage: z.enum(GTM_INVESTOR_RELATIONSHIP_STAGES).nullable().default(null),
+  whatTheyNeedToSee: z.string().trim().max(10_000).nullable().default(null),
+  investorThesisFeedback: z.string().trim().max(10_000).nullable().default(null),
+  historicalSignal: z.string().trim().max(5000).nullable().default(null),
+  futureTrigger: z.string().trim().max(2000).nullable().default(null),
+  priorOutcome: z.string().trim().max(5000).nullable().default(null),
+  relationshipSource: z.string().trim().max(1000).nullable().default(null),
+  nextTrigger: z.string().trim().max(2000).nullable().default(null),
+}).superRefine((value, context) => {
+  if (value.playerId && value.contactType !== "athlete") {
+    context.addIssue({ code: "custom", message: "A canonical Player can only be linked to an athlete contact." });
+  }
+  const investorFields = [
+    value.investorType, value.investorRelationshipStage,
+    value.whatTheyNeedToSee, value.investorThesisFeedback,
+    value.historicalSignal, value.futureTrigger, value.priorOutcome,
+    value.relationshipSource,
+  ];
+  if (value.contactType !== "investor" && investorFields.some((field) => field !== null)) {
+    context.addIssue({ code: "custom", message: "Investor fields require an investor contact." });
+  }
 });
 
 export interface GtmPlayerOption {
@@ -206,7 +236,7 @@ export async function addGtmNote(input: unknown): Promise<GtmMutationResult<{ id
   return { ok: true, value: { id: data.id as string, noteType: data.note_type as string, body: data.body as string, createdAt: data.created_at as string } };
 }
 
-export async function logGtmInteraction(input: unknown): Promise<GtmMutationResult<{ id: string; interactionAt: string }>> {
+export async function logGtmInteraction(input: unknown): Promise<GtmMutationResult<{ id: string; interactionAt: string; outcomes: string[]; nextTrigger: string | null }>> {
   const parsed = logInteractionSchema.safeParse(input);
   if (!parsed.success) return { ok: false, code: "invalid", message: "Complete the required interaction fields." };
 
@@ -217,7 +247,8 @@ export async function logGtmInteraction(input: unknown): Promise<GtmMutationResu
     return { ok: false, code: "unauthorized", message: "Your administrator access could not be verified." };
   }
 
-  const { data, error } = await authorization.supabase.rpc("log_gtm_interaction", {
+  const gtm = authorization.supabase as unknown as SupabaseClient;
+  const { data, error } = await gtm.rpc("log_gtm_interaction_v2", {
     p_contact_id: parsed.data.contactId,
     p_interaction_type: parsed.data.interactionType,
     p_direction: parsed.data.direction,
@@ -228,6 +259,8 @@ export async function logGtmInteraction(input: unknown): Promise<GtmMutationResu
     p_opportunity_id: null,
     p_next_action: parsed.data.nextAction || null,
     p_next_action_at: parsed.data.nextActionAt || null,
+    p_outcomes: parsed.data.outcomes,
+    p_next_trigger: parsed.data.nextTrigger || null,
   });
 
   if (error || !data) {
@@ -237,7 +270,15 @@ export async function logGtmInteraction(input: unknown): Promise<GtmMutationResu
 
   const row = Array.isArray(data) ? data[0] : data;
   refreshGtmPaths();
-  return { ok: true, value: { id: String(row.id), interactionAt: String(row.interaction_at) } };
+  return {
+    ok: true,
+    value: {
+      id: String(row.id),
+      interactionAt: String(row.interaction_at),
+      outcomes: Array.isArray(row.outcomes) ? row.outcomes.map(String) : [],
+      nextTrigger: row.next_trigger ? String(row.next_trigger) : null,
+    },
+  };
 }
 
 export async function searchGtmPlayers(query: string): Promise<GtmMutationResult<GtmPlayerOption[]>> {
@@ -272,7 +313,7 @@ export async function createGtmContact(input: unknown): Promise<GtmMutationResul
 
   const gtm = authorization.supabase as unknown as SupabaseClient;
   const value = parsed.data;
-  const { data, error } = await gtm.rpc("create_gtm_contact", {
+  const { data, error } = await gtm.rpc("create_gtm_contact_v2", {
     p_display_name: value.displayName,
     p_first_name: value.firstName,
     p_last_name: value.lastName,
@@ -285,6 +326,15 @@ export async function createGtmContact(input: unknown): Promise<GtmMutationResul
     p_league_level: value.leagueLevel,
     p_do_not_automate: value.doNotAutomate,
     p_player_id: value.playerId,
+    p_investor_type: value.investorType,
+    p_investor_relationship_stage: value.investorRelationshipStage,
+    p_what_they_need_to_see: value.whatTheyNeedToSee,
+    p_investor_thesis_feedback: value.investorThesisFeedback,
+    p_historical_signal: value.historicalSignal,
+    p_future_trigger: value.futureTrigger,
+    p_prior_outcome: value.priorOutcome,
+    p_relationship_source: value.relationshipSource,
+    p_next_trigger: value.nextTrigger,
   });
   if (error || !data) {
     const unavailable = error?.code === "42883" || error?.code === "PGRST202";

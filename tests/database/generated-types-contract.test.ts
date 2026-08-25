@@ -65,6 +65,16 @@ describe("authoritative generated database contract", () => {
     expect(generated).toContain("get_gtm_foundation_metrics: {");
     expect(generated).toContain("import_gtm_contacts: {");
     expect(generated).toContain("prepare_gtm_import_job: {");
+    expect(generated).toContain("create_gtm_contact_v2: {");
+    expect(generated).toContain("log_gtm_interaction_v2: {");
+  });
+
+  it("contains the GTM Phase 2 investor and conversation addendum", () => {
+    expect(generated).toMatch(/gtm_contacts: \{[\s\S]*?investor_type: string \| null/);
+    expect(generated).toMatch(/gtm_contacts: \{[\s\S]*?investor_relationship_stage: string \| null/);
+    expect(generated).toMatch(/gtm_contacts: \{[\s\S]*?next_trigger: string \| null/);
+    expect(generated).toMatch(/gtm_interactions: \{[\s\S]*?outcomes: string\[\]/);
+    expect(generated).toMatch(/gtm_interactions: \{[\s\S]*?next_trigger: string \| null/);
   });
 
   it("contains schema shape only, without project binding or credential values", () => {

@@ -13,6 +13,7 @@ import {
   type GtmPlayerOption,
 } from "@/app/admin/gtm/actions";
 import { GTM_CSV_MAX_BYTES, GTM_IMPORT_FIELDS, type GtmFieldMapping, type GtmImportField } from "@/lib/gtm/import-contract";
+import { GTM_INVESTOR_RELATIONSHIP_STAGES, GTM_INVESTOR_TYPES } from "@/lib/gtm/types";
 
 const fieldLabels: Record<GtmImportField, string> = {
   displayName: "Display name",
@@ -85,6 +86,15 @@ function AddContactDialog({ onComplete }: { onComplete: () => void }) {
         leagueLevel: String(formData.get("leagueLevel") ?? "").trim() || null,
         doNotAutomate: formData.get("doNotAutomate") === "on",
         playerId: selectedPlayer?.id ?? null,
+        investorType: String(formData.get("investorType") ?? "").trim() || null,
+        investorRelationshipStage: String(formData.get("investorRelationshipStage") ?? "").trim() || null,
+        whatTheyNeedToSee: String(formData.get("whatTheyNeedToSee") ?? "").trim() || null,
+        investorThesisFeedback: String(formData.get("investorThesisFeedback") ?? "").trim() || null,
+        historicalSignal: String(formData.get("historicalSignal") ?? "").trim() || null,
+        futureTrigger: String(formData.get("futureTrigger") ?? "").trim() || null,
+        priorOutcome: String(formData.get("priorOutcome") ?? "").trim() || null,
+        relationshipSource: String(formData.get("relationshipSource") ?? "").trim() || null,
+        nextTrigger: String(formData.get("nextTrigger") ?? "").trim() || null,
       });
       setPending(false);
       if (!result.ok) { setNotice(result.message); return; }
@@ -103,7 +113,7 @@ function AddContactDialog({ onComplete }: { onComplete: () => void }) {
           {notice && <p role="alert" className="rounded-xl border border-neutral-300 bg-white px-4 py-3 text-sm dark:border-neutral-700 dark:bg-neutral-900">{notice}</p>}
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="text-sm font-medium">Display name<input name="displayName" required maxLength={240} className={inputClass} /></label>
-            <label className="text-sm font-medium">Contact type<select value={contactType} onChange={(event) => { setContactType(event.target.value); if (event.target.value !== "athlete") setSelectedPlayer(null); }} className={inputClass}><option value="unclassified">Unclassified</option><option value="enterprise">Enterprise</option><option value="athlete">Athlete / player</option><option value="multiplier">Multiplier</option></select></label>
+            <label className="text-sm font-medium">Contact type<select value={contactType} onChange={(event) => { setContactType(event.target.value); if (event.target.value !== "athlete") setSelectedPlayer(null); }} className={inputClass}><option value="unclassified">Unclassified</option><option value="enterprise">Enterprise</option><option value="athlete">Athlete / player</option><option value="multiplier">Multiplier</option><option value="investor">Investor</option></select></label>
             <label className="text-sm font-medium">First name<input name="firstName" maxLength={120} className={inputClass} /></label>
             <label className="text-sm font-medium">Last name<input name="lastName" maxLength={120} className={inputClass} /></label>
             <label className="text-sm font-medium">Email<input name="email" type="email" maxLength={320} className={inputClass} /></label>
@@ -114,6 +124,23 @@ function AddContactDialog({ onComplete }: { onComplete: () => void }) {
             <label className="text-sm font-medium">League / level<input name="leagueLevel" maxLength={80} className={inputClass} /></label>
           </div>
 
+          {contactType === "investor" && (
+            <fieldset className="rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+              <legend className="px-1 text-sm font-semibold">Investor context <span className="font-normal text-neutral-500">(optional)</span></legend>
+              <p className="mt-1 text-xs text-neutral-500">These fields stay private and are valid only for investor contacts.</p>
+              <div className="mt-3 grid gap-4 sm:grid-cols-2">
+                <label className="text-sm font-medium">Investor type<select name="investorType" className={inputClass}><option value="">Not classified</option>{GTM_INVESTOR_TYPES.map((type) => <option key={type} value={type}>{type.replaceAll("_", " ")}</option>)}</select></label>
+                <label className="text-sm font-medium">Relationship stage<select name="investorRelationshipStage" className={inputClass}><option value="">Not classified</option>{GTM_INVESTOR_RELATIONSHIP_STAGES.map((stage) => <option key={stage} value={stage}>{stage.replaceAll("_", " ")}</option>)}</select></label>
+                <label className="text-sm font-medium sm:col-span-2">What they need to see<textarea name="whatTheyNeedToSee" maxLength={10000} rows={3} className={inputClass} /></label>
+                <label className="text-sm font-medium sm:col-span-2">Investor thesis feedback<textarea name="investorThesisFeedback" maxLength={10000} rows={3} className={inputClass} /></label>
+                <label className="text-sm font-medium">Historical signal<textarea name="historicalSignal" maxLength={5000} rows={3} className={inputClass} /></label>
+                <label className="text-sm font-medium">Future trigger<textarea name="futureTrigger" maxLength={2000} rows={3} className={inputClass} /></label>
+                <label className="text-sm font-medium">Prior outcome<textarea name="priorOutcome" maxLength={5000} rows={3} className={inputClass} /></label>
+                <label className="text-sm font-medium">Relationship source<input name="relationshipSource" maxLength={1000} className={inputClass} /></label>
+              </div>
+            </fieldset>
+          )}
+
           {contactType === "athlete" && (
             <fieldset className="rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
               <legend className="px-1 text-sm font-semibold">Canonical Player link <span className="font-normal text-neutral-500">(optional)</span></legend>
@@ -122,6 +149,8 @@ function AddContactDialog({ onComplete }: { onComplete: () => void }) {
               {!selectedPlayer && players.length > 0 && <div className="mt-3 divide-y divide-neutral-200 overflow-hidden rounded-xl border border-neutral-200 dark:divide-neutral-800 dark:border-neutral-800">{players.map((player) => <button key={player.id} type="button" onClick={() => setSelectedPlayer(player)} className="flex min-h-11 w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-neutral-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#ffbb00] dark:hover:bg-neutral-800"><span><span className="font-semibold">{player.name}</span><span className="block text-xs text-neutral-500">{[player.position, player.team, player.level].filter(Boolean).join(" · ") || "Player record"}</span></span><span className="font-semibold">Link</span></button>)}</div>}
             </fieldset>
           )}
+
+          <label className="block text-sm font-medium">Next trigger <span className="font-normal text-neutral-500">(optional)</span><textarea name="nextTrigger" maxLength={2000} rows={2} placeholder="Re-engage after the next meaningful milestone" className={inputClass} /></label>
 
           <label className="flex min-h-11 items-center gap-3 rounded-xl border border-neutral-200 bg-white px-4 text-sm dark:border-neutral-800 dark:bg-neutral-900"><input name="doNotAutomate" type="checkbox" className="h-4 w-4" /><span><span className="font-semibold">Do not automate</span><span className="block text-xs text-neutral-500">Preserve this contact for manual outreach only.</span></span></label>
           <div className="flex justify-end gap-2"><Dialog.Close type="button" className={secondaryButton}>Cancel</Dialog.Close><button disabled={pending} className={primaryButton}>{pending ? "Creating…" : "Create contact"}</button></div>

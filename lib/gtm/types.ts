@@ -2,10 +2,59 @@ export const GTM_CONTACT_TYPES = [
   "enterprise",
   "athlete",
   "multiplier",
+  "investor",
   "unclassified",
 ] as const;
 
 export type GtmContactType = (typeof GTM_CONTACT_TYPES)[number];
+
+export const GTM_INVESTOR_TYPES = [
+  "angel",
+  "athlete_angel",
+  "operator_angel",
+  "pre_seed_vc",
+  "seed_vc",
+  "sports_vc",
+  "consumer_vc",
+  "media_vc",
+  "strategic_corporate_vc",
+  "family_office",
+] as const;
+
+export type GtmInvestorType = (typeof GTM_INVESTOR_TYPES)[number];
+
+export const GTM_INVESTOR_RELATIONSHIP_STAGES = [
+  "existing_relationship",
+  "introduction",
+  "discovery",
+  "product_shown",
+  "interested",
+  "milestone_follow_up",
+  "intro_offered",
+  "potential_check",
+  "diligence",
+  "passed",
+  "future_round",
+] as const;
+
+export type GtmInvestorRelationshipStage =
+  (typeof GTM_INVESTOR_RELATIONSHIP_STAGES)[number];
+
+export const GTM_CONVERSATION_OUTCOMES = [
+  "user_conversion",
+  "pilot_opportunity",
+  "capital",
+  "referral",
+  "strategic_insight",
+  "product_validation",
+  "distribution_opportunity",
+  "partnership",
+  "future_follow_up",
+  "no_fit",
+] as const;
+
+export type GtmConversationOutcome =
+  (typeof GTM_CONVERSATION_OUTCOMES)[number];
 
 export const GTM_PRIORITY_TIERS = ["A", "B", "C", "D"] as const;
 
@@ -139,4 +188,5 @@ export interface GtmContactSummary {
   lastInteractionAt: string | null;
   nextAction: string | null;
   nextActionAt: string | null;
+  nextTrigger: string | null;
 }

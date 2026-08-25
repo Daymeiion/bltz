@@ -18,6 +18,8 @@ export interface GtmContactInteraction {
   subject: string | null;
   summary: string | null;
   interactionAt: string;
+  outcomes: string[];
+  nextTrigger: string | null;
 }
 
 export interface GtmCustomerDiscoveryRecord {
@@ -68,6 +70,15 @@ export interface GtmContactRow {
   lastInteractionAt: string | null;
   nextAction: string | null;
   nextActionAt: string | null;
+  investorType: string | null;
+  investorRelationshipStage: string | null;
+  whatTheyNeedToSee: string | null;
+  investorThesisFeedback: string | null;
+  historicalSignal: string | null;
+  futureTrigger: string | null;
+  priorOutcome: string | null;
+  relationshipSource: string | null;
+  nextTrigger: string | null;
   playerMatch: { playerId: string; verified: boolean } | null;
   notes: GtmContactNote[];
   interactions: GtmContactInteraction[];
@@ -107,13 +118,12 @@ function isPermissionDenied(error: { code?: string | null }) {
 export async function getGtmContacts(): Promise<GtmContactsReadModel> {
   await requireInternalAdmin();
   const supabase = await createClient();
-  // Generated schema types are updated only after the Foundation migration lands.
   const gtm = supabase as unknown as SupabaseClient;
   const generatedAt = new Date().toISOString();
 
   const { data, error } = await gtm
     .from("gtm_contacts")
-    .select("id,display_name,first_name,last_name,current_company,current_title,contact_type,segment,sport,league_level,relationship_strength,network_leverage,bltz_relevance,buying_authority,timing_score,priority_score,priority_tier,pipeline_stage,source,linkedin_url,do_not_automate,is_priority,last_interaction_at,next_action,next_action_at")
+    .select("id,display_name,first_name,last_name,current_company,current_title,contact_type,segment,sport,league_level,relationship_strength,network_leverage,bltz_relevance,buying_authority,timing_score,priority_score,priority_tier,pipeline_stage,source,linkedin_url,do_not_automate,is_priority,last_interaction_at,next_action,next_action_at,investor_type,investor_relationship_stage,what_they_need_to_see,investor_thesis_feedback,historical_signal,future_trigger,prior_outcome,relationship_source,next_trigger")
     .eq("archived", false)
     .order("is_priority", { ascending: false })
     .order("priority_score", { ascending: false, nullsFirst: false })
@@ -136,7 +146,7 @@ export async function getGtmContacts(): Promise<GtmContactsReadModel> {
     const [matchesResult, notesResult, interactionsResult, discoveryResult] = await Promise.all([
       gtm.from("gtm_contact_players").select("contact_id,player_id,verified").in("contact_id", contactIds),
       gtm.from("gtm_notes").select("id,contact_id,note_type,body,created_at").in("contact_id", contactIds).order("created_at", { ascending: false }).limit(1000),
-      gtm.from("gtm_interactions").select("id,contact_id,interaction_type,direction,subject,summary,interaction_at").in("contact_id", contactIds).order("interaction_at", { ascending: false }).limit(1000),
+      gtm.from("gtm_interactions").select("id,contact_id,interaction_type,direction,subject,summary,interaction_at,outcomes,next_trigger").in("contact_id", contactIds).order("interaction_at", { ascending: false }).limit(1000),
       gtm.from("gtm_customer_discovery").select("id,contact_id,interaction_id,organization_id,problem_discussed,current_solution,pain_level,primary_bltz_use_case,feature_requested,would_use,would_pilot,would_pay,expected_buyer,expected_budget_range,primary_objection,introduction_offered,introduction_target,additional_context,created_at,updated_at").in("contact_id", contactIds).order("created_at", { ascending: false }).limit(1000),
     ]);
 
@@ -164,6 +174,8 @@ export async function getGtmContacts(): Promise<GtmContactsReadModel> {
         subject: interaction.subject as string | null,
         summary: interaction.summary as string | null,
         interactionAt: interaction.interaction_at as string,
+        outcomes: Array.isArray(interaction.outcomes) ? interaction.outcomes as string[] : [],
+        nextTrigger: interaction.next_trigger as string | null,
       });
       interactionsByContact.set(contactId, interactions);
     }
@@ -223,6 +235,15 @@ export async function getGtmContacts(): Promise<GtmContactsReadModel> {
     lastInteractionAt: contact.last_interaction_at as string | null,
     nextAction: contact.next_action as string | null,
     nextActionAt: contact.next_action_at as string | null,
+    investorType: contact.investor_type as string | null,
+    investorRelationshipStage: contact.investor_relationship_stage as string | null,
+    whatTheyNeedToSee: contact.what_they_need_to_see as string | null,
+    investorThesisFeedback: contact.investor_thesis_feedback as string | null,
+    historicalSignal: contact.historical_signal as string | null,
+    futureTrigger: contact.future_trigger as string | null,
+    priorOutcome: contact.prior_outcome as string | null,
+    relationshipSource: contact.relationship_source as string | null,
+    nextTrigger: contact.next_trigger as string | null,
     playerMatch: matchesByContact.get(contact.id as string) ?? null,
     notes: notesByContact.get(contact.id as string) ?? [],
     interactions: interactionsByContact.get(contact.id as string) ?? [],

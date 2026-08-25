@@ -1322,9 +1322,14 @@ export type Database = {
           do_not_automate: boolean
           email: string | null
           first_name: string | null
+          future_trigger: string | null
           geography: string | null
+          historical_signal: string | null
           id: string
           introduction_potential: number | null
+          investor_relationship_stage: string | null
+          investor_thesis_feedback: string | null
+          investor_type: string | null
           is_priority: boolean
           last_interaction_at: string | null
           last_name: string | null
@@ -1334,12 +1339,15 @@ export type Database = {
           network_leverage: number | null
           next_action: string | null
           next_action_at: string | null
+          next_trigger: string | null
           organization_id: string | null
           phone: string | null
           pipeline_stage: string
+          prior_outcome: string | null
           priority_model: string | null
           priority_score: number | null
           priority_tier: string | null
+          relationship_source: string | null
           relationship_strength: number | null
           segment: string | null
           source: string | null
@@ -1348,6 +1356,7 @@ export type Database = {
           timing_score: number | null
           updated_at: string
           updated_by: string | null
+          what_they_need_to_see: string | null
         }
         Insert: {
           archived?: boolean
@@ -1362,9 +1371,14 @@ export type Database = {
           do_not_automate?: boolean
           email?: string | null
           first_name?: string | null
+          future_trigger?: string | null
           geography?: string | null
+          historical_signal?: string | null
           id?: string
           introduction_potential?: number | null
+          investor_relationship_stage?: string | null
+          investor_thesis_feedback?: string | null
+          investor_type?: string | null
           is_priority?: boolean
           last_interaction_at?: string | null
           last_name?: string | null
@@ -1374,12 +1388,15 @@ export type Database = {
           network_leverage?: number | null
           next_action?: string | null
           next_action_at?: string | null
+          next_trigger?: string | null
           organization_id?: string | null
           phone?: string | null
           pipeline_stage?: string
+          prior_outcome?: string | null
           priority_model?: string | null
           priority_score?: number | null
           priority_tier?: string | null
+          relationship_source?: string | null
           relationship_strength?: number | null
           segment?: string | null
           source?: string | null
@@ -1388,6 +1405,7 @@ export type Database = {
           timing_score?: number | null
           updated_at?: string
           updated_by?: string | null
+          what_they_need_to_see?: string | null
         }
         Update: {
           archived?: boolean
@@ -1402,9 +1420,14 @@ export type Database = {
           do_not_automate?: boolean
           email?: string | null
           first_name?: string | null
+          future_trigger?: string | null
           geography?: string | null
+          historical_signal?: string | null
           id?: string
           introduction_potential?: number | null
+          investor_relationship_stage?: string | null
+          investor_thesis_feedback?: string | null
+          investor_type?: string | null
           is_priority?: boolean
           last_interaction_at?: string | null
           last_name?: string | null
@@ -1414,12 +1437,15 @@ export type Database = {
           network_leverage?: number | null
           next_action?: string | null
           next_action_at?: string | null
+          next_trigger?: string | null
           organization_id?: string | null
           phone?: string | null
           pipeline_stage?: string
+          prior_outcome?: string | null
           priority_model?: string | null
           priority_score?: number | null
           priority_tier?: string | null
+          relationship_source?: string | null
           relationship_strength?: number | null
           segment?: string | null
           source?: string | null
@@ -1428,6 +1454,7 @@ export type Database = {
           timing_score?: number | null
           updated_at?: string
           updated_by?: string | null
+          what_they_need_to_see?: string | null
         }
         Relationships: [
           {
@@ -1620,8 +1647,10 @@ export type Database = {
           id: string
           interaction_at: string
           interaction_type: string
+          next_trigger: string | null
           opportunity_id: string | null
           organization_id: string | null
+          outcomes: string[]
           subject: string | null
           summary: string | null
           updated_at: string
@@ -1634,8 +1663,10 @@ export type Database = {
           id?: string
           interaction_at: string
           interaction_type: string
+          next_trigger?: string | null
           opportunity_id?: string | null
           organization_id?: string | null
+          outcomes?: string[]
           subject?: string | null
           summary?: string | null
           updated_at?: string
@@ -1648,8 +1679,10 @@ export type Database = {
           id?: string
           interaction_at?: string
           interaction_type?: string
+          next_trigger?: string | null
           opportunity_id?: string | null
           organization_id?: string | null
+          outcomes?: string[]
           subject?: string | null
           summary?: string | null
           updated_at?: string
@@ -4507,9 +4540,14 @@ export type Database = {
           do_not_automate: boolean
           email: string | null
           first_name: string | null
+          future_trigger: string | null
           geography: string | null
+          historical_signal: string | null
           id: string
           introduction_potential: number | null
+          investor_relationship_stage: string | null
+          investor_thesis_feedback: string | null
+          investor_type: string | null
           is_priority: boolean
           last_interaction_at: string | null
           last_name: string | null
@@ -4519,12 +4557,15 @@ export type Database = {
           network_leverage: number | null
           next_action: string | null
           next_action_at: string | null
+          next_trigger: string | null
           organization_id: string | null
           phone: string | null
           pipeline_stage: string
+          prior_outcome: string | null
           priority_model: string | null
           priority_score: number | null
           priority_tier: string | null
+          relationship_source: string | null
           relationship_strength: number | null
           segment: string | null
           source: string | null
@@ -4533,6 +4574,87 @@ export type Database = {
           timing_score: number | null
           updated_at: string
           updated_by: string | null
+          what_they_need_to_see: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "gtm_contacts"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      create_gtm_contact_v2: {
+        Args: {
+          p_contact_type?: string
+          p_current_company?: string
+          p_current_title?: string
+          p_display_name: string
+          p_do_not_automate?: boolean
+          p_email?: string
+          p_first_name?: string
+          p_future_trigger?: string
+          p_historical_signal?: string
+          p_investor_relationship_stage?: string
+          p_investor_thesis_feedback?: string
+          p_investor_type?: string
+          p_last_name?: string
+          p_league_level?: string
+          p_linkedin_url?: string
+          p_next_trigger?: string
+          p_player_id?: string
+          p_prior_outcome?: string
+          p_relationship_source?: string
+          p_sport?: string
+          p_what_they_need_to_see?: string
+        }
+        Returns: {
+          archived: boolean
+          bltz_relevance: number | null
+          buying_authority: number | null
+          contact_type: string
+          created_at: string
+          created_by: string
+          current_company: string | null
+          current_title: string | null
+          display_name: string
+          do_not_automate: boolean
+          email: string | null
+          first_name: string | null
+          future_trigger: string | null
+          geography: string | null
+          historical_signal: string | null
+          id: string
+          introduction_potential: number | null
+          investor_relationship_stage: string | null
+          investor_thesis_feedback: string | null
+          investor_type: string | null
+          is_priority: boolean
+          last_interaction_at: string | null
+          last_name: string | null
+          league_level: string | null
+          linkedin_connected_on: string | null
+          linkedin_url: string | null
+          network_leverage: number | null
+          next_action: string | null
+          next_action_at: string | null
+          next_trigger: string | null
+          organization_id: string | null
+          phone: string | null
+          pipeline_stage: string
+          prior_outcome: string | null
+          priority_model: string | null
+          priority_score: number | null
+          priority_tier: string | null
+          relationship_source: string | null
+          relationship_strength: number | null
+          segment: string | null
+          source: string | null
+          source_record_id: string | null
+          sport: string | null
+          timing_score: number | null
+          updated_at: string
+          updated_by: string | null
+          what_they_need_to_see: string | null
         }
         SetofOptions: {
           from: "*"
@@ -4667,8 +4789,48 @@ export type Database = {
           id: string
           interaction_at: string
           interaction_type: string
+          next_trigger: string | null
           opportunity_id: string | null
           organization_id: string | null
+          outcomes: string[]
+          subject: string | null
+          summary: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "gtm_interactions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      log_gtm_interaction_v2: {
+        Args: {
+          p_contact_id: string
+          p_direction: string
+          p_interaction_at: string
+          p_interaction_type: string
+          p_next_action?: string
+          p_next_action_at?: string
+          p_next_trigger?: string
+          p_opportunity_id?: string
+          p_organization_id?: string
+          p_outcomes?: string[]
+          p_subject?: string
+          p_summary?: string
+        }
+        Returns: {
+          contact_id: string
+          created_at: string
+          created_by: string
+          direction: string
+          id: string
+          interaction_at: string
+          interaction_type: string
+          next_trigger: string | null
+          opportunity_id: string | null
+          organization_id: string | null
+          outcomes: string[]
           subject: string | null
           summary: string | null
           updated_at: string

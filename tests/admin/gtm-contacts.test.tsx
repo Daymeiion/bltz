@@ -47,6 +47,15 @@ function contact(overrides: Partial<GtmContactRow> = {}): GtmContactRow {
     lastInteractionAt: "2026-08-01T12:00:00.000Z",
     nextAction: "Schedule discovery call",
     nextActionAt: "2026-08-20T12:00:00.000Z",
+    investorType: null,
+    investorRelationshipStage: null,
+    whatTheyNeedToSee: null,
+    investorThesisFeedback: null,
+    historicalSignal: null,
+    futureTrigger: null,
+    priorOutcome: null,
+    relationshipSource: null,
+    nextTrigger: "Re-engage after first university pilot",
     playerMatch: null,
     notes: [],
     interactions: [],
@@ -60,6 +69,7 @@ const baseFilters: GtmContactFilters = {
   contactType: "all",
   priorityTier: "all",
   pipelineStage: "all",
+  conversationOutcome: "all",
   savedView: "All contacts",
 };
 
@@ -71,6 +81,51 @@ describe("GTM contacts workspace", () => {
     ];
 
     expect(filterGtmContacts(contacts, { ...baseFilters, search: "north coast", contactType: "enterprise", priorityTier: "A" })).toEqual([contacts[0]]);
+  });
+
+  it("filters investor contacts and non-binary conversation outcomes", () => {
+    const investor = contact({
+      contactType: "investor",
+      investorType: "sports_vc",
+      investorRelationshipStage: "milestone_follow_up",
+      interactions: [{
+        id: "4b102f96-b0d1-4ba2-946c-5890a55aa97c",
+        interactionType: "meeting",
+        direction: "mutual",
+        subject: "Product review",
+        summary: null,
+        interactionAt: "2026-08-20T12:00:00.000Z",
+        outcomes: ["capital", "strategic_insight"],
+        nextTrigger: "Reconnect after 250 activated athletes",
+      }],
+    });
+    const enterprise = contact({ id: "1c1ccff9-bfa0-40e7-8654-bbda8d999711" });
+
+    expect(filterGtmContacts([investor, enterprise], { ...baseFilters, contactType: "investor", conversationOutcome: "capital" })).toEqual([investor]);
+  });
+
+  it("renders investor and conversation-outcome filters in the existing workspace", () => {
+    const investor = contact({
+      contactType: "investor",
+      investorType: "sports_vc",
+      investorRelationshipStage: "milestone_follow_up",
+      whatTheyNeedToSee: "University pilot traction",
+      interactions: [{
+        id: "4b102f96-b0d1-4ba2-946c-5890a55aa97c",
+        interactionType: "meeting",
+        direction: "mutual",
+        subject: "Product review",
+        summary: null,
+        interactionAt: "2026-08-20T12:00:00.000Z",
+        outcomes: ["capital", "strategic_insight"],
+        nextTrigger: "Reconnect after 250 activated athletes",
+      }],
+    });
+    const markup = renderToStaticMarkup(<GtmContactsWorkspace data={{ state: "ready", contacts: [investor], generatedAt: "2026-08-24T12:00:00.000Z" }} />);
+
+    expect(markup).toContain("Investor");
+    expect(markup).toContain("All outcomes");
+    expect(markup).toContain("Strategic Insight");
   });
 
   it("supports the built-in follow-up and relationship-intelligence views", () => {
@@ -117,7 +172,7 @@ describe("GTM contacts workspace", () => {
 
     expect(markup).toContain("md:grid-cols-2");
     expect(markup).toContain("lg:grid-cols-3");
-    expect(markup).toContain("xl:grid-cols-[minmax(14rem,1fr)_12rem_repeat(3,minmax(8rem,10rem))]");
+    expect(markup).toContain("xl:grid-cols-[minmax(14rem,1fr)_12rem_repeat(4,minmax(8rem,10rem))]");
     expect(markup).not.toContain("lg:grid-cols-[minmax(16rem,1fr)_14rem_repeat(3,minmax(9rem,12rem))]");
     expect(markup).toContain("Pipeline stage");
   });
