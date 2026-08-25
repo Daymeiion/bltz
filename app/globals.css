@@ -397,7 +397,8 @@
    are supplied directly to the mobile sheet by OrganizationShell. */
 .crm-mobile-sheet,
 .crm-menu-content,
-.crm-assignment-drawer {
+.crm-assignment-drawer,
+.crm-unsaved-warning {
   --crm-surface: #ffffff;
   --crm-surface-subtle: #f1f3f5;
   --crm-surface-hover: #eceff3;
@@ -440,7 +441,8 @@
   box-sizing: border-box;
 }
 
-[data-product="enterprise-crm"] :focus-visible {
+[data-product="enterprise-crm"] :focus-visible,
+.crm-unsaved-warning :focus-visible {
   outline: 2px solid var(--crm-focus);
   outline-offset: 2px;
 }
@@ -772,10 +774,11 @@
 .crm-inline-state--error { background: var(--crm-blocked-bg); color: var(--crm-blocked); }
 .crm-inline-state--success { background: var(--crm-positive-bg); color: var(--crm-positive); }
 .crm-inline-state--restricted { background: var(--crm-restricted-bg); color: var(--crm-restricted); }
-.crm-unsaved-warning { display: grid; gap: var(--crm-space-3); padding: var(--crm-space-4); border: 1px solid color-mix(in srgb, var(--crm-attention) 30%, transparent); border-radius: var(--crm-radius-md); background: var(--crm-attention-bg); color: var(--crm-attention); }
-.crm-unsaved-warning > div { display: flex; flex-wrap: wrap; gap: var(--crm-space-2); }
-.crm-unsaved-warning > div:first-child { display: grid; }
-.crm-unsaved-warning span { font-size: 13px; }
+.crm-unsaved-warning { display: grid; width: min(420px, calc(100vw - (2 * var(--crm-space-4)))); gap: var(--crm-space-4); padding: var(--crm-space-4); border: 1px solid color-mix(in srgb, var(--crm-attention) 30%, transparent); border-radius: var(--crm-radius-lg); background: var(--crm-attention-bg); color: var(--crm-attention); box-shadow: var(--crm-shadow-overlay); }
+.crm-unsaved-warning [data-slot="alert-dialog-header"] { display: grid; gap: var(--crm-space-2); text-align: left; }
+.crm-unsaved-warning [data-slot="alert-dialog-title"] { color: var(--crm-attention); font-family: "Barlow Condensed", "Barlow", sans-serif; font-size: 22px; line-height: 28px; }
+.crm-unsaved-warning [data-slot="alert-dialog-description"] { color: var(--crm-fg-secondary); font-size: 13px; }
+.crm-unsaved-warning [data-slot="alert-dialog-footer"] { display: flex; flex-direction: row; flex-wrap: wrap; justify-content: flex-end; gap: var(--crm-space-2); }
 .crm-assignment-drawer__footer { flex-direction: row; justify-content: flex-end; gap: var(--crm-space-2); margin-top: auto; padding: var(--crm-space-4) 0 0; border-top: 1px solid var(--crm-border-subtle); }
 
 .crm-workload-legend { display: flex; flex-wrap: wrap; gap: var(--crm-space-3); margin: 0; padding: 0; list-style: none; }

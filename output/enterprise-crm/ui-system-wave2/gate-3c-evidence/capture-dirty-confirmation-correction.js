@@ -30,8 +30,9 @@ async (page) => {
     const ariaModal = await confirmation.getAttribute("aria-modal");
     const labelledBy = await confirmation.getAttribute("aria-labelledby");
     const describedBy = await confirmation.getAttribute("aria-describedby");
+    const announcement = await confirmation.evaluate((node) => ({ name: document.getElementById(node.getAttribute("aria-labelledby") || "")?.textContent, description: document.getElementById(node.getAttribute("aria-describedby") || "")?.textContent }));
     const focusInside = await confirmation.evaluate((node) => node.contains(document.activeElement));
-    if (!focusInside || ariaModal !== "true" || !labelledBy || !describedBy) throw new Error(`Dirty confirmation did not receive announced modal focus: ${JSON.stringify({ initialFocus, focusInside, ariaModal, labelledBy, describedBy })}`);
+    if (!focusInside || ariaModal !== "true" || announcement.name !== "Discard unsaved changes?" || announcement.description !== "Your assignment details have not been submitted.") throw new Error(`Dirty confirmation did not receive announced modal focus: ${JSON.stringify({ initialFocus, focusInside, ariaModal, labelledBy, describedBy, announcement })}`);
     await page.screenshot({ path: `${output}assignment-drawer-dirty-confirmation-focus-375-bltz.png`, fullPage: false });
     const order = [initialFocus];
     await page.keyboard.press("Shift+Tab"); order.push(await describeFocus());
@@ -40,30 +41,36 @@ async (page) => {
     const trapped = await confirmation.evaluate((node) => node.contains(document.activeElement));
     if (!trapped) throw new Error(`Dirty confirmation focus escaped: ${JSON.stringify(order)}`);
     await page.getByRole("button", { name: "Keep editing" }).click();
-    const draft = await page.getByRole("combobox", { name: "Assign owner" }).inputValue();
+    const owner = page.getByRole("combobox", { name: "Assign owner" });
+    const draft = await owner.inputValue();
     const keepFocus = await describeFocus();
-    if (draft !== "morgan" || !keepFocus.includes("Assign owner")) throw new Error(`Keep Editing failed: ${JSON.stringify({ draft, keepFocus })}`);
+    const keepFocusIsOwner = await owner.evaluate((node) => node === document.activeElement);
+    if (draft !== "morgan" || !keepFocusIsOwner) throw new Error(`Keep Editing failed: ${JSON.stringify({ draft, keepFocus, keepFocusIsOwner })}`);
     await page.keyboard.press("Escape");
     await page.getByRole("button", { name: "Discard changes" }).click();
     await page.getByRole("dialog", { name: "Assign owner" }).waitFor({ state: "hidden" });
+    await page.waitForTimeout(550);
     const returnFocus = await describeFocus();
     const exactReturn = await trigger.evaluate((node) => node === document.activeElement);
     if (!exactReturn) throw new Error(`Discard did not return to exact opener: ${returnFocus}`);
-    results.push({ viewport: "375x900", initialFocus, ariaModal, labelledBy, describedBy, order, trapped, draft, keepFocus, returnFocus, exactReturn });
+    results.push({ viewport: "375x900", initialFocus, ariaModal, labelledBy, describedBy, announcement, order, trapped, draft, keepFocus, keepFocusIsOwner, returnFocus, exactReturn });
   }
 
   {
     const { confirmation } = await openDirtyConfirmation(1440, 1000);
     const accessibleName = await confirmation.getAttribute("aria-labelledby");
     const accessibleDescription = await confirmation.getAttribute("aria-describedby");
+    const announcement = await confirmation.evaluate((node) => ({ name: document.getElementById(node.getAttribute("aria-labelledby") || "")?.textContent, description: document.getElementById(node.getAttribute("aria-describedby") || "")?.textContent }));
     const initialFocus = await describeFocus();
     await page.screenshot({ path: `${output}assignment-drawer-dirty-confirmation-announcement-1440-bltz.png`, fullPage: false });
     await page.keyboard.press("Escape");
     await confirmation.waitFor({ state: "hidden" });
-    const draft = await page.getByRole("combobox", { name: "Assign owner" }).inputValue();
+    const owner = page.getByRole("combobox", { name: "Assign owner" });
+    const draft = await owner.inputValue();
     const escapeFocus = await describeFocus();
-    if (!accessibleName || !accessibleDescription || draft !== "morgan" || !escapeFocus.includes("Assign owner")) throw new Error(`Escape/announcement evidence failed: ${JSON.stringify({ accessibleName, accessibleDescription, initialFocus, draft, escapeFocus })}`);
-    results.push({ viewport: "1440x1000", accessibleName, accessibleDescription, initialFocus, draft, escapeFocus });
+    const escapeFocusIsOwner = await owner.evaluate((node) => node === document.activeElement);
+    if (!accessibleName || !accessibleDescription || announcement.name !== "Discard unsaved changes?" || announcement.description !== "Your assignment details have not been submitted." || draft !== "morgan" || !escapeFocusIsOwner) throw new Error(`Escape/announcement evidence failed: ${JSON.stringify({ accessibleName, accessibleDescription, announcement, initialFocus, draft, escapeFocus, escapeFocusIsOwner })}`);
+    results.push({ viewport: "1440x1000", accessibleName, accessibleDescription, announcement, initialFocus, draft, escapeFocus, escapeFocusIsOwner });
   }
 
   return results;

@@ -32,10 +32,12 @@ describe("AssignmentDrawer interaction contract", () => {
     expect(confirmation.getAttribute("aria-modal")).toBe("true");
     expect(confirmation.getAttribute("aria-labelledby")).toBeTruthy();
     expect(confirmation.getAttribute("aria-describedby")).toBeTruthy();
+    expect(document.getElementById(confirmation.getAttribute("aria-labelledby")!)?.textContent).toBe("Discard unsaved changes?");
+    expect(document.getElementById(confirmation.getAttribute("aria-describedby")!)?.textContent).toBe("Your assignment details have not been submitted.");
     expect(confirmation.contains(document.activeElement)).toBe(true);
     expect(document.activeElement?.textContent).toBe("Keep editing");
     click([...confirmation.querySelectorAll("button")].find((button) => button.textContent === "Keep editing")!); await act(async () => undefined); expect(document.querySelector('[role="dialog"]')).not.toBeNull(); expect(document.activeElement).toBe(owner);
-    click(close); click([...dialog.querySelectorAll("button")].find((button) => button.textContent === "Discard changes")!);
+    click(close); click([...document.querySelectorAll<HTMLElement>('[role="alertdialog"] button')].find((button) => button.textContent === "Discard changes")!);
     await act(async () => undefined);
     expect(document.querySelector('[role="dialog"]')).toBeNull(); expect(document.activeElement).toBe(trigger);
   });

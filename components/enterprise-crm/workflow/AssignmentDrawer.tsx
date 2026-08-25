@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { IconAlertTriangle, IconCheck } from "@tabler/icons-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { MemberPicker, type MemberPickerOption } from "./MemberPicker";
 
@@ -23,7 +24,10 @@ export type AssignmentDrawerProps = {
 
 export function AssignmentDrawer({ open, onOpenChange, sourceTitle, sourceContext, members, priorities, initialValue, state = "default", errorMessage, onSubmit }: AssignmentDrawerProps) {
   const firstField = useRef<HTMLSelectElement>(null);
+  const keepEditingControl = useRef<HTMLButtonElement>(null);
   const returnFocus = useRef<HTMLElement | null>(null);
+  const discarding = useRef(false);
+  const restoreEditorAfterPrompt = useRef(false);
   const [draft, setDraft] = useState<AssignmentDraft>({ memberId: initialValue?.memberId ?? "", priority: initialValue?.priority ?? "", dueDate: initialValue?.dueDate ?? "", comment: initialValue?.comment ?? "" });
   const [dirty, setDirty] = useState(false);
   const [discardPrompt, setDiscardPrompt] = useState(false);
@@ -34,8 +38,13 @@ export function AssignmentDrawer({ open, onOpenChange, sourceTitle, sourceContex
   const update = (key: keyof AssignmentDraft, value: string) => { setDraft((current) => ({ ...current, [key]: value })); setDirty(true); setValidation(undefined); };
   const requestOpenChange = (next: boolean) => { if (!next && dirty && state !== "success") { setDiscardPrompt(true); return; } onOpenChange(next); };
   const submit = (event: FormEvent) => { event.preventDefault(); if (!draft.memberId || !draft.priority) { setValidation("Choose an eligible member and priority."); return; } onSubmit(draft); };
-  const discard = () => { setDirty(false); setDiscardPrompt(false); onOpenChange(false); };
-  const keepEditing = () => { setDiscardPrompt(false); firstField.current?.focus(); };
+  const discard = () => { discarding.current = true; restoreEditorAfterPrompt.current = false; setDirty(false); setDiscardPrompt(false); onOpenChange(false); };
+  const keepEditing = () => { restoreEditorAfterPrompt.current = true; setDiscardPrompt(false); };
+  const changeDiscardPrompt = (next: boolean) => {
+    if (next) { setDiscardPrompt(true); return; }
+    if (discarding.current) { discarding.current = false; return; }
+    keepEditing();
+  };
 
   return (
     <Sheet open={open} onOpenChange={requestOpenChange}>
@@ -51,11 +60,22 @@ export function AssignmentDrawer({ open, onOpenChange, sourceTitle, sourceContex
             {validation ? <div className="crm-inline-state crm-inline-state--error" role="alert"><IconAlertTriangle aria-hidden />{validation}</div> : null}
             {state === "error" ? <div className="crm-inline-state crm-inline-state--error" role="alert"><IconAlertTriangle aria-hidden />{errorMessage ?? "Assignment could not be saved. Review the details and try again."}</div> : null}
             {state === "success" ? <div className="crm-inline-state crm-inline-state--success" role="status"><IconCheck aria-hidden />Owner assigned. The source can now refresh.</div> : null}
-            {discardPrompt ? <div className="crm-unsaved-warning" role="alertdialog" aria-label="Unsaved assignment changes"><div><strong>Discard unsaved changes?</strong><span>Your assignment details have not been submitted.</span></div><div><button type="button" className="crm-button crm-button--secondary" onClick={keepEditing}>Keep editing</button><button type="button" className="crm-button crm-button--destructive" onClick={discard}>Discard changes</button></div></div> : null}
           </>}
           <SheetFooter className="crm-assignment-drawer__footer"><button type="button" className="crm-button crm-button--secondary" onClick={() => requestOpenChange(false)} disabled={busy}>Cancel</button>{state !== "restricted" ? <button type="submit" className="crm-button crm-button--primary" disabled={busy || state === "success"}>{busy ? "Assigning…" : state === "success" ? "Assigned" : "Assign"}</button> : null}</SheetFooter>
         </form>
       </SheetContent>
+      <AlertDialog open={discardPrompt} onOpenChange={changeDiscardPrompt}>
+        <AlertDialogContent aria-modal="true" className="crm-unsaved-warning" onOpenAutoFocus={(event) => { event.preventDefault(); keepEditingControl.current?.focus(); }} onCloseAutoFocus={(event) => { event.preventDefault(); if (restoreEditorAfterPrompt.current) { restoreEditorAfterPrompt.current = false; firstField.current?.focus(); } }}>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Discard unsaved changes?</AlertDialogTitle>
+            <AlertDialogDescription>Your assignment details have not been submitted.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel ref={keepEditingControl} className="crm-button crm-button--secondary" onClick={keepEditing}>Keep editing</AlertDialogCancel>
+            <AlertDialogAction className="crm-button crm-button--destructive" onClick={discard}>Discard changes</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Sheet>
   );
 }
