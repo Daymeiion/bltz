@@ -917,4 +917,5 @@
 
 @media (prefers-reduced-motion: reduce) {
   [data-product="enterprise-crm"] *, [data-product="enterprise-crm"] *::before, [data-product="enterprise-crm"] *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
+  .crm-assignment-drawer, .crm-assignment-drawer *, body:has(.crm-assignment-drawer) [data-slot="sheet-overlay"] { scroll-behavior: auto !important; transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
 }
