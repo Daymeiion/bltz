@@ -130,6 +130,26 @@ begin
   perform public.match_gtm_contact_player(v_contact_id, '00000000-0000-4000-8000-00000000e201');
   if (select count(*) from public.gtm_contact_players link where link.contact_id = v_contact_id and link.player_id = '00000000-0000-4000-8000-00000000e201') <> 1 then raise exception 'duplicate Player pair created'; end if;
   if not exists (select 1 from public.gtm_contact_players link where link.contact_id = v_contact_id and link.verified) then raise exception 'manual Player verification failed'; end if;
+
+end;
+$$;
+
+reset role;
+do $$
+begin
+  if not exists (select 1 from public.audit_logs log where log.action = 'gtm.note.created')
+    or not exists (select 1 from public.audit_logs log where log.action = 'gtm.interaction.created')
+    or not exists (select 1 from public.audit_logs log where log.action = 'gtm.customer_discovery.created')
+    or not exists (select 1 from public.audit_logs log where log.action = 'gtm.contact_player.created') then
+    raise exception 'required GTM child audit event missing';
+  end if;
+  if exists (
+    select 1 from public.audit_logs log
+    where concat_ws(' ', log.previous_values::text, log.new_values::text, log.request_metadata::text)
+      ilike any (array['%Edited note%', '%Discussed pilot%', '%Fragmented media%', '%Spreadsheets%'])
+  ) then
+    raise exception 'private GTM prose leaked into audit metadata';
+  end if;
 end;
 $$;
 
