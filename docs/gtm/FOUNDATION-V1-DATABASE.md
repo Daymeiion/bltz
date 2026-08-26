@@ -44,6 +44,8 @@ Migration `20260825202830_implement_gtm_core_workflows.sql` completes the first 
 
 Deployment order is Foundation V1 → Phase 2 addendum → Prompt 3 core workflows → generated types → application. The migration is forward-fix oriented: history rows are preserved, legacy pipeline values are mapped, and older interaction functions remain callable.
 
+Coordinator QA adds `20260825220000_fix_gtm_metrics_active_discovery.sql` after the core-workflow migration. It keeps archived relationship history intact while excluding discovery rows owned by archived contacts from current-portfolio counts, frequencies, intent, and willingness-to-pay metrics.
+
 ## CSV import state machine
 
 The Admin server parses the uploaded CSV in memory, tolerates LinkedIn preamble text, suggests aliases instead of assuming one header shape, normalizes values, validates rows, and previews canonical contact and Player matches. It persists only filename, hash, mapping, counts, summary, and uploader—not raw CSV rows.

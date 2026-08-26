@@ -117,6 +117,15 @@ begin
   );
   if (select count(*) from public.gtm_customer_discovery discovery where discovery.contact_id = v_contact_id) <> 2 then raise exception 'discovery records missing'; end if;
 
+  if (public.get_gtm_metrics_v1() ->> 'discoveryConversations')::integer <> 1 then
+    raise exception 'active discovery conversation missing from metrics';
+  end if;
+  update public.gtm_contacts set archived = true where id = v_contact_id;
+  if (public.get_gtm_metrics_v1() ->> 'discoveryConversations')::integer <> 0 then
+    raise exception 'archived contact leaked into discovery metrics';
+  end if;
+  update public.gtm_contacts set archived = false where id = v_contact_id;
+
   perform public.match_gtm_contact_player(v_contact_id, '00000000-0000-4000-8000-00000000e201');
   perform public.match_gtm_contact_player(v_contact_id, '00000000-0000-4000-8000-00000000e201');
   if (select count(*) from public.gtm_contact_players link where link.contact_id = v_contact_id and link.player_id = '00000000-0000-4000-8000-00000000e201') <> 1 then raise exception 'duplicate Player pair created'; end if;
