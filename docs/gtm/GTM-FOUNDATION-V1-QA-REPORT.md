@@ -1,9 +1,13 @@
 # GTM Foundation V1 Coordinator QA Report
 
-Date: 2026-08-25  
-Review branch: `codex/gtm-foundation-v1-review`  
-Combined implementation reviewed through: `e1b5a2b`  
-Coordinator correction: `0e4ce8f`  
+Date: 2026-08-25
+
+Review branch: `codex/gtm-foundation-v1-review`
+
+Combined implementation reviewed through: `e1b5a2b`
+
+Coordinator correction: `0e4ce8f`
+
 Integration base: `81a4efc`
 
 ## Gate recommendation
@@ -59,7 +63,8 @@ None.
 
 The original `get_gtm_metrics_v1` filtered contact metrics through active contacts but queried discovery records directly. Archiving a contact removed it from contact totals while leaving its discovery conversation, problems, features, objections, pilot intent, and willingness-to-pay signals in current-portfolio analytics.
 
-Before correction: discovery conversations changed from 1 to 2 when a discovery record belonging to an already archived contact was inserted.  
+Before correction: discovery conversations changed from 1 to 2 when a discovery record belonging to an already archived contact was inserted.
+
 After correction: the metric remained 1.
 
 Correction: `20260825220000_fix_gtm_metrics_active_discovery.sql` introduces a single active-contact projection and joins every discovery aggregate to it. The migration replaces only the reporting function, preserves historical rows, retains invoker security and the internal-admin guard, and keeps existing grants.
