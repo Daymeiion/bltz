@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
-import { getCurrentUserProfile } from '@/lib/rbac';
+import { getCurrentAuthorizationProfile } from '@/lib/rbac';
 import { createServiceClient } from "@/lib/supabase/service";
 import type { PlayerAward } from "@/types/database";
 
 export async function GET() {
   try {
-    const profile = await getCurrentUserProfile();
+    const profile = await getCurrentAuthorizationProfile();
     if (!profile) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

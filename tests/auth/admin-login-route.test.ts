@@ -18,17 +18,13 @@ function request(body: string, origin = "http://localhost") {
   }) as unknown as NextRequest;
 }
 
-function supabaseFor(role: string | null) {
-  const query = {
-    select: vi.fn(() => query),
-    eq: vi.fn(() => query),
-    maybeSingle: vi.fn(async () => ({ data: role ? { role } : null, error: null })),
-  };
+function supabaseFor(isInternalAdmin: boolean) {
   return {
     auth: {
       signInWithPassword: vi.fn(async () => ({ data: { user: { id: "user-1" } }, error: null })),
+      signOut: vi.fn(async () => ({ error: null })),
     },
-    from: vi.fn(() => query),
+    rpc: vi.fn(async () => ({ data: isInternalAdmin, error: null })),
   };
 }
 
@@ -42,16 +38,18 @@ describe("dedicated admin login", () => {
     ).toBe(false);
   });
 
-  it("rejects authenticated users without the admin profile role", async () => {
-    createServerClient.mockReturnValue(supabaseFor("player"));
+  it("rejects authenticated users without an active platform assignment", async () => {
+    const supabase = supabaseFor(false);
+    createServerClient.mockReturnValue(supabase);
     const { POST } = await import("@/app/api/admin/login/route");
     const response = await POST(request("email=player%40bltz.test&password=secret"));
     expect(response.status).toBe(303);
     expect(response.headers.get("location")).toBe("http://localhost/auth/admin?error=not_admin");
+    expect(supabase.auth.signOut).toHaveBeenCalledWith({ scope: "local" });
   });
 
-  it("redirects verified admins to Beta Intelligence", async () => {
-    createServerClient.mockReturnValue(supabaseFor("admin"));
+  it("redirects an assigned platform admin to Beta Intelligence", async () => {
+    createServerClient.mockReturnValue(supabaseFor(true));
     const { POST } = await import("@/app/api/admin/login/route");
     const response = await POST(request("email=admin%40bltz.test&password=secret"));
     expect(response.status).toBe(303);

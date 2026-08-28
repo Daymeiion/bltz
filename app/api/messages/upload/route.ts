@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUserProfile } from "@/lib/rbac";
+import { getCurrentUserProfile, isInternalAdmin } from "@/lib/rbac";
 import { createClient } from "@/lib/supabase/server";
 import sharp from "sharp";
 
@@ -48,11 +48,9 @@ export async function POST(request: NextRequest) {
     if (!message) {
       return NextResponse.json({ error: "Message not found" }, { status: 404 });
     }
-    if (
-      profile.role !== 'admin' &&
-      message.sender_id !== profile.id &&
-      message.recipient_id !== profile.id
-    ) {
+    const isParticipant =
+      message.sender_id === profile.id || message.recipient_id === profile.id;
+    if (!isParticipant && !(await isInternalAdmin())) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

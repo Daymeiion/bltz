@@ -189,7 +189,7 @@ technical_admin
 super_admin
 ```
 
-A user may hold multiple roles in different contexts. Do not rely on one global role field for organization permissions.
+A user may hold multiple roles in different contexts. Do not rely on one global role field for organization permissions. `auth.users` is authentication identity. `profiles` is user profile data. Organization membership and platform authorization must not depend on `profiles.role`.
 
 Use an organization membership model:
 
@@ -211,15 +211,15 @@ All protected actions must be authorized server-side. Hiding a button is not suf
 Expected entities:
 
 ```text
-users
+auth.users
 profiles
 organizations
 organization_memberships
 teams
 seasons
-athletes
+players (athletes)
 athlete_claims
-lockers
+player_lockers (lockers)
 media_assets
 athlete_media
 rights_records
@@ -236,6 +236,23 @@ notifications
 ```
 
 One media asset may be connected to multiple athletes. Use a join table rather than an array of athlete IDs.
+
+Canonical table names differ from product language. See **Canonical Identifiers and Media Graph Guardrails** below. Do not create a second `athletes` table during Phase 2.
+
+## Canonical Identifiers and Media Graph Guardrails
+
+Architecture decisions for this section are recorded in `docs/media/MEDIA-GRAPH-ROADMAP.md`. The authoritative phase sequence is `docs/BLTZ_BUILD_ORDER.md`.
+
+- `public.players.id` is the canonical athlete identifier. Product copy may say “athlete”; the table remains `players`.
+- `player_lockers` is a presentation and configuration entity with at most one row per `players` row. Lockers consume media; they do not own media.
+- `schools` are directory and reference entities. Organizations are separate tenant entities and may reference a school.
+- Existing `teams` retain their UUIDs and require organization context in Phase 2. Do not recreate teams to satisfy tenancy.
+- Phase 2 must introduce stable `seasons`, `sports_events`, and normalized athlete-team-season/roster relationships. Those records are identity and career context, not Media Graph tables.
+- Existing `media` and `videos` tables are legacy Phase One models. Do not extend them into the future Media Graph. Phase 5 adapts or migrates them at a documented boundary.
+- Existing license fields on `media` (`license_status`, `license_kind`, `license_request_*`, `public_locker_approved`, and related columns) are legacy Locker eligibility fields. They must not become the Phase 6 rights engine.
+- Provider integrations use adapters. Getty IDs and other provider-specific fields must not become core columns on athletes (`players`), Lockers (`player_lockers`), teams, or organizations.
+- Phase 5 is **BLTZ Media Graph**. Phase 6 is **Media Rights, Attribution & Clearance Engine**. Phase 2 must not design Phase 5 tables.
+- All media eligibility checks must go through one conceptual permission API: `resolveMediaPermissions(asset, usageContext)`. Do not scatter `license_status` or equivalent checks across Locker, CRM, Admin, or campaign surfaces.
 
 ## Media and Rights Rules
 
@@ -279,6 +296,7 @@ Publication must be blocked when required rights or approvals are missing. Right
 - Prefer soft deletion for legal, financial, or audit-significant records.
 - Preserve created_at and updated_at.
 - Document destructive changes before execution.
+- `supabase/migrations` is the only authoritative active migration directory. `lib/supabase/migrations` is legacy and must receive no new migrations.
 
 ## Design System
 
@@ -349,6 +367,10 @@ After coding, run validation, report failures honestly, document manual steps, a
 
 ## Current Build Order
 
+The authoritative phase sequence is `docs/BLTZ_BUILD_ORDER.md`. Phase 1 and Phase 1.5 are complete. Phase 5 is BLTZ Media Graph. Phase 6 is Media Rights, Attribution & Clearance Engine.
+
+The product-work sequence after that architecture freeze remains:
+
 1. Repository audit
 2. Authentication and role cleanup
 3. Organization and membership foundation
@@ -362,4 +384,14 @@ After coding, run validation, report failures honestly, document manual steps, a
 11. Analytics
 12. Revenue attribution
 
-Do not skip the shared foundation to build visually complete dashboards first.
+Do not skip the shared foundation to build visually complete dashboards first. Do not design Phase 5 Media Graph tables during organization, membership, roster, season, or event foundation work.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

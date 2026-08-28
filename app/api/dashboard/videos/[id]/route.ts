@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
-import { getCurrentUserProfile, type UserProfile } from "@/lib/rbac";
+import {
+  getCurrentUserProfile,
+  isInternalAdmin,
+  type UserProfile,
+} from "@/lib/rbac";
 import { updateVideo, deleteVideo, getVideoById } from "@/lib/queries/videos";
 import { createClient } from "@/lib/supabase/server";
 
@@ -9,8 +13,9 @@ type OwnedVideo = {
 };
 
 async function canManageVideo(profile: UserProfile, video: OwnedVideo): Promise<boolean> {
-  if (profile.role === 'admin' || video.owner_user_id === profile.id) return true;
+  if (video.owner_user_id === profile.id) return true;
   if (profile.player_id && video.player_id === profile.player_id) return true;
+  if (await isInternalAdmin()) return true;
   if (!video.player_id) return false;
 
   const supabase = await createClient();

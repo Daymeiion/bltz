@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
-import { getCurrentUserProfile } from "@/lib/rbac";
+import {
+  getCurrentAuthorizationProfile,
+  getCurrentUserProfile,
+} from "@/lib/rbac";
 import { calculateVideoRevenue } from "@/lib/queries/revenue";
 import { createClient } from "@/lib/supabase/server";
 
@@ -9,15 +12,14 @@ import { createClient } from "@/lib/supabase/server";
  */
 export async function POST(request: Request) {
   try {
-    const profile = await getCurrentUserProfile();
+    const profile = await getCurrentAuthorizationProfile();
     
     if (!profile) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    if (profile.role !== 'admin') {
+    if (profile.role !== "admin") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
-
     const body = await request.json();
     const { videoId, playerId } = body;
 

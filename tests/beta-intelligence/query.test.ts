@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const requireRole = vi.fn();
+const requireInternalAdmin = vi.fn();
 const createServiceClient = vi.fn();
-vi.mock("@/lib/rbac", () => ({ requireRole }));
+vi.mock("@/lib/rbac", () => ({ requireInternalAdmin }));
 vi.mock("@/lib/supabase/service", () => ({ createServiceClient }));
 
 const activity = {
@@ -54,14 +54,14 @@ describe("Beta Intelligence aggregate query", () => {
     const { getBetaIntelligenceDashboard } = await import("@/lib/beta-intelligence/query");
 
     await expect(getBetaIntelligenceDashboard({ cohort: "Cal alumni" })).resolves.toEqual(payload);
-    expect(requireRole).toHaveBeenCalledWith("admin");
+    expect(requireInternalAdmin).toHaveBeenCalledOnce();
     expect(rpc).toHaveBeenCalledWith("get_beta_intelligence_dashboard", {
       p_since: null, p_cohort: "Cal alumni", p_status: null, p_athlete_id: null,
     });
   });
 
   it("does not create the service client when authorization fails", async () => {
-    requireRole.mockRejectedValueOnce(new Error("Forbidden"));
+    requireInternalAdmin.mockRejectedValueOnce(new Error("Forbidden"));
     const { getBetaIntelligenceDashboard } = await import("@/lib/beta-intelligence/query");
 
     await expect(getBetaIntelligenceDashboard()).rejects.toThrow("Forbidden");

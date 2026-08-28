@@ -2,12 +2,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { filterBetaAthletes } from "@/components/admin/beta/BetaIntelligenceDashboard";
 import type { BetaAthleteSummary } from "@/lib/beta-intelligence/contracts";
 
-const getCurrentUserProfile = vi.fn();
+const getCurrentAuthorizationProfile = vi.fn();
 const redirect = vi.fn((destination: string) => {
   throw new Error(`REDIRECT:${destination}`);
 });
 
-vi.mock("@/lib/rbac", () => ({ getCurrentUserProfile }));
+vi.mock("@/lib/rbac", () => ({ getCurrentAuthorizationProfile }));
 vi.mock("next/navigation", () => ({ redirect }));
 vi.mock("@/components/admin/AdminSidebar", () => ({ AdminSidebar: () => null }));
 
@@ -43,7 +43,7 @@ describe("Beta Intelligence dashboard", () => {
   });
 
   it("inherits server-side admin protection from the admin layout", async () => {
-    getCurrentUserProfile.mockResolvedValue({ id: "player-1", role: "player" });
+    getCurrentAuthorizationProfile.mockResolvedValue({ id: "player-1", role: "player" });
     const { default: AdminLayout } = await import("@/app/admin/layout");
 
     await expect(AdminLayout({ children: <div>Private beta data</div> })).rejects.toThrow(
@@ -53,7 +53,7 @@ describe("Beta Intelligence dashboard", () => {
   });
 
   it("allows an authorized admin to render nested admin content", async () => {
-    getCurrentUserProfile.mockResolvedValue({ id: "admin-1", role: "admin" });
+    getCurrentAuthorizationProfile.mockResolvedValue({ id: "admin-1", role: "admin" });
     const { default: AdminLayout } = await import("@/app/admin/layout");
 
     const result = await AdminLayout({ children: <div>Private beta data</div> });
