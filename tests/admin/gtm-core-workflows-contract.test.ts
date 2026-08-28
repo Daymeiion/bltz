@@ -33,7 +33,7 @@ describe("GTM Prompt 3 workflow contracts", () => {
       "setGtmNextAction", "setGtmPriority", "matchGtmContactPlayer",
     ]) expect(actions).toContain(`function ${action}`);
     expect(actions).toContain("await getAuthorizedClient()");
-    expect(actions).toContain('rpc("update_gtm_contact_v1"');
+    expect(actions).toContain('rpc("update_gtm_contact_v2"');
     expect(actions).toContain('rpc("match_gtm_contact_player"');
   });
 

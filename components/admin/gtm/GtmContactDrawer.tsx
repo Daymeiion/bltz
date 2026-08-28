@@ -27,6 +27,7 @@ import {
   setGtmNextAction,
   setGtmPipelineStage,
   setGtmPriority,
+  setGtmRelationshipIntelligence,
   type GtmPlayerOption,
 } from "@/app/admin/gtm/actions";
 import type { GtmContactRow } from "@/lib/gtm/server";
@@ -38,11 +39,14 @@ import {
   GTM_INVESTOR_RELATIONSHIP_STAGES,
   GTM_INVESTOR_TYPES,
   GTM_NOTE_TYPES,
+  GTM_POTENTIAL_ROLES,
   GTM_PIPELINE_STAGES,
+  GTM_RELATIONSHIP_OBJECTIVES,
+  GTM_RELATIONSHIP_PRIORITIES,
 } from "@/lib/gtm/types";
 import { cn } from "@/lib/utils";
 
-type DrawerMode = "note" | "interaction" | "discovery" | "edit" | "next_action" | "stage" | "player" | "archive" | null;
+type DrawerMode = "note" | "interaction" | "discovery" | "edit" | "relationship" | "next_action" | "stage" | "player" | "archive" | null;
 
 const inputClass = "mt-2 min-h-11 w-full rounded-xl border border-neutral-300 bg-white px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ffbb00] dark:border-neutral-700 dark:bg-neutral-950";
 const textareaClass = `${inputClass} py-3`;
@@ -52,7 +56,6 @@ const secondaryButton = "inline-flex min-h-11 items-center justify-center gap-2 
 function nullableText(formData: FormData, name: string) {
   return String(formData.get(name) ?? "").trim() || null;
 }
-
 function nullableScore(formData: FormData, name: string) {
   const value = nullableText(formData, name);
   return value === null ? null : Number(value);
@@ -100,6 +103,25 @@ function StatusBadge({ value, fallback }: { value: string | null; fallback?: str
 
 function FormActions({ pending, submitLabel, onCancel }: { pending: boolean; submitLabel: string; onCancel: () => void }) {
   return <div className="flex justify-end gap-2"><button type="button" onClick={onCancel} className="min-h-11 rounded-xl px-4 text-sm font-semibold">Cancel</button><button disabled={pending} className={primaryButton}>{pending ? "Saving…" : submitLabel}</button></div>;
+}
+
+function RelationshipIntelligenceFields({ contact, contactType }: { contact: GtmContactRow; contactType: string }) {
+  return (
+    <fieldset className="rounded-xl border border-neutral-200 p-3 dark:border-neutral-700">
+      <legend className="px-1 text-sm font-semibold">Relationship Intelligence <span className="font-normal text-neutral-500">(optional)</span></legend>
+      <p className="mt-1 text-xs text-neutral-500">Potential roles are multi-select. The objective is the one current goal.</p>
+      {contactType === "other" && <label className="mt-3 block text-sm font-medium">Contact type clarification<input name="contactTypeOther" defaultValue={contact.contactTypeOther ?? ""} maxLength={240} className={inputClass} /></label>}
+      <div className="mt-3">
+        <p className="text-sm font-medium">Potential roles</p>
+        <div className="mt-2 flex flex-wrap gap-2">{GTM_POTENTIAL_ROLES.map((role) => <label key={role} className="cursor-pointer"><input name="potentialRoles" value={role} type="checkbox" defaultChecked={contact.potentialRoles.includes(role)} className="peer sr-only" /><span className="inline-flex min-h-10 items-center rounded-lg border border-neutral-300 px-3 text-xs font-semibold peer-checked:border-amber-500 peer-checked:bg-amber-50 peer-focus-visible:ring-2 peer-focus-visible:ring-[#ffbb00] dark:border-neutral-700 dark:peer-checked:bg-amber-950/30">{label(role)}</span></label>)}</div>
+      </div>
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <label className="text-sm font-medium">Relationship objective<select name="relationshipObjective" defaultValue={contact.relationshipObjective ?? ""} className={inputClass}><option value="">Not set</option>{GTM_RELATIONSHIP_OBJECTIVES.map((objective) => <option key={objective} value={objective}>{label(objective)}</option>)}</select></label>
+        <label className="text-sm font-medium">Relationship priority<select name="relationshipPriority" defaultValue={contact.relationshipPriority ?? ""} className={inputClass}><option value="">Not set</option>{GTM_RELATIONSHIP_PRIORITIES.map((priority) => <option key={priority} value={priority}>{label(priority)}</option>)}</select></label>
+        <label className="text-sm font-medium sm:col-span-2">Relationship context<textarea name="relationshipContext" defaultValue={contact.relationshipContext ?? ""} rows={3} maxLength={5000} className={textareaClass} /></label>
+      </div>
+    </fieldset>
+  );
 }
 
 function TriState({ name, labelText }: { name: string; labelText: string }) {
@@ -264,6 +286,11 @@ function ActiveGtmContactDrawer({
       email: nullableText(formData, "email"), phone: nullableText(formData, "phone"),
       linkedinUrl: nullableText(formData, "linkedinUrl"), currentCompany: nullableText(formData, "currentCompany"),
       currentTitle: nullableText(formData, "currentTitle"), contactType,
+      contactTypeOther: contactType === "other" ? contact.contactTypeOther : null,
+      potentialRoles: contact.potentialRoles.length ? contact.potentialRoles : null,
+      relationshipObjective: contact.relationshipObjective,
+      relationshipPriority: contact.relationshipPriority,
+      relationshipContext: contact.relationshipContext,
       segment: nullableText(formData, "segment"), sport: nullableText(formData, "sport"),
       leagueLevel: nullableText(formData, "leagueLevel"), geography: nullableText(formData, "geography"),
       relationshipStrength: contactType === "enterprise" ? nullableScore(formData, "relationshipStrength") : null,
@@ -289,11 +316,32 @@ function ActiveGtmContactDrawer({
       onContactUpdate({
         ...contact, ...input,
         id: contact.id,
+        potentialRoles: input.potentialRoles ?? [],
         priorityScore: result.value.priorityScore,
         priorityTier: result.value.priorityTier,
         playerMatch: contactType === "athlete" ? contact.playerMatch : null,
       });
       setMode(null); setNotice("Contact updated.");
+    });
+  }
+
+  function submitRelationshipIntelligence(formData: FormData) {
+    const potentialRoles = formData.getAll("potentialRoles").map(String).filter(Boolean);
+    const input = {
+      contactId: contact.id,
+      contactTypeOther: contact.contactType === "other" ? nullableText(formData, "contactTypeOther") : null,
+      potentialRoles: potentialRoles.length ? potentialRoles : null,
+      relationshipObjective: nullableText(formData, "relationshipObjective"),
+      relationshipPriority: nullableText(formData, "relationshipPriority"),
+      relationshipContext: nullableText(formData, "relationshipContext"),
+    };
+    setPending(true); setNotice(null);
+    startTransition(async () => {
+      const result = await setGtmRelationshipIntelligence(input);
+      setPending(false);
+      if (!result.ok) return setNotice(result.message);
+      onContactUpdate({ ...contact, ...input, potentialRoles });
+      setMode(null); setNotice("Relationship intelligence updated.");
     });
   }
 
@@ -411,9 +459,13 @@ function ActiveGtmContactDrawer({
 
           {mode === "archive" && <div className={formShell}><h3 className="font-semibold text-red-700 dark:text-red-300">Archive contact?</h3><p className="text-sm leading-6 text-neutral-600 dark:text-neutral-300">This removes the contact from active GTM views while preserving notes, interactions, discovery findings, Player linkage, and audit history.</p><div className="flex justify-end gap-2"><button type="button" onClick={() => setMode(null)} className={secondaryButton}>Cancel</button><button type="button" onClick={confirmArchive} disabled={pending} className="inline-flex min-h-11 items-center justify-center rounded-xl bg-red-700 px-4 text-sm font-semibold text-white disabled:opacity-50">{pending ? "Archiving…" : "Archive contact"}</button></div></div>}
 
+          {mode === "relationship" && <form action={submitRelationshipIntelligence} className={formShell}><RelationshipIntelligenceFields contact={contact} contactType={contact.contactType} /><FormActions pending={pending} submitLabel="Save relationship intelligence" onCancel={() => setMode(null)} /></form>}
+
           {mode === "edit" && <form action={submitEdit} className={formShell}><h3 className="font-semibold">Edit Contact</h3><div className="grid gap-3 sm:grid-cols-2"><label className="text-sm font-medium">Display name<input name="displayName" required defaultValue={contact.displayName} maxLength={240} className={inputClass} /></label><label className="text-sm font-medium">Contact type<select value={editContactType} onChange={(event) => setEditContactType(event.target.value)} className={inputClass}>{GTM_CONTACT_TYPES.map((type) => <option key={type} value={type}>{label(type)}</option>)}</select></label><label className="text-sm font-medium">First name<input name="firstName" defaultValue={contact.firstName ?? ""} maxLength={120} className={inputClass} /></label><label className="text-sm font-medium">Last name<input name="lastName" defaultValue={contact.lastName ?? ""} maxLength={120} className={inputClass} /></label><label className="text-sm font-medium">Email<input name="email" type="email" defaultValue={contact.email ?? ""} maxLength={320} className={inputClass} /></label><label className="text-sm font-medium">Phone<input name="phone" defaultValue={contact.phone ?? ""} maxLength={40} className={inputClass} /></label><label className="text-sm font-medium">Company / organization<input name="currentCompany" defaultValue={contact.currentCompany ?? ""} maxLength={200} className={inputClass} /></label><label className="text-sm font-medium">Title<input name="currentTitle" defaultValue={contact.currentTitle ?? ""} maxLength={200} className={inputClass} /></label><label className="text-sm font-medium">Segment<input name="segment" defaultValue={contact.segment ?? ""} maxLength={120} className={inputClass} /></label><label className="text-sm font-medium">Geography<input name="geography" defaultValue={contact.geography ?? ""} maxLength={160} className={inputClass} /></label><label className="text-sm font-medium">Sport<input name="sport" defaultValue={contact.sport ?? ""} maxLength={80} className={inputClass} /></label><label className="text-sm font-medium">League / level<input name="leagueLevel" defaultValue={contact.leagueLevel ?? ""} maxLength={80} className={inputClass} /></label><label className="text-sm font-medium sm:col-span-2">LinkedIn URL<input name="linkedinUrl" type="url" defaultValue={contact.linkedinUrl ?? ""} maxLength={500} className={inputClass} /></label></div>{editContactType === "enterprise" && <fieldset className="rounded-xl border border-neutral-200 p-3 dark:border-neutral-700"><legend className="px-1 text-sm font-semibold">Enterprise priority scoring <span className="font-normal text-neutral-500">(0–5 each)</span></legend><div className="grid gap-3 sm:grid-cols-2">{[["Relationship Strength", "relationshipStrength", contact.relationshipStrength], ["BLTZ Relevance", "bltzRelevance", contact.bltzRelevance], ["Buying Authority", "buyingAuthority", contact.buyingAuthority], ["Network Leverage", "networkLeverage", contact.networkLeverage], ["Timing", "timingScore", contact.timingScore]].map(([text, name, value]) => <label key={String(name)} className="text-sm font-medium">{text}<select name={String(name)} defaultValue={value == null ? "" : String(value)} className={inputClass}><option value="">Not scored</option>{[0, 1, 2, 3, 4, 5].map((score) => <option key={score} value={score}>{score}</option>)}</select></label>)}</div></fieldset>}{editContactType === "investor" && <fieldset className="rounded-xl border border-neutral-200 p-3 dark:border-neutral-700"><legend className="px-1 text-sm font-semibold">Investor context</legend><div className="grid gap-3 sm:grid-cols-2"><label className="text-sm font-medium">Investor type<select name="investorType" defaultValue={contact.investorType ?? ""} className={inputClass}><option value="">Not classified</option>{GTM_INVESTOR_TYPES.map((type) => <option key={type} value={type}>{label(type)}</option>)}</select></label><label className="text-sm font-medium">Relationship stage<select name="investorRelationshipStage" defaultValue={contact.investorRelationshipStage ?? ""} className={inputClass}><option value="">Not classified</option>{GTM_INVESTOR_RELATIONSHIP_STAGES.map((stage) => <option key={stage} value={stage}>{label(stage)}</option>)}</select></label><label className="text-sm font-medium sm:col-span-2">What they need to see<textarea name="whatTheyNeedToSee" defaultValue={contact.whatTheyNeedToSee ?? ""} rows={2} maxLength={10000} className={textareaClass} /></label><label className="text-sm font-medium sm:col-span-2">Investor thesis feedback<textarea name="investorThesisFeedback" defaultValue={contact.investorThesisFeedback ?? ""} rows={2} maxLength={10000} className={textareaClass} /></label><label className="text-sm font-medium">Historical signal<textarea name="historicalSignal" defaultValue={contact.historicalSignal ?? ""} rows={2} maxLength={5000} className={textareaClass} /></label><label className="text-sm font-medium">Future trigger<textarea name="futureTrigger" defaultValue={contact.futureTrigger ?? ""} rows={2} maxLength={2000} className={textareaClass} /></label><label className="text-sm font-medium">Prior outcome<textarea name="priorOutcome" defaultValue={contact.priorOutcome ?? ""} rows={2} maxLength={5000} className={textareaClass} /></label><label className="text-sm font-medium">Relationship source<input name="relationshipSource" defaultValue={contact.relationshipSource ?? ""} maxLength={1000} className={inputClass} /></label></div></fieldset>}<label className="flex min-h-11 items-center gap-3 rounded-xl border border-neutral-200 px-3 text-sm dark:border-neutral-700"><input name="doNotAutomate" type="checkbox" defaultChecked={contact.doNotAutomate} /><span><span className="font-semibold">Do not automate</span><span className="block text-xs text-neutral-500">Manual outreach only.</span></span></label><FormActions pending={pending} submitLabel="Save contact" onCancel={() => setMode(null)} /></form>}
 
           <section className="mt-8 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-neutral-200 bg-neutral-200 dark:border-neutral-800 dark:bg-neutral-800" aria-label="Contact summary">{[["Contact type", label(contact.contactType)], ["Segment", contact.segment ?? "Not classified"], ["Priority", contact.priorityScore == null ? (contact.isPriority ? "Marked priority" : "Not scored") : `${contact.priorityScore} · Tier ${contact.priorityTier ?? "?"}`], ["Pipeline stage", label(contact.pipelineStage)], ["Last interaction", formatDate(contact.lastInteractionAt)], ["Next action", contact.nextAction ?? "Not assigned"], ["Due", formatDate(contact.nextActionAt)], ["Next trigger", contact.nextTrigger ?? "Not assigned"], ["Automation", contact.doNotAutomate ? "Protected: do not automate" : "Manual outreach eligible"], ["Geography", contact.geography ?? "Not recorded"]].map(([term, value]) => <div key={term} className="bg-white p-4 dark:bg-neutral-900"><dt className="text-[11px] font-semibold uppercase tracking-[0.1em] text-neutral-500">{term}</dt><dd className="mt-1 text-sm font-medium">{value}</dd></div>)}</section>
+
+          <section className="mt-8 rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900" aria-labelledby="relationship-intelligence-heading"><div className="flex items-center justify-between gap-3"><div><h3 id="relationship-intelligence-heading" className="text-lg font-semibold">Relationship Intelligence</h3><p className="mt-1 text-xs text-neutral-500">Why this relationship matters to BLTZ right now.</p></div><button type="button" onClick={() => openMode("relationship")} className="min-h-11 rounded-xl px-3 text-sm font-semibold underline-offset-4 hover:underline">Edit</button></div><dl className="mt-4 grid gap-3 sm:grid-cols-3"><div><dt className="text-xs text-neutral-500">Contact type</dt><dd className="mt-1 text-sm font-semibold">{contact.contactType === "other" && contact.contactTypeOther ? contact.contactTypeOther : label(contact.contactType)}</dd></div><div><dt className="text-xs text-neutral-500">Current objective</dt><dd className="mt-1 text-sm font-semibold">{label(contact.relationshipObjective)}</dd></div><div><dt className="text-xs text-neutral-500">Relationship priority</dt><dd className="mt-1 text-sm font-semibold">{label(contact.relationshipPriority)}</dd></div></dl><div className="mt-4"><p className="text-xs text-neutral-500">Potential roles</p>{contact.potentialRoles.length ? <div className="mt-2 flex flex-wrap gap-2">{contact.potentialRoles.map((role) => <StatusBadge key={role} value={role} />)}</div> : <p className="mt-1 text-sm font-medium">Not recorded</p>}</div><div className="mt-4"><p className="text-xs text-neutral-500">Relationship context</p><p className="mt-1 whitespace-pre-wrap text-sm leading-6">{contact.relationshipContext ?? "Not recorded"}</p></div></section>
 
           {contact.contactType === "investor" && <section className="mt-8"><h3 className="text-lg font-semibold">Investor context</h3><dl className="mt-3 grid gap-3 sm:grid-cols-2">{[["Investor type", label(contact.investorType)], ["Relationship stage", label(contact.investorRelationshipStage)], ["What they need to see", contact.whatTheyNeedToSee], ["Thesis feedback", contact.investorThesisFeedback], ["Historical signal", contact.historicalSignal], ["Future trigger", contact.futureTrigger], ["Prior outcome", contact.priorOutcome], ["Relationship source", contact.relationshipSource]].map(([term, value]) => <div key={term} className="rounded-xl border border-neutral-200 bg-white p-3 dark:border-neutral-800 dark:bg-neutral-900"><dt className="text-xs text-neutral-500">{term}</dt><dd className="mt-1 whitespace-pre-wrap text-sm font-medium">{value || "Not recorded"}</dd></div>)}</dl></section>}
 

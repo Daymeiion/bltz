@@ -14,6 +14,9 @@ import {
   GTM_PIPELINE_STAGES,
   GTM_INVESTOR_RELATIONSHIP_STAGES,
   GTM_INVESTOR_TYPES,
+  GTM_POTENTIAL_ROLES,
+  GTM_RELATIONSHIP_OBJECTIVES,
+  GTM_RELATIONSHIP_PRIORITIES,
 } from "@/lib/gtm/types";
 import { requireInternalAdmin } from "@/lib/rbac";
 import { createClient } from "@/lib/supabase/server";
@@ -56,6 +59,13 @@ const editContactSchema = z.object({
   currentCompany: nullableText(200),
   currentTitle: nullableText(200),
   contactType: z.enum(GTM_CONTACT_TYPES),
+  contactTypeOther: nullableText(240),
+  potentialRoles: z.array(z.enum(GTM_POTENTIAL_ROLES)).max(20)
+    .refine((values) => new Set(values).size === values.length, "Choose each potential role once.")
+    .nullable(),
+  relationshipObjective: z.enum(GTM_RELATIONSHIP_OBJECTIVES).nullable(),
+  relationshipPriority: z.enum(GTM_RELATIONSHIP_PRIORITIES).nullable(),
+  relationshipContext: nullableText(5000),
   segment: nullableText(120),
   sport: nullableText(80),
   leagueLevel: nullableText(80),
@@ -83,6 +93,9 @@ const editContactSchema = z.object({
   if (value.contactType !== "investor" && investorFields.some((field) => field !== null)) {
     context.addIssue({ code: "custom", message: "Investor fields require an investor contact." });
   }
+  if (value.contactType !== "other" && value.contactTypeOther !== null) {
+    context.addIssue({ code: "custom", message: "Other contact clarification requires the Other contact type." });
+  }
 });
 
 const nextActionSchema = z.object({
@@ -92,6 +105,17 @@ const nextActionSchema = z.object({
   nextTrigger: nullableText(2000),
 }).superRefine((value, context) => {
   if (value.nextActionAt && !value.nextAction) context.addIssue({ code: "custom", message: "Enter a next action before assigning a date." });
+});
+
+const relationshipIntelligenceSchema = z.object({
+  contactId: z.string().uuid(),
+  contactTypeOther: nullableText(240),
+  potentialRoles: z.array(z.enum(GTM_POTENTIAL_ROLES)).max(20)
+    .refine((values) => new Set(values).size === values.length, "Choose each potential role once.")
+    .nullable(),
+  relationshipObjective: z.enum(GTM_RELATIONSHIP_OBJECTIVES).nullable(),
+  relationshipPriority: z.enum(GTM_RELATIONSHIP_PRIORITIES).nullable(),
+  relationshipContext: nullableText(5000),
 });
 
 const discoverySchema = z.object({
@@ -126,6 +150,13 @@ const createContactSchema = z.object({
   currentCompany: z.string().trim().max(200).nullable(),
   currentTitle: z.string().trim().max(200).nullable(),
   contactType: z.enum(GTM_CONTACT_TYPES),
+  contactTypeOther: z.string().trim().max(240).nullable().default(null),
+  potentialRoles: z.array(z.enum(GTM_POTENTIAL_ROLES)).max(20)
+    .refine((values) => new Set(values).size === values.length, "Choose each potential role once.")
+    .nullable().default(null),
+  relationshipObjective: z.enum(GTM_RELATIONSHIP_OBJECTIVES).nullable().default(null),
+  relationshipPriority: z.enum(GTM_RELATIONSHIP_PRIORITIES).nullable().default(null),
+  relationshipContext: z.string().trim().max(5000).nullable().default(null),
   sport: z.string().trim().max(80).nullable(),
   leagueLevel: z.string().trim().max(80).nullable(),
   doNotAutomate: z.boolean(),
@@ -151,6 +182,9 @@ const createContactSchema = z.object({
   ];
   if (value.contactType !== "investor" && investorFields.some((field) => field !== null)) {
     context.addIssue({ code: "custom", message: "Investor fields require an investor contact." });
+  }
+  if (value.contactType !== "other" && value.contactTypeOther !== null) {
+    context.addIssue({ code: "custom", message: "Other contact clarification requires the Other contact type." });
   }
 });
 
@@ -219,7 +253,7 @@ async function readCsv(formData: FormData) {
   const file = formData.get("file");
   if (!(file instanceof File) || !file.name.toLowerCase().endsWith(".csv")) throw new Error("Choose a CSV file.");
   if (file.type && !["text/csv", "application/csv", "application/vnd.ms-excel"].includes(file.type)) throw new Error("Choose a CSV file.");
-  if (file.size > GTM_CSV_MAX_BYTES) throw new Error("CSV files must be smaller than 750 KB.");
+  if (file.size > GTM_CSV_MAX_BYTES) throw new Error("CSV files must be smaller than 2 MB.");
   return { file, parsed: parseGtmCsv(Buffer.from(await file.arrayBuffer()), parseMapping(formData.get("mapping"))) };
 }
 
@@ -415,7 +449,7 @@ export async function createGtmContact(input: unknown): Promise<GtmMutationResul
 
   const gtm = authorization.supabase as unknown as SupabaseClient;
   const value = parsed.data;
-  const { data, error } = await gtm.rpc("create_gtm_contact_v2", {
+  const { data, error } = await gtm.rpc("create_gtm_contact_v3", {
     p_display_name: value.displayName,
     p_first_name: value.firstName,
     p_last_name: value.lastName,
@@ -437,6 +471,11 @@ export async function createGtmContact(input: unknown): Promise<GtmMutationResul
     p_prior_outcome: value.priorOutcome,
     p_relationship_source: value.relationshipSource,
     p_next_trigger: value.nextTrigger,
+    p_contact_type_other: value.contactType === "other" ? value.contactTypeOther : null,
+    p_potential_roles: value.potentialRoles,
+    p_relationship_objective: value.relationshipObjective,
+    p_relationship_priority: value.relationshipPriority,
+    p_relationship_context: value.relationshipContext,
   });
   if (error || !data) {
     const unavailable = error?.code === "42883" || error?.code === "PGRST202";
@@ -459,7 +498,7 @@ export async function editGtmContact(input: unknown): Promise<GtmMutationResult<
 
   const value = parsed.data;
   const gtm = authorization.supabase as unknown as SupabaseClient;
-  const { data, error } = await gtm.rpc("update_gtm_contact_v1", {
+  const { data, error } = await gtm.rpc("update_gtm_contact_v2", {
     p_contact_id: value.contactId,
     p_display_name: value.displayName,
     p_first_name: value.firstName,
@@ -488,6 +527,11 @@ export async function editGtmContact(input: unknown): Promise<GtmMutationResult<
     p_future_trigger: value.contactType === "investor" ? value.futureTrigger : null,
     p_prior_outcome: value.contactType === "investor" ? value.priorOutcome : null,
     p_relationship_source: value.contactType === "investor" ? value.relationshipSource : null,
+    p_contact_type_other: value.contactType === "other" ? value.contactTypeOther : null,
+    p_potential_roles: value.potentialRoles,
+    p_relationship_objective: value.relationshipObjective,
+    p_relationship_priority: value.relationshipPriority,
+    p_relationship_context: value.relationshipContext,
   });
   if (error || !data) {
     const duplicate = error?.code === "23505";
@@ -511,6 +555,18 @@ async function updateContactWorkflow(contactId: string, patch: Record<string, un
   if (error || !data) return { ok: false, code: "failed", message: "The contact workflow could not be updated. Refresh and try again." };
   refreshGtmPaths();
   return { ok: true, value: { id: String(data.id) } };
+}
+
+export async function setGtmRelationshipIntelligence(input: unknown): Promise<GtmMutationResult<{ id: string }>> {
+  const parsed = relationshipIntelligenceSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, code: "invalid", message: parsed.error.issues[0]?.message ?? "Review the relationship details." };
+  return updateContactWorkflow(parsed.data.contactId, {
+    contact_type_other: parsed.data.contactTypeOther,
+    potential_roles: parsed.data.potentialRoles,
+    relationship_objective: parsed.data.relationshipObjective,
+    relationship_priority: parsed.data.relationshipPriority,
+    relationship_context: parsed.data.relationshipContext,
+  });
 }
 
 export async function setGtmPipelineStage(input: unknown): Promise<GtmMutationResult<{ id: string }>> {
@@ -702,13 +758,17 @@ export async function previewGtmCsv(formData: FormData): Promise<GtmMutationResu
       invalid: parsed.issues.length,
     };
     const previewSummary = { valid: create + update, invalid: counts.invalid, duplicates: counts.duplicate, potentialMatches: reviews.length };
-    const { error: prepareError } = await gtm.rpc("prepare_gtm_import_job", {
+    const previewRows = parsed.rows
+      .filter((row) => outcomes.get(row.sourceRecordId) !== "skip")
+      .map(({ rowNumber: _rowNumber, ...row }) => row);
+    const { error: prepareError } = await gtm.rpc("prepare_gtm_import_job_v2", {
       p_filename: file.name,
       p_import_type: "linkedin_connections",
       p_content_sha256: parsed.contentSha256,
       p_idempotency_key: idempotencyKey,
       p_field_mapping: mapping,
       p_preview_summary: previewSummary,
+      p_rows: previewRows,
       p_rows_found: counts.found,
       p_rows_duplicated: counts.duplicate,
       p_rows_failed: counts.invalid,
@@ -754,6 +814,11 @@ export async function commitGtmCsv(formData: FormData): Promise<GtmMutationResul
     const mapping = { ...parsed.suggestedMapping, ...parseMapping(formData.get("mapping")) };
     const previewSummary = { valid: accepted.length, invalid: parsed.issues.length, duplicates: parsed.duplicateCount + collisionCount, potentialMatches: playerReviews.size };
     const matchDecisions = parsePlayerMatchDecisions(formData.get("playerMatchDecisions"));
+    for (const review of playerReviews.values()) {
+      if (review.strength !== "strong" && !matchDecisions.has(review.sourceRecordId)) {
+        throw new Error(`Review or reject the possible Player match for ${review.displayName} before importing.`);
+      }
+    }
     const { data, error } = await gtm.rpc("import_gtm_contacts", {
       p_filename: file.name,
       p_content_sha256: parsed.contentSha256,

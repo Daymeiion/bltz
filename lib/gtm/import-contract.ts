@@ -1,7 +1,7 @@
 import type { GtmContactType } from "@/lib/gtm/types";
 
-export const GTM_CSV_MAX_BYTES = 750_000;
-export const GTM_CSV_MAX_ROWS = 2_000;
+export const GTM_CSV_MAX_BYTES = 2_000_000;
+export const GTM_CSV_MAX_ROWS = 10_000;
 
 export const GTM_IMPORT_FIELDS = [
   "displayName", "firstName", "lastName", "email", "linkedinUrl",

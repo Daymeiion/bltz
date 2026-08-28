@@ -1,6 +1,6 @@
 "use client";
 
-import { IconAddressBook, IconChartDots3, IconFileUpload } from "@tabler/icons-react";
+import { IconAddressBook, IconChartDots3, IconFileUpload, IconUsersGroup } from "@tabler/icons-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 const items = [
   { href: "/admin/gtm", label: "Overview", icon: IconChartDots3 },
   { href: "/admin/gtm/contacts", label: "Contacts", icon: IconAddressBook },
+  { href: "/admin/gtm/players", label: "Players", icon: IconUsersGroup },
   { href: "/admin/gtm/imports", label: "Imports", icon: IconFileUpload },
 ] as const;
 

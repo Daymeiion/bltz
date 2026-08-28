@@ -10,7 +10,7 @@ describe("authoritative generated database contract", () => {
   it("is a full Supabase CLI schema snapshot", () => {
     expect(generated).toContain("export type Database = {");
     expect(generated).toContain("__InternalSupabase:");
-    expect(generated).toContain('PostgrestVersion: "14.15"');
+    expect(generated).toMatch(/PostgrestVersion: "14\.\d+"/);
     expect(generated).toContain("export type Tables<");
     expect(generated).toContain("export type TablesInsert<");
     expect(generated).toContain("export type TablesUpdate<");

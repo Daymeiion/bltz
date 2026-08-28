@@ -7,11 +7,10 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Preserve the deployed PostgREST compatibility metadata. Local generation
-  // does not emit this block, but the application client uses the staging
-  // version to select the correct PostgREST typing behavior.
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.15"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -1314,6 +1313,7 @@ export type Database = {
           bltz_relevance: number | null
           buying_authority: number | null
           contact_type: string
+          contact_type_other: string | null
           created_at: string
           created_by: string
           current_company: string | null
@@ -1343,10 +1343,14 @@ export type Database = {
           organization_id: string | null
           phone: string | null
           pipeline_stage: string
+          potential_roles: string[] | null
           prior_outcome: string | null
           priority_model: string | null
           priority_score: number | null
           priority_tier: string | null
+          relationship_context: string | null
+          relationship_objective: string | null
+          relationship_priority: string | null
           relationship_source: string | null
           relationship_strength: number | null
           segment: string | null
@@ -1363,6 +1367,7 @@ export type Database = {
           bltz_relevance?: number | null
           buying_authority?: number | null
           contact_type?: string
+          contact_type_other?: string | null
           created_at?: string
           created_by: string
           current_company?: string | null
@@ -1392,10 +1397,14 @@ export type Database = {
           organization_id?: string | null
           phone?: string | null
           pipeline_stage?: string
+          potential_roles?: string[] | null
           prior_outcome?: string | null
           priority_model?: string | null
           priority_score?: number | null
           priority_tier?: string | null
+          relationship_context?: string | null
+          relationship_objective?: string | null
+          relationship_priority?: string | null
           relationship_source?: string | null
           relationship_strength?: number | null
           segment?: string | null
@@ -1412,6 +1421,7 @@ export type Database = {
           bltz_relevance?: number | null
           buying_authority?: number | null
           contact_type?: string
+          contact_type_other?: string | null
           created_at?: string
           created_by?: string
           current_company?: string | null
@@ -1441,10 +1451,14 @@ export type Database = {
           organization_id?: string | null
           phone?: string | null
           pipeline_stage?: string
+          potential_roles?: string[] | null
           prior_outcome?: string | null
           priority_model?: string | null
           priority_score?: number | null
           priority_tier?: string | null
+          relationship_context?: string | null
+          relationship_objective?: string | null
+          relationship_priority?: string | null
           relationship_source?: string | null
           relationship_strength?: number | null
           segment?: string | null
@@ -1582,6 +1596,7 @@ export type Database = {
           rows_duplicated: number
           rows_failed: number
           rows_found: number
+          rows_sha256: string | null
           rows_updated: number
           started_at: string | null
           status: string
@@ -1606,6 +1621,7 @@ export type Database = {
           rows_duplicated?: number
           rows_failed?: number
           rows_found?: number
+          rows_sha256?: string | null
           rows_updated?: number
           started_at?: string | null
           status?: string
@@ -1630,6 +1646,7 @@ export type Database = {
           rows_duplicated?: number
           rows_failed?: number
           rows_found?: number
+          rows_sha256?: string | null
           rows_updated?: number
           started_at?: string | null
           status?: string
@@ -1915,6 +1932,41 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "schools"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      gtm_player_prospects: {
+        Row: {
+          archived: boolean
+          archived_at: string | null
+          archived_by: string | null
+          gsis_id: string
+          selected_at: string
+          selected_by: string
+        }
+        Insert: {
+          archived?: boolean
+          archived_at?: string | null
+          archived_by?: string | null
+          gsis_id: string
+          selected_at?: string
+          selected_by: string
+        }
+        Update: {
+          archived?: boolean
+          archived_at?: string | null
+          archived_by?: string | null
+          gsis_id?: string
+          selected_at?: string
+          selected_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gtm_player_prospects_gsis_id_fkey"
+            columns: ["gsis_id"]
+            isOneToOne: true
+            referencedRelation: "nfl_players"
+            referencedColumns: ["gsis_id"]
           },
         ]
       }
@@ -4535,6 +4587,7 @@ export type Database = {
           bltz_relevance: number | null
           buying_authority: number | null
           contact_type: string
+          contact_type_other: string | null
           created_at: string
           created_by: string
           current_company: string | null
@@ -4564,10 +4617,14 @@ export type Database = {
           organization_id: string | null
           phone: string | null
           pipeline_stage: string
+          potential_roles: string[] | null
           prior_outcome: string | null
           priority_model: string | null
           priority_score: number | null
           priority_tier: string | null
+          relationship_context: string | null
+          relationship_objective: string | null
+          relationship_priority: string | null
           relationship_source: string | null
           relationship_strength: number | null
           segment: string | null
@@ -4615,6 +4672,7 @@ export type Database = {
           bltz_relevance: number | null
           buying_authority: number | null
           contact_type: string
+          contact_type_other: string | null
           created_at: string
           created_by: string
           current_company: string | null
@@ -4644,10 +4702,104 @@ export type Database = {
           organization_id: string | null
           phone: string | null
           pipeline_stage: string
+          potential_roles: string[] | null
           prior_outcome: string | null
           priority_model: string | null
           priority_score: number | null
           priority_tier: string | null
+          relationship_context: string | null
+          relationship_objective: string | null
+          relationship_priority: string | null
+          relationship_source: string | null
+          relationship_strength: number | null
+          segment: string | null
+          source: string | null
+          source_record_id: string | null
+          sport: string | null
+          timing_score: number | null
+          updated_at: string
+          updated_by: string | null
+          what_they_need_to_see: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "gtm_contacts"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      create_gtm_contact_v3: {
+        Args: {
+          p_contact_type?: string
+          p_contact_type_other?: string
+          p_current_company?: string
+          p_current_title?: string
+          p_display_name: string
+          p_do_not_automate?: boolean
+          p_email?: string
+          p_first_name?: string
+          p_future_trigger?: string
+          p_historical_signal?: string
+          p_investor_relationship_stage?: string
+          p_investor_thesis_feedback?: string
+          p_investor_type?: string
+          p_last_name?: string
+          p_league_level?: string
+          p_linkedin_url?: string
+          p_next_trigger?: string
+          p_player_id?: string
+          p_potential_roles?: string[]
+          p_prior_outcome?: string
+          p_relationship_context?: string
+          p_relationship_objective?: string
+          p_relationship_priority?: string
+          p_relationship_source?: string
+          p_sport?: string
+          p_what_they_need_to_see?: string
+        }
+        Returns: {
+          archived: boolean
+          bltz_relevance: number | null
+          buying_authority: number | null
+          contact_type: string
+          contact_type_other: string | null
+          created_at: string
+          created_by: string
+          current_company: string | null
+          current_title: string | null
+          display_name: string
+          do_not_automate: boolean
+          email: string | null
+          first_name: string | null
+          future_trigger: string | null
+          geography: string | null
+          historical_signal: string | null
+          id: string
+          introduction_potential: number | null
+          investor_relationship_stage: string | null
+          investor_thesis_feedback: string | null
+          investor_type: string | null
+          is_priority: boolean
+          last_interaction_at: string | null
+          last_name: string | null
+          league_level: string | null
+          linkedin_connected_on: string | null
+          linkedin_url: string | null
+          network_leverage: number | null
+          next_action: string | null
+          next_action_at: string | null
+          next_trigger: string | null
+          organization_id: string | null
+          phone: string | null
+          pipeline_stage: string
+          potential_roles: string[] | null
+          prior_outcome: string | null
+          priority_model: string | null
+          priority_score: number | null
+          priority_tier: string | null
+          relationship_context: string | null
+          relationship_objective: string | null
+          relationship_priority: string | null
           relationship_source: string | null
           relationship_strength: number | null
           segment: string | null
@@ -4729,6 +4881,7 @@ export type Database = {
       }
       get_gtm_foundation_metrics: { Args: { p_since?: string }; Returns: Json }
       get_gtm_metrics_v1: { Args: { p_since?: string }; Returns: Json }
+      gtm_import_rows_sha256: { Args: { p_rows: Json }; Returns: string }
       import_gtm_contacts: {
         Args: {
           p_content_sha256: string
@@ -4758,6 +4911,7 @@ export type Database = {
           rows_duplicated: number
           rows_failed: number
           rows_found: number
+          rows_sha256: string | null
           rows_updated: number
           started_at: string | null
           status: string
@@ -4941,6 +5095,53 @@ export type Database = {
           rows_duplicated: number
           rows_failed: number
           rows_found: number
+          rows_sha256: string | null
+          rows_updated: number
+          started_at: string | null
+          status: string
+          updated_at: string
+          uploaded_by: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "gtm_import_jobs"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      prepare_gtm_import_job_v2: {
+        Args: {
+          p_content_sha256: string
+          p_field_mapping: Json
+          p_filename: string
+          p_idempotency_key: string
+          p_import_type: string
+          p_potential_matches?: number
+          p_preview_summary: Json
+          p_rows: Json
+          p_rows_duplicated?: number
+          p_rows_failed?: number
+          p_rows_found: number
+        }
+        Returns: {
+          approved_at: string | null
+          approved_by: string | null
+          completed_at: string | null
+          content_sha256: string
+          created_at: string
+          error_summary: string | null
+          field_mapping: Json
+          filename: string
+          id: string
+          idempotency_key: string
+          import_type: string
+          potential_matches: number
+          preview_summary: Json
+          rows_created: number
+          rows_duplicated: number
+          rows_failed: number
+          rows_found: number
+          rows_sha256: string | null
           rows_updated: number
           started_at: string | null
           status: string
@@ -5003,6 +5204,7 @@ export type Database = {
           bltz_relevance: number | null
           buying_authority: number | null
           contact_type: string
+          contact_type_other: string | null
           created_at: string
           created_by: string
           current_company: string | null
@@ -5032,10 +5234,111 @@ export type Database = {
           organization_id: string | null
           phone: string | null
           pipeline_stage: string
+          potential_roles: string[] | null
           prior_outcome: string | null
           priority_model: string | null
           priority_score: number | null
           priority_tier: string | null
+          relationship_context: string | null
+          relationship_objective: string | null
+          relationship_priority: string | null
+          relationship_source: string | null
+          relationship_strength: number | null
+          segment: string | null
+          source: string | null
+          source_record_id: string | null
+          sport: string | null
+          timing_score: number | null
+          updated_at: string
+          updated_by: string | null
+          what_they_need_to_see: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "gtm_contacts"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      update_gtm_contact_v2: {
+        Args: {
+          p_bltz_relevance: number
+          p_buying_authority: number
+          p_contact_id: string
+          p_contact_type: string
+          p_contact_type_other: string
+          p_current_company: string
+          p_current_title: string
+          p_display_name: string
+          p_do_not_automate: boolean
+          p_email: string
+          p_first_name: string
+          p_future_trigger: string
+          p_geography: string
+          p_historical_signal: string
+          p_investor_relationship_stage: string
+          p_investor_thesis_feedback: string
+          p_investor_type: string
+          p_last_name: string
+          p_league_level: string
+          p_linkedin_url: string
+          p_network_leverage: number
+          p_phone: string
+          p_potential_roles: string[]
+          p_prior_outcome: string
+          p_relationship_context: string
+          p_relationship_objective: string
+          p_relationship_priority: string
+          p_relationship_source: string
+          p_relationship_strength: number
+          p_segment: string
+          p_sport: string
+          p_timing_score: number
+          p_what_they_need_to_see: string
+        }
+        Returns: {
+          archived: boolean
+          bltz_relevance: number | null
+          buying_authority: number | null
+          contact_type: string
+          contact_type_other: string | null
+          created_at: string
+          created_by: string
+          current_company: string | null
+          current_title: string | null
+          display_name: string
+          do_not_automate: boolean
+          email: string | null
+          first_name: string | null
+          future_trigger: string | null
+          geography: string | null
+          historical_signal: string | null
+          id: string
+          introduction_potential: number | null
+          investor_relationship_stage: string | null
+          investor_thesis_feedback: string | null
+          investor_type: string | null
+          is_priority: boolean
+          last_interaction_at: string | null
+          last_name: string | null
+          league_level: string | null
+          linkedin_connected_on: string | null
+          linkedin_url: string | null
+          network_leverage: number | null
+          next_action: string | null
+          next_action_at: string | null
+          next_trigger: string | null
+          organization_id: string | null
+          phone: string | null
+          pipeline_stage: string
+          potential_roles: string[] | null
+          prior_outcome: string | null
+          priority_model: string | null
+          priority_score: number | null
+          priority_tier: string | null
+          relationship_context: string | null
+          relationship_objective: string | null
+          relationship_priority: string | null
           relationship_source: string | null
           relationship_strength: number | null
           segment: string | null

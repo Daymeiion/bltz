@@ -1,7 +1,7 @@
 "use client";
 
 import * as Dialog from "@radix-ui/react-dialog";
-import { IconFileUpload, IconSearch, IconUserPlus, IconX } from "@tabler/icons-react";
+import { IconFileUpload, IconSearch, IconUserPlus, IconUsersGroup, IconX } from "@tabler/icons-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { startTransition, useState } from "react";
@@ -10,7 +10,14 @@ import {
   searchGtmPlayers,
   type GtmPlayerOption,
 } from "@/app/admin/gtm/actions";
-import { GTM_INVESTOR_RELATIONSHIP_STAGES, GTM_INVESTOR_TYPES } from "@/lib/gtm/types";
+import {
+  GTM_CONTACT_TYPES,
+  GTM_INVESTOR_RELATIONSHIP_STAGES,
+  GTM_INVESTOR_TYPES,
+  GTM_POTENTIAL_ROLES,
+  GTM_RELATIONSHIP_OBJECTIVES,
+  GTM_RELATIONSHIP_PRIORITIES,
+} from "@/lib/gtm/types";
 
 const inputClass = "mt-2 min-h-11 w-full rounded-xl border border-neutral-300 bg-white px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ffbb00] dark:border-neutral-700 dark:bg-neutral-950";
 const secondaryButton = "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-neutral-300 bg-white px-4 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ffbb00] disabled:opacity-50 dark:border-neutral-700 dark:bg-neutral-950";
@@ -31,7 +38,6 @@ function ModalShell({ children, title, description }: { children: React.ReactNod
     </Dialog.Portal>
   );
 }
-
 function AddContactDialog({ onComplete }: { onComplete: () => void }) {
   const [open, setOpen] = useState(false);
   const [contactType, setContactType] = useState("unclassified");
@@ -51,6 +57,7 @@ function AddContactDialog({ onComplete }: { onComplete: () => void }) {
   };
 
   const submit = (formData: FormData) => {
+    const potentialRoles = formData.getAll("potentialRoles").map(String).filter(Boolean);
     setPending(true);
     setNotice(null);
     startTransition(async () => {
@@ -63,6 +70,11 @@ function AddContactDialog({ onComplete }: { onComplete: () => void }) {
         currentCompany: String(formData.get("currentCompany") ?? "").trim() || null,
         currentTitle: String(formData.get("currentTitle") ?? "").trim() || null,
         contactType,
+        contactTypeOther: String(formData.get("contactTypeOther") ?? "").trim() || null,
+        potentialRoles: potentialRoles.length ? potentialRoles : null,
+        relationshipObjective: String(formData.get("relationshipObjective") ?? "").trim() || null,
+        relationshipPriority: String(formData.get("relationshipPriority") ?? "").trim() || null,
+        relationshipContext: String(formData.get("relationshipContext") ?? "").trim() || null,
         sport: String(formData.get("sport") ?? "").trim() || null,
         leagueLevel: String(formData.get("leagueLevel") ?? "").trim() || null,
         doNotAutomate: formData.get("doNotAutomate") === "on",
@@ -94,7 +106,7 @@ function AddContactDialog({ onComplete }: { onComplete: () => void }) {
           {notice && <p role="alert" className="rounded-xl border border-neutral-300 bg-white px-4 py-3 text-sm dark:border-neutral-700 dark:bg-neutral-900">{notice}</p>}
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="text-sm font-medium">Display name<input name="displayName" required maxLength={240} className={inputClass} /></label>
-            <label className="text-sm font-medium">Contact type<select value={contactType} onChange={(event) => { setContactType(event.target.value); if (event.target.value !== "athlete") setSelectedPlayer(null); }} className={inputClass}><option value="unclassified">Unclassified</option><option value="enterprise">Enterprise</option><option value="athlete">Athlete / player</option><option value="multiplier">Multiplier</option><option value="investor">Investor</option></select></label>
+            <label className="text-sm font-medium">Contact type<select value={contactType} onChange={(event) => { setContactType(event.target.value); if (event.target.value !== "athlete") setSelectedPlayer(null); }} className={inputClass}>{GTM_CONTACT_TYPES.map((type) => <option key={type} value={type}>{type.replaceAll("_", " ")}</option>)}</select></label>
             <label className="text-sm font-medium">First name<input name="firstName" maxLength={120} className={inputClass} /></label>
             <label className="text-sm font-medium">Last name<input name="lastName" maxLength={120} className={inputClass} /></label>
             <label className="text-sm font-medium">Email<input name="email" type="email" maxLength={320} className={inputClass} /></label>
@@ -104,6 +116,21 @@ function AddContactDialog({ onComplete }: { onComplete: () => void }) {
             <label className="text-sm font-medium">Sport<input name="sport" maxLength={80} className={inputClass} /></label>
             <label className="text-sm font-medium">League / level<input name="leagueLevel" maxLength={80} className={inputClass} /></label>
           </div>
+
+          <fieldset className="rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+            <legend className="px-1 text-sm font-semibold">Relationship Intelligence <span className="font-normal text-neutral-500">(optional)</span></legend>
+            <p className="mt-1 text-xs text-neutral-500">Keep who they are, how they could help, and the current objective distinct.</p>
+            {contactType === "other" && <label className="mt-3 block text-sm font-medium">Contact type clarification<input name="contactTypeOther" maxLength={240} className={inputClass} /></label>}
+            <div className="mt-4">
+              <p className="text-sm font-medium">Potential roles</p>
+              <div className="mt-2 flex flex-wrap gap-2">{GTM_POTENTIAL_ROLES.map((role) => <label key={role} className="cursor-pointer"><input name="potentialRoles" value={role} type="checkbox" className="peer sr-only" /><span className="inline-flex min-h-10 items-center rounded-lg border border-neutral-300 px-3 text-xs font-semibold capitalize peer-checked:border-amber-500 peer-checked:bg-amber-50 peer-focus-visible:ring-2 peer-focus-visible:ring-[#ffbb00] dark:border-neutral-700 dark:peer-checked:bg-amber-950/30">{role.replaceAll("_", " ")}</span></label>)}</div>
+            </div>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <label className="text-sm font-medium">Current objective<select name="relationshipObjective" className={inputClass}><option value="">Not set</option>{GTM_RELATIONSHIP_OBJECTIVES.map((objective) => <option key={objective} value={objective}>{objective.replaceAll("_", " ")}</option>)}</select></label>
+              <label className="text-sm font-medium">Relationship priority<select name="relationshipPriority" className={inputClass}><option value="">Not set</option>{GTM_RELATIONSHIP_PRIORITIES.map((priority) => <option key={priority} value={priority}>{priority}</option>)}</select></label>
+              <label className="text-sm font-medium sm:col-span-2">Relationship context<textarea name="relationshipContext" maxLength={5000} rows={3} placeholder="Why this relationship matters to BLTZ" className={inputClass} /></label>
+            </div>
+          </fieldset>
 
           {contactType === "investor" && (
             <fieldset className="rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
@@ -144,5 +171,5 @@ function AddContactDialog({ onComplete }: { onComplete: () => void }) {
 export function GtmContactIntake() {
   const router = useRouter();
   const onComplete = () => router.refresh();
-  return <div className="flex flex-wrap gap-2"><Link href="/admin/gtm/imports" className={secondaryButton}><IconFileUpload className="h-4 w-4" />Import CSV</Link><AddContactDialog onComplete={onComplete} /></div>;
+  return <div className="flex flex-wrap gap-2"><Link href="/admin/gtm/players" className={secondaryButton}><IconUsersGroup className="h-4 w-4" />Browse Player Master</Link><Link href="/admin/gtm/imports" className={secondaryButton}><IconFileUpload className="h-4 w-4" />Import CSV</Link><AddContactDialog onComplete={onComplete} /></div>;
 }

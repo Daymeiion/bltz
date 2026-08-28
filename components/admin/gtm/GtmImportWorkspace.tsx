@@ -10,7 +10,7 @@ import {
   type GtmCsvInspection, type GtmCsvPreview,
 } from "@/app/admin/gtm/actions";
 import { GtmNavigation } from "@/components/admin/gtm/GtmNavigation";
-import { GTM_CSV_MAX_BYTES, GTM_IMPORT_FIELDS, type GtmFieldMapping, type GtmImportField } from "@/lib/gtm/import-contract";
+import { GTM_CSV_MAX_BYTES, GTM_CSV_MAX_ROWS, GTM_IMPORT_FIELDS, type GtmFieldMapping, type GtmImportField } from "@/lib/gtm/import-contract";
 import { cn } from "@/lib/utils";
 
 const fieldLabels: Record<GtmImportField, string> = {
@@ -100,7 +100,7 @@ export function GtmImportWorkspace() {
   return (
     <main className="mx-auto max-w-[1600px] px-4 pb-16 pt-6 sm:px-8 sm:pt-8">
       <div className="flex flex-col gap-5 border-b border-neutral-300 pb-6 lg:flex-row lg:items-end lg:justify-between dark:border-neutral-800">
-        <header><p className="text-xs font-semibold uppercase tracking-[0.12em] text-neutral-500">LinkedIn connections</p><h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em] sm:text-4xl">Import contacts</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-600 dark:text-neutral-300">Map changing export headers, inspect every exception, and approve the import before any contact is committed.</p></header>
+        <header><p className="text-xs font-semibold uppercase tracking-[0.12em] text-neutral-500">LinkedIn connections</p><h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em] sm:text-4xl">Import contacts</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-600 dark:text-neutral-300">Map changing export headers, inspect every exception, and approve the import before any contact is committed. Player Master remains a separate canonical reference.</p></header>
         <GtmNavigation />
       </div>
 
@@ -120,7 +120,7 @@ export function GtmImportWorkspace() {
       {!complete && <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="space-y-5">
           <section className="rounded-2xl border border-neutral-200 bg-white p-5 dark:border-neutral-800 dark:bg-neutral-900" aria-labelledby="upload-file">
-            <div className="flex items-start gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-neutral-100 dark:bg-neutral-800"><IconFileUpload className="h-5 w-5" /></span><div><h2 id="upload-file" className="font-semibold">1. Upload LinkedIn CSV</h2><p className="mt-1 text-xs leading-5 text-neutral-500">Raw CSV rows are parsed for this request and are not retained. Maximum {(GTM_CSV_MAX_BYTES / 1000).toFixed(0)} KB and 2,000 rows.</p></div></div>
+            <div className="flex items-start gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-neutral-100 dark:bg-neutral-800"><IconFileUpload className="h-5 w-5" /></span><div><h2 id="upload-file" className="font-semibold">1. Upload LinkedIn CSV</h2><p className="mt-1 text-xs leading-5 text-neutral-500">Raw CSV rows are parsed for this request and are not retained. Maximum {(GTM_CSV_MAX_BYTES / 1_000_000).toFixed(0)} MB and {GTM_CSV_MAX_ROWS.toLocaleString()} rows.</p></div></div>
             <input aria-label="LinkedIn CSV file" type="file" accept=".csv,text/csv" className="mt-4 block w-full rounded-xl border border-dashed border-neutral-300 bg-neutral-50 p-4 text-sm file:mr-4 file:min-h-11 file:rounded-xl file:border-0 file:bg-neutral-950 file:px-4 file:text-sm file:font-semibold file:text-white dark:border-neutral-700 dark:bg-neutral-950 dark:file:bg-white dark:file:text-black" onChange={(event) => selectFile(event.target.files?.[0] ?? null)} />
             <div className="mt-4 flex justify-end"><button type="button" onClick={inspect} disabled={pending || !file} className={secondaryButton}>{pending && !inspection ? "Reading headers…" : "Read headers"}</button></div>
           </section>

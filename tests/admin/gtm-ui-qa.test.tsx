@@ -5,6 +5,7 @@ import type { GtmMetrics } from "@/lib/gtm/server";
 
 vi.mock("next/navigation", () => ({ usePathname: () => "/admin/gtm/imports" }));
 vi.mock("@/app/admin/gtm/actions", () => ({ commitGtmCsv: vi.fn(), inspectGtmCsv: vi.fn(), previewGtmCsv: vi.fn() }));
+vi.mock("@/app/admin/gtm/player-master-actions", () => ({ commitPlayerMasterCsv: vi.fn(), previewPlayerMasterCsv: vi.fn() }));
 
 import { GtmImportWorkspace } from "@/components/admin/gtm/GtmImportWorkspace";
 import { GtmOverview } from "@/components/admin/gtm/GtmOverview";
@@ -29,6 +30,9 @@ describe("Prompt 4 GTM Admin experience", () => {
   it("renders a dedicated seven-step import surface before a file is committed", () => {
     const markup = renderToStaticMarkup(<GtmImportWorkspace />);
     for (const step of ["Upload", "Map fields", "Validate", "Review results", "Player matches", "Confirm", "Import"]) expect(markup).toContain(step);
+    expect(markup).toContain("Player Master");
+    expect(markup).toContain("10,000 rows");
+    expect(markup).toContain("separate canonical reference");
     expect(markup).toContain("LinkedIn CSV file");
     expect(markup).toContain("Approval gate");
     expect(markup).toContain("Raw CSV rows are parsed for this request and are not retained");

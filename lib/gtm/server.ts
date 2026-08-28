@@ -56,6 +56,11 @@ export interface GtmContactRow {
   currentCompany: string | null;
   currentTitle: string | null;
   contactType: string;
+  contactTypeOther: string | null;
+  potentialRoles: string[];
+  relationshipObjective: string | null;
+  relationshipPriority: string | null;
+  relationshipContext: string | null;
   segment: string | null;
   sport: string | null;
   leagueLevel: string | null;
@@ -166,6 +171,40 @@ function isPermissionDenied(error: { code?: string | null }) {
   return error.code === "42501" || error.code === "PGRST301";
 }
 
+const GTM_READ_PAGE_SIZE = 1_000;
+const GTM_CONTACT_ID_CHUNK_SIZE = 200;
+
+function chunks<T>(values: T[], size: number) {
+  const result: T[][] = [];
+  for (let index = 0; index < values.length; index += size) result.push(values.slice(index, index + size));
+  return result;
+}
+
+async function fetchContactChildren(
+  gtm: SupabaseClient,
+  table: string,
+  columns: string,
+  contactIds: string[],
+  orderColumn: string,
+) {
+  const rows: Record<string, unknown>[] = [];
+  for (const contactIdChunk of chunks(contactIds, GTM_CONTACT_ID_CHUNK_SIZE)) {
+    for (let offset = 0; ; offset += GTM_READ_PAGE_SIZE) {
+      const result = await gtm
+        .from(table)
+        .select(columns)
+        .in("contact_id", contactIdChunk)
+        .order(orderColumn, { ascending: false })
+        .range(offset, offset + GTM_READ_PAGE_SIZE - 1);
+      if (result.error) throw new Error(`${table}_query_failed:${result.error.code ?? "unknown"}`);
+      const page = (result.data ?? []) as unknown as Record<string, unknown>[];
+      rows.push(...page);
+      if (page.length < GTM_READ_PAGE_SIZE) break;
+    }
+  }
+  return rows;
+}
+
 /** User-scoped read keeps RLS active after the internal-admin check. */
 export async function getGtmContacts(): Promise<GtmContactsReadModel> {
   await requireInternalAdmin();
@@ -173,21 +212,26 @@ export async function getGtmContacts(): Promise<GtmContactsReadModel> {
   const gtm = supabase as unknown as SupabaseClient;
   const generatedAt = new Date().toISOString();
 
-  const { data, error } = await gtm
-    .from("gtm_contacts")
-    .select("id,display_name,first_name,last_name,email,phone,geography,current_company,current_title,contact_type,segment,sport,league_level,relationship_strength,network_leverage,bltz_relevance,buying_authority,timing_score,priority_score,priority_tier,pipeline_stage,source,linkedin_url,do_not_automate,is_priority,last_interaction_at,next_action,next_action_at,investor_type,investor_relationship_stage,what_they_need_to_see,investor_thesis_feedback,historical_signal,future_trigger,prior_outcome,relationship_source,next_trigger")
-    .eq("archived", false)
-    .order("is_priority", { ascending: false })
-    .order("priority_score", { ascending: false, nullsFirst: false })
-    .limit(500);
+  const rawContacts: Record<string, unknown>[] = [];
+  for (let offset = 0; ; offset += GTM_READ_PAGE_SIZE) {
+    const result = await gtm
+      .from("gtm_contacts")
+      .select("id,display_name,first_name,last_name,email,phone,geography,current_company,current_title,contact_type,contact_type_other,potential_roles,relationship_objective,relationship_priority,relationship_context,segment,sport,league_level,relationship_strength,network_leverage,bltz_relevance,buying_authority,timing_score,priority_score,priority_tier,pipeline_stage,source,linkedin_url,do_not_automate,is_priority,last_interaction_at,next_action,next_action_at,investor_type,investor_relationship_stage,what_they_need_to_see,investor_thesis_feedback,historical_signal,future_trigger,prior_outcome,relationship_source,next_trigger")
+      .eq("archived", false)
+      .order("is_priority", { ascending: false })
+      .order("priority_score", { ascending: false, nullsFirst: false })
+      .order("id", { ascending: true })
+      .range(offset, offset + GTM_READ_PAGE_SIZE - 1);
 
-  if (error) {
-    if (isMissingRelation(error)) return { state: "not_configured", contacts: [], generatedAt };
-    if (isPermissionDenied(error)) return { state: "restricted", contacts: [], generatedAt };
-    throw new Error(`gtm_contacts_query_failed:${error.code ?? "unknown"}`);
+    if (result.error) {
+      if (isMissingRelation(result.error)) return { state: "not_configured", contacts: [], generatedAt };
+      if (isPermissionDenied(result.error)) return { state: "restricted", contacts: [], generatedAt };
+      throw new Error(`gtm_contacts_query_failed:${result.error.code ?? "unknown"}`);
+    }
+    const page = (result.data ?? []) as unknown as Record<string, unknown>[];
+    rawContacts.push(...page);
+    if (page.length < GTM_READ_PAGE_SIZE) break;
   }
-
-  const rawContacts = data ?? [];
   const contactIds = rawContacts.map((contact) => contact.id as string);
   const matchesByContact = new Map<string, GtmContactRow["playerMatch"]>();
   const notesByContact = new Map<string, GtmContactNote[]>();
@@ -195,19 +239,21 @@ export async function getGtmContacts(): Promise<GtmContactsReadModel> {
   const discoveriesByContact = new Map<string, GtmCustomerDiscoveryRecord[]>();
 
   if (contactIds.length > 0) {
-    const [matchesResult, notesResult, interactionsResult, discoveryResult] = await Promise.all([
-      gtm.from("gtm_contact_players").select("contact_id,player_id,verified,updated_at").in("contact_id", contactIds).order("verified", { ascending: false }).order("updated_at", { ascending: false }),
-      gtm.from("gtm_notes").select("id,contact_id,note_type,body,created_at").in("contact_id", contactIds).order("created_at", { ascending: false }).limit(1000),
-      gtm.from("gtm_interactions").select("id,contact_id,interaction_type,direction,subject,summary,interaction_at,outcomes,next_trigger,follow_up_required").in("contact_id", contactIds).order("interaction_at", { ascending: false }).limit(1000),
-      gtm.from("gtm_customer_discovery").select("id,contact_id,interaction_id,organization_id,problem_discussed,current_solution,pain_level,primary_bltz_use_case,feature_requested,would_use,would_pilot,would_pay,expected_buyer,expected_budget_range,primary_objection,introduction_offered,introduction_target,additional_context,created_at,updated_at").in("contact_id", contactIds).order("created_at", { ascending: false }).limit(1000),
+    const [rawMatches, rawNotes, rawInteractions, rawDiscoveries] = await Promise.all([
+      fetchContactChildren(gtm, "gtm_contact_players", "contact_id,player_id,verified,updated_at", contactIds, "updated_at"),
+      fetchContactChildren(gtm, "gtm_notes", "id,contact_id,note_type,body,created_at", contactIds, "created_at"),
+      fetchContactChildren(gtm, "gtm_interactions", "id,contact_id,interaction_type,direction,subject,summary,interaction_at,outcomes,next_trigger,follow_up_required", contactIds, "interaction_at"),
+      fetchContactChildren(gtm, "gtm_customer_discovery", "id,contact_id,interaction_id,organization_id,problem_discussed,current_solution,pain_level,primary_bltz_use_case,feature_requested,would_use,would_pilot,would_pay,expected_buyer,expected_budget_range,primary_objection,introduction_offered,introduction_target,additional_context,created_at,updated_at", contactIds, "created_at"),
     ]);
 
-    const rawMatches = matchesResult.error ? [] : (matchesResult.data ?? []);
     const playerIds = [...new Set(rawMatches.map((match) => match.player_id as string))];
-    const playersResult = playerIds.length > 0
-      ? await gtm.from("players").select("id,name,full_name,display_name,team,position,level").in("id", playerIds)
-      : { data: [], error: null };
-    const playersById = new Map((playersResult.error ? [] : (playersResult.data ?? [])).map((player) => [player.id as string, player]));
+    const rawPlayers: Record<string, unknown>[] = [];
+    for (const playerIdChunk of chunks(playerIds, GTM_CONTACT_ID_CHUNK_SIZE)) {
+      const playersResult = await gtm.from("players").select("id,name,full_name,display_name,team,position,level").in("id", playerIdChunk);
+      if (playersResult.error) throw new Error(`gtm_players_query_failed:${playersResult.error.code ?? "unknown"}`);
+      rawPlayers.push(...((playersResult.data ?? []) as unknown as Record<string, unknown>[]));
+    }
+    const playersById = new Map(rawPlayers.map((player) => [player.id as string, player]));
     for (const match of rawMatches) {
       if (!matchesByContact.has(match.contact_id as string)) {
         const player = playersById.get(match.player_id as string);
@@ -221,13 +267,13 @@ export async function getGtmContacts(): Promise<GtmContactsReadModel> {
         });
       }
     }
-    for (const note of notesResult.error ? [] : (notesResult.data ?? [])) {
+    for (const note of rawNotes) {
       const contactId = note.contact_id as string;
       const notes = notesByContact.get(contactId) ?? [];
       notes.push({ id: note.id as string, noteType: note.note_type as string, body: note.body as string, createdAt: note.created_at as string });
       notesByContact.set(contactId, notes);
     }
-    for (const interaction of interactionsResult.error ? [] : (interactionsResult.data ?? [])) {
+    for (const interaction of rawInteractions) {
       const contactId = interaction.contact_id as string;
       const interactions = interactionsByContact.get(contactId) ?? [];
       interactions.push({
@@ -243,7 +289,7 @@ export async function getGtmContacts(): Promise<GtmContactsReadModel> {
       });
       interactionsByContact.set(contactId, interactions);
     }
-    for (const discovery of discoveryResult.error ? [] : (discoveryResult.data ?? [])) {
+    for (const discovery of rawDiscoveries) {
       const contactId = discovery.contact_id as string;
       const discoveries = discoveriesByContact.get(contactId) ?? [];
       discoveries.push({
@@ -284,6 +330,11 @@ export async function getGtmContacts(): Promise<GtmContactsReadModel> {
     currentCompany: contact.current_company as string | null,
     currentTitle: contact.current_title as string | null,
     contactType: (contact.contact_type as string | null) ?? "unclassified",
+    contactTypeOther: contact.contact_type_other as string | null,
+    potentialRoles: Array.isArray(contact.potential_roles) ? contact.potential_roles as string[] : [],
+    relationshipObjective: contact.relationship_objective as string | null,
+    relationshipPriority: contact.relationship_priority as string | null,
+    relationshipContext: contact.relationship_context as string | null,
     segment: contact.segment as string | null,
     sport: contact.sport as string | null,
     leagueLevel: contact.league_level as string | null,

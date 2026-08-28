@@ -1,6 +1,13 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  experimental: {
+    serverActions: {
+      // GTM accepts CSV files up to 2 MB. Leave room for multipart boundaries
+      // and action metadata while keeping the transport limit bounded.
+      bodySizeLimit: "3mb",
+    },
+  },
   turbopack: {
     root: process.cwd(),
   },

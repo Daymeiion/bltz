@@ -113,7 +113,7 @@ function sourceIdentity(
 
 export function parseGtmCsv(buffer: Buffer, mappingOverride?: GtmFieldMapping): ParsedGtmImport {
   if (buffer.byteLength === 0) throw new Error("Choose a non-empty CSV file.");
-  if (buffer.byteLength > GTM_CSV_MAX_BYTES) throw new Error("CSV files must be smaller than 750 KB.");
+  if (buffer.byteLength > GTM_CSV_MAX_BYTES) throw new Error("CSV files must be smaller than 2 MB.");
   if (buffer[0] === 0x50 && buffer[1] === 0x4b) throw new Error("Choose a CSV file, not an Excel workbook.");
   const contentSha256 = createHash("sha256").update(buffer).digest("hex");
 

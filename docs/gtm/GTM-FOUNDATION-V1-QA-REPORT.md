@@ -135,3 +135,52 @@ Desktop overview and import states use the existing BLTZ Admin navigation, typog
 ## Final coordinator decision
 
 GTM Foundation V1 has no open P0 or P1 findings and is ready for staging review. The branch has not been merged or deployed. Advanced GTM may be planned only after the staging owner accepts this report; this review did not begin that work.
+
+## Production-release audit addendum — 2026-08-28
+
+Release branch: `codex/gtm-production-release`
+
+This addendum supersedes the earlier staging-only recommendation for the production candidate. It does not authorize a production database mutation.
+
+### Added production safeguards
+
+- LinkedIn imports accept up to 10,000 rows and 2 MB. The founder's real LinkedIn export parsed successfully within those bounds: 6,100 valid records and 278 reviewable row issues. No live records were committed during the parse check.
+- The database cryptographically binds approved normalized preview rows to the final commit. A changed payload is rejected, and ordinary authenticated users cannot rewrite import-job approval or result provenance.
+- Ambiguous Player matches require an explicit accept or reject decision on the server. UI state alone cannot bypass the review gate.
+- Contact reads use bounded pagination instead of truncating the portfolio at 500 contacts.
+- Relationship Intelligence fields are integrated into contact creation, editing, display, and filtering without changing canonical Player identity.
+- Player prospect cohorts store only stable `nfl_players.gsis_id` references and workflow provenance. Selecting a Player does not create a GTM contact, duplicate Player fields, or create a Locker.
+- Password-recovery callbacks now return users to the password-update screen instead of the landing page.
+- Generated database types were regenerated from the staged schema after all candidate migrations.
+
+### Live staging proof
+
+All candidate migrations through `20260828121000` were applied to the dedicated staging project. A rollback-only database exercise verified:
+
+- an internal administrator can select a reference-only Player prospect;
+- selection creates no `gtm_contacts` row;
+- a preview-bound import commits when the approved rows are unchanged;
+- an altered commit payload is rejected;
+- direct import provenance updates are rejected;
+- an ordinary authenticated identity cannot read or select prospects, prepare an import, or access GTM data.
+
+### Final automated gates
+
+| Gate | Result |
+| --- | --- |
+| Vitest | Pass — 55 files passed, 2 skipped; 376 tests passed, 24 skipped |
+| TypeScript | Pass — `tsc --noEmit --incremental false` |
+| ESLint | Pass — 0 errors; 204 pre-existing warnings |
+| Production build | Pass — Next.js 16.3.1 webpack build; 85 routes/pages compiled |
+| Diff integrity | Pass — no whitespace errors |
+| Secret scan | Pass — no credential-shaped production values found; only explicit test fixtures matched |
+
+### Production database reconciliation status
+
+Read-only inspection confirmed that production contains 24,740 canonical `nfl_players` rows and no GTM tables. The candidate staged schema has 30 additional foundation/GTM tables. Production's migration ledger ends before the repository's July 2026 baseline even though the legacy production objects exist.
+
+This is a P1 deployment blocker, not an application defect. The historical `20260701000000_production_schema_baseline.sql` must not be replayed over the established database or bulk-marked as applied without object-level equivalence evidence. Database promotion must follow `docs/stabilization/supabase-production-promotion.md`: reconcile schema and history, confirm backup and exact target, review the precise pending forward migrations, then obtain a separate production change-window approval. The application must not deploy before its database contracts exist.
+
+### Current gate recommendation
+
+**PASS for the code release candidate and staged schema. HOLD production deployment until migration-history reconciliation and the separately approved database change window are complete.**

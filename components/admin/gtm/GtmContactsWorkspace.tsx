@@ -9,7 +9,14 @@ import { useEffect, useMemo, useState } from "react";
 import { GtmContactIntake } from "@/components/admin/gtm/GtmContactIntake";
 import { GtmNavigation } from "@/components/admin/gtm/GtmNavigation";
 import type { GtmContactRow, GtmContactsReadModel, GtmMetrics } from "@/lib/gtm/server";
-import { GTM_CONVERSATION_OUTCOMES, GTM_PIPELINE_STAGES } from "@/lib/gtm/types";
+import {
+  GTM_CONTACT_TYPES,
+  GTM_CONVERSATION_OUTCOMES,
+  GTM_PIPELINE_STAGES,
+  GTM_POTENTIAL_ROLES,
+  GTM_RELATIONSHIP_OBJECTIVES,
+  GTM_RELATIONSHIP_PRIORITIES,
+} from "@/lib/gtm/types";
 import { cn } from "@/lib/utils";
 
 const GtmContactDrawer = dynamic(
@@ -23,6 +30,9 @@ type SortDirection = "asc" | "desc";
 export interface GtmContactFilters {
   search: string;
   contactType: string;
+  potentialRole: string;
+  relationshipObjective: string;
+  relationshipPriority: string;
   priorityTier: string;
   pipelineStage: string;
   conversationOutcome: string;
@@ -36,9 +46,9 @@ export interface GtmContactFilters {
   needsFollowUp: string;
   savedView: string;
 }
-
 const initialFilters: GtmContactFilters = {
-  search: "", contactType: "all", priorityTier: "all", pipelineStage: "all",
+  search: "", contactType: "all", potentialRole: "all", relationshipObjective: "all",
+  relationshipPriority: "all", priorityTier: "all", pipelineStage: "all",
   conversationOutcome: "all", segment: "all", organization: "all", sport: "all",
   leagueLevel: "all", source: "all", doNotAutomate: "all", hasPlayerMatch: "all",
   needsFollowUp: "all", savedView: "All contacts",
@@ -66,6 +76,8 @@ export function filterGtmContacts(contacts: GtmContactRow[], filters: GtmContact
     const searchable = [
       contact.displayName, contact.email, contact.phone, contact.geography,
       contact.currentCompany, contact.currentTitle, contact.segment, contact.sport,
+      contact.contactTypeOther, ...contact.potentialRoles, contact.relationshipObjective,
+      contact.relationshipPriority, contact.relationshipContext,
       contact.leagueLevel, contact.investorType, contact.investorRelationshipStage,
       contact.whatTheyNeedToSee, contact.investorThesisFeedback, contact.historicalSignal,
       contact.futureTrigger, contact.priorOutcome, contact.relationshipSource,
@@ -73,6 +85,9 @@ export function filterGtmContacts(contacts: GtmContactRow[], filters: GtmContact
     ].map(normalize).join(" ");
     if (search && !searchable.includes(search)) return false;
     if (filters.contactType !== "all" && contact.contactType !== filters.contactType) return false;
+    if (filters.potentialRole !== "all" && !contact.potentialRoles.includes(filters.potentialRole)) return false;
+    if (filters.relationshipObjective !== "all" && contact.relationshipObjective !== filters.relationshipObjective) return false;
+    if (filters.relationshipPriority !== "all" && contact.relationshipPriority !== filters.relationshipPriority) return false;
     if (filters.priorityTier !== "all" && contact.priorityTier !== filters.priorityTier) return false;
     if (filters.pipelineStage !== "all" && contact.pipelineStage !== filters.pipelineStage) return false;
     if (filters.conversationOutcome !== "all" && !contact.interactions.some((interaction) => interaction.outcomes.includes(filters.conversationOutcome))) return false;
@@ -233,7 +248,7 @@ export function GtmContactsWorkspace({ data, metrics = null, initialContactId = 
         <div className="grid gap-3 border-b border-neutral-200 p-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[minmax(14rem,1fr)_12rem_repeat(4,minmax(8rem,10rem))] dark:border-neutral-800">
           <label className="relative block"><span className="sr-only">Search contacts</span><IconSearch className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-neutral-500" /><input value={filters.search} onChange={(event) => updateFilter("search", event.target.value)} placeholder="Search name, company, role, sport…" className="min-h-11 w-full rounded-xl border border-neutral-300 bg-white pl-10 pr-3 text-sm dark:border-neutral-700 dark:bg-neutral-950" /></label>
           <FilterSelect label="Saved view" value={filters.savedView} onChange={(value) => updateFilter("savedView", value)}>{builtInViews.map((view) => <option key={view}>{view}</option>)}</FilterSelect>
-          <FilterSelect label="Contact type" value={filters.contactType} onChange={(value) => updateFilter("contactType", value)}><option value="all">All contact types</option>{["enterprise", "athlete", "multiplier", "investor", "unclassified"].map((type) => <option key={type} value={type}>{label(type)}</option>)}</FilterSelect>
+          <FilterSelect label="Contact type" value={filters.contactType} onChange={(value) => updateFilter("contactType", value)}><option value="all">All contact types</option>{GTM_CONTACT_TYPES.map((type) => <option key={type} value={type}>{label(type)}</option>)}</FilterSelect>
           <FilterSelect label="Priority tier" value={filters.priorityTier} onChange={(value) => updateFilter("priorityTier", value)}><option value="all">All priority tiers</option>{["A", "B", "C", "D"].map((tier) => <option key={tier}>{tier}</option>)}</FilterSelect>
           <FilterSelect label="Pipeline stage" value={filters.pipelineStage} onChange={(value) => updateFilter("pipelineStage", value)}><option value="all">All pipeline stages</option>{GTM_PIPELINE_STAGES.map((stage) => <option key={stage} value={stage}>{label(stage)}</option>)}</FilterSelect>
           <FilterSelect label="Needs follow-up" value={filters.needsFollowUp} onChange={(value) => updateFilter("needsFollowUp", value)}><option value="all">Any follow-up status</option><option value="yes">Needs follow-up</option><option value="no">No follow-up due</option></FilterSelect>
@@ -249,6 +264,9 @@ export function GtmContactsWorkspace({ data, metrics = null, initialContactId = 
             <FilterSelect label="Automation status" value={filters.doNotAutomate} onChange={(value) => updateFilter("doNotAutomate", value)}><option value="all">Any automation status</option><option value="yes">Do not automate</option><option value="no">Automation permitted</option></FilterSelect>
             <FilterSelect label="Player match" value={filters.hasPlayerMatch} onChange={(value) => updateFilter("hasPlayerMatch", value)}><option value="all">Any Player-match status</option><option value="yes">Has Player match</option><option value="no">No Player match</option></FilterSelect>
             <FilterSelect label="Conversation outcome" value={filters.conversationOutcome} onChange={(value) => updateFilter("conversationOutcome", value)}><option value="all">All conversation outcomes</option>{GTM_CONVERSATION_OUTCOMES.map((outcome) => <option key={outcome} value={outcome}>{label(outcome)}</option>)}</FilterSelect>
+            <FilterSelect label="Potential role" value={filters.potentialRole} onChange={(value) => updateFilter("potentialRole", value)}><option value="all">All potential roles</option>{GTM_POTENTIAL_ROLES.map((role) => <option key={role} value={role}>{label(role)}</option>)}</FilterSelect>
+            <FilterSelect label="Relationship objective" value={filters.relationshipObjective} onChange={(value) => updateFilter("relationshipObjective", value)}><option value="all">All relationship objectives</option>{GTM_RELATIONSHIP_OBJECTIVES.map((objective) => <option key={objective} value={objective}>{label(objective)}</option>)}</FilterSelect>
+            <FilterSelect label="Relationship priority" value={filters.relationshipPriority} onChange={(value) => updateFilter("relationshipPriority", value)}><option value="all">All relationship priorities</option>{GTM_RELATIONSHIP_PRIORITIES.map((priority) => <option key={priority} value={priority}>{label(priority)}</option>)}</FilterSelect>
           </div>
         </details>
         {hasFilters && <div className="flex items-center justify-between gap-4 border-b border-neutral-200 px-4 py-3 text-xs text-neutral-500 dark:border-neutral-800"><span className="inline-flex items-center gap-2"><IconFilter className="h-4 w-4" />{filtered.length} of {contacts.length} contacts</span><button type="button" onClick={resetFilters} className="min-h-11 rounded-xl px-3 font-semibold">Reset filters</button></div>}
