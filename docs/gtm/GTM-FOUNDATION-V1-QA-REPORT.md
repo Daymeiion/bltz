@@ -181,6 +181,27 @@ Read-only inspection confirmed that production contains 24,740 canonical `nfl_pl
 
 This is a P1 deployment blocker, not an application defect. The historical `20260701000000_production_schema_baseline.sql` must not be replayed over the established database or bulk-marked as applied without object-level equivalence evidence. Database promotion must follow `docs/stabilization/supabase-production-promotion.md`: reconcile schema and history, confirm backup and exact target, review the precise pending forward migrations, then obtain a separate production change-window approval. The application must not deploy before its database contracts exist.
 
+### Production change-window result — 2026-08-28
+
+The user separately approved the production database change window for project `drxtzxnwdtgxwueiqygf`. Immediately before mutation, the project reported `ACTIVE_HEALTHY`; the latest physical backup was `COMPLETED` at `2026-08-28T08:03:41.025Z`; PITR was not enabled.
+
+The historical baseline was not replayed. A read-only equivalence inventory proved all baseline objects present: 49 tables, 129 constraints, 97 indexes, 108 policies, 11 functions, one enum, and three sequences. Version `20260701000000` was then recorded as history-only.
+
+Only the 13 migrations introduced by the audited release were applied, from `20260818000000` through `20260828121000`. Unrelated historical Spotify, media, waitlist, follow, Locker quote, and beta-intelligence migrations were excluded from this change window.
+
+Production postflight verified:
+
+- canonical `nfl_players` remained exactly 24,740 rows;
+- all ten GTM tables exist and have RLS enabled;
+- 28 GTM policies are installed;
+- one active `super_admin` assignment was preserved from the legacy administrator;
+- the administrator authorization context loads `get_gtm_metrics_v1` successfully;
+- an ordinary authenticated identity sees zero GTM contacts, notes, and Player prospect selections;
+- the same ordinary identity is denied the private GTM metrics function;
+- all 13 release migration versions are recorded, with latest version `20260828121000`.
+
+No LinkedIn contacts were committed during deployment. Live CSV import remains a user-reviewed preview/approval action in the Admin UI.
+
 ### Current gate recommendation
 
-**PASS for the code release candidate and staged schema. HOLD production deployment until migration-history reconciliation and the separately approved database change window are complete.**
+**PASS for production application merge. The production database contracts are present, Player Master is preserved, authorization smoke checks pass, and the application may now deploy from the audited pull request.**
