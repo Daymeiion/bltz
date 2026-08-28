@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getCurrentUserProfile } from "@/lib/rbac";
+import { getCurrentAuthorizationProfile } from "@/lib/rbac";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { AdminThemeShell } from "@/components/admin/AdminThemeShell";
 import "./admin-theme.css";
@@ -9,9 +9,8 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const profile = await getCurrentUserProfile();
+  const profile = await getCurrentAuthorizationProfile();
 
-  // Check if user is admin
   if (!profile || profile.role !== "admin") {
     redirect("/auth/admin?error=not_admin");
   }

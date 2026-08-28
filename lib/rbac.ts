@@ -62,7 +62,6 @@ export async function getCurrentUserProfile(): Promise<UserProfile | null> {
         id: user.id,
         email: user.email ?? null,
         display_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
-        role: "fan",
         avatar_url: user.user_metadata?.avatar_url || null
       })
       .select("id, email, display_name, avatar_url, role, player_id")
@@ -105,7 +104,38 @@ export async function hasRole(allowedRoles: UserRole | UserRole[]): Promise<bool
   }
 
   const roles = Array.isArray(allowedRoles) ? allowedRoles : [allowedRoles];
-  return roles.includes(profile.role);
+  if (roles.includes("admin") && (await isInternalAdmin())) {
+    return true;
+  }
+
+  return roles.some((role) => role !== "admin" && role === profile.role);
+}
+
+/**
+ * Resolve platform-wide administration only from the database assignment
+ * predicate. `profiles.role` and browser/JWT metadata are intentionally ignored.
+ */
+export async function isInternalAdmin(): Promise<boolean> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("is_internal_admin");
+  return !error && data === true;
+}
+
+export async function getCurrentAuthorizationProfile(): Promise<UserProfile | null> {
+  const profile = await getCurrentUserProfile();
+  if (!profile) return null;
+
+  if (await isInternalAdmin()) {
+    return { ...profile, role: "admin" };
+  }
+
+  return profile.role === "admin" ? { ...profile, role: "fan" } : profile;
+}
+
+export async function requireInternalAdmin(): Promise<void> {
+  if (!(await isInternalAdmin())) {
+    throw new Error("Forbidden - Platform administrator assignment required");
+  }
 }
 
 /**

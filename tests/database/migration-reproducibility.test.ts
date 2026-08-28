@@ -50,6 +50,9 @@ describe("migration reproducibility contracts", () => {
     expect(validator).toContain('const isolatedSupabase = join(isolatedRoot, "supabase")');
     expect(validator).toContain('join(isolatedSupabase, "config.toml")');
     expect(validator).toContain('["db", "reset", "--local", "--no-seed"]');
+    expect(validator).toContain("runSqlFile(phase2RlsTest)");
+    expect(validator).toContain('`supabase_db_${isolatedProjectId}`');
+    expect(validator).toContain('"ON_ERROR_STOP=1"');
     expect(validator).toContain('"lint"');
     expect(validator).toContain('"--fail-on"');
     expect(validator).not.toContain('"--linked"');

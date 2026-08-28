@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getCurrentUserProfile } from "@/lib/rbac";
+import { getCurrentAuthorizationProfile } from "@/lib/rbac";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/server";
  */
 export async function GET() {
   try {
-    const profile = await getCurrentUserProfile();
+    const profile = await getCurrentAuthorizationProfile();
     
     // Check if user is admin
     if (!profile || profile.role !== 'admin') {

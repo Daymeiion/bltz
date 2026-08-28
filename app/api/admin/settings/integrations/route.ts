@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUserProfile } from "@/lib/rbac";
+import { getCurrentAuthorizationProfile } from "@/lib/rbac";
 import { createClient } from "@/lib/supabase/server";
 
 export async function GET() {
   try {
-    const profile = await getCurrentUserProfile();
+    const profile = await getCurrentAuthorizationProfile();
     if (!profile || profile.role !== "admin") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
@@ -26,7 +26,7 @@ export async function GET() {
 
 export async function PUT(request: NextRequest) {
   try {
-    const profile = await getCurrentUserProfile();
+    const profile = await getCurrentAuthorizationProfile();
     if (!profile || profile.role !== "admin") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }

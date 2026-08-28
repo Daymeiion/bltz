@@ -6,7 +6,7 @@
 - Version: 1.0
 - Product type: Internal governance and operations system
 - Related product: BLTZ School and Team CRM
-- Related document: `school-team-crm-pd.md`
+- Related document: `school-team-crm-prd.md`
 
 ## 1. Executive Summary
 

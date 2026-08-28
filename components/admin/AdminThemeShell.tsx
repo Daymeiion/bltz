@@ -85,11 +85,15 @@ function AppearanceControl() {
 export function AdminThemeShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const shellRef = useRef<HTMLDivElement>(null);
-  const isBeta = pathname === "/admin/beta";
+  const workspace = pathname === "/admin/beta"
+    ? "beta"
+    : pathname === "/admin/gtm" || pathname.startsWith("/admin/gtm/")
+      ? "gtm"
+      : null;
   const route = routeDetails[pathname] ?? routeDetails["/admin"];
 
   useGSAP(() => {
-    if (isBeta) return;
+    if (workspace) return;
     const motion = gsap.matchMedia();
     motion.add("(prefers-reduced-motion: no-preference)", () => {
       gsap.fromTo("[data-admin-hero-copy]", { y: 24, opacity: 0 }, { y: 0, opacity: 1, duration: 0.75, ease: "power3.out" });
@@ -111,9 +115,22 @@ export function AdminThemeShell({ children }: { children: React.ReactNode }) {
       });
     });
     return () => motion.revert();
-  }, { scope: shellRef, dependencies: [pathname, isBeta] });
+  }, { scope: shellRef, dependencies: [pathname, workspace] });
 
-  if (isBeta) return <div className="admin-theme-shell min-h-full">{children}</div>;
+  if (workspace === "beta") {
+    return <div className="admin-theme-shell min-h-full" data-admin-workspace="beta">{children}</div>;
+  }
+
+  if (workspace === "gtm") {
+    return (
+      <div
+        className="admin-theme-shell admin-theme-gtm min-h-full bg-[#f1f0ed] text-neutral-950 transition-colors duration-300 dark:bg-[#0b0c0e] dark:text-neutral-50"
+        data-admin-workspace="gtm"
+      >
+        {children}
+      </div>
+    );
+  }
 
   return (
     <div ref={shellRef} className="admin-theme-shell admin-theme-legacy relative min-h-full overflow-x-hidden bg-[#f1f0ed] text-neutral-950 transition-colors duration-300 dark:bg-[#0b0c0e] dark:text-neutral-50">

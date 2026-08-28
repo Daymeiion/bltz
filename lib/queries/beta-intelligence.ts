@@ -1,4 +1,4 @@
-import { requireRole } from "@/lib/rbac";
+import { requireInternalAdmin } from "@/lib/rbac";
 import { createServiceClient } from "@/lib/supabase/service";
 import type {
   AnalyticsEvent,
@@ -18,7 +18,7 @@ export interface BetaParticipantFilters {
 
 /** Admin-only participant list contract for the future Beta Intelligence UI. */
 export async function listBetaParticipants(filters: BetaParticipantFilters = {}) {
-  await requireRole("admin");
+  await requireInternalAdmin();
   const supabase = createServiceClient();
   let query = supabase
     .from("beta_participants")
@@ -49,7 +49,7 @@ export interface AthleteBetaIntelligenceRecord {
 export async function getAthleteBetaIntelligence(
   athleteId: string,
 ): Promise<AthleteBetaIntelligenceRecord> {
-  await requireRole("admin");
+  await requireInternalAdmin();
   const supabase = createServiceClient();
 
   const [participant, feedback, insights, baselines, events] = await Promise.all([

@@ -21,6 +21,7 @@ const required = [
   "NEXT_PUBLIC_SUPABASE_URL",
   "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY",
   "SUPABASE_SERVICE_ROLE_KEY",
+  "PHASE2_EXPECTED_SUPER_ADMIN_USER_ID",
 ];
 
 for (const name of Object.keys(process.env)) {
@@ -60,27 +61,48 @@ const fixtures = [
   { key: "RLS_TEST_ATHLETE_A_JWT", role: "player", label: "athleteA" },
   { key: "RLS_TEST_ATHLETE_B_JWT", role: "player", label: "athleteB" },
   { key: "RLS_TEST_NON_ADMIN_JWT", role: "fan", label: "nonAdmin" },
-  { key: "RLS_TEST_PLATFORM_ADMIN_JWT", role: "admin", label: "platformAdmin" },
+  { key: "RLS_TEST_LEGACY_ADMIN_JWT", role: "admin", label: "legacyAdmin" },
 ];
 
 const created = [];
+let platformAdminJwt;
 
 async function cleanup() {
+  const errors = [];
+  if (platformAdminJwt) {
+    const sessionRevoke = await admin.auth.admin.signOut(platformAdminJwt, "local");
+    if (sessionRevoke.error) {
+      errors.push(`platformAdmin session revoke: ${sessionRevoke.error.message}`);
+    }
+  }
   for (const row of created) {
-    await admin.from("profiles").delete().eq("id", row.id);
-    await admin.auth.admin.deleteUser(row.id);
+    const profileDelete = await admin.from("profiles").delete().eq("id", row.id);
+    if (profileDelete.error) {
+      errors.push(`${row.label} profile delete: ${profileDelete.error.message}`);
+    }
+    const userDelete = await admin.auth.admin.deleteUser(row.id);
+    if (userDelete.error) {
+      errors.push(`${row.label} Auth user delete: ${userDelete.error.message}`);
+    }
   }
   const leftover = [];
   for (const row of created) {
-    const { data: profile } = await admin.from("profiles").select("id").eq("id", row.id).maybeSingle();
-    const { data: userData } = await admin.auth.admin.getUserById(row.id);
+    const profileCheck = await admin.from("profiles").select("id").eq("id", row.id).maybeSingle();
+    if (profileCheck.error) {
+      errors.push(`${row.label} profile cleanup verification: ${profileCheck.error.message}`);
+    }
+    const userCheck = await admin.auth.admin.getUserById(row.id);
+    const authUserMissing = userCheck.error?.status === 404;
+    if (userCheck.error && !authUserMissing) {
+      errors.push(`${row.label} Auth cleanup verification: ${userCheck.error.message}`);
+    }
     leftover.push({
       label: row.label,
-      profile: Boolean(profile),
-      authUser: Boolean(userData.user),
+      profile: Boolean(profileCheck.data),
+      authUser: Boolean(userCheck.data?.user),
     });
   }
-  return leftover;
+  return { rows: leftover, errors };
 }
 
 async function createFixture(spec) {
@@ -118,13 +140,73 @@ async function createFixture(spec) {
   return { label: spec.label, role: spec.role, userIdPrefix: id.slice(0, 8) };
 }
 
+async function signInAssignedPlatformAdmin() {
+  const expectedUserId = process.env.PHASE2_EXPECTED_SUPER_ADMIN_USER_ID;
+  const userLookup = await admin.auth.admin.getUserById(expectedUserId);
+  const expectedUser = userLookup.data.user;
+  if (userLookup.error || !expectedUser?.email) {
+    throw new Error(
+      `Failed to load assigned platform admin: ${userLookup.error?.message ?? "missing email"}`,
+    );
+  }
+
+  const generatedLink = await admin.auth.admin.generateLink({
+    type: "magiclink",
+    email: expectedUser.email,
+  });
+  const tokenHash = generatedLink.data.properties?.hashed_token;
+  if (
+    generatedLink.error
+    || generatedLink.data.user?.id !== expectedUserId
+    || !tokenHash
+  ) {
+    throw new Error(
+      `Failed to generate assigned platform admin session: ${generatedLink.error?.message ?? "identity mismatch"}`,
+    );
+  }
+
+  const session = await browser.auth.verifyOtp({
+    token_hash: tokenHash,
+    type: "magiclink",
+  });
+  const user = session.data.user;
+  const token = session.data.session?.access_token;
+  if (session.error || user?.id !== expectedUserId || !token) {
+    throw new Error(
+      `Failed to verify assigned platform admin session: ${session.error?.message ?? "identity mismatch"}`,
+    );
+  }
+  platformAdminJwt = token;
+
+  const assignment = await admin
+    .from("platform_role_assignments")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("role", "super_admin")
+    .is("revoked_at", null)
+    .maybeSingle();
+  if (assignment.error || !assignment.data) {
+    throw new Error(
+      `Assigned platform admin is missing an active super_admin assignment: ${assignment.error?.message ?? "not found"}`,
+    );
+  }
+
+  process.env.RLS_TEST_PLATFORM_ADMIN_JWT = platformAdminJwt;
+  return {
+    label: "platformAdmin",
+    role: "super_admin",
+    userIdPrefix: user.id.slice(0, 8),
+  };
+}
+
 let identities;
-let leftover;
+let cleanupResult;
 let testStatus = 1;
 
 try {
   identities = [];
   for (const spec of fixtures) identities.push(await createFixture(spec));
+  identities.push(await signInAssignedPlatformAdmin());
 
   process.env.RUN_LIVE_RLS_TESTS = "1";
   process.env.NODE_OPTIONS = [process.env.NODE_OPTIONS, "--use-system-ca"].filter(Boolean).join(" ");
@@ -142,7 +224,7 @@ try {
   if (result.error) throw result.error;
   testStatus = result.status ?? 1;
 } finally {
-  leftover = await cleanup();
+  cleanupResult = await cleanup();
   for (const name of Object.keys(process.env)) {
     if (name.startsWith("RLS_TEST_")) delete process.env[name];
   }
@@ -152,9 +234,12 @@ const evidence = {
   projectRef,
   runId,
   identities,
-  cleanup: leftover,
-  leftoverRows: leftover.filter((row) => row.profile || row.authUser).length,
+  cleanup: cleanupResult?.rows ?? [],
+  cleanupErrors: cleanupResult?.errors ?? ["cleanup did not complete"],
+  leftoverRows: (cleanupResult?.rows ?? []).filter((row) => row.profile || row.authUser).length,
   testsExit: testStatus,
 };
 console.log(`STAGING_RLS_EVIDENCE=${JSON.stringify(evidence)}`);
-if (testStatus !== 0 || evidence.leftoverRows !== 0) process.exit(testStatus || 1);
+if (testStatus !== 0 || evidence.leftoverRows !== 0 || evidence.cleanupErrors.length !== 0) {
+  process.exit(testStatus || 1);
+}
