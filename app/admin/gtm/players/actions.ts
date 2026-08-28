@@ -18,6 +18,10 @@ export type SelectPlayerProspectsResult =
   | { ok: true; selectedCount: number; existingCount: number }
   | { ok: false; code: "invalid" | "unauthorized" | "unavailable" | "failed"; message: string };
 
+export type PromotePlayerProspectsResult =
+  | { ok: true; createdCount: number; existingCount: number; linkedPlayerCount: number }
+  | { ok: false; code: "invalid" | "unauthorized" | "unavailable" | "failed"; message: string };
+
 export async function selectPlayerMasterProspects(input: unknown): Promise<SelectPlayerProspectsResult> {
   const parsed = selectionSchema.safeParse(input);
   if (!parsed.success) {
@@ -73,4 +77,45 @@ export async function selectPlayerMasterProspects(input: unknown): Promise<Selec
 
   revalidatePath("/admin/gtm/players");
   return { ok: true, selectedCount: newIds.length, existingCount: existingIds.size };
+}
+
+export async function promotePlayerMasterProspects(input: unknown): Promise<PromotePlayerProspectsResult> {
+  const parsed = selectionSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, code: "invalid", message: parsed.error.issues[0]?.message ?? "Choose valid selected prospects." };
+  }
+
+  try {
+    await requireInternalAdmin();
+  } catch {
+    return { ok: false, code: "unauthorized", message: "Your administrator access could not be verified." };
+  }
+
+  const supabase = await createClient();
+  const gtm = supabase as unknown as SupabaseClient;
+  const { data, error } = await gtm.rpc("promote_gtm_player_prospects", { p_gsis_ids: parsed.data.gsisIds });
+  if (error || !data || typeof data !== "object" || Array.isArray(data)) {
+    const unavailable = error?.code === "42883" || error?.code === "PGRST202";
+    const invalid = error?.code === "22023" || error?.code === "23514";
+    return {
+      ok: false,
+      code: unavailable ? "unavailable" : invalid ? "invalid" : "failed",
+      message: unavailable
+        ? "Player-to-contact promotion is not available until the approved migration is deployed."
+        : invalid
+          ? "Only active prospects in the selected cohort can be added to Contacts. Refresh and try again."
+          : "The selected prospects could not be added to Contacts. No Player identities were copied.",
+    };
+  }
+
+  const result = data as Record<string, unknown>;
+  revalidatePath("/admin/gtm");
+  revalidatePath("/admin/gtm/contacts");
+  revalidatePath("/admin/gtm/players");
+  return {
+    ok: true,
+    createdCount: Number(result.createdCount ?? 0),
+    existingCount: Number(result.existingCount ?? 0),
+    linkedPlayerCount: Number(result.linkedPlayerCount ?? 0),
+  };
 }

@@ -82,6 +82,8 @@ export function filterGtmContacts(contacts: GtmContactRow[], filters: GtmContact
       contact.whatTheyNeedToSee, contact.investorThesisFeedback, contact.historicalSignal,
       contact.futureTrigger, contact.priorOutcome, contact.relationshipSource,
       contact.nextTrigger, contact.playerMatch?.playerName,
+      contact.playerMaster?.displayName, contact.playerMaster?.collegeName,
+      contact.playerMaster?.team, contact.playerMaster?.position,
     ].map(normalize).join(" ");
     if (search && !searchable.includes(search)) return false;
     if (filters.contactType !== "all" && contact.contactType !== filters.contactType) return false;
@@ -97,7 +99,7 @@ export function filterGtmContacts(contacts: GtmContactRow[], filters: GtmContact
     if (filters.leagueLevel !== "all" && normalize(contact.leagueLevel) !== filters.leagueLevel) return false;
     if (filters.source !== "all" && normalize(contact.source) !== filters.source) return false;
     if (filters.doNotAutomate !== "all" && contact.doNotAutomate !== (filters.doNotAutomate === "yes")) return false;
-    if (filters.hasPlayerMatch !== "all" && Boolean(contact.playerMatch) !== (filters.hasPlayerMatch === "yes")) return false;
+    if (filters.hasPlayerMatch !== "all" && Boolean(contact.playerMatch || contact.playerMaster) !== (filters.hasPlayerMatch === "yes")) return false;
     const needsFollowUp = Boolean(contact.nextActionAt && new Date(contact.nextActionAt) <= now);
     if (filters.needsFollowUp !== "all" && needsFollowUp !== (filters.needsFollowUp === "yes")) return false;
     switch (filters.savedView) {

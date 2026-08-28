@@ -46,6 +46,19 @@ Deployment order is Foundation V1 → Phase 2 addendum → Prompt 3 core workflo
 
 Coordinator QA adds `20260825220000_fix_gtm_metrics_active_discovery.sql` after the core-workflow migration. It keeps archived relationship history intact while excluding discovery rows owned by archived contacts from current-portfolio counts, frequencies, intent, and willingness-to-pay metrics.
 
+## Player prospect promotion
+
+Migration `20260828215242_promote_player_prospects_to_gtm_contacts.sql` closes the gap between the reference-only Player prospect cohort and operational GTM Contacts.
+
+- `gtm_player_prospects` remains the private selected cohort and stores only `nfl_players.gsis_id`, selection provenance, and archive state.
+- An internal administrator may promote up to 100 active selected prospects at once with `promote_gtm_player_prospects`.
+- A promoted contact stores only `player_master_gsis_id` plus GTM workflow data. Name, college, team, position, status, and other athlete identity fields remain canonical in `nfl_players` and are joined at read time.
+- Exact GSIS matches to an existing `public.players` record create a verified `gtm_contact_players` link. No Player or Locker record is created.
+- The Player Master reference is unique across all GTM contacts, so repeat promotion is idempotent and cannot create uncontrolled duplicates.
+- The RPC is security-invoker, validates internal-admin authorization and active cohort membership, and continues to rely on existing GTM RLS and immutable audit triggers.
+
+Deployment order is the existing GTM production chain through `20260828121000`, then this promotion migration, regenerated database types, and the corresponding Admin application release.
+
 ## CSV import state machine
 
 The Admin server parses the uploaded CSV in memory, tolerates LinkedIn preamble text, suggests aliases instead of assuming one header shape, normalizes values, validates rows, and previews canonical contact and Player matches. It persists only filename, hash, mapping, counts, summary, and uploader—not raw CSV rows.

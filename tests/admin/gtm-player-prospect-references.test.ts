@@ -28,4 +28,10 @@ describe("reference-only GTM Player prospects", () => {
     expect(filters.college).toBe("California Berkeley");
     expect(filters.page).toBe(2);
   });
+
+  it("supports separate Player Master, selected cohort, and promoted contact views", () => {
+    expect(parseGtmPlayerProspectFilters({ view: "selected" }).view).toBe("selected");
+    expect(parseGtmPlayerProspectFilters({ view: "contacts" }).view).toBe("contacts");
+    expect(parseGtmPlayerProspectFilters({ view: "not-a-view" }).view).toBe("all");
+  });
 });

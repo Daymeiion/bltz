@@ -88,6 +88,14 @@ export interface GtmContactRow {
   priorOutcome: string | null;
   relationshipSource: string | null;
   nextTrigger: string | null;
+  playerMaster?: {
+    gsisId: string;
+    displayName: string;
+    collegeName: string | null;
+    team: string | null;
+    position: string | null;
+    status: string | null;
+  } | null;
   playerMatch: {
     playerId: string;
     playerName: string;
@@ -216,7 +224,7 @@ export async function getGtmContacts(): Promise<GtmContactsReadModel> {
   for (let offset = 0; ; offset += GTM_READ_PAGE_SIZE) {
     const result = await gtm
       .from("gtm_contacts")
-      .select("id,display_name,first_name,last_name,email,phone,geography,current_company,current_title,contact_type,contact_type_other,potential_roles,relationship_objective,relationship_priority,relationship_context,segment,sport,league_level,relationship_strength,network_leverage,bltz_relevance,buying_authority,timing_score,priority_score,priority_tier,pipeline_stage,source,linkedin_url,do_not_automate,is_priority,last_interaction_at,next_action,next_action_at,investor_type,investor_relationship_stage,what_they_need_to_see,investor_thesis_feedback,historical_signal,future_trigger,prior_outcome,relationship_source,next_trigger")
+      .select("id,display_name,first_name,last_name,email,phone,geography,current_company,current_title,contact_type,contact_type_other,potential_roles,relationship_objective,relationship_priority,relationship_context,segment,sport,league_level,relationship_strength,network_leverage,bltz_relevance,buying_authority,timing_score,priority_score,priority_tier,pipeline_stage,source,linkedin_url,do_not_automate,is_priority,last_interaction_at,next_action,next_action_at,investor_type,investor_relationship_stage,what_they_need_to_see,investor_thesis_feedback,historical_signal,future_trigger,prior_outcome,relationship_source,next_trigger,player_master_gsis_id")
       .eq("archived", false)
       .order("is_priority", { ascending: false })
       .order("priority_score", { ascending: false, nullsFirst: false })
@@ -237,6 +245,28 @@ export async function getGtmContacts(): Promise<GtmContactsReadModel> {
   const notesByContact = new Map<string, GtmContactNote[]>();
   const interactionsByContact = new Map<string, GtmContactInteraction[]>();
   const discoveriesByContact = new Map<string, GtmCustomerDiscoveryRecord[]>();
+  const playerMasterByGsis = new Map<string, GtmContactRow["playerMaster"]>();
+
+  const playerMasterIds = [...new Set(rawContacts
+    .map((contact) => contact.player_master_gsis_id as string | null)
+    .filter((value): value is string => Boolean(value)))];
+  for (const gsisIdChunk of chunks(playerMasterIds, GTM_CONTACT_ID_CHUNK_SIZE)) {
+    const playerMasterResult = await gtm
+      .from("nfl_players")
+      .select("gsis_id,display_name,college_name,latest_team,position,status")
+      .in("gsis_id", gsisIdChunk);
+    if (playerMasterResult.error) throw new Error(`gtm_player_master_query_failed:${playerMasterResult.error.code ?? "unknown"}`);
+    for (const player of playerMasterResult.data ?? []) {
+      playerMasterByGsis.set(String(player.gsis_id), {
+        gsisId: String(player.gsis_id),
+        displayName: String(player.display_name),
+        collegeName: player.college_name == null ? null : String(player.college_name),
+        team: player.latest_team == null ? null : String(player.latest_team),
+        position: player.position == null ? null : String(player.position),
+        status: player.status == null ? null : String(player.status),
+      });
+    }
+  }
 
   if (contactIds.length > 0) {
     const [rawMatches, rawNotes, rawInteractions, rawDiscoveries] = await Promise.all([
@@ -317,10 +347,15 @@ export async function getGtmContacts(): Promise<GtmContactsReadModel> {
     }
   }
 
-  const contacts: GtmContactRow[] = rawContacts.map((contact) => ({
+  const contacts: GtmContactRow[] = rawContacts.map((contact) => {
+    const playerMaster = contact.player_master_gsis_id
+      ? (playerMasterByGsis.get(String(contact.player_master_gsis_id)) ?? null)
+      : null;
+    return ({
     id: contact.id as string,
     displayName: (contact.display_name as string | null)
       || [contact.first_name, contact.last_name].filter(Boolean).join(" ")
+      || playerMaster?.displayName
       || "Unnamed contact",
     firstName: contact.first_name as string | null,
     lastName: contact.last_name as string | null,
@@ -362,13 +397,15 @@ export async function getGtmContacts(): Promise<GtmContactsReadModel> {
     priorOutcome: contact.prior_outcome as string | null,
     relationshipSource: contact.relationship_source as string | null,
     nextTrigger: contact.next_trigger as string | null,
+    playerMaster,
     playerMatch: contact.contact_type === "athlete"
       ? (matchesByContact.get(contact.id as string) ?? null)
       : null,
     notes: notesByContact.get(contact.id as string) ?? [],
     interactions: interactionsByContact.get(contact.id as string) ?? [],
     discoveries: discoveriesByContact.get(contact.id as string) ?? [],
-  }));
+  });
+  });
 
   return { state: "ready", contacts, generatedAt };
 }
