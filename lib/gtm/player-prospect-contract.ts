@@ -11,12 +11,16 @@ export const GTM_PLAYER_PROSPECT_SORTS = [
 
 export type GtmPlayerProspectSort = (typeof GTM_PLAYER_PROSPECT_SORTS)[number];
 
+export const GTM_PLAYER_PROSPECT_VIEWS = ["all", "selected", "contacts"] as const;
+export type GtmPlayerProspectView = (typeof GTM_PLAYER_PROSPECT_VIEWS)[number];
+
 export interface GtmPlayerProspectFilters {
   search: string;
   college: string;
   team: string;
   position: string;
   status: string;
+  view: GtmPlayerProspectView;
   sort: GtmPlayerProspectSort;
   direction: "asc" | "desc";
   page: number;
@@ -37,6 +41,7 @@ export interface GtmPlayerProspectRow {
   yearsOfExperience: number | null;
   headshotUrl: string | null;
   selectedAt: string | null;
+  contactId: string | null;
 }
 
 export type GtmPlayerProspectsReadModel =
@@ -63,12 +68,14 @@ function parsePage(value: string | undefined) {
 
 export function parseGtmPlayerProspectFilters(input: Record<string, string | string[] | undefined>): GtmPlayerProspectFilters {
   const requestedSort = cleanText(typeof input.sort === "string" ? input.sort : undefined) as GtmPlayerProspectSort;
+  const requestedView = cleanText(typeof input.view === "string" ? input.view : undefined) as GtmPlayerProspectView;
   return {
     search: cleanText(typeof input.search === "string" ? input.search : undefined),
     college: cleanText(typeof input.college === "string" ? input.college : undefined, 120),
     team: cleanText(typeof input.team === "string" ? input.team : undefined, 20).toUpperCase(),
     position: cleanText(typeof input.position === "string" ? input.position : undefined, 30).toUpperCase(),
     status: cleanText(typeof input.status === "string" ? input.status : undefined, 40),
+    view: GTM_PLAYER_PROSPECT_VIEWS.includes(requestedView) ? requestedView : "all",
     sort: GTM_PLAYER_PROSPECT_SORTS.includes(requestedSort) ? requestedSort : "name",
     direction: input.direction === "desc" ? "desc" : "asc",
     page: parsePage(typeof input.page === "string" ? input.page : undefined),

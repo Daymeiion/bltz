@@ -6,6 +6,10 @@ import { z } from "zod";
 import {
   parseGtmCsv,
 } from "@/lib/gtm/import";
+import {
+  classifyGtmImportRow,
+  type GtmClassificationResult,
+} from "@/lib/gtm/classification";
 import { GTM_CSV_MAX_BYTES, GTM_IMPORT_FIELDS, type GtmFieldMapping, type NormalizedGtmImportRow } from "@/lib/gtm/import-contract";
 import { buildPlayerMatchReviewMap, type CanonicalPlayerCandidate, type PlayerMatchReview } from "@/lib/gtm/player-matching";
 import {
@@ -201,8 +205,8 @@ export interface GtmCsvPreview {
   idempotencyKey: string;
   headers: string[];
   mapping: GtmFieldMapping;
-  counts: { found: number; newContacts: number; existingContacts: number; updates: number; duplicate: number; matchedPlayers: number; possiblePlayerMatches: number; invalid: number };
-  sample: Array<Pick<NormalizedGtmImportRow, "rowNumber" | "displayName" | "email" | "currentCompany" | "contactType"> & { outcome: "create" | "update" | "skip"; playerMatchStatus: string | null }>;
+  counts: { found: number; newContacts: number; existingContacts: number; updates: number; duplicate: number; matchedPlayers: number; possiblePlayerMatches: number; automaticClassifications: number; needsReview: number; unclassified: number; invalid: number };
+  sample: Array<Pick<NormalizedGtmImportRow, "rowNumber" | "displayName" | "email" | "currentCompany"> & { contactType: string; segment: string | null; classificationStatus: string; classificationConfidence: number; outcome: "create" | "update" | "skip"; playerMatchStatus: string | null }>;
   playerReviews: PlayerMatchReview[];
   issues: Array<{ rowNumber: number; message: string }>;
 }
@@ -244,7 +248,7 @@ function parsePlayerMatchDecisions(value: FormDataEntryValue | null) {
   for (const [sourceRecordId, playerId] of Object.entries(candidate)) {
     if (!/^[a-f0-9]{64}$/.test(sourceRecordId)) continue;
     if (playerId === null) decisions.set(sourceRecordId, null);
-    else if (typeof playerId === "string" && z.string().uuid().safeParse(playerId).success) decisions.set(sourceRecordId, playerId);
+    else if (typeof playerId === "string" && /^[A-Za-z0-9._-]{1,128}$/.test(playerId)) decisions.set(sourceRecordId, playerId);
   }
   return decisions;
 }
@@ -309,33 +313,105 @@ async function analyzeExisting(gtm: SupabaseClient, rows: NormalizedGtmImportRow
 }
 
 async function findPlayerMatchReviews(gtm: SupabaseClient, rows: NormalizedGtmImportRow[]) {
-  const athleteRows = rows.filter((row) => row.contactType === "athlete");
-  const playersById = new Map<string, CanonicalPlayerCandidate>();
-  for (let offset = 0; offset < athleteRows.length; offset += 75) {
-    const names = [...new Set(athleteRows.slice(offset, offset + 75).map((row) => row.displayName))];
-    const results = await Promise.all([
-      gtm.from("players").select("id,name,full_name,display_name,team,school,college,position,level").in("name", names),
-      gtm.from("players").select("id,name,full_name,display_name,team,school,college,position,level").in("full_name", names),
-      gtm.from("players").select("id,name,full_name,display_name,team,school,college,position,level").in("display_name", names),
-    ]);
-    for (const result of results) {
-      if (result.error) continue;
-      for (const player of result.data ?? []) {
-        playersById.set(String(player.id), {
-          id: String(player.id),
-          name: player.name as string | null,
-          fullName: player.full_name as string | null,
-          displayName: player.display_name as string | null,
-          team: player.team as string | null,
-          school: player.school as string | null,
-          college: player.college as string[] | null,
-          position: player.position as string | null,
-          level: player.level as string | null,
-        });
-      }
+  const names = [...new Set(rows.map((row) => row.displayName).filter(Boolean))];
+  const playersByGsis = new Map<string, CanonicalPlayerCandidate>();
+  for (let offset = 0; offset < names.length; offset += 250) {
+    const { data, error } = await gtm.rpc("get_gtm_player_match_candidates", {
+      p_display_names: names.slice(offset, offset + 250),
+    });
+    if (error) throw error;
+    for (const player of data ?? []) {
+      playersByGsis.set(String(player.gsis_id), {
+        gsisId: String(player.gsis_id),
+        playerId: player.player_id ? String(player.player_id) : null,
+        displayName: String(player.display_name),
+        team: player.latest_team ? String(player.latest_team) : null,
+        college: player.college_name ? String(player.college_name) : null,
+        position: player.player_position ? String(player.player_position) : null,
+        status: player.status ? String(player.status) : null,
+      });
     }
   }
-  return buildPlayerMatchReviewMap(rows, [...playersById.values()]);
+  return buildPlayerMatchReviewMap(rows, [...playersByGsis.values()]);
+}
+
+type PreparedGtmImportRow = Omit<NormalizedGtmImportRow, "contactType"> &
+  GtmClassificationResult & {
+    playerMasterGsisId: string | null;
+    playerId: string | null;
+    playerMatchType: string | null;
+    playerMatchConfidence: number | null;
+    playerMatchVerified: boolean;
+    identityReviewStatus: "clear" | "possible" | "ambiguous" | "rejected" | "manual_verified";
+    identityReviewReason: string | null;
+  };
+
+function prepareImportRows(
+  rows: NormalizedGtmImportRow[],
+  reviews: Map<string, PlayerMatchReview>,
+  decisions?: Map<string, string | null>,
+): PreparedGtmImportRow[] {
+  return rows.map((row) => {
+    const review = reviews.get(row.sourceRecordId);
+    const hasDecision = decisions?.has(row.sourceRecordId) === true;
+    const selectedGsisId = hasDecision
+      ? decisions?.get(row.sourceRecordId)
+      : review?.strength === "strong" ? review.candidates.find((candidate) => candidate.matchType !== "name_only")?.id : null;
+    const match = selectedGsisId
+      ? review?.candidates.find((candidate) => candidate.id === selectedGsisId)
+      : null;
+    if (selectedGsisId && !match) throw new Error(`Player match review for ${row.displayName} is no longer valid. Preview the import again.`);
+    const classification = classifyGtmImportRow(row, {
+      matched: Boolean(review),
+      strong: Boolean(match),
+      status: match?.status,
+      team: match?.team,
+      college: match?.school,
+    });
+    const manualPlayerVerification = Boolean(hasDecision && match);
+    return {
+      ...row,
+      ...classification,
+      classificationSource: manualPlayerVerification ? "manual_player_match" : classification.classificationSource,
+      classificationConfidence: manualPlayerVerification ? 1 : classification.classificationConfidence,
+      classificationStatus: manualPlayerVerification ? "manual_verified" : classification.classificationStatus,
+      classificationReasons: manualPlayerVerification
+        ? [...classification.classificationReasons, "Founder verified the Player Master match during import"]
+        : classification.classificationReasons,
+      playerMasterGsisId: match?.id ?? null,
+      playerId: match?.playerId ?? null,
+      playerMatchType: manualPlayerVerification ? "manual" : match?.matchType ?? null,
+      playerMatchConfidence: manualPlayerVerification ? 1 : match?.confidence ?? null,
+      playerMatchVerified: manualPlayerVerification,
+      identityReviewStatus: !review || review.strength === "strong"
+        ? "clear"
+        : hasDecision ? (match ? "manual_verified" : "rejected") : review.strength,
+      identityReviewReason: review
+        ? `${review.strength} Player Master name match${hasDecision && !match ? " rejected during import review" : ""}`
+        : null,
+    };
+  });
+}
+
+const FOUNDER_LOCK_FIELDS = [
+  ["display_name", "displayName"], ["first_name", "firstName"],
+  ["last_name", "lastName"], ["email", "email"], ["phone", "phone"],
+  ["linkedin_url", "linkedinUrl"], ["current_company", "currentCompany"],
+  ["current_title", "currentTitle"], ["contact_type", "contactType"],
+  ["segment", "segment"], ["sport", "sport"],
+  ["league_level", "leagueLevel"], ["geography", "geography"],
+  ["relationship_strength", "relationshipStrength"],
+  ["bltz_relevance", "bltzRelevance"], ["buying_authority", "buyingAuthority"],
+  ["network_leverage", "networkLeverage"], ["timing_score", "timingScore"],
+] as const;
+
+function founderFieldLocks(value: Record<string, unknown>) {
+  return FOUNDER_LOCK_FIELDS.flatMap(([column, key]) => {
+    const fieldValue = value[key];
+    if (key === "contactType" && fieldValue === "unclassified") return [];
+    if (fieldValue == null || (typeof fieldValue === "string" && fieldValue.trim() === "")) return [];
+    return [column];
+  });
 }
 
 function refreshGtmPaths() {
@@ -484,9 +560,14 @@ export async function createGtmContact(input: unknown): Promise<GtmMutationResul
       ? "Contact intake is not available until the GTM intake migration is deployed."
       : duplicate ? "A contact with that LinkedIn URL or source identity already exists." : "The contact could not be created. Try again." };
   }
+  const created = Array.isArray(data) ? data[0] : data;
+  const { error: verificationError } = await gtm.rpc("mark_gtm_contact_manual_verification", {
+    p_contact_id: created.id,
+    p_fields: founderFieldLocks(value),
+  });
+  if (verificationError) return { ok: false, code: "failed", message: "The contact was created, but its founder-data protection could not be applied. Refresh before editing or importing." };
   refreshGtmPaths();
-  const row = Array.isArray(data) ? data[0] : data;
-  return { ok: true, value: { id: String(row.id) } };
+  return { ok: true, value: { id: String(created.id) } };
 }
 
 export async function editGtmContact(input: unknown): Promise<GtmMutationResult<{ priorityScore: number | null; priorityTier: string | null }>> {
@@ -538,6 +619,11 @@ export async function editGtmContact(input: unknown): Promise<GtmMutationResult<
     return { ok: false, code: "failed", message: duplicate ? "Another active contact already uses that LinkedIn URL." : "The contact could not be updated. Try again." };
   }
   const row = Array.isArray(data) ? data[0] : data;
+  const { error: verificationError } = await gtm.rpc("mark_gtm_contact_manual_verification", {
+    p_contact_id: value.contactId,
+    p_fields: founderFieldLocks(value),
+  });
+  if (verificationError) return { ok: false, code: "failed", message: "The contact changed, but its founder-data protection could not be applied. Refresh before importing." };
   refreshGtmPaths();
   return { ok: true, value: {
     priorityScore: row.priority_score == null ? null : Number(row.priority_score),
@@ -744,9 +830,18 @@ export async function previewGtmCsv(formData: FormData): Promise<GtmMutationResu
     }
     const idempotencyKey = crypto.randomUUID();
     const mapping = { ...parsed.suggestedMapping, ...parseMapping(formData.get("mapping")) };
-    const reviews = [...playerReviews.values()];
+    const acceptedRows = parsed.rows.filter((row) => outcomes.get(row.sourceRecordId) !== "skip");
+    const acceptedReviews = new Map(
+      [...playerReviews].filter(([sourceRecordId]) => outcomes.get(sourceRecordId) !== "skip"),
+    );
+    const reviews = [...acceptedReviews.values()];
+    const preparedRows = prepareImportRows(acceptedRows, acceptedReviews);
+    const sampleRows = prepareImportRows(parsed.rows, playerReviews);
     const matchedPlayers = reviews.filter((review) => review.strength === "strong").length;
     const possiblePlayerMatches = reviews.length - matchedPlayers;
+    const automaticClassifications = preparedRows.filter((row) => row.classificationStatus === "auto_classified").length;
+    const needsReview = preparedRows.filter((row) => row.classificationStatus === "needs_review").length;
+    const unclassified = preparedRows.filter((row) => row.classificationStatus === "unclassified").length;
     const counts = {
       found: parsed.rows.length + parsed.issues.length + parsed.duplicateCount,
       newContacts: create,
@@ -755,12 +850,21 @@ export async function previewGtmCsv(formData: FormData): Promise<GtmMutationResu
       duplicate: parsed.duplicateCount + collision,
       matchedPlayers,
       possiblePlayerMatches,
+      automaticClassifications,
+      needsReview,
+      unclassified,
       invalid: parsed.issues.length,
     };
-    const previewSummary = { valid: create + update, invalid: counts.invalid, duplicates: counts.duplicate, potentialMatches: reviews.length };
-    const previewRows = parsed.rows
-      .filter((row) => outcomes.get(row.sourceRecordId) !== "skip")
-      .map(({ rowNumber: _rowNumber, ...row }) => row);
+    const previewRows = preparedRows.map(({ rowNumber: _rowNumber, ...row }) => row);
+    const previewSummary = {
+      valid: create + update,
+      invalid: counts.invalid,
+      duplicates: counts.duplicate,
+      potentialMatches: reviews.length,
+      automaticClassifications: previewRows.filter((row) => row.classificationStatus === "auto_classified").length,
+      needsReview: previewRows.filter((row) => row.classificationStatus === "needs_review").length,
+      unclassified: previewRows.filter((row) => row.classificationStatus === "unclassified").length,
+    };
     const { error: prepareError } = await gtm.rpc("prepare_gtm_import_job_v2", {
       p_filename: file.name,
       p_import_type: "linkedin_connections",
@@ -781,12 +885,15 @@ export async function previewGtmCsv(formData: FormData): Promise<GtmMutationResu
       headers: parsed.headers,
       mapping,
       counts,
-      sample: parsed.rows.slice(0, 50).map((row) => ({
+      sample: sampleRows.slice(0, 50).map((row) => ({
         rowNumber: row.rowNumber,
         displayName: row.displayName,
         email: row.email,
         currentCompany: row.currentCompany,
         contactType: row.contactType,
+        segment: row.segment,
+        classificationStatus: row.classificationStatus,
+        classificationConfidence: row.classificationConfidence,
         outcome: outcomes.get(row.sourceRecordId) ?? "create",
         playerMatchStatus: playerReviews.get(row.sourceRecordId)?.strength ?? null,
       })),
@@ -810,36 +917,36 @@ export async function commitGtmCsv(formData: FormData): Promise<GtmMutationResul
     const gtm = authorization.supabase as unknown as SupabaseClient;
     const [existing, playerReviews] = await Promise.all([analyzeExisting(gtm, parsed.rows), findPlayerMatchReviews(gtm, parsed.rows)]);
     const accepted = parsed.rows.filter((row) => existingOutcome(existing, row) !== "skip");
+    const acceptedSourceIds = new Set(accepted.map((row) => row.sourceRecordId));
+    const acceptedReviews = new Map(
+      [...playerReviews].filter(([sourceRecordId]) => acceptedSourceIds.has(sourceRecordId)),
+    );
     const collisionCount = parsed.rows.length - accepted.length;
     const mapping = { ...parsed.suggestedMapping, ...parseMapping(formData.get("mapping")) };
-    const previewSummary = { valid: accepted.length, invalid: parsed.issues.length, duplicates: parsed.duplicateCount + collisionCount, potentialMatches: playerReviews.size };
     const matchDecisions = parsePlayerMatchDecisions(formData.get("playerMatchDecisions"));
-    for (const review of playerReviews.values()) {
+    for (const review of acceptedReviews.values()) {
       if (review.strength !== "strong" && !matchDecisions.has(review.sourceRecordId)) {
         throw new Error(`Review or reject the possible Player match for ${review.displayName} before importing.`);
       }
     }
-    const { data, error } = await gtm.rpc("import_gtm_contacts", {
+    const preparedRows = prepareImportRows(accepted, acceptedReviews, matchDecisions);
+    const previewClassificationRows = prepareImportRows(accepted, acceptedReviews);
+    const previewSummary = {
+      valid: accepted.length,
+      invalid: parsed.issues.length,
+      duplicates: parsed.duplicateCount + collisionCount,
+      potentialMatches: acceptedReviews.size,
+      automaticClassifications: previewClassificationRows.filter((row) => row.classificationStatus === "auto_classified").length,
+      needsReview: previewClassificationRows.filter((row) => row.classificationStatus === "needs_review").length,
+      unclassified: previewClassificationRows.filter((row) => row.classificationStatus === "unclassified").length,
+    };
+    const { data, error } = await gtm.rpc("import_gtm_contacts_v2", {
       p_filename: file.name,
       p_content_sha256: parsed.contentSha256,
       p_idempotency_key: idempotencyKey,
       p_field_mapping: mapping,
       p_preview_summary: previewSummary,
-      p_rows: accepted.map(({ rowNumber: _rowNumber, ...row }) => {
-        const review = playerReviews.get(row.sourceRecordId);
-        const hasDecision = matchDecisions.has(row.sourceRecordId);
-        const selectedId = hasDecision
-          ? matchDecisions.get(row.sourceRecordId)
-          : review?.strength === "strong" ? review.candidates[0]?.id : null;
-        const match = selectedId ? review?.candidates.find((candidate) => candidate.id === selectedId) : null;
-        if (selectedId && !match) throw new Error(`Player match review for ${row.displayName} is no longer valid. Preview the import again.`);
-        return {
-          ...row,
-          playerId: match?.id ?? null,
-          playerMatchType: hasDecision && match ? "manual" : match?.matchType ?? null,
-          playerMatchConfidence: hasDecision && match ? 1 : match?.confidence ?? null,
-        };
-      }),
+      p_rows: preparedRows.map(({ rowNumber: _rowNumber, ...row }) => row),
       p_duplicate_count: parsed.duplicateCount + collisionCount,
       p_invalid_count: parsed.issues.length,
     });

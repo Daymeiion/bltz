@@ -37,12 +37,21 @@ export async function getGtmPlayerProspects(
   const start = (filters.page - 1) * GTM_PLAYER_PROSPECT_PAGE_SIZE;
   const end = start + GTM_PLAYER_PROSPECT_PAGE_SIZE - 1;
 
-  let query = supabase
+  const relationshipProjection = filters.view === "selected"
+    ? ",gtm_player_prospects!inner(selected_at,archived)"
+    : filters.view === "contacts"
+      ? ",gtm_contacts!inner(id,archived)"
+      : "";
+
+  let query = gtm
     .from("nfl_players")
     .select(
-      "gsis_id,display_name,first_name,last_name,college_name,college_conference,latest_team,position,status,rookie_season,last_season,years_of_experience,headshot_url",
+      `gsis_id,display_name,first_name,last_name,college_name,college_conference,latest_team,position,status,rookie_season,last_season,years_of_experience,headshot_url${relationshipProjection}`,
       { count: "exact" },
     );
+
+  if (filters.view === "selected") query = query.eq("gtm_player_prospects.archived", false);
+  if (filters.view === "contacts") query = query.eq("gtm_contacts.archived", false);
 
   if (filters.search) {
     query = query.or(`display_name.ilike.%${filters.search}%,first_name.ilike.%${filters.search}%,last_name.ilike.%${filters.search}%`);
@@ -66,23 +75,28 @@ export async function getGtmPlayerProspects(
     throw new Error(`gtm_player_prospects_query_failed:${error.code ?? "unknown"}`);
   }
 
-  const sourceRows = data ?? [];
-  const gsisIds = sourceRows.map((row) => row.gsis_id);
+  const sourceRows = (data ?? []) as unknown as Record<string, unknown>[];
+  const gsisIds = sourceRows.map((row) => String(row.gsis_id));
   const selectionsByGsis = new Map<string, string>();
+  const contactsByGsis = new Map<string, string>();
   if (gsisIds.length > 0) {
-    const { data: selections, error: selectionsError } = await gtm
-      .from("gtm_player_prospects")
-      .select("gsis_id,selected_at")
-      .eq("archived", false)
-      .in("gsis_id", gsisIds);
-    if (selectionsError) {
+    const [{ data: selections, error: selectionsError }, { data: contacts, error: contactsError }] = await Promise.all([
+      gtm.from("gtm_player_prospects").select("gsis_id,selected_at").eq("archived", false).in("gsis_id", gsisIds),
+      gtm.from("gtm_contacts").select("id,player_master_gsis_id").eq("archived", false).in("player_master_gsis_id", gsisIds),
+    ]);
+    if (selectionsError && !isMissingRelation(selectionsError)) {
       if (isPermissionDenied(selectionsError)) return { state: "restricted", rows: [], total: 0, filters };
-      if (!isMissingRelation(selectionsError)) {
-        throw new Error(`gtm_player_prospect_selections_query_failed:${selectionsError.code ?? "unknown"}`);
-      }
+      throw new Error(`gtm_player_prospect_selections_query_failed:${selectionsError.code ?? "unknown"}`);
+    }
+    if (contactsError && !isMissingRelation(contactsError)) {
+      if (isPermissionDenied(contactsError)) return { state: "restricted", rows: [], total: 0, filters };
+      throw new Error(`gtm_player_prospect_contacts_query_failed:${contactsError.code ?? "unknown"}`);
     }
     for (const selection of selections ?? []) {
-      selectionsByGsis.set(selection.gsis_id, selection.selected_at);
+      selectionsByGsis.set(String(selection.gsis_id), String(selection.selected_at));
+    }
+    for (const contact of contacts ?? []) {
+      contactsByGsis.set(String(contact.player_master_gsis_id), String(contact.id));
     }
   }
 
@@ -91,20 +105,21 @@ export async function getGtmPlayerProspects(
   return {
     state: "ready",
     rows: sourceRows.map((row) => ({
-      gsisId: row.gsis_id,
-      displayName: row.display_name,
-      firstName: row.first_name,
-      lastName: row.last_name,
-      collegeName: row.college_name,
-      collegeConference: row.college_conference,
-      latestTeam: row.latest_team,
-      position: row.position,
-      status: row.status,
-      rookieSeason: row.rookie_season,
-      lastSeason: row.last_season,
-      yearsOfExperience: row.years_of_experience,
-      headshotUrl: row.headshot_url,
-      selectedAt: selectionsByGsis.get(row.gsis_id) ?? null,
+      gsisId: String(row.gsis_id),
+      displayName: String(row.display_name),
+      firstName: row.first_name == null ? null : String(row.first_name),
+      lastName: row.last_name == null ? null : String(row.last_name),
+      collegeName: row.college_name == null ? null : String(row.college_name),
+      collegeConference: row.college_conference == null ? null : String(row.college_conference),
+      latestTeam: row.latest_team == null ? null : String(row.latest_team),
+      position: row.position == null ? null : String(row.position),
+      status: row.status == null ? null : String(row.status),
+      rookieSeason: row.rookie_season == null ? null : Number(row.rookie_season),
+      lastSeason: row.last_season == null ? null : Number(row.last_season),
+      yearsOfExperience: row.years_of_experience == null ? null : Number(row.years_of_experience),
+      headshotUrl: row.headshot_url == null ? null : String(row.headshot_url),
+      selectedAt: selectionsByGsis.get(String(row.gsis_id)) ?? null,
+      contactId: contactsByGsis.get(String(row.gsis_id)) ?? null,
     })),
     total,
     page: Math.min(filters.page, pageCount),

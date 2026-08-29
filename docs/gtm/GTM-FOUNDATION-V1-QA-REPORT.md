@@ -205,3 +205,16 @@ No LinkedIn contacts were committed during deployment. Live CSV import remains a
 ### Current gate recommendation
 
 **PASS for production application merge. The production database contracts are present, Player Master is preserved, authorization smoke checks pass, and the application may now deploy from the audited pull request.**
+
+## Player promotion correction — 2026-08-28
+
+The earlier release intentionally stopped at a reference-only selected cohort. Migration `20260828215242` and its paired Admin workflow now add a separate, explicit promotion step:
+
+1. Player Master filtering builds the selected prospect cohort.
+2. The **Selected prospects** view shows that persistent cohort.
+3. **Add to Contacts** promotes one or up to 100 selected prospects into operational GTM Contacts.
+4. The **Added contacts** view links directly to the contact drawer for classification, relationship scoring, notes, interactions, discovery, follow-up, and stage management.
+
+Promotion stores only the stable GSIS reference and GTM workflow metadata. Canonical name, college, team, position, and status remain in Player Master. Exact GSIS matches link an existing Locker Player; the workflow never creates or duplicates a Player.
+
+Correction gates: 380 tests passed with 24 existing environment-dependent skips; TypeScript and targeted ESLint passed; the Next.js 16.3.1 webpack production build compiled all 85 routes/pages. Production database application and live RBAC smoke verification remain required before this correction is considered released.

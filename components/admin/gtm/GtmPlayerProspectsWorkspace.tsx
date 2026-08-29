@@ -14,7 +14,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { selectPlayerMasterProspects } from "@/app/admin/gtm/players/actions";
+import { promotePlayerMasterProspects, selectPlayerMasterProspects } from "@/app/admin/gtm/players/actions";
 import { GtmNavigation } from "@/components/admin/gtm/GtmNavigation";
 import {
   GTM_PLAYER_PROSPECT_SORTS,
@@ -38,6 +38,7 @@ function pageHref(model: Extract<GtmPlayerProspectsReadModel, { state: "ready" }
   if (filters.team) parameters.set("team", filters.team);
   if (filters.position) parameters.set("position", filters.position);
   if (filters.status) parameters.set("status", filters.status);
+  if (filters.view !== "all") parameters.set("view", filters.view);
   if (filters.sort !== "name") parameters.set("sort", filters.sort);
   if (filters.direction !== "asc") parameters.set("direction", filters.direction);
   if (page > 1) parameters.set("page", String(page));
@@ -70,7 +71,9 @@ export function GtmPlayerProspectsWorkspace({ data }: { data: GtmPlayerProspects
   const [pending, startPromotion] = useTransition();
   const [notice, setNotice] = useState<string | null>(null);
 
-  const availableIds = data.rows.filter((row) => !row.selectedAt).map((row) => row.gsisId);
+  const availableIds = data.state === "ready"
+    ? data.rows.filter((row) => data.filters.view === "selected" ? !row.contactId : !row.selectedAt).map((row) => row.gsisId)
+    : [];
   const allAvailableSelected = availableIds.length > 0 && availableIds.every((id) => selected.has(id));
 
   const togglePlayer = (gsisId: string, checked: boolean) => {
@@ -100,6 +103,25 @@ export function GtmPlayerProspectsWorkspace({ data }: { data: GtmPlayerProspects
     });
   };
 
+  const promoteProspects = (gsisIds: string[]) => {
+    setNotice(null);
+    startPromotion(async () => {
+      const result = await promotePlayerMasterProspects({ gsisIds });
+      if (!result.ok) {
+        setNotice(result.message);
+        return;
+      }
+      setSelected(new Set());
+      setNotice(`${result.createdCount.toLocaleString()} contact${result.createdCount === 1 ? "" : "s"} added to GTM${result.existingCount ? `; ${result.existingCount.toLocaleString()} already existed` : ""}. ${result.linkedPlayerCount.toLocaleString()} exact canonical Player match${result.linkedPlayerCount === 1 ? "" : "es"} verified.`);
+      router.refresh();
+    });
+  };
+
+  const runPrimaryAction = (gsisIds: string[]) => {
+    if (data.state === "ready" && data.filters.view === "selected") promoteProspects(gsisIds);
+    else selectProspects(gsisIds);
+  };
+
   return (
     <main className="mx-auto min-h-screen max-w-[1600px] px-4 py-8 text-neutral-950 sm:px-8 dark:text-white">
       <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
@@ -119,7 +141,7 @@ export function GtmPlayerProspectsWorkspace({ data }: { data: GtmPlayerProspects
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="font-mono text-2xl font-semibold">{data.total.toLocaleString()}</p>
-                <h2 id="player-prospect-filters" className="text-sm font-semibold text-neutral-600 dark:text-neutral-300">Player Master results</h2>
+                <h2 id="player-prospect-filters" className="text-sm font-semibold text-neutral-600 dark:text-neutral-300">{data.filters.view === "all" ? "Player Master results" : data.filters.view === "selected" ? "Selected prospect cohort" : "Players added to GTM Contacts"}</h2>
               </div>
               <p className="max-w-lg text-xs leading-5 text-neutral-500">College uses a contains match, so “California” can find school names containing California. Team and position use exact abbreviations.</p>
             </div>
@@ -137,19 +159,24 @@ export function GtmPlayerProspectsWorkspace({ data }: { data: GtmPlayerProspects
                 <Link href="/admin/gtm/players" className={secondaryButton}>Reset</Link>
               </div>
             </form>
+            <nav className="mt-4 flex flex-wrap gap-2 border-t border-neutral-200 pt-4 dark:border-neutral-800" aria-label="Player GTM workflow views">
+              {[["all", "All Player Master"], ["selected", "Selected prospects"], ["contacts", "Added contacts"]].map(([view, text]) => (
+                <Link key={view} href={`/admin/gtm/players${view === "all" ? "" : `?view=${view}`}`} className={cn(secondaryButton, data.filters.view === view && "border-neutral-950 bg-neutral-950 text-white dark:border-white dark:bg-white dark:text-neutral-950")}>{text}</Link>
+              ))}
+            </nav>
           </section>
 
           {notice && <p role="status" aria-live="polite" className="mt-4 rounded-xl border border-neutral-300 bg-white px-4 py-3 text-sm dark:border-neutral-700 dark:bg-neutral-900">{notice}</p>}
 
           <section className="mt-4 overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-900" aria-label="Player prospect results">
             <div className="flex flex-col gap-3 border-b border-neutral-200 p-4 sm:flex-row sm:items-center sm:justify-between dark:border-neutral-800">
-              <label className="inline-flex min-h-11 items-center gap-3 text-sm font-semibold">
+              {data.filters.view !== "contacts" && <label className="inline-flex min-h-11 items-center gap-3 text-sm font-semibold">
                 <input type="checkbox" checked={allAvailableSelected} disabled={availableIds.length === 0 || pending} onChange={(event) => togglePage(event.target.checked)} className="h-4 w-4" />
-                Select available players on this page
-              </label>
-              <button type="button" onClick={() => selectProspects([...selected])} disabled={selected.size === 0 || pending} className={primaryButton}>
-                <IconUserPlus className="h-4 w-4" />{pending ? "Saving cohort…" : `Select ${selected.size || "players"} for GTM`}
-              </button>
+                {data.filters.view === "selected" ? "Select prospects to add to Contacts" : "Select available players on this page"}
+              </label>}
+              {data.filters.view !== "contacts" ? <button type="button" onClick={() => runPrimaryAction([...selected])} disabled={selected.size === 0 || pending} className={primaryButton}>
+                <IconUserPlus className="h-4 w-4" />{pending ? "Saving…" : data.filters.view === "selected" ? `Add ${selected.size || "players"} to Contacts` : `Add ${selected.size || "players"} to prospect cohort`}
+              </button> : <Link href="/admin/gtm/contacts" className={primaryButton}><IconAddressBook className="h-4 w-4" />Open Contacts</Link>}
             </div>
 
             {data.rows.length === 0 ? (
@@ -165,9 +192,11 @@ export function GtmPlayerProspectsWorkspace({ data }: { data: GtmPlayerProspects
                   <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
                     {data.rows.map((player) => {
                       const added = Boolean(player.selectedAt);
+                      const promoted = Boolean(player.contactId);
+                      const selectable = data.filters.view === "selected" ? !promoted : !added;
                       return (
                         <tr key={player.gsisId} className="hover:bg-neutral-50/80 dark:hover:bg-neutral-800/50">
-                          <td className="px-4 py-3"><input type="checkbox" aria-label={`Select ${player.displayName}`} checked={selected.has(player.gsisId)} disabled={added || pending} onChange={(event) => togglePlayer(player.gsisId, event.target.checked)} className="h-4 w-4" /></td>
+                          <td className="px-4 py-3">{data.filters.view !== "contacts" && <input type="checkbox" aria-label={`Select ${player.displayName}`} checked={selected.has(player.gsisId)} disabled={!selectable || pending} onChange={(event) => togglePlayer(player.gsisId, event.target.checked)} className="h-4 w-4" />}</td>
                           <td className="px-3 py-3"><p className="font-semibold">{player.displayName}</p><p className="mt-1 font-mono text-[11px] text-neutral-500">{player.gsisId}</p></td>
                           <td className="px-3 py-3"><p>{player.collegeName ?? "Not recorded"}</p>{player.collegeConference && <p className="mt-1 text-xs text-neutral-500">{player.collegeConference}</p>}</td>
                           <td className="px-3 py-3 font-semibold">{player.latestTeam ?? "—"}</td>
@@ -175,7 +204,7 @@ export function GtmPlayerProspectsWorkspace({ data }: { data: GtmPlayerProspects
                           <td className="px-3 py-3"><p>{player.yearsOfExperience == null ? "Experience unknown" : `${player.yearsOfExperience} ${player.yearsOfExperience === 1 ? "year" : "years"}`}</p><p className="mt-1 text-xs text-neutral-500">{player.rookieSeason ?? "?"}–{player.lastSeason ?? "present"}</p></td>
                           <td className="px-3 py-3">{player.status ? label(player.status) : "Not recorded"}</td>
                           <td className="px-4 py-3 text-right">
-                            {player.selectedAt ? <span className={secondaryButton}><IconCheck className="h-4 w-4" />Selected prospect</span> : <button type="button" onClick={() => selectProspects([player.gsisId])} disabled={pending} className={secondaryButton}><IconAddressBook className="h-4 w-4" />Select prospect</button>}
+                            {promoted ? <Link href={`/admin/gtm/contacts?contact=${player.contactId}`} className={secondaryButton}><IconCheck className="h-4 w-4" />Open contact</Link> : added ? <button type="button" onClick={() => promoteProspects([player.gsisId])} disabled={pending} className={secondaryButton}><IconUserPlus className="h-4 w-4" />Add to Contacts</button> : <button type="button" onClick={() => selectProspects([player.gsisId])} disabled={pending} className={secondaryButton}><IconAddressBook className="h-4 w-4" />Add to cohort</button>}
                           </td>
                         </tr>
                       );

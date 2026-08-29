@@ -1312,13 +1312,18 @@ export type Database = {
           archived: boolean
           bltz_relevance: number | null
           buying_authority: number | null
+          classification_confidence: number | null
+          classification_locked: boolean
+          classification_reasons: string[]
+          classification_source: string | null
+          classification_status: string
           contact_type: string
           contact_type_other: string | null
           created_at: string
           created_by: string
           current_company: string | null
           current_title: string | null
-          display_name: string
+          display_name: string | null
           do_not_automate: boolean
           email: string | null
           first_name: string | null
@@ -1343,10 +1348,12 @@ export type Database = {
           organization_id: string | null
           phone: string | null
           pipeline_stage: string
+          player_master_gsis_id: string | null
           potential_roles: string[] | null
           prior_outcome: string | null
           priority_model: string | null
           priority_score: number | null
+          priority_score_explanation: Json | null
           priority_tier: string | null
           relationship_context: string | null
           relationship_objective: string | null
@@ -1357,6 +1364,10 @@ export type Database = {
           source: string | null
           source_record_id: string | null
           sport: string | null
+          personas: string[]
+          manual_field_locks: string[]
+          identity_review_reason: string | null
+          identity_review_status: string
           timing_score: number | null
           updated_at: string
           updated_by: string | null
@@ -1366,13 +1377,18 @@ export type Database = {
           archived?: boolean
           bltz_relevance?: number | null
           buying_authority?: number | null
+          classification_confidence?: number | null
+          classification_locked?: boolean
+          classification_reasons?: string[]
+          classification_source?: string | null
+          classification_status?: string
           contact_type?: string
           contact_type_other?: string | null
           created_at?: string
           created_by: string
           current_company?: string | null
           current_title?: string | null
-          display_name: string
+          display_name?: string | null
           do_not_automate?: boolean
           email?: string | null
           first_name?: string | null
@@ -1397,10 +1413,12 @@ export type Database = {
           organization_id?: string | null
           phone?: string | null
           pipeline_stage?: string
+          player_master_gsis_id?: string | null
           potential_roles?: string[] | null
           prior_outcome?: string | null
           priority_model?: string | null
           priority_score?: number | null
+          priority_score_explanation?: Json | null
           priority_tier?: string | null
           relationship_context?: string | null
           relationship_objective?: string | null
@@ -1411,6 +1429,10 @@ export type Database = {
           source?: string | null
           source_record_id?: string | null
           sport?: string | null
+          personas?: string[]
+          manual_field_locks?: string[]
+          identity_review_reason?: string | null
+          identity_review_status?: string
           timing_score?: number | null
           updated_at?: string
           updated_by?: string | null
@@ -1420,6 +1442,11 @@ export type Database = {
           archived?: boolean
           bltz_relevance?: number | null
           buying_authority?: number | null
+          classification_confidence?: number | null
+          classification_locked?: boolean
+          classification_reasons?: string[]
+          classification_source?: string | null
+          classification_status?: string
           contact_type?: string
           contact_type_other?: string | null
           created_at?: string
@@ -1451,10 +1478,12 @@ export type Database = {
           organization_id?: string | null
           phone?: string | null
           pipeline_stage?: string
+          player_master_gsis_id?: string | null
           potential_roles?: string[] | null
           prior_outcome?: string | null
           priority_model?: string | null
           priority_score?: number | null
+          priority_score_explanation?: Json | null
           priority_tier?: string | null
           relationship_context?: string | null
           relationship_objective?: string | null
@@ -1465,12 +1494,23 @@ export type Database = {
           source?: string | null
           source_record_id?: string | null
           sport?: string | null
+          personas?: string[]
+          manual_field_locks?: string[]
+          identity_review_reason?: string | null
+          identity_review_status?: string
           timing_score?: number | null
           updated_at?: string
           updated_by?: string | null
           what_they_need_to_see?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "gtm_contacts_player_master_gsis_id_fkey"
+            columns: ["player_master_gsis_id"]
+            isOneToOne: false
+            referencedRelation: "nfl_players"
+            referencedColumns: ["gsis_id"]
+          },
           {
             foreignKeyName: "gtm_contacts_organization_id_fkey"
             columns: ["organization_id"]
@@ -4881,7 +4921,33 @@ export type Database = {
       }
       get_gtm_foundation_metrics: { Args: { p_since?: string }; Returns: Json }
       get_gtm_metrics_v1: { Args: { p_since?: string }; Returns: Json }
+      get_gtm_network_metrics_v1: { Args: never; Returns: Json }
+      get_gtm_player_match_candidates: {
+        Args: { p_display_names: string[] }
+        Returns: {
+          college_name: string | null
+          display_name: string
+          gsis_id: string
+          latest_team: string | null
+          player_id: string | null
+          player_position: string | null
+          status: string | null
+        }[]
+      }
       gtm_import_rows_sha256: { Args: { p_rows: Json }; Returns: string }
+      import_gtm_contacts_v2: {
+        Args: {
+          p_content_sha256: string
+          p_duplicate_count?: number
+          p_field_mapping: Json
+          p_filename: string
+          p_idempotency_key: string
+          p_invalid_count?: number
+          p_preview_summary: Json
+          p_rows: Json
+        }
+        Returns: Database["public"]["Tables"]["gtm_import_jobs"]["Row"]
+      }
       import_gtm_contacts: {
         Args: {
           p_content_sha256: string
@@ -4926,6 +4992,10 @@ export type Database = {
         }
       }
       is_internal_admin: { Args: never; Returns: boolean }
+      mark_gtm_contact_manual_verification: {
+        Args: { p_contact_id: string; p_fields: string[] }
+        Returns: Database["public"]["Tables"]["gtm_contacts"]["Row"]
+      }
       log_gtm_interaction: {
         Args: {
           p_contact_id: string
