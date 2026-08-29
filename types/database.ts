@@ -406,7 +406,8 @@ export interface GtmContact {
   id: string;
   first_name: string | null;
   last_name: string | null;
-  display_name: string;
+  display_name: string | null;
+  player_master_gsis_id: string | null;
   linkedin_url: string | null;
   email: string | null;
   phone: string | null;
@@ -426,6 +427,7 @@ export interface GtmContact {
   timing_score: number | null;
   priority_score: number | null;
   priority_tier: GtmPriorityTier | null;
+  priority_score_explanation: Json | null;
   priority_model: "enterprise_v1" | null;
   pipeline_stage: GtmPipelineStage;
   source: string | null;
@@ -446,6 +448,15 @@ export interface GtmContact {
   prior_outcome: string | null;
   relationship_source: string | null;
   next_trigger: string | null;
+  personas: string[];
+  classification_source: string | null;
+  classification_confidence: number | null;
+  classification_status: "auto_classified" | "manual_verified" | "needs_review" | "unclassified";
+  classification_locked: boolean;
+  classification_reasons: string[];
+  manual_field_locks: string[];
+  identity_review_status: "clear" | "possible" | "ambiguous" | "rejected" | "manual_verified";
+  identity_review_reason: string | null;
   created_by: string;
   updated_by: string | null;
   created_at: string;

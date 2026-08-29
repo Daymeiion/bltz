@@ -74,6 +74,14 @@ function contact(overrides: Partial<GtmContactRow> = {}): GtmContactRow {
     priorOutcome: null,
     relationshipSource: null,
     nextTrigger: "Re-engage after first university pilot",
+    personas: ["Enterprise Decision Maker"],
+    classificationSource: "deterministic_rules_v1",
+    classificationConfidence: 0.96,
+    classificationStatus: "auto_classified",
+    classificationReasons: ["senior athletics decision-maker title"],
+    identityReviewStatus: "clear",
+    identityReviewReason: null,
+    priorityScoreExplanation: null,
     playerMatch: null,
     notes: [],
     interactions: [],
@@ -99,6 +107,8 @@ const baseFilters: GtmContactFilters = {
   doNotAutomate: "all",
   hasPlayerMatch: "all",
   needsFollowUp: "all",
+  classificationStatus: "all",
+  identityReviewStatus: "all",
   savedView: "All contacts",
 };
 

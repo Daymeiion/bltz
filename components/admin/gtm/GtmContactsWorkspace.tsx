@@ -44,6 +44,8 @@ export interface GtmContactFilters {
   doNotAutomate: string;
   hasPlayerMatch: string;
   needsFollowUp: string;
+  classificationStatus: string;
+  identityReviewStatus: string;
   savedView: string;
 }
 const initialFilters: GtmContactFilters = {
@@ -51,14 +53,20 @@ const initialFilters: GtmContactFilters = {
   relationshipPriority: "all", priorityTier: "all", pipelineStage: "all",
   conversationOutcome: "all", segment: "all", organization: "all", sport: "all",
   leagueLevel: "all", source: "all", doNotAutomate: "all", hasPlayerMatch: "all",
-  needsFollowUp: "all", savedView: "All contacts",
+  needsFollowUp: "all", classificationStatus: "all", identityReviewStatus: "all", savedView: "All contacts",
 };
 
 const builtInViews = [
-  "All contacts", "My Top 50", "Needs Follow-Up", "New LinkedIn Connections",
-  "Enterprise Prospects", "Athletic Directors", "NIL / Athlete Development",
-  "NFL Players", "Former Players", "High Network Leverage", "Potential Introductions",
-  "No Contact Yet", "Locker Candidates",
+  "All contacts", "Top 50 Overall", "Top 25 Enterprise Prospects",
+  "Top 25 Athlete / Locker Prospects", "Top 20 Multipliers",
+  "Top 20 Potential Introduction Sources", "High-confidence Player Matches",
+  "Ambiguous Player Matches", "Potential Pilot Organizations",
+  "Needs Classification", "Ambiguous Identity", "High Priority",
+  "Strategic Player Network", "Enterprise Decision Makers", "Multipliers",
+  "Needs Follow-Up", "New LinkedIn Connections", "Athletic Directors",
+  "NIL / Athlete Development", "NFL Players", "Former Players",
+  "High Network Leverage", "Potential Introductions", "No Contact Yet",
+  "Locker Candidates",
 ] as const;
 
 function normalize(value: string | null | undefined) {
@@ -81,7 +89,9 @@ export function filterGtmContacts(contacts: GtmContactRow[], filters: GtmContact
       contact.leagueLevel, contact.investorType, contact.investorRelationshipStage,
       contact.whatTheyNeedToSee, contact.investorThesisFeedback, contact.historicalSignal,
       contact.futureTrigger, contact.priorOutcome, contact.relationshipSource,
-      contact.nextTrigger, contact.playerMatch?.playerName,
+      contact.nextTrigger, ...contact.personas, ...contact.classificationReasons,
+      contact.classificationStatus, contact.identityReviewStatus,
+      contact.playerMatch?.playerName,
       contact.playerMaster?.displayName, contact.playerMaster?.collegeName,
       contact.playerMaster?.team, contact.playerMaster?.position,
     ].map(normalize).join(" ");
@@ -102,8 +112,23 @@ export function filterGtmContacts(contacts: GtmContactRow[], filters: GtmContact
     if (filters.hasPlayerMatch !== "all" && Boolean(contact.playerMatch || contact.playerMaster) !== (filters.hasPlayerMatch === "yes")) return false;
     const needsFollowUp = Boolean(contact.nextActionAt && new Date(contact.nextActionAt) <= now);
     if (filters.needsFollowUp !== "all" && needsFollowUp !== (filters.needsFollowUp === "yes")) return false;
+    if (filters.classificationStatus !== "all" && contact.classificationStatus !== filters.classificationStatus) return false;
+    if (filters.identityReviewStatus !== "all" && contact.identityReviewStatus !== filters.identityReviewStatus) return false;
     switch (filters.savedView) {
-      case "My Top 50": return contact.isPriority || (contact.priorityScore ?? -1) >= 80;
+      case "Top 50 Overall": return true;
+      case "Top 25 Enterprise Prospects": return contact.contactType === "enterprise";
+      case "Top 25 Athlete / Locker Prospects": return contact.contactType === "athlete";
+      case "Top 20 Multipliers": return contact.contactType === "multiplier";
+      case "Top 20 Potential Introduction Sources": return contact.personas.some((persona) => /founder|investor|representative|media/i.test(persona)) || (contact.networkLeverage ?? -1) >= 4;
+      case "High-confidence Player Matches": return Boolean(contact.playerMaster) && ["clear", "manual_verified"].includes(contact.identityReviewStatus);
+      case "Ambiguous Player Matches": return ["possible", "ambiguous"].includes(contact.identityReviewStatus);
+      case "Potential Pilot Organizations": return contact.contactType === "enterprise" && (contact.bltzRelevance ?? -1) >= 4;
+      case "Needs Classification": return ["needs_review", "unclassified"].includes(contact.classificationStatus);
+      case "Ambiguous Identity": return ["possible", "ambiguous"].includes(contact.identityReviewStatus);
+      case "High Priority": return contact.isPriority || contact.priorityTier === "A";
+      case "Strategic Player Network": return Boolean(contact.playerMaster);
+      case "Enterprise Decision Makers": return contact.contactType === "enterprise" && ((contact.buyingAuthority ?? -1) >= 4 || contact.personas.includes("Enterprise Decision Maker"));
+      case "Multipliers": return contact.contactType === "multiplier";
       case "Needs Follow-Up": return Boolean(contact.nextActionAt && new Date(contact.nextActionAt) <= now);
       case "New LinkedIn Connections": return contact.source === "linkedin_connections" && !contact.lastInteractionAt;
       case "Enterprise Prospects": return contact.contactType === "enterprise";
@@ -118,6 +143,13 @@ export function filterGtmContacts(contacts: GtmContactRow[], filters: GtmContact
       default: return true;
     }
   });
+}
+
+function savedViewLimit(savedView: string) {
+  if (savedView === "Top 50 Overall") return 50;
+  if (savedView.startsWith("Top 25")) return 25;
+  if (savedView.startsWith("Top 20")) return 20;
+  return null;
 }
 
 export function sortGtmContacts(contacts: GtmContactRow[], key: SortKey, direction: SortDirection) {
@@ -184,6 +216,8 @@ function MetricsSummary({ metrics }: { metrics: GtmMetrics | null }) {
     ["Priority", metrics.priorityContacts], ["Active conversations", metrics.activeConversations], ["Needs follow-up", metrics.contactsNeedingFollowUp],
     ["Discovery conversations", metrics.discoveryConversations], ["Player-linked", metrics.playerLinkedContacts], ["Demo candidates", metrics.demoCandidates],
     ["Pilot candidates", metrics.pilotCandidates], ["Active pilots", metrics.activePilots], ["Conversions", metrics.conversions],
+    ["Auto classified", metrics.autoClassifiedContacts ?? 0], ["Manually verified", metrics.manuallyVerifiedContacts ?? 0], ["Needs classification", metrics.needsClassificationContacts ?? 0],
+    ["Players in network", metrics.playersInFounderNetwork ?? metrics.playerLinkedContacts], ["Ambiguous identity", metrics.ambiguousIdentityContacts ?? 0],
   ] as const;
   const lists = [
     ["Reported problems", metrics.discoveryAnalysis.problems],
@@ -225,7 +259,11 @@ export function GtmContactsWorkspace({ data, metrics = null, initialContactId = 
   const [sortKey, setSortKey] = useState<SortKey>("priorityScore");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [selectedId, setSelectedId] = useState<string | null>(() => data.contacts.some((contact) => contact.id === initialContactId) ? initialContactId : null);
-  const filtered = useMemo(() => sortGtmContacts(filterGtmContacts(contacts, filters), sortKey, sortDirection), [contacts, filters, sortKey, sortDirection]);
+  const filtered = useMemo(() => {
+    const sorted = sortGtmContacts(filterGtmContacts(contacts, filters), sortKey, sortDirection);
+    const limit = savedViewLimit(filters.savedView);
+    return limit ? sorted.slice(0, limit) : sorted;
+  }, [contacts, filters, sortKey, sortDirection]);
   const selectedContact = contacts.find((contact) => contact.id === selectedId) ?? null;
   const hasFilters = Object.entries(filters).some(([key, value]) => key === "savedView" ? value !== "All contacts" : value !== "all" && value !== "");
   const resetFilters = () => setFilters(initialFilters);
@@ -263,6 +301,8 @@ export function GtmContactsWorkspace({ data, metrics = null, initialContactId = 
             <FilterSelect label="Sport" value={filters.sport} onChange={(value) => updateFilter("sport", value)}><option value="all">All sports</option>{optionSets.sports.map(([value, text]) => <option key={value} value={value}>{text}</option>)}</FilterSelect>
             <FilterSelect label="League or level" value={filters.leagueLevel} onChange={(value) => updateFilter("leagueLevel", value)}><option value="all">All leagues / levels</option>{optionSets.leagues.map(([value, text]) => <option key={value} value={value}>{text}</option>)}</FilterSelect>
             <FilterSelect label="Source" value={filters.source} onChange={(value) => updateFilter("source", value)}><option value="all">All sources</option>{optionSets.sources.map(([value, text]) => <option key={value} value={value}>{label(text)}</option>)}</FilterSelect>
+            <FilterSelect label="Classification status" value={filters.classificationStatus} onChange={(value) => updateFilter("classificationStatus", value)}><option value="all">All classification states</option><option value="auto_classified">Auto classified</option><option value="manual_verified">Manually verified</option><option value="needs_review">Needs review</option><option value="unclassified">Unclassified</option></FilterSelect>
+            <FilterSelect label="Identity review status" value={filters.identityReviewStatus} onChange={(value) => updateFilter("identityReviewStatus", value)}><option value="all">All identity states</option><option value="clear">Clear</option><option value="possible">Possible match</option><option value="ambiguous">Ambiguous match</option><option value="rejected">Rejected match</option><option value="manual_verified">Manually verified</option></FilterSelect>
             <FilterSelect label="Automation status" value={filters.doNotAutomate} onChange={(value) => updateFilter("doNotAutomate", value)}><option value="all">Any automation status</option><option value="yes">Do not automate</option><option value="no">Automation permitted</option></FilterSelect>
             <FilterSelect label="Player match" value={filters.hasPlayerMatch} onChange={(value) => updateFilter("hasPlayerMatch", value)}><option value="all">Any Player-match status</option><option value="yes">Has Player match</option><option value="no">No Player match</option></FilterSelect>
             <FilterSelect label="Conversation outcome" value={filters.conversationOutcome} onChange={(value) => updateFilter("conversationOutcome", value)}><option value="all">All conversation outcomes</option>{GTM_CONVERSATION_OUTCOMES.map((outcome) => <option key={outcome} value={outcome}>{label(outcome)}</option>)}</FilterSelect>
