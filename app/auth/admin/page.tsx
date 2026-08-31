@@ -7,10 +7,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 const errorMessages: Record<string, string> = {
-  invalid_credentials: "The email or password is incorrect.",
+  invalid_credentials: "Unable to sign in with those credentials.",
+  authentication_unavailable: "The sign-in service is temporarily unavailable. Please try again later.",
+  authorization_unavailable: "Administrator access could not be verified right now. Please try again later.",
+  rate_limited: "Too many sign-in attempts. Please wait before trying again.",
   not_admin: "This account does not have BLTZ administrator access.",
   profile_unavailable: "The administrator profile could not be verified.",
   missing_fields: "Email and password are required.",
+  logout_unavailable: "This browser session was cleared, but server sign-out could not be confirmed. Please try signing in again when the service is available.",
 };
 
 export const metadata = {
