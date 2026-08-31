@@ -71,40 +71,45 @@ describe("AdminSidebar GTM destination", () => {
   it("exposes the mobile navigation toggle state to assistive technology", () => {
     renderSidebar();
 
-    const toggle = document.querySelector('button[aria-controls="admin-mobile-navigation"]');
-    expect(toggle?.getAttribute("aria-label")).toBe("Open navigation");
+    const toggle = document.querySelector('button[aria-label="Open admin navigation"]');
+    expect(toggle?.hasAttribute("aria-controls")).toBe(true);
     expect(toggle?.getAttribute("aria-expanded")).toBe("false");
     expect(toggle?.getAttribute("aria-haspopup")).toBe("dialog");
     expect(toggle?.classList.contains("h-11")).toBe(true);
     expect(toggle?.classList.contains("w-11")).toBe(true);
   });
 
-  it("contains mobile focus and restores it to the toggle when Escape closes the dialog", () => {
+  it("contains mobile focus and restores it to the toggle when Escape closes the dialog", async () => {
     const container = document.createElement("div");
     document.body.replaceChildren(container);
     const root = createRoot(container);
 
-    act(() => root.render(<AdminSidebar />));
+    await act(async () => root.render(<AdminSidebar />));
 
-    const toggle = document.querySelector<HTMLButtonElement>('button[aria-controls="admin-mobile-navigation"]');
+    const toggle = document.querySelector<HTMLButtonElement>('button[aria-label="Open admin navigation"]');
     expect(toggle).not.toBeNull();
 
-    act(() => toggle?.click());
+    await act(async () => { toggle?.focus(); toggle?.click(); });
 
     const dialog = document.querySelector<HTMLElement>('[role="dialog"][aria-modal="true"]');
-    expect(dialog?.getAttribute("aria-label")).toBe("Admin navigation");
-    expect(document.activeElement).toBe(dialog?.querySelector("a"));
+    expect(dialog?.id).toBe(toggle?.getAttribute("aria-controls"));
+    expect(document.getElementById(dialog!.getAttribute("aria-labelledby")!)?.textContent).toBe("BLTZ Admin navigation");
+    const firstFocusable = document.activeElement;
+    expect(dialog?.contains(firstFocusable)).toBe(true);
 
-    const lastFocusable = dialog?.querySelector<HTMLButtonElement>("button:last-of-type");
+    const lastFocusable = [...dialog!.querySelectorAll<HTMLButtonElement>("button")].at(-1);
     lastFocusable?.focus();
-    act(() => document.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", bubbles: true })));
+    await act(async () => document.activeElement!.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", bubbles: true, cancelable: true })));
+    // Radix may initially autofocus a button; Tab order still wraps to the
+    // first navigation link, not necessarily that initial autofocus target.
     expect(document.activeElement).toBe(dialog?.querySelector("a"));
 
-    act(() => document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
+    await act(async () => document.activeElement!.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
+    await act(async () => new Promise(resolve => setTimeout(resolve, 0)));
     expect(document.querySelector('[role="dialog"]')).toBeNull();
     expect(document.activeElement).toBe(toggle);
 
-    act(() => root.unmount());
+    await act(async () => root.unmount());
   });
 
   it("posts logout through the server authorization boundary", () => {

@@ -1,6 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextRequest, NextResponse } from "next/server";
-import { TEST_AUTH_COOKIE } from "@/lib/onboarding/test-auth";
+import { expireAdminSessionCookies } from "@/lib/auth/admin-session-cookies";
 
 export function isTrustedAdminLogoutOrigin(
   origin: string | null,
@@ -37,10 +37,16 @@ export async function POST(request: NextRequest) {
     },
   );
 
-  await supabase.auth.signOut({ scope: "local" });
-
-  const response = NextResponse.redirect(new URL("/auth/admin", request.url), 303);
-  cookieResponse.cookies.getAll().forEach((cookie) => response.cookies.set(cookie));
-  response.cookies.delete(TEST_AUTH_COOKIE);
+  let unavailable = false;
+  try {
+    const { error } = await supabase.auth.signOut({ scope: "local" });
+    unavailable = Boolean(error);
+  } catch {
+    unavailable = true;
+  }
+  const destination = unavailable ? "/auth/admin?error=logout_unavailable" : "/auth/admin";
+  const response = NextResponse.redirect(new URL(destination, request.url), 303);
+  response.headers.set("Cache-Control", "private, no-store");
+  expireAdminSessionCookies(request, response, cookieResponse);
   return response;
 }

@@ -2,10 +2,11 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { SearchModal, SearchResult } from './search-modal';
+import { UserRound } from 'lucide-react';
+import { LogoutButton } from '@/components/logout-button';
+import { Popover, PopoverTrigger, PopoverContent } from './popover';
 
 export const Navbar = () => {
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [showUserMenu, setShowUserMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -149,7 +150,6 @@ export const Navbar = () => {
               </form>
             </div>
           <div className="flex items-center lg:order-2">
-              <button type="button" className="hidden sm:inline-flex items-center justify-center text-white bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:ring-primary-300 font-light rounded-lg text-xs px-3 py-1.5 mr-2 dark:bg-primary-600 dark:hover:bg-primary-700 focus:outline-none dark:focus:ring-primary-800"><svg aria-hidden="true" className="mr-1 -ml-1 w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd"></path></svg> New Widget</button>
               {/* Mobile Search - shows when typing */}
               {(searchQuery.length > 0 || showSearchModal) && (
                 <div className="lg:hidden absolute top-full left-0 right-0 px-4 py-2 bg-gray-900/95 dark:bg-gray-900/95 backdrop-blur-md border-b border-gray-700 z-[10001]">
@@ -194,74 +194,20 @@ export const Navbar = () => {
                     <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"/>
                     </svg>
               </button>
-              {/* Notifications */}
-              <button type="button"               onClick={() => {
-                setShowNotifications(!showNotifications);
-                setShowUserMenu(false);
-              }} className="p-2 mr-1 text-gray-500 rounded-xl hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-700 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600">
-                  <span className="sr-only">View notifications</span>
-                  {/* Bell icon */}
-                  <svg className="w-5 h-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 14 20"><path d="M12.133 10.632v-1.8A5.406 5.406 0 0 0 7.979 3.57.946.946 0 0 0 8 3.464V1.1a1 1 0 0 0-2 0v2.364a.946.946 0 0 0 .021.106 5.406 5.406 0 0 0-4.154 5.262v1.8C1.867 13.018 0 13.614 0 14.807 0 15.4 0 16 .538 16h12.924C14 16 14 15.4 14 14.807c0-1.193-1.867-1.789-1.867-4.175ZM3.823 17a3.453 3.453 0 0 0 6.354 0H3.823Z"/></svg>
-              </button>
-              {/* User Menu */}
-              <button type="button"               onClick={() => {
-                setShowUserMenu(!showUserMenu);
-                setShowNotifications(false);
-              }} className="flex mx-3 text-sm bg-gray-800 rounded-full md:mr-0 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600" id="user-menu-button" aria-expanded="false">
-                  <span className="sr-only">Open user menu</span>
-                  <img className="w-8 h-8 rounded-full" src="https://flowbite.com/docs/images/people/profile-picture-5.jpg" alt="user photo" />
-              </button>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button type="button" aria-label="Account" className="flex mx-3 p-2 text-sm rounded-full md:mr-0 focus-visible:ring-4 focus-visible:ring-gray-300 dark:focus-visible:ring-gray-600">
+                    <UserRound className="h-5 w-5" aria-hidden="true" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent align="end" aria-label="Account" className="z-[10001] w-56">
+                  <LogoutButton variant="ghost" className="w-full justify-start">Sign out</LogoutButton>
+                </PopoverContent>
+              </Popover>
           </div>
       </div>
   </nav>
   
-  {/* Dropdown Menus */}
-  {/* Notifications Dropdown */}
-  {showNotifications && (
-    <div className="absolute right-4 top-full mt-2 z-[100] max-w-sm text-base list-none bg-white rounded-lg divide-y divide-gray-100 shadow-xl border border-gray-200 dark:divide-gray-600 dark:bg-gray-700 dark:border-gray-600">
-      <div className="block py-2 px-4 text-base font-medium text-center text-gray-700 bg-gray-50 dark:bg-gray-700 dark:text-gray-400 rounded-t-lg">
-        Notifications
-      </div>
-      <div>
-        <a href="#" className="flex py-3 px-4 border-b hover:bg-gray-100 dark:hover:bg-gray-600 dark:border-gray-600">
-          <div className="flex-shrink-0">
-            <img className="w-11 h-11 rounded-full" src="https://flowbite.s3.amazonaws.com/blocks/marketing-ui/avatars/bonnie-green.png" alt="Bonnie Green avatar" />
-          </div>
-          <div className="pl-3 w-full">
-            <div className="text-gray-500 font-normal text-sm mb-1.5 dark:text-gray-400">New message from <span className="font-semibold text-gray-900 dark:text-white">Bonnie Green</span>: "Hey, what's up?"</div>
-            <div className="text-xs font-medium text-primary-700 dark:text-primary-400">a few moments ago</div>
-          </div>
-        </a>
-      </div>
-      <a href="#" className="block py-2 text-base font-medium text-center text-gray-900 bg-gray-50 hover:bg-gray-100 dark:bg-gray-700 dark:text-white dark:hover:underline rounded-b-lg">
-        View all
-      </a>
-    </div>
-  )}
-
-
-  {/* User Menu Dropdown */}
-  {showUserMenu && (
-    <div className="absolute right-4 top-full mt-2 z-[100] w-56 text-base list-none bg-white rounded divide-y divide-gray-100 shadow dark:bg-gray-700 dark:divide-gray-600">
-      <div className="py-3 px-4">
-        <span className="block text-sm font-semibold text-gray-900 dark:text-white">Neil sims</span>
-        <span className="block text-sm text-gray-500 truncate dark:text-gray-400">name@flowbite.com</span>
-      </div>
-      <ul className="py-1 text-gray-500 dark:text-gray-400">
-        <li>
-          <a href="#" className="block py-2 px-4 text-sm hover:bg-gray-100 dark:hover:bg-gray-600 dark:text-gray-400 dark:hover:text-white">My profile</a>
-        </li>
-        <li>
-          <a href="#" className="block py-2 px-4 text-sm hover:bg-gray-100 dark:hover:bg-gray-600 dark:text-gray-400 dark:hover:text-white">Account settings</a>
-        </li>
-      </ul>
-      <ul className="py-1 text-gray-500 dark:text-gray-400">
-        <li>
-          <a href="#" className="block py-2 px-4 text-sm hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">Sign out</a>
-        </li>
-      </ul>
-    </div>
-  )}
 
   {/* Search Modal */}
   <SearchModal

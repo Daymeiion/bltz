@@ -2,11 +2,15 @@ const BLOCKED_AUTH_DESTINATIONS = ["/auth/login", "/auth/sign-up"];
 
 export function getSafeInternalPath(next: string | null | undefined): string | null {
   if (!next || !next.startsWith("/") || next.startsWith("//")) return null;
-  if (BLOCKED_AUTH_DESTINATIONS.some((path) => next === path || next.startsWith(`${path}?`))) {
+  // Reject browser URL normalization tricks and nested encoded separators.
+  if (/[\s\\]/.test(next) || /%(?:2f|5c|0[0-9a-f]|1[0-9a-f]|7f|25)/i.test(next)) return null;
+  const url = new URL(next, "https://bltz.invalid");
+  if (url.origin !== "https://bltz.invalid" || url.pathname.startsWith("//")) return null;
+  if (BLOCKED_AUTH_DESTINATIONS.some((path) => url.pathname === path)) {
     return null;
   }
 
-  return next;
+  return url.pathname + url.search + url.hash;
 }
 export function getSafeInternalNext(search: string): string | null {
   return getSafeInternalPath(new URLSearchParams(search).get("next"));
