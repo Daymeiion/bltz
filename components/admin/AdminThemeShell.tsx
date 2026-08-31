@@ -89,7 +89,7 @@ export function AdminThemeShell({ children }: { children: React.ReactNode }) {
     ? "beta"
     : pathname === "/admin/gtm" || pathname.startsWith("/admin/gtm/")
       ? "gtm"
-      : null;
+      : pathname === "/admin/preview-lockers" || pathname.startsWith("/admin/preview-lockers/") ? "preview" : null;
   const route = routeDetails[pathname] ?? routeDetails["/admin"];
 
   useGSAP(() => {
@@ -120,6 +120,7 @@ export function AdminThemeShell({ children }: { children: React.ReactNode }) {
   if (workspace === "beta") {
     return <div className="admin-theme-shell min-h-full" data-admin-workspace="beta">{children}</div>;
   }
+  if (workspace === "preview") return <div className="admin-theme-shell min-h-full bg-background text-foreground" data-admin-workspace="preview">{children}</div>;
 
   if (workspace === "gtm") {
     return (

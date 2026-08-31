@@ -18,6 +18,7 @@ import { trackProductEvent } from "@/lib/analytics/client";
 // ---------------------------------------------------------------------------
 
 export type LockerData = {
+  privateDemo?: boolean;
   athleteId: string | null;
   slug: string;
   fullName: string;
@@ -90,7 +91,7 @@ export type LockerData = {
   schools: { label: string; color: string; logo: string | null }[];
   proTeams: { label: string; color: string; logo: string | null }[];
   awards: { year: string; label: string }[];
-  videos: { id: string; title: string; thumb: string | null }[];
+  videos: { id: string; title: string; thumb: string | null; url?: string }[];
   podcastAppearances?: {
     id: string;
     type: "podcast" | "interview";
@@ -219,9 +220,10 @@ export default function LockerView({
   const [heroPlaying, setHeroPlaying] = useState(true);
   const showAthleteNav = viewerMode === "athlete";
   const isEmbedded = presentation === "embedded";
+  const lockerPath = `${data.privateDemo ? "/preview-lockers" : "/player"}/${encodeURIComponent(data.slug)}`;
 
   useEffect(() => {
-    if (isEmbedded) return;
+    if (isEmbedded || data.privateDemo) return;
     const source = document.referrer
       ? (() => {
           try { return new URL(document.referrer).hostname; } catch { return undefined; }
@@ -235,7 +237,7 @@ export default function LockerView({
       properties: { source, viewer_mode: viewerMode },
       dedupeKey: `locker_viewed:${data.slug}:${viewerMode}:${window.location.pathname}`,
     });
-  }, [data.athleteId, data.slug, isEmbedded, viewerMode]);
+  }, [data.athleteId, data.slug, data.privateDemo, isEmbedded, viewerMode]);
 
   useEffect(() => {
     const node = teamHistoryRef.current;
@@ -305,6 +307,7 @@ export default function LockerView({
   }, [data.careerSeasons?.length, statsSort, tab]);
 
   const openSiteSearch = () => {
+    if (data.privateDemo) return;
     setSearchOpen(true);
   };
 
@@ -413,7 +416,7 @@ export default function LockerView({
   // when nothing is playing or Spotify isn't connected.
   const [nowPlaying, setNowPlaying] = useState<NowPlayingTrack | null>(null);
   useEffect(() => {
-    if (isEmbedded || !data.slug) return;
+    if (isEmbedded || data.privateDemo || !data.slug) return;
     let alive = true;
     const load = async () => {
       try {
@@ -432,7 +435,7 @@ export default function LockerView({
     load();
     const id = setInterval(load, 30_000); // refresh every 30s
     return () => { alive = false; clearInterval(id); };
-  }, [data.slug, isEmbedded]);
+  }, [data.slug, data.privateDemo, isEmbedded]);
 
   // SAMPLE — no stats pipeline yet; these are the counter targets.
   const targets = { tackles: 58, int: 6, pbu: 14, ff: 2, dtd: 2, solo: 41, earned: 14208, views: 842000 };
@@ -532,6 +535,7 @@ export default function LockerView({
   };
 
   const animateStats = () => {
+    if (data.privateDemo) return;
     if (statsAnimated.current) return;
     statsAnimated.current = true;
     const dur = 1100;
@@ -581,7 +585,7 @@ export default function LockerView({
   ];
   const realVideos = data.videos.map((v, i) => ({
     ...v,
-    ...sampleMeta[i % sampleMeta.length],
+    ...(data.privateDemo ? { tag: "PRIVATE DEMO", dur: "", views: "", when: "" } : sampleMeta[i % sampleMeta.length]),
     img: v.thumb || poolAt(i),
     isPlaceholder: false,
   }));
@@ -655,13 +659,13 @@ export default function LockerView({
     .map(([key, label]) => ({ key, label, active: bioSort === key }));
 
   // ---- MEDIA cards (visuals use real photos; SAMPLE article/podcast copy) ----
-  const mediaArticles = [
+  const mediaArticles = data.privateDemo ? [] : [
     { source: "THE ATHLETIC", title: "THE CONFERENCE'S BEST COVER MAN", meta: "6 MIN READ", img: poolAt(0), dek: "Film, leadership, and the week-by-week rise of a verified locker profile.", originalUrl: "https://www.nytimes.com/athletic/" },
     { source: "ESPN", title: "DRAFT STOCK RISING", meta: "4 MIN READ", img: poolAt(3), dek: "Scouts circle the traits, production, and projection behind the latest board movement.", originalUrl: "https://www.espn.com/" },
     { source: "TEAM SITE", title: "LOCKER ROOM STANDARD SETTER", meta: "3 MIN READ", img: poolAt(1), dek: "How preparation and practice habits have become part of the weekly team story.", originalUrl: "https://calbears.com/" },
     { source: "LOCAL PRESS", title: "FROM FRIDAY NIGHTS TO FEATURE FILM", meta: "5 MIN READ", img: poolAt(2), dek: "The hometown arc behind the athlete's growing media archive.", originalUrl: "https://www.latimes.com/sports/" },
   ];
-  const mediaShorts = [
+  const mediaShorts = data.privateDemo ? [] : [
     { source: "@ATHLETE", title: "PREGAME WALK", meta: "218K VIEWS", img: poolAt(1), videoUrl: null },
     { source: "@ATHLETE", title: "FILM STUDY · 6AM", meta: "96K VIEWS", img: poolAt(2), videoUrl: null },
     { source: "TEAM CAM", title: "TUNNEL READY", meta: "74K VIEWS", img: poolAt(3), videoUrl: null },
@@ -718,7 +722,7 @@ export default function LockerView({
     return () => window.clearTimeout(timeout);
   }, [modalShortCount, modalShortHasVideo, shortModalIndex]);
   const mediaPodcast = data.podcastAppearances ?? [];
-  const mediaSocial = [
+  const mediaSocial = data.privateDemo ? [] : [
     { platform: "Instagram", handle: "@athlete", meta: "12.4K LIKES", img: poolAt(4), format: "square", published: "OCT 18, 2025", caption: "Game day with the people who make every rep count." },
     { platform: "X", handle: "@athlete", meta: "4.8K REPOSTS", img: poolAt(0), format: "portrait", published: "SEP 29, 2025", caption: "The work travels. Another week, another opportunity to raise the standard." },
     { platform: "Facebook", handle: "Athlete Page", meta: "8.1K REACTIONS", img: poolAt(1), format: "square", published: "AUG 12, 2025", caption: "A hometown moment worth keeping in the career archive." },
@@ -767,7 +771,7 @@ export default function LockerView({
     value: formatStatNumber(season.gamesPlayed),
     barStyle: { width: 26, height: Math.max(8, season.gamesPlayed / maxCareerGames * 100) + "%", borderRadius: 5, background: season.level.toLowerCase() === "pro" ? "linear-gradient(180deg,#FFB940,#C77D00)" : "linear-gradient(180deg,#2952FF,#1A3DCC)", transformOrigin: "bottom", animation: "barGrow .6s cubic-bezier(.16,1,.3,1) both" } as React.CSSProperties,
   }));
-  const timeline = [
+  const timeline = data.privateDemo ? [] : [
     { year: "2021", tag: "TRUE FRESHMAN", title: "BROKE THE ROTATION", note: "Started 4 games, first career INT. Freshman All-American nod." },
     { year: "2022", tag: "RB1 SHUTDOWN", title: "LOCKDOWN ISLAND", note: "Held opposing WR1s to 38% completion. Named team captain." },
     { year: "2023", tag: "ALL-CONFERENCE", title: "FIRST-TEAM ALL-CONFERENCE", note: "4 INT, 2 returned for scores. Led conference in PBU." },
@@ -852,13 +856,14 @@ export default function LockerView({
             <button
               type="button"
               aria-label="Search BLTZ"
+              disabled={data.privateDemo}
               onClick={openSiteSearch}
               style={{ width: 34, height: 34, borderRadius: 9999, border: "1px solid #1E2640", background: "rgba(255,255,255,.05)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none" }}
             >
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#FFB940" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
             </button>
-            <button onClick={() => setFollowing((f) => !f)} style={following ? followOff : followOn}>
-              {following ? "FOLLOWING" : "+ FOLLOW"}
+            <button disabled={data.privateDemo} onClick={() => setFollowing((f) => !f)} style={following ? followOff : followOn}>
+              {data.privateDemo ? "PRIVATE DEMO" : following ? "FOLLOWING" : "+ FOLLOW"}
             </button>
           </div>
         </div>
@@ -870,7 +875,7 @@ export default function LockerView({
           <div className="locker-topbar" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 18px 12px", position: "relative", zIndex: 6 }}>
             <img src={data.logoSrc} alt="BLTZ" style={{ height: 30, width: "auto", display: "block" }} />
             <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-              <button type="button" aria-label="Search BLTZ" onClick={openSiteSearch} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", display: "flex", alignItems: "center" }}>
+              <button type="button" aria-label="Search BLTZ" disabled={data.privateDemo} onClick={openSiteSearch} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", display: "flex", alignItems: "center" }}>
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFB940" strokeWidth="2.4" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
               </button>
               <div style={{ width: 38, height: 38, borderRadius: 9999, overflow: "hidden", background: "#0A1A6E", border: "1px solid rgba(255,255,255,.2)" }}>
@@ -1011,7 +1016,7 @@ export default function LockerView({
             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 10 }}>
               <h2 style={{ fontFamily: disp, fontWeight: 700, fontSize: 24, lineHeight: 1, letterSpacing: "-.02em", textTransform: "uppercase", color: "#fff", margin: 0 }}>FILM ROOM</h2>
               <a
-                href={`/player/${data.slug}/videos`}
+                href={`${lockerPath}/videos`}
                 aria-label="View all videos"
                 style={{ width: 34, height: 34, borderRadius: 9999, border: "1px solid #1E2640", background: "rgba(255,255,255,.05)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none", textDecoration: "none" }}
               >
@@ -1019,7 +1024,7 @@ export default function LockerView({
               </a>
             </div>
             <div className="hs" style={{ display: "flex", gap: 12, overflowX: "auto", padding: "4px 0 8px", scrollSnapType: "x mandatory" }}>
-              {videos.map((v, i) => (
+              {data.privateDemo ? (data.videos.length ? data.videos.map(v => <a key={v.id} href={`${lockerPath}/videos#${v.id}`} className="min-w-64 rounded-xl border border-white/20 p-4 text-white"><strong>{v.title}</strong><p>Open video · Private demo</p></a>) : <p className="text-white/70">No videos saved in this preview.</p>) : videos.map((v, i) => (
                 <div key={v.id + i} style={{ flex: "none", width: 262, scrollSnapAlign: "start", cursor: v.isPlaceholder ? "default" : "pointer" }}>
                   <div style={{ position: "relative", height: 150, borderRadius: 14, overflow: "hidden", border: "1px solid #1E2640", background: GRAD_FIELD }}>
                     {v.img ? <img src={v.img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", opacity: .92 }} /> : null}
@@ -1049,7 +1054,7 @@ export default function LockerView({
             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 14 }}>
               <h1 style={{ fontFamily: disp, fontWeight: 700, fontSize: 24, lineHeight: 1, letterSpacing: "-.02em", textTransform: "uppercase", color: "#fff", margin: 0 }}>PHOTOS</h1>
               <a
-                href={`/player/${data.slug}/photos`}
+                href={`${lockerPath}/photos`}
                 aria-label="View all photos"
                 style={{ width: 34, height: 34, borderRadius: 9999, border: "1px solid #1E2640", background: "rgba(255,255,255,.05)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none", textDecoration: "none" }}
               >
@@ -1243,7 +1248,7 @@ export default function LockerView({
                     <button className="locker-filter-pill" key={p.key} onClick={() => setMediaSort(p.key)} style={pillStyle(p.active)}>{p.label}</button>
                   ))}
                 </div>
-                {mediaSort === "articles" ? (
+                {data.privateDemo ? <p className="p-6 text-white/70">No articles, podcasts or social posts are saved in this private preview. Saved videos and photos are available in the Film Room and Photos above.</p> : mediaSort === "articles" ? (
                   <div style={{ padding: "14px 18px 10px" }}>
                     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                       {mediaArticles.slice(0, 3).map((article) => (
@@ -1615,7 +1620,7 @@ export default function LockerView({
                   ))}
                 </div>
 
-                {statsSort === "season" && (
+                {statsSort === "season" && !data.privateDemo && (
                   <div style={{ animation: "tabIn .35s ease", padding: "14px 18px 4px" }}>
                     <div style={{ borderRadius: 16, padding: 18, border: "1px solid rgba(245,166,35,.25)", background: "radial-gradient(120% 100% at 100% 0,rgba(245,166,35,.12),#131829 60%)", marginBottom: 14 }}>
                       <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: ".18em", color: "rgba(255,255,255,.5)", marginBottom: 6 }}>2024 SEASON POOL EARNINGS</div>
@@ -1745,6 +1750,7 @@ export default function LockerView({
 
                 {statsSort === "timeline" && (
                   <div className="hs" style={{ animation: "tabIn .35s ease", display: "flex", gap: 12, overflowX: "auto", padding: "16px 18px 10px", scrollSnapType: "x mandatory" }}>
+                    {data.privateDemo && <p>No career timeline is saved in this private preview.</p>}
                     {timeline.map((t, i) => (
                       <div key={i} style={{ flex: "none", width: 210, scrollSnapAlign: "start", borderRadius: 16, overflow: "hidden", border: "1px solid #1E2640", background: "#131829", display: "flex", flexDirection: "column" }}>
                         <div style={{ height: 5, background: "linear-gradient(90deg,#2952FF,#F5A623)" }} />
