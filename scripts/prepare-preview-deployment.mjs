@@ -17,6 +17,8 @@ const sql = `-- REVIEW ONLY until coordinator approves this exact packet.
 -- Migration LF-normalized SHA256: ${hash}
 -- Never run repository-wide migration replay or modify existing ledger rows.
 begin;
+set local lock_timeout = '5s';
+set local statement_timeout = '45s';
 select pg_advisory_xact_lock(hashtextextended('bltz:preview:20260831161831',0));
 lock table supabase_migrations.schema_migrations in share row exclusive mode;
 do $preflight$
