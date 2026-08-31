@@ -16,6 +16,7 @@ export function ClientShell({ children }: Readonly<{ children: React.ReactNode }
     pathname === "/" ||
     (pathname?.startsWith("/onboarding") ?? false) ||
     (pathname?.startsWith("/player") ?? false) ||
+    (pathname === "/preview-lockers" || pathname?.startsWith("/preview-lockers/") || false) ||
     (pathname?.startsWith("/admin") ?? false) ||
     (pathname?.startsWith("/auth") ?? false);
 

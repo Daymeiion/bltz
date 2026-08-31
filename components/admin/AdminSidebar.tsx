@@ -26,7 +26,7 @@ interface SidebarLink {
 }
 
 export function isAdminSidebarLinkActive(pathname: string, href: string) {
-  return pathname === href || (href === "/admin/gtm" && pathname.startsWith(`${href}/`));
+  return pathname === href || (["/admin/gtm", "/admin/preview-lockers"].includes(href) && pathname.startsWith(`${href}/`));
 }
 
 export function AdminSidebar() {
@@ -75,6 +75,7 @@ export function AdminSidebar() {
       href: "/admin/settings",
       icon: <IconSettings className="h-5 w-5 flex-shrink-0" />,
     },
+    { label: "Preview Lockers", href: "/admin/preview-lockers", icon: <IconUsers className="h-5 w-5 flex-shrink-0" /> },
   ];
 
   return (

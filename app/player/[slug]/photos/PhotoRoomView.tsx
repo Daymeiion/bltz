@@ -22,6 +22,7 @@ export type PhotoRoomImage = {
 };
 
 export type PhotoRoomData = {
+  privateDemo?: boolean;
   athleteId: string | null;
   slug: string;
   athleteName: string;
@@ -46,6 +47,7 @@ function searchHref(result: SearchResult) {
 }
 
 export default function PhotoRoomView({ data }: { data: PhotoRoomData }) {
+  const lockerPath = `${data.privateDemo ? "/preview-lockers" : "/player"}/${encodeURIComponent(data.slug)}`;
   const [activeIndex, setActiveIndex] = useState(0);
   const [activeFilter, setActiveFilter] = useState<FilterKey>("cfb");
   const [searchOpen, setSearchOpen] = useState(false);
@@ -61,6 +63,7 @@ export default function PhotoRoomView({ data }: { data: PhotoRoomData }) {
   const resumeTriggeredRef = useRef(false);
 
   useEffect(() => {
+    if (data.privateDemo) return;
     void trackProductEvent({
       eventName: "photo_gallery_opened",
       source: "public_locker",
@@ -69,7 +72,7 @@ export default function PhotoRoomView({ data }: { data: PhotoRoomData }) {
       properties: { photo_count: data.images.length },
       dedupeKey: `photo_gallery_opened:${data.slug}:${window.location.pathname}`,
     });
-  }, [data.athleteId, data.images.length, data.slug]);
+  }, [data.athleteId, data.images.length, data.slug, data.privateDemo]);
 
   const slideshowImages = data.images.length ? data.images : [];
   const hasAnyImages = data.images.length > 0;
@@ -181,7 +184,7 @@ export default function PhotoRoomView({ data }: { data: PhotoRoomData }) {
   }, [searchOpen]);
 
   function selectImage(id: string) {
-    void trackProductEvent({
+    if (!data.privateDemo) void trackProductEvent({
       eventName: "media_viewed",
       source: "public_locker",
       athleteId: data.athleteId,
@@ -207,15 +210,15 @@ export default function PhotoRoomView({ data }: { data: PhotoRoomData }) {
     <main className={styles.page} style={{ "--photo-accent": data.accentColor } as React.CSSProperties}>
       <div className={styles.shell}>
         <header className={styles.header}>
-          <Link href={`/player/${data.slug}`} className={styles.brand} aria-label="BLTZ Player Locker">
+          <Link href={lockerPath} className={styles.brand} aria-label="BLTZ Player Locker">
             <Image src="/images/bltz-mark.svg" alt="BLTZ" width={38} height={39} priority />
           </Link>
           <div className={styles.headerActions}>
-            <button type="button" className={styles.iconButton} onClick={() => setSearchOpen(true)} aria-label="Search BLTZ">
+            <button type="button" disabled={data.privateDemo} className={styles.iconButton} onClick={() => setSearchOpen(true)} aria-label="Search BLTZ">
               <Search aria-hidden="true" />
             </button>
-            <Link href={`/player/${data.slug}`} className={styles.avatar} aria-label={`View ${data.athleteName}'s locker`}>
-              <Image src={data.athleteHeadshotUrl} alt="" fill sizes="42px" />
+            <Link href={lockerPath} className={styles.avatar} aria-label={`View ${data.athleteName}'s locker`}>
+              <Image src={data.athleteHeadshotUrl} alt="" fill sizes="42px" unoptimized={data.privateDemo} />
             </Link>
           </div>
         </header>
