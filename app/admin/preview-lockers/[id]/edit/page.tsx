@@ -7,8 +7,12 @@ export const dynamic = "force-dynamic";
 export default async function EditPreview({ params }: { params: Promise<{ id: string }> }) {
   const { client } = await previewAdmin(); const { id } = await params;
   if (!z.uuid().safeParse(id).success) notFound();
-  const { data, error } = await client.from("preview_lockers").select(PREVIEW_COLUMNS).eq("id", id).maybeSingle();
+  const [{ data, error }, viewer] = await Promise.all([
+    client.from("preview_lockers").select(PREVIEW_COLUMNS).eq("id", id).maybeSingle(),
+    client.rpc("preview_locker_has_viewer", { p_preview_locker_id: id }),
+  ]);
   if (error) throw new PreviewError("preview_unavailable", 503);
   if (!data) notFound();
-  return <section className="mx-auto max-w-4xl space-y-6 p-6 sm:p-10"><h1 className="text-3xl font-semibold">Edit private preview</h1><PreviewLockerForm record={previewRecord.parse(data)} /></section>;
+  if (viewer.error) throw new PreviewError("preview_unavailable", 503);
+  return <section className="mx-auto max-w-4xl space-y-6 p-6 sm:p-10"><h1 className="text-3xl font-semibold">Edit private preview</h1><PreviewLockerForm record={previewRecord.parse(data)} viewerAssigned={viewer.data === true} /></section>;
 }

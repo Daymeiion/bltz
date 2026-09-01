@@ -8,11 +8,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { previewContent, previewIdentity, slugify, type PreviewContent, type PreviewRecord } from "@/lib/preview-lockers/validation";
 import { readDiscovery } from "@/lib/preview-lockers/stream-client";
 import { mergeSuggestions } from "@/lib/preview-lockers/merge-suggestions";
+import PreviewViewerAccess from "./PreviewViewerAccess";
 
 const initial = () => previewContent.parse({ slug: "private-preview", full_name: "".padEnd(2, "_") });
 type Scalar = Exclude<keyof PreviewContent, "schools" | "pro_teams" | "awards" | "videos" | "photos">;
 
-export default function PreviewLockerForm({ record }: { record?: PreviewRecord }) {
+export default function PreviewLockerForm({ record, viewerAssigned = false }: { record?: PreviewRecord; viewerAssigned?: boolean }) {
   const [draft, setDraft] = useState<PreviewContent>(() => record ? previewContent.parse(Object.fromEntries(Object.keys(previewContent.shape).map(k => [k, record[k as keyof PreviewRecord]]))) : { ...initial(), full_name: "", slug: "" });
   const [busy, setBusy] = useState<"discovery" | "save" | null>(null);
   const [message, setMessage] = useState("");
@@ -72,7 +73,7 @@ export default function PreviewLockerForm({ record }: { record?: PreviewRecord }
         <label className="grid gap-2 text-sm">Career level<select aria-label="Career level" className="h-10 rounded-md border bg-background px-3" value={draft.level ?? ""} onChange={event => change({ level: (event.target.value || null) as PreviewContent["level"] })}><option value="">Not recorded</option><option value="hs">High school</option><option value="college">College</option><option value="pro">Professional</option><option value="former">Former athlete</option></select></label>
         {field("hometown", "Hometown")}{field("jersey", "Jersey", 10)}{field("height_in", "Height (inches)", 2, true)}{field("weight_lbs", "Weight (lbs)", 3, true)}{field("games_played", "Games played", 4, true)}
       </div>
-      {!saved && <div className="flex flex-wrap gap-3"><Button type="button" variant="outline" onClick={discover}>Find media suggestions</Button><Button type="button" variant="outline" onClick={() => setMessage("Manual mode: complete the fields below, review, then save privately.")}>Continue manually</Button></div>}
+      {!saved && <section className="space-y-3 rounded-lg border p-4" aria-labelledby="preview-scraper-heading"><div className="space-y-1"><h2 id="preview-scraper-heading" className="font-semibold">Build with web scraper</h2><p className="text-sm">Searches nflverse NFL roster data, cfbverse college roster data, Wikipedia, ESPN, and YouTube. Suggestions remain editable and are not identity, accuracy, copyright, or rights verification.</p><p className="text-sm">Google Images is not queried. A future image-search provider requires an approved adapter. You can cancel, continue manually, or replace every suggestion before saving.</p></div><div className="flex flex-wrap gap-3"><Button type="button" variant="outline" onClick={discover}>Build with web scraper</Button><Button type="button" variant="outline" onClick={() => setMessage("Manual mode: complete the fields below, review, then save privately.")}>Continue manually</Button></div></section>}
       <div className="grid gap-4 sm:grid-cols-2">{field("headshot_url", "Headshot HTTPS URL", 2048)}{field("hero_video_url", "Hero video HTTPS URL (direct video)", 2048)}</div>
       <label className="grid gap-2 text-sm">Biography<Textarea aria-label="Biography" rows={6} maxLength={4000} value={draft.bio} onChange={event => change({ bio: event.target.value })} /></label>
       <div className="grid gap-4 sm:grid-cols-2">{field("athlete_quote", "Athlete quote", 600)}{field("athlete_quote_author", "Quote attribution")}</div>
@@ -85,6 +86,7 @@ export default function PreviewLockerForm({ record }: { record?: PreviewRecord }
     </fieldset>
     {busy === "discovery" && <Button type="button" variant="outline" onClick={() => { abort.current?.abort(); setMessage("Discovery cancelled. Continue manually."); }}>Cancel discovery</Button>}
     {busy === "save" && <p role="status">Saving privately…</p>}
-    <nav className="flex flex-wrap gap-4" aria-label="Preview navigation"><Link className="underline" href="/admin/preview-lockers">Back to saved previews</Link>{saved && <><Link className="underline" href={`/preview-lockers/${saved.slug}`}>Open private Locker</Link><Link className="underline" href={`/preview-lockers/${saved.slug}/photos`}>Open private Photos</Link><a className="underline" href={`/admin/preview-lockers/${saved.id}/edit`}>Reload saved version (discards unsaved draft)</a></>}</nav>
+    {saved && <PreviewViewerAccess previewId={saved.id} initialAssigned={record ? viewerAssigned : false} />}
+    <nav className="flex flex-wrap gap-4" aria-label="Preview navigation"><Link className="underline" href="/admin/preview-lockers">Back to saved previews</Link>{saved && <><Link className="underline" href={`/preview-lockers/${saved.slug}`}>Open private Locker</Link><Link className="underline" href={`/preview-lockers/${saved.slug}/photos`}>Open private Photos</Link><Link className="underline" href={`/preview-lockers/${saved.slug}/videos`}>Open private Film Room</Link><a className="underline" href={`/admin/preview-lockers/${saved.id}/edit`}>Reload saved version (discards unsaved draft)</a></>}</nav>
   </div>;
 }

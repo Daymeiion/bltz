@@ -33,6 +33,10 @@ export function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATH_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }
 
+export function isPrivatePreviewPath(pathname: string): boolean {
+  return pathname === "/preview-lockers" || pathname.startsWith("/preview-lockers/");
+}
+
 /**
  * Pure decision for "should this athlete-path user be redirected to /onboarding?"
  * Exported separately so we can unit-test the role/claim matrix without
@@ -48,6 +52,9 @@ export function shouldRedirectToOnboarding(args: {
   const inAdmin = args.pathname === "/admin" || args.pathname.startsWith("/admin/");
   if (inOnboarding) return false;
   if (inAdmin) return false;
+  // Preview authorization is enforced by authenticated Supabase RLS. Do not
+  // divert an assigned player into onboarding before that row check can run.
+  if (isPrivatePreviewPath(args.pathname)) return false;
   if (isPublicPath(args.pathname)) return false;
   const isAthlete = args.profile?.role === "player";
   const hasClaim = Boolean(args.claimIntentCookie);

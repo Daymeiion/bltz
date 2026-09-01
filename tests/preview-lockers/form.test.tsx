@@ -14,8 +14,10 @@ it("retains manually entered biography and photo when discovery returns manual f
   await act(async () => root.render(<PreviewLockerForm />));
   await fill("Full name", "Synthetic Preview"); await fill("Biography", "Manual biography"); await click("Add photo"); await fill("Photo 1 title", "Manual photo"); await fill("Photo 1 url", "https://example.com/manual.jpg");
   fetcher.mockResolvedValue(new Response("")); discovery.read.mockResolvedValue({ draft: previewContent.parse({ slug: "synthetic-preview", full_name: "Synthetic Preview" }), message: "Manual fallback" });
-  await click("Find media suggestions");
+  await click("Build with web scraper");
   expect(host.querySelector<HTMLTextAreaElement>('[aria-label="Biography"]')!.value).toBe("Manual biography"); expect(host.querySelector<HTMLInputElement>('[aria-label="Photo 1 url"]')!.value).toBe("https://example.com/manual.jpg");
+  expect(host.textContent).toMatch(/nflverse NFL roster data.*cfbverse college roster data.*Wikipedia.*ESPN.*YouTube/);
+  expect(host.textContent).toContain("Google Images is not queried");
 });
 it("requires review, retains create id on retry and exposes full saved navigation", async () => {
   await act(async () => root.render(<PreviewLockerForm />)); await fill("Full name", "Synthetic Preview");

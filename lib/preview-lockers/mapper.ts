@@ -7,7 +7,9 @@ export function previewLockerData(row: PreviewRecord): LockerData {
     privateDemo: true, athleteId: null, slug: row.slug, fullName: row.full_name,
     hometown: row.hometown || "", position: row.position || "", jersey: row.jersey || "",
     levelLabel: row.level || "Private demo", headshotUrl: row.headshot_url || "/images/black-headshot-fallback.svg",
-    heroVideoUrl: row.hero_video_url, logoSrc: "/images/bltz-mark.svg", bio: row.bio,
+    // External preview videos render only in the guarded Film Room. LockerView's
+    // hero uses a raw <video> element and must not load arbitrary provider URLs.
+    heroVideoUrl: null, logoSrc: "/images/bltz-mark.svg", bio: row.bio,
     athleteQuote: row.athlete_quote, athleteQuoteAuthor: row.athlete_quote_author,
     heightDisplay: row.height_in ? `${Math.floor(row.height_in / 12)}′ ${row.height_in % 12}″` : "",
     weightLbs: row.weight_lbs, dobDisplay: "", gamesPlayed: row.games_played,

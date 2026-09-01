@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isPublicPath, shouldRedirectToOnboarding, shouldUseTestAuth } from "@/lib/supabase/middleware";
+import { isPrivatePreviewPath, isPublicPath, shouldRedirectToOnboarding, shouldUseTestAuth } from "@/lib/supabase/middleware";
 
 describe("isPublicPath", () => {
   it("treats root, auth, api, and locker pages as public", () => {
@@ -15,6 +15,19 @@ describe("isPublicPath", () => {
     expect(isPublicPath("/dashboard")).toBe(false);
     expect(isPublicPath("/onboarding")).toBe(false);
     expect(isPublicPath("/onboarding/loader")).toBe(false);
+    expect(isPublicPath("/preview-lockers/private-demo")).toBe(false);
+  });
+});
+
+describe("private preview routing", () => {
+  it("keeps assigned-player routes authenticated but outside onboarding diversion", () => {
+    expect(isPrivatePreviewPath("/preview-lockers/private-demo")).toBe(true);
+    expect(isPrivatePreviewPath("/preview-lockers/private-demo/photos")).toBe(true);
+    expect(isPrivatePreviewPath("/preview-lockers/private-demo/videos")).toBe(true);
+    expect(isPrivatePreviewPath("/admin/preview-lockers")).toBe(false);
+    for (const pathname of ["/preview-lockers/private-demo", "/preview-lockers/private-demo/photos", "/preview-lockers/private-demo/videos"]) {
+      expect(shouldRedirectToOnboarding({ pathname, profile: { role: "player", player_id: null } })).toBe(false);
+    }
   });
 });
 
