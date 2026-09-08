@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { updatePreview } from "@/lib/preview-lockers/validation";
 import { previewAdmin, readBody, json, failure, PreviewError } from "@/lib/preview-lockers/server";
 import type { PreviewDatabase } from "@/types/preview-lockers.generated";
@@ -17,7 +18,17 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (error?.code === "23505") throw new PreviewError("preview_conflict", 409);
     if (error) throw new PreviewError("could_not_update", 503);
     if (!data) throw new PreviewError("preview_conflict", 409);
-    return json(data);
+    const relationship = await (client as unknown as SupabaseClient)
+      .from("gtm_player_preview_lockers")
+      .select("completed_revision")
+      .eq("preview_locker_id", id)
+      .maybeSingle();
+    const completionStatus = relationship.error ? "unavailable" : "available";
+    return json({
+      ...data,
+      complete: relationship.data != null && Number(relationship.data.completed_revision) === data.revision,
+      completionStatus,
+    });
   } catch (error) { return failure(error); }
 }
 // No DELETE handler: permanent deletion is not an approved preview operation.

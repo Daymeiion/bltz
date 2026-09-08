@@ -79,10 +79,19 @@ export async function getGtmPlayerProspects(
   const gsisIds = sourceRows.map((row) => String(row.gsis_id));
   const selectionsByGsis = new Map<string, string>();
   const contactsByGsis = new Map<string, string>();
+  const previewsByGsis = new Map<string, { id: string; slug: string; state: "draft" | "complete" }>();
   if (gsisIds.length > 0) {
-    const [{ data: selections, error: selectionsError }, { data: contacts, error: contactsError }] = await Promise.all([
+    const [
+      { data: selections, error: selectionsError },
+      { data: contacts, error: contactsError },
+      { data: previews, error: previewsError },
+    ] = await Promise.all([
       gtm.from("gtm_player_prospects").select("gsis_id,selected_at").eq("archived", false).in("gsis_id", gsisIds),
       gtm.from("gtm_contacts").select("id,player_master_gsis_id").eq("archived", false).in("player_master_gsis_id", gsisIds),
+      gtm
+        .from("gtm_player_preview_lockers")
+        .select("gsis_id,completed_revision,preview_lockers!inner(id,slug,revision)")
+        .in("gsis_id", gsisIds),
     ]);
     if (selectionsError && !isMissingRelation(selectionsError)) {
       if (isPermissionDenied(selectionsError)) return { state: "restricted", rows: [], total: 0, filters };
@@ -92,11 +101,27 @@ export async function getGtmPlayerProspects(
       if (isPermissionDenied(contactsError)) return { state: "restricted", rows: [], total: 0, filters };
       throw new Error(`gtm_player_prospect_contacts_query_failed:${contactsError.code ?? "unknown"}`);
     }
+    if (previewsError && !isMissingRelation(previewsError)) {
+      if (isPermissionDenied(previewsError)) return { state: "restricted", rows: [], total: 0, filters };
+      throw new Error(`gtm_player_prospect_previews_query_failed:${previewsError.code ?? "unknown"}`);
+    }
     for (const selection of selections ?? []) {
       selectionsByGsis.set(String(selection.gsis_id), String(selection.selected_at));
     }
     for (const contact of contacts ?? []) {
       contactsByGsis.set(String(contact.player_master_gsis_id), String(contact.id));
+    }
+    for (const relationship of previews ?? []) {
+      const embedded = relationship.preview_lockers as unknown;
+      const preview = Array.isArray(embedded) ? embedded[0] : embedded;
+      if (!preview || typeof preview !== "object") continue;
+      const row = preview as Record<string, unknown>;
+      const revision = Number(row.revision);
+      previewsByGsis.set(String(relationship.gsis_id), {
+        id: String(row.id),
+        slug: String(row.slug),
+        state: Number(relationship.completed_revision) === revision ? "complete" : "draft",
+      });
     }
   }
 
@@ -104,7 +129,9 @@ export async function getGtmPlayerProspects(
   const pageCount = Math.max(1, Math.ceil(total / GTM_PLAYER_PROSPECT_PAGE_SIZE));
   return {
     state: "ready",
-    rows: sourceRows.map((row) => ({
+    rows: sourceRows.map((row) => {
+      const preview = previewsByGsis.get(String(row.gsis_id));
+      return ({
       gsisId: String(row.gsis_id),
       displayName: String(row.display_name),
       firstName: row.first_name == null ? null : String(row.first_name),
@@ -120,7 +147,10 @@ export async function getGtmPlayerProspects(
       headshotUrl: row.headshot_url == null ? null : String(row.headshot_url),
       selectedAt: selectionsByGsis.get(String(row.gsis_id)) ?? null,
       contactId: contactsByGsis.get(String(row.gsis_id)) ?? null,
-    })),
+      previewId: preview?.id ?? null,
+      previewSlug: preview?.slug ?? null,
+      previewState: preview?.state ?? null,
+    }); }),
     total,
     page: Math.min(filters.page, pageCount),
     pageSize: GTM_PLAYER_PROSPECT_PAGE_SIZE,

@@ -32,3 +32,27 @@ it("retains a conflicted edit draft and supplies a full document reload link", a
   await act(async () => root.render(<PreviewLockerForm record={record} />)); await fill("Biography", "Unsaved edit"); await act(async () => host.querySelector<HTMLInputElement>('input[type="checkbox"]')!.click()); fetcher.mockResolvedValue(new Response("{}", { status: 409 })); await click("Save changes privately");
   expect(host.textContent).toContain("Save conflict"); expect(host.querySelector<HTMLTextAreaElement>('[aria-label="Biography"]')!.value).toBe("Unsaved edit"); expect(host.textContent).toContain("Reload saved version (discards unsaved draft)"); expect(JSON.parse(fetcher.mock.calls[0][1].body).revision).toBe(3);
 });
+it("keeps discovery available for a linked saved draft and requires explicit persisted completion", async () => {
+  const record = { ...previewContent.parse({ slug: "synthetic-preview", full_name: "Synthetic Preview" }), id: "00000000-0000-4000-8000-000000000001", revision: 3, created_at: "", updated_at: "" };
+  await act(async () => root.render(<PreviewLockerForm record={record} gtmLinked />));
+  expect([...host.querySelectorAll("button")].some(button => button.textContent === "Build with web scraper")).toBe(true);
+  expect(host.textContent).toContain("Draft / incomplete");
+  const checks = host.querySelectorAll<HTMLInputElement>('input[type="checkbox"]');
+  expect(checks).toHaveLength(2);
+  await act(async () => checks[1].click());
+  fetcher.mockResolvedValue(new Response(JSON.stringify({ complete: true, revision: 3, unchanged: false })));
+  await click("Mark preview complete");
+  expect(JSON.parse(fetcher.mock.calls[0][1].body)).toEqual({ revision: 3 });
+  expect(host.textContent).toContain("Preview complete");
+  expect(host.textContent).toContain("identity and media rights remain unverified");
+});
+it("clears completed presentation after a persisted content edit", async () => {
+  const record = { ...previewContent.parse({ slug: "synthetic-preview", full_name: "Synthetic Preview", bio: "Reviewed" }), id: "00000000-0000-4000-8000-000000000001", revision: 3, created_at: "", updated_at: "" };
+  await act(async () => root.render(<PreviewLockerForm record={record} gtmLinked gtmCompleted />));
+  expect(host.textContent).toContain("Preview complete");
+  await fill("Biography", "Persisted change");
+  await act(async () => host.querySelector<HTMLInputElement>('input[type="checkbox"]')!.click());
+  fetcher.mockResolvedValue(new Response(JSON.stringify({ id: record.id, slug: record.slug, revision: 4, complete: false, completionStatus: "available" })));
+  await click("Save changes privately");
+  expect(host.textContent).toContain("Draft / incomplete");
+});
