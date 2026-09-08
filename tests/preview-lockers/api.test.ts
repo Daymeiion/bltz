@@ -22,3 +22,11 @@ it("returns unchanged idempotent create and rejects later-version retries", asyn
 it("uses revision compare-and-set and returns conflict rather than overwriting", async () => {
   mock.maybeSingle.mockResolvedValue({data:null,error:null}); expect((await PATCH(request({revision:7,content},"PATCH"),{params:Promise.resolve({id})})).status).toBe(409); expect(mock.eq).toHaveBeenCalledWith("revision",7);
 });
+it("reports a committed save even when the postwrite completion read fails", async () => {
+  mock.maybeSingle
+    .mockResolvedValueOnce({ data: { id, slug: content.slug, revision: 8 }, error: null })
+    .mockResolvedValueOnce({ data: null, error: { code: "08006" } });
+  const response = await PATCH(request({ revision: 7, content }, "PATCH"), { params: Promise.resolve({ id }) });
+  expect(response.status).toBe(200);
+  expect(await response.json()).toEqual({ id, slug: content.slug, revision: 8, complete: false, completionStatus: "unavailable" });
+});

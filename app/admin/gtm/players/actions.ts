@@ -14,6 +14,10 @@ const selectionSchema = z.object({
   }
 });
 
+const previewSchema = z.object({
+  gsisId: z.string().trim().min(1).max(120).refine((value) => !/[\s\p{Cc}]/u.test(value), "Choose a valid Player Master prospect."),
+});
+
 export type SelectPlayerProspectsResult =
   | { ok: true; selectedCount: number; existingCount: number }
   | { ok: false; code: "invalid" | "unauthorized" | "unavailable" | "failed"; message: string };
@@ -21,6 +25,56 @@ export type SelectPlayerProspectsResult =
 export type PromotePlayerProspectsResult =
   | { ok: true; createdCount: number; existingCount: number; linkedPlayerCount: number }
   | { ok: false; code: "invalid" | "unauthorized" | "unavailable" | "failed"; message: string };
+
+export type OpenPlayerPreviewResult =
+  | { ok: true; id: string; slug: string; created: boolean; complete: boolean }
+  | { ok: false; code: "invalid" | "unauthorized" | "unavailable" | "failed"; message: string };
+
+export async function openPlayerMasterPreview(input: unknown): Promise<OpenPlayerPreviewResult> {
+  const parsed = previewSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, code: "invalid", message: parsed.error.issues[0]?.message ?? "Choose a valid Player Master prospect." };
+  }
+
+  try {
+    await requireInternalAdmin();
+  } catch {
+    return { ok: false, code: "unauthorized", message: "Your administrator access could not be verified." };
+  }
+
+  const supabase = await createClient();
+  const gtm = supabase as unknown as SupabaseClient;
+  const { data, error } = await gtm.rpc("open_or_create_gtm_player_preview", { p_gsis_id: parsed.data.gsisId });
+  if (error || !data || typeof data !== "object" || Array.isArray(data)) {
+    const unavailable = error?.code === "42883" || error?.code === "PGRST202";
+    const invalid = error?.code === "22023" || error?.code === "23503" || error?.code === "23514";
+    return {
+      ok: false,
+      code: unavailable ? "unavailable" : invalid ? "invalid" : "failed",
+      message: unavailable
+        ? "Preview creation is not available until the approved migration is deployed."
+        : invalid
+          ? "Only active prospects in the selected cohort can create a preview. Refresh and try again."
+          : "The private preview could not be created or reopened. No canonical Player or claim was created.",
+    };
+  }
+
+  const result = data as Record<string, unknown>;
+  const id = z.uuid().safeParse(result.id);
+  const slug = z.string().min(1).max(80).safeParse(result.slug);
+  if (!id.success || !slug.success) {
+    return { ok: false, code: "failed", message: "The saved preview link was invalid. Refresh and try again." };
+  }
+  revalidatePath("/admin/gtm/players");
+  revalidatePath("/admin/preview-lockers");
+  return {
+    ok: true,
+    id: id.data,
+    slug: slug.data,
+    created: result.created === true,
+    complete: result.complete === true,
+  };
+}
 
 export async function selectPlayerMasterProspects(input: unknown): Promise<SelectPlayerProspectsResult> {
   const parsed = selectionSchema.safeParse(input);

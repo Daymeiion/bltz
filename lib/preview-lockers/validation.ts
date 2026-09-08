@@ -47,6 +47,7 @@ export const previewContent = z.object({
 }).strict();
 export const createPreview = z.object({ id: z.uuid(), content: previewContent }).strict();
 export const updatePreview = z.object({ revision: z.number().int().positive(), content: previewContent }).strict();
+export const previewViewerAssignment = z.object({ email: z.string().trim().toLowerCase().max(254).email() }).strict();
 export const previewRecord = previewContent.extend({ id: z.uuid(), revision: z.number().int().positive(), created_at: z.string(), updated_at: z.string() });
 export type PreviewContent = z.infer<typeof previewContent>;
 export type PreviewRecord = z.infer<typeof previewRecord>;

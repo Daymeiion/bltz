@@ -6,6 +6,7 @@ import {
   IconChevronLeft,
   IconChevronRight,
   IconFilter,
+  IconPhoto,
   IconSearch,
   IconShieldLock,
   IconUserPlus,
@@ -14,7 +15,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { promotePlayerMasterProspects, selectPlayerMasterProspects } from "@/app/admin/gtm/players/actions";
+import { openPlayerMasterPreview, promotePlayerMasterProspects, selectPlayerMasterProspects } from "@/app/admin/gtm/players/actions";
 import { GtmNavigation } from "@/components/admin/gtm/GtmNavigation";
 import {
   GTM_PLAYER_PROSPECT_SORTS,
@@ -69,6 +70,7 @@ export function GtmPlayerProspectsWorkspace({ data }: { data: GtmPlayerProspects
   const router = useRouter();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [pending, startPromotion] = useTransition();
+  const [previewPending, setPreviewPending] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
   const availableIds = data.state === "ready"
@@ -120,6 +122,25 @@ export function GtmPlayerProspectsWorkspace({ data }: { data: GtmPlayerProspects
   const runPrimaryAction = (gsisIds: string[]) => {
     if (data.state === "ready" && data.filters.view === "selected") promoteProspects(gsisIds);
     else selectProspects(gsisIds);
+  };
+
+  const openPreview = (gsisId: string) => {
+    setNotice(null);
+    setPreviewPending(gsisId);
+    startPromotion(async () => {
+      try {
+        const result = await openPlayerMasterPreview({ gsisId });
+        if (!result.ok) {
+          setNotice(result.message);
+          return;
+        }
+        router.push(`/admin/preview-lockers/${result.id}/edit`);
+      } catch {
+        setNotice("The private preview could not be created or reopened. Refresh and try again; no canonical Player or claim was created.");
+      } finally {
+        setPreviewPending(null);
+      }
+    });
   };
 
   return (
@@ -185,9 +206,9 @@ export function GtmPlayerProspectsWorkspace({ data }: { data: GtmPlayerProspects
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="min-w-[1050px] w-full border-collapse text-left text-sm">
+                <table className="min-w-[1280px] w-full border-collapse text-left text-sm">
                   <thead className="bg-neutral-50 text-xs uppercase tracking-[0.06em] text-neutral-500 dark:bg-neutral-950">
-                    <tr><th className="w-12 px-4 py-3"><span className="sr-only">Select</span></th><th className="px-3 py-3">Player</th><th className="px-3 py-3">College</th><th className="px-3 py-3">Team</th><th className="px-3 py-3">Position</th><th className="px-3 py-3">Career</th><th className="px-3 py-3">Status</th><th className="px-4 py-3 text-right">GTM</th></tr>
+                    <tr><th className="w-12 px-4 py-3"><span className="sr-only">Select</span></th><th className="px-3 py-3">Player</th><th className="px-3 py-3">College</th><th className="px-3 py-3">Team</th><th className="px-3 py-3">Position</th><th className="px-3 py-3">Career</th><th className="px-3 py-3">Status</th><th className="px-3 py-3">Preview</th><th className="px-4 py-3 text-right">GTM</th></tr>
                   </thead>
                   <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
                     {data.rows.map((player) => {
@@ -203,6 +224,21 @@ export function GtmPlayerProspectsWorkspace({ data }: { data: GtmPlayerProspects
                           <td className="px-3 py-3">{player.position ?? "—"}</td>
                           <td className="px-3 py-3"><p>{player.yearsOfExperience == null ? "Experience unknown" : `${player.yearsOfExperience} ${player.yearsOfExperience === 1 ? "year" : "years"}`}</p><p className="mt-1 text-xs text-neutral-500">{player.rookieSeason ?? "?"}–{player.lastSeason ?? "present"}</p></td>
                           <td className="px-3 py-3">{player.status ? label(player.status) : "Not recorded"}</td>
+                          <td className="px-3 py-3">
+                            {!added ? <span className="text-neutral-400">—</span> : player.previewId ? (
+                              <div className="space-y-1">
+                                <Link href={`/admin/preview-lockers/${player.previewId}/edit`} className={secondaryButton}>
+                                  {player.previewState === "complete" ? <IconCheck className="h-4 w-4" /> : <IconPhoto className="h-4 w-4" />}
+                                  {player.previewState === "complete" ? "Preview complete" : "Open preview draft"}
+                                </Link>
+                                {player.previewState !== "complete" && <p className="text-xs text-neutral-500">Draft / incomplete</p>}
+                              </div>
+                            ) : (
+                              <button type="button" onClick={() => openPreview(player.gsisId)} disabled={pending} className={secondaryButton}>
+                                <IconPhoto className="h-4 w-4" />{previewPending === player.gsisId ? "Creating…" : "Create preview Locker"}
+                              </button>
+                            )}
+                          </td>
                           <td className="px-4 py-3 text-right">
                             {promoted ? <Link href={`/admin/gtm/contacts?contact=${player.contactId}`} className={secondaryButton}><IconCheck className="h-4 w-4" />Open contact</Link> : added ? <button type="button" onClick={() => promoteProspects([player.gsisId])} disabled={pending} className={secondaryButton}><IconUserPlus className="h-4 w-4" />Add to Contacts</button> : <button type="button" onClick={() => selectProspects([player.gsisId])} disabled={pending} className={secondaryButton}><IconAddressBook className="h-4 w-4" />Add to cohort</button>}
                           </td>

@@ -7,13 +7,22 @@ export const PREVIEW_COLUMNS = "id,slug,full_name,position,level,school,hometown
 export class PreviewError extends Error {
   constructor(public code: string, public status: number) { super(code); }
 }
-export async function previewAdmin() {
+export async function previewUser() {
   const client = await createClient();
   const { data: { user }, error } = await client.auth.getUser();
   if (error || !user) throw new PreviewError("unauthorized", 401);
-  const role = await client.rpc("is_internal_admin");
-  if (role.error || role.data !== true) throw new PreviewError("forbidden", 403);
   return { client, user };
+}
+export async function previewAccess() {
+  const { client, user } = await previewUser();
+  const role = await client.rpc("is_internal_admin");
+  if (role.error) throw new PreviewError("preview_unavailable", 503);
+  return { client, user, isAdmin: role.data === true };
+}
+export async function previewAdmin() {
+  const access = await previewAccess();
+  if (!access.isAdmin) throw new PreviewError("forbidden", 403);
+  return access;
 }
 export function json(data: unknown, status = 200) { return Response.json(data, { status, headers: PRIVATE_HEADERS }); }
 export function failure(error: unknown) {
@@ -46,8 +55,8 @@ export async function readBody(req: Request, limit = 128 * 1024): Promise<unknow
   finally { reader.releaseLock(); }
 }
 export async function readPrivatePreview(slug: string) {
-  const authorization = await previewAdmin().catch(error => {
-    if (error instanceof PreviewError && [401, 403].includes(error.status)) return null;
+  const authorization = await previewUser().catch(error => {
+    if (error instanceof PreviewError && error.status === 401) return null;
     throw error;
   });
   if (!authorization) return null;

@@ -42,6 +42,9 @@ export interface GtmPlayerProspectRow {
   headshotUrl: string | null;
   selectedAt: string | null;
   contactId: string | null;
+  previewId: string | null;
+  previewSlug: string | null;
+  previewState: "draft" | "complete" | null;
 }
 
 export type GtmPlayerProspectsReadModel =

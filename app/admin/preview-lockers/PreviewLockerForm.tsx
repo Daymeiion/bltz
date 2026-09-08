@@ -8,23 +8,37 @@ import { Textarea } from "@/components/ui/textarea";
 import { previewContent, previewIdentity, slugify, type PreviewContent, type PreviewRecord } from "@/lib/preview-lockers/validation";
 import { readDiscovery } from "@/lib/preview-lockers/stream-client";
 import { mergeSuggestions } from "@/lib/preview-lockers/merge-suggestions";
+import PreviewViewerAccess from "./PreviewViewerAccess";
 
 const initial = () => previewContent.parse({ slug: "private-preview", full_name: "".padEnd(2, "_") });
 type Scalar = Exclude<keyof PreviewContent, "schools" | "pro_teams" | "awards" | "videos" | "photos">;
 
-export default function PreviewLockerForm({ record }: { record?: PreviewRecord }) {
+export default function PreviewLockerForm({
+  record,
+  viewerAssigned = false,
+  gtmLinked = false,
+  gtmCompleted = false,
+}: {
+  record?: PreviewRecord;
+  viewerAssigned?: boolean;
+  gtmLinked?: boolean;
+  gtmCompleted?: boolean;
+}) {
   const [draft, setDraft] = useState<PreviewContent>(() => record ? previewContent.parse(Object.fromEntries(Object.keys(previewContent.shape).map(k => [k, record[k as keyof PreviewRecord]]))) : { ...initial(), full_name: "", slug: "" });
-  const [busy, setBusy] = useState<"discovery" | "save" | null>(null);
+  const [busy, setBusy] = useState<"discovery" | "save" | "complete" | null>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [reviewed, setReviewed] = useState(false);
+  const [completionReviewed, setCompletionReviewed] = useState(false);
+  const [completed, setCompleted] = useState(gtmCompleted);
+  const [dirty, setDirty] = useState(false);
   const [saved, setSaved] = useState<{ id: string; slug: string; revision: number } | null>(record ?? null);
   const revision = useRef(record?.revision);
   const createId = useRef<string | null>(null);
   const pending = useRef(false);
   const abort = useRef<AbortController | null>(null);
   useEffect(() => () => abort.current?.abort(), []);
-  function change(patch: Partial<PreviewContent>) { setDraft(current => ({ ...current, ...patch })); setReviewed(false); setError(""); }
+  function change(patch: Partial<PreviewContent>) { setDraft(current => ({ ...current, ...patch })); setReviewed(false); setCompletionReviewed(false); setDirty(true); setError(""); }
   function field(key: Scalar, label: string, maxLength = 160, numeric = false) {
     return <label className="grid gap-2 text-sm" key={key}>{label}<Input aria-label={label} maxLength={maxLength} type={numeric ? "number" : "text"} value={draft[key] ?? ""} onChange={event => change({ [key]: numeric ? event.target.value === "" ? null : Number(event.target.value) : event.target.value || null })} /></label>;
   }
@@ -37,7 +51,7 @@ export default function PreviewLockerForm({ record }: { record?: PreviewRecord }
     try {
       const result = await readDiscovery(await fetch("/api/preview-lockers/discovery", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(identity.data), signal: controller.signal }), setMessage);
       if (!controller.signal.aborted) {
-        if (result.draft) { const suggestion = result.draft; setDraft(current => mergeSuggestions(current, suggestion)); setReviewed(false); }
+        if (result.draft) { const suggestion = result.draft; setDraft(current => mergeSuggestions(current, suggestion)); setReviewed(false); setCompletionReviewed(false); setDirty(true); }
         setMessage(result.message);
       }
     } catch (cause) { if (!controller.signal.aborted) setError(cause instanceof Error ? cause.message : "Discovery unavailable. Continue manually."); }
@@ -55,9 +69,27 @@ export default function PreviewLockerForm({ record }: { record?: PreviewRecord }
         body: JSON.stringify(saved ? { revision: revision.current, content: parsed.data } : { id: createId.current, content: parsed.data }),
       });
       if (!response.ok) throw new Error(response.status === 409 ? "Save conflict: this slug is in use, the record changed, or an earlier save may have completed. Your draft is retained. Open the saved list before retrying." : response.status === 401 || response.status === 403 ? "Your Admin session is no longer authorized. Sign in again before saving." : "Save failed. Your draft is retained; retry is safe.");
-      const data = await response.json(); setSaved(data); revision.current = data.revision; setReviewed(false);
-      setMessage("Saved privately. No canonical athlete, claim, or public Locker was created.");
+      const data = await response.json(); setSaved(data); revision.current = data.revision; setReviewed(false); setCompletionReviewed(false); setDirty(false);
+      if (gtmLinked) setCompleted(data.complete === true);
+      setMessage(data.completionStatus === "unavailable"
+        ? "Saved privately. Completion status could not be refreshed; reload before marking this preview complete."
+        : "Saved privately. No canonical athlete, claim, or public Locker was created.");
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Save failed. Your draft is retained."); }
+    finally { pending.current = false; setBusy(null); }
+  }
+  async function completePreview() {
+    if (pending.current || !saved || !gtmLinked || !completionReviewed || dirty) return;
+    pending.current = true; setBusy("complete"); setError("");
+    try {
+      const response = await fetch(`/api/preview-lockers/${saved.id}/completion`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ revision: revision.current }),
+      });
+      if (!response.ok) throw new Error(response.status === 409 ? "Completion conflict: this preview changed. Reload the saved version, review it, and try again." : response.status === 401 || response.status === 403 ? "Your Admin session is no longer authorized. Sign in again before completing this preview." : "Completion could not be saved. The preview remains draft / incomplete.");
+      setCompleted(true); setCompletionReviewed(false);
+      setMessage("Preview complete. This confirms private-demo review only; identity and media rights remain unverified.");
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Completion could not be saved. The preview remains draft / incomplete."); }
     finally { pending.current = false; setBusy(null); }
   }
   return <div className="space-y-6">
@@ -72,7 +104,7 @@ export default function PreviewLockerForm({ record }: { record?: PreviewRecord }
         <label className="grid gap-2 text-sm">Career level<select aria-label="Career level" className="h-10 rounded-md border bg-background px-3" value={draft.level ?? ""} onChange={event => change({ level: (event.target.value || null) as PreviewContent["level"] })}><option value="">Not recorded</option><option value="hs">High school</option><option value="college">College</option><option value="pro">Professional</option><option value="former">Former athlete</option></select></label>
         {field("hometown", "Hometown")}{field("jersey", "Jersey", 10)}{field("height_in", "Height (inches)", 2, true)}{field("weight_lbs", "Weight (lbs)", 3, true)}{field("games_played", "Games played", 4, true)}
       </div>
-      {!saved && <div className="flex flex-wrap gap-3"><Button type="button" variant="outline" onClick={discover}>Find media suggestions</Button><Button type="button" variant="outline" onClick={() => setMessage("Manual mode: complete the fields below, review, then save privately.")}>Continue manually</Button></div>}
+      {(!saved || gtmLinked) && <section className="space-y-3 rounded-lg border p-4" aria-labelledby="preview-scraper-heading"><div className="space-y-1"><h2 id="preview-scraper-heading" className="font-semibold">Build with web scraper</h2><p className="text-sm">Searches nflverse NFL roster data, cfbverse college roster data, Wikipedia, ESPN, and YouTube. Suggestions fill only blank fields and remain editable; they are not identity, accuracy, copyright, or rights verification.</p><p className="text-sm">Google Images is not queried. A future image-search provider requires an approved adapter. You can cancel, continue manually, or replace every suggestion before saving.</p></div><div className="flex flex-wrap gap-3"><Button type="button" variant="outline" onClick={discover}>Build with web scraper</Button><Button type="button" variant="outline" onClick={() => setMessage("Manual mode: complete the fields below, review, then save privately.")}>Continue manually</Button></div></section>}
       <div className="grid gap-4 sm:grid-cols-2">{field("headshot_url", "Headshot HTTPS URL", 2048)}{field("hero_video_url", "Hero video HTTPS URL (direct video)", 2048)}</div>
       <label className="grid gap-2 text-sm">Biography<Textarea aria-label="Biography" rows={6} maxLength={4000} value={draft.bio} onChange={event => change({ bio: event.target.value })} /></label>
       <div className="grid gap-4 sm:grid-cols-2">{field("athlete_quote", "Athlete quote", 600)}{field("athlete_quote_author", "Quote attribution")}</div>
@@ -82,9 +114,23 @@ export default function PreviewLockerForm({ record }: { record?: PreviewRecord }
       <section className="space-y-3"><h2 className="font-semibold">Photos · {draft.photos.length}/40</h2>{draft.photos.map((photo, index) => <fieldset className="space-y-2 rounded-lg border p-3" key={photo.id}><legend>Photo {index + 1}</legend>{(["title", "url", "credits", "sourceUrl", "season"] as const).map(key => <Input key={key} aria-label={`Photo ${index + 1} ${key}`} placeholder={key} maxLength={key === "title" ? 160 : key === "credits" ? 300 : key === "season" ? 20 : 2048} value={photo[key] ?? ""} onChange={e => change({ photos: draft.photos.map((v, i) => i === index ? { ...v, [key]: e.target.value || (["title", "url"].includes(key) ? "" : null) } : v) })} />)}<select aria-label={`Photo ${index + 1} level`} className="h-10 rounded-md border bg-background px-3" value={photo.level} onChange={e => change({ photos: draft.photos.map((v, i) => i === index ? { ...v, level: e.target.value as typeof photo.level } : v) })}>{["hs", "cfb", "pro", "off-field"].map(level => <option key={level}>{level}</option>)}</select><Button type="button" variant="outline" onClick={() => change({ photos: draft.photos.filter((_, i) => i !== index) })}>Remove photo from draft</Button></fieldset>)}<Button type="button" variant="outline" disabled={draft.photos.length >= 40} onClick={() => change({ photos: [...draft.photos, { id: crypto.randomUUID(), title: "", url: "", credits: null, sourceUrl: null, season: null, level: "off-field" }] })}>Add photo</Button></section>
       <label className="flex items-start gap-3"><input type="checkbox" checked={reviewed} onChange={e => setReviewed(e.target.checked)} className="mt-1 h-5 w-5" />I reviewed this draft for private demo use. This is not public publication or rights verification.</label>
       <Button type="button" disabled={!reviewed} onClick={save}>{saved ? "Save changes privately" : "Save private preview"}</Button>
+      {saved && gtmLinked && <section className="space-y-3 rounded-lg border p-4" aria-labelledby="preview-completion-heading">
+        <div>
+          <h2 id="preview-completion-heading" className="font-semibold">Cohort preview status</h2>
+          <p className="mt-1 text-sm font-medium">{completed ? "✓ Preview complete" : "Draft / incomplete"}</p>
+          <p className="mt-1 text-sm">Completion confirms explicit review of this persisted private demo only. It does not verify athlete identity, media accuracy, copyright, or rights.</p>
+        </div>
+        {!completed && <>
+          <label className="flex items-start gap-3"><input type="checkbox" checked={completionReviewed} disabled={dirty} onChange={event => setCompletionReviewed(event.target.checked)} className="mt-1 h-5 w-5" />I explicitly reviewed the current persisted preview for private demo use.</label>
+          {dirty && <p className="text-sm">Save or discard the unsaved edits before completing this preview.</p>}
+          <Button type="button" disabled={!completionReviewed || dirty} onClick={completePreview}>Mark preview complete</Button>
+        </>}
+      </section>}
     </fieldset>
     {busy === "discovery" && <Button type="button" variant="outline" onClick={() => { abort.current?.abort(); setMessage("Discovery cancelled. Continue manually."); }}>Cancel discovery</Button>}
     {busy === "save" && <p role="status">Saving privately…</p>}
-    <nav className="flex flex-wrap gap-4" aria-label="Preview navigation"><Link className="underline" href="/admin/preview-lockers">Back to saved previews</Link>{saved && <><Link className="underline" href={`/preview-lockers/${saved.slug}`}>Open private Locker</Link><Link className="underline" href={`/preview-lockers/${saved.slug}/photos`}>Open private Photos</Link><a className="underline" href={`/admin/preview-lockers/${saved.id}/edit`}>Reload saved version (discards unsaved draft)</a></>}</nav>
+    {busy === "complete" && <p role="status">Saving completion…</p>}
+    {saved && <PreviewViewerAccess previewId={saved.id} initialAssigned={record ? viewerAssigned : false} />}
+    <nav className="flex flex-wrap gap-4" aria-label="Preview navigation"><Link className="underline" href="/admin/preview-lockers">Back to saved previews</Link>{saved && <><Link className="underline" href={`/preview-lockers/${saved.slug}`}>Open private Locker</Link><Link className="underline" href={`/preview-lockers/${saved.slug}/photos`}>Open private Photos</Link><Link className="underline" href={`/preview-lockers/${saved.slug}/videos`}>Open private Film Room</Link><a className="underline" href={`/admin/preview-lockers/${saved.id}/edit`}>Reload saved version (discards unsaved draft)</a></>}</nav>
   </div>;
 }
