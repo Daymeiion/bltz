@@ -45,4 +45,7 @@ describe("request-owned preview discovery", () => {
     await expect(readDiscovery(new Response("event: event\ndata: {}\n\n"), vi.fn())).rejects.toThrow("disconnected");
     const result = await readDiscovery(new Response('event: done\ndata: {"status":"manual","draft":{"raw_sources":"secret"}}\n\n'), vi.fn()); expect(result.draft).toBeUndefined();
   });
+  it("explains both admission limits without claiming a rejected start was consumed", async () => {
+    await expect(readDiscovery(new Response("", { status: 429 }), vi.fn())).rejects.toThrow(/less than 3 minutes.*10 scraper runs for the current UTC day.*did not consume another run/);
+  });
 });

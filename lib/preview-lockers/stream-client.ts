@@ -1,7 +1,9 @@
 import { previewContent, type PreviewContent } from "./validation";
 
 export async function readDiscovery(response: Response, onProgress: (text: string) => void): Promise<{ draft?: PreviewContent; message: string }> {
-  if (!response.ok) throw new Error(response.status === 429 ? "Discovery limit reached. Continue manually or try later." : "Discovery unavailable. Your manual draft is still here.");
+  if (!response.ok) throw new Error(response.status === 429
+    ? "The scraper run was not started. It may be less than 3 minutes since this Admin account's last scraper run started, or the account may have reached 10 scraper runs for the current UTC day. Continue manually and try later if appropriate. This rejected attempt did not consume another run."
+    : "Discovery unavailable. Your manual draft is still here.");
   const reader = response.body?.getReader();
   if (!reader) throw new Error("Discovery unavailable. Continue manually.");
   const decoder = new TextDecoder(); let buffer = ""; let bytes = 0;
