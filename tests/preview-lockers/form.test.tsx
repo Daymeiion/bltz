@@ -32,6 +32,71 @@ it("retains a conflicted edit draft and supplies a full document reload link", a
   await act(async () => root.render(<PreviewLockerForm record={record} />)); await fill("Biography", "Unsaved edit"); await act(async () => host.querySelector<HTMLInputElement>('input[type="checkbox"]')!.click()); fetcher.mockResolvedValue(new Response("{}", { status: 409 })); await click("Save changes privately");
   expect(host.textContent).toContain("Save conflict"); expect(host.querySelector<HTMLTextAreaElement>('[aria-label="Biography"]')!.value).toBe("Unsaved edit"); expect(host.textContent).toContain("Reload saved version (discards unsaved draft)"); expect(JSON.parse(fetcher.mock.calls[0][1].body).revision).toBe(3);
 });
+it("keeps dirty drafts mounted by guarding same-tab navigation and opening saved previews in new tabs", async () => {
+  const record = { ...previewContent.parse({ slug: "synthetic-preview", full_name: "Synthetic Preview" }), id: "00000000-0000-4000-8000-000000000001", revision: 3, created_at: "", updated_at: "" };
+  await act(async () => root.render(<PreviewLockerForm record={record} />));
+  await fill("Biography", "Unsaved scraped result");
+  const back = host.querySelector<HTMLAnchorElement>('a[href="/admin/preview-lockers"]')!;
+  const navigation = new MouseEvent("click", { bubbles: true, cancelable: true, button: 0 });
+  await act(async () => back.dispatchEvent(navigation));
+  expect(navigation.defaultPrevented).toBe(true);
+  expect(host.querySelector<HTMLTextAreaElement>('[aria-label="Biography"]')!.value).toBe("Unsaved scraped result");
+  expect(host.textContent).toContain("Unsaved scraped or manual changes are still in this editor");
+  for (const href of ["/preview-lockers/synthetic-preview", "/preview-lockers/synthetic-preview/photos", "/preview-lockers/synthetic-preview/videos"]) {
+    const preview = host.querySelector<HTMLAnchorElement>(`a[href="${href}"]`)!;
+    expect(preview.target).toBe("_blank");
+    expect(preview.rel).toBe("noopener noreferrer");
+  }
+  const discard = host.querySelector<HTMLAnchorElement>('a[data-draft-discard="true"]')!;
+  let discardReached = false;
+  discard.addEventListener("click", event => { discardReached = true; event.preventDefault(); });
+  await act(async () => discard.click());
+  expect(discardReached).toBe(true);
+});
+it("warns on browser unload only while the draft is dirty", async () => {
+  const record = { ...previewContent.parse({ slug: "synthetic-preview", full_name: "Synthetic Preview" }), id: "00000000-0000-4000-8000-000000000001", revision: 3, created_at: "", updated_at: "" };
+  await act(async () => root.render(<PreviewLockerForm record={record} />));
+  const cleanUnload = new Event("beforeunload", { cancelable: true });
+  window.dispatchEvent(cleanUnload);
+  expect(cleanUnload.defaultPrevented).toBe(false);
+  await fill("Biography", "Unsaved edit");
+  const dirtyUnload = new Event("beforeunload", { cancelable: true });
+  window.dispatchEvent(dirtyUnload);
+  expect(dirtyUnload.defaultPrevented).toBe(true);
+});
+it("offers an explicit discard-and-return path for a new unsaved draft", async () => {
+  await act(async () => root.render(<PreviewLockerForm />));
+  await fill("Full name", "Unsaved New Preview");
+  const back = host.querySelector<HTMLAnchorElement>('a[href="/admin/preview-lockers"]:not([data-draft-discard])')!;
+  const blocked = new MouseEvent("click", { bubbles: true, cancelable: true, button: 0 });
+  await act(async () => back.dispatchEvent(blocked));
+  expect(blocked.defaultPrevented).toBe(true);
+  const discard = host.querySelector<HTMLAnchorElement>('a[data-draft-discard="true"]')!;
+  expect(discard.textContent).toContain("Discard unsaved draft");
+  let discardReached = false;
+  discard.addEventListener("click", event => { discardReached = true; event.preventDefault(); });
+  await act(async () => discard.click());
+  expect(discardReached).toBe(true);
+});
+it("blocks same-tab departure while an admitted discovery is still in flight", async () => {
+  const record = { ...previewContent.parse({ slug: "synthetic-preview", full_name: "Synthetic Preview" }), id: "00000000-0000-4000-8000-000000000001", revision: 3, created_at: "", updated_at: "" };
+  let finish!: (value: { draft: ReturnType<typeof previewContent.parse>; message: string }) => void;
+  discovery.read.mockImplementation(() => new Promise(resolve => { finish = resolve; }));
+  fetcher.mockResolvedValue(new Response(""));
+  await act(async () => root.render(<PreviewLockerForm record={record} gtmLinked />));
+  await click("Build with web scraper");
+  const back = host.querySelector<HTMLAnchorElement>('a[href="/admin/preview-lockers"]')!;
+  const navigation = new MouseEvent("click", { bubbles: true, cancelable: true, button: 0 });
+  await act(async () => back.dispatchEvent(navigation));
+  expect(navigation.defaultPrevented).toBe(true);
+  expect(host.textContent).toContain("Discovery is still running in this editor");
+  expect(host.querySelector<HTMLAnchorElement>('a[data-draft-discard="true"]')!.getAttribute("aria-disabled")).toBe("true");
+  const unload = new Event("beforeunload", { cancelable: true });
+  window.dispatchEvent(unload);
+  expect(unload.defaultPrevented).toBe(true);
+  await act(async () => finish({ draft: previewContent.parse({ slug: "synthetic-preview", full_name: "Synthetic Preview", bio: "Recovered result" }), message: "Suggestions ready" }));
+  expect(host.querySelector<HTMLTextAreaElement>('[aria-label="Biography"]')!.value).toBe("Recovered result");
+});
 it("keeps discovery available for a linked saved draft and requires explicit persisted completion", async () => {
   const record = { ...previewContent.parse({ slug: "synthetic-preview", full_name: "Synthetic Preview" }), id: "00000000-0000-4000-8000-000000000001", revision: 3, created_at: "", updated_at: "" };
   await act(async () => root.render(<PreviewLockerForm record={record} gtmLinked />));

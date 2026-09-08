@@ -37,7 +37,36 @@ export default function PreviewLockerForm({
   const createId = useRef<string | null>(null);
   const pending = useRef(false);
   const abort = useRef<AbortController | null>(null);
+  const allowDraftDiscard = useRef(false);
   useEffect(() => () => abort.current?.abort(), []);
+  useEffect(() => {
+    const departureProtected = dirty || busy !== null;
+    if (!departureProtected) { allowDraftDiscard.current = false; return; }
+    const beforeUnload = (event: BeforeUnloadEvent) => {
+      if (allowDraftDiscard.current) return;
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    const guardNavigation = (event: MouseEvent) => {
+      if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      const target = event.target instanceof Element ? event.target.closest<HTMLAnchorElement>("a[href]") : null;
+      if (!target || target.target === "_blank" || target.hasAttribute("download")) return;
+      if (target.dataset.draftDiscard === "true" && !busy) { allowDraftDiscard.current = true; return; }
+      event.preventDefault();
+      event.stopPropagation();
+      setMessage(busy === "discovery"
+        ? "Discovery is still running in this editor. Wait for it to finish or cancel it before leaving; navigating away would stop the admitted run."
+        : busy
+          ? "A private preview update is still being saved. Wait for it to finish before leaving."
+          : "Unsaved scraped or manual changes are still in this editor. Review and save them, or explicitly reload the saved version to discard them, before leaving.");
+    };
+    window.addEventListener("beforeunload", beforeUnload);
+    document.addEventListener("click", guardNavigation, true);
+    return () => {
+      window.removeEventListener("beforeunload", beforeUnload);
+      document.removeEventListener("click", guardNavigation, true);
+    };
+  }, [dirty, busy]);
   function change(patch: Partial<PreviewContent>) { setDraft(current => ({ ...current, ...patch })); setReviewed(false); setCompletionReviewed(false); setDirty(true); setError(""); }
   function field(key: Scalar, label: string, maxLength = 160, numeric = false) {
     return <label className="grid gap-2 text-sm" key={key}>{label}<Input aria-label={label} maxLength={maxLength} type={numeric ? "number" : "text"} value={draft[key] ?? ""} onChange={event => change({ [key]: numeric ? event.target.value === "" ? null : Number(event.target.value) : event.target.value || null })} /></label>;
@@ -104,7 +133,7 @@ export default function PreviewLockerForm({
         <label className="grid gap-2 text-sm">Career level<select aria-label="Career level" className="h-10 rounded-md border bg-background px-3" value={draft.level ?? ""} onChange={event => change({ level: (event.target.value || null) as PreviewContent["level"] })}><option value="">Not recorded</option><option value="hs">High school</option><option value="college">College</option><option value="pro">Professional</option><option value="former">Former athlete</option></select></label>
         {field("hometown", "Hometown")}{field("jersey", "Jersey", 10)}{field("height_in", "Height (inches)", 2, true)}{field("weight_lbs", "Weight (lbs)", 3, true)}{field("games_played", "Games played", 4, true)}
       </div>
-      {(!saved || gtmLinked) && <section className="space-y-3 rounded-lg border p-4" aria-labelledby="preview-scraper-heading"><div className="space-y-1"><h2 id="preview-scraper-heading" className="font-semibold">Build with web scraper</h2><p className="text-sm">Searches nflverse NFL roster data, cfbverse college roster data, Wikipedia, ESPN, and YouTube. Suggestions fill only blank fields and remain editable; they are not identity, accuracy, copyright, or rights verification.</p><p className="text-sm">Google Images is not queried. A future image-search provider requires an approved adapter. You can cancel, continue manually, or replace every suggestion before saving.</p></div><div className="flex flex-wrap gap-3"><Button type="button" variant="outline" onClick={discover}>Build with web scraper</Button><Button type="button" variant="outline" onClick={() => setMessage("Manual mode: complete the fields below, review, then save privately.")}>Continue manually</Button></div></section>}
+      {(!saved || gtmLinked) && <section className="space-y-3 rounded-lg border p-4" aria-labelledby="preview-scraper-heading"><div className="space-y-1"><h2 id="preview-scraper-heading" className="font-semibold">Build with web scraper</h2><p className="text-sm">Searches nflverse NFL roster data, cfbverse college roster data, Wikipedia, ESPN, and YouTube. Suggestions fill only blank fields and remain editable; they are not identity, accuracy, copyright, or rights verification.</p><p className="text-sm">Google Images is not queried. A future image-search provider requires an approved adapter. You can cancel, continue manually, or replace every suggestion before saving.</p><p className="text-sm font-medium">Scraped and manual changes are retained while this editor remains open, until you explicitly review and save. Preview pages open the last saved version in a new tab so the editor stays open. A previously closed unsaved draft cannot be recovered.</p></div><div className="flex flex-wrap gap-3"><Button type="button" variant="outline" onClick={discover}>Build with web scraper</Button><Button type="button" variant="outline" onClick={() => setMessage("Manual mode: complete the fields below, review, then save privately.")}>Continue manually</Button></div></section>}
       <div className="grid gap-4 sm:grid-cols-2">{field("headshot_url", "Headshot HTTPS URL", 2048)}{field("hero_video_url", "Hero video HTTPS URL (direct video)", 2048)}</div>
       <label className="grid gap-2 text-sm">Biography<Textarea aria-label="Biography" rows={6} maxLength={4000} value={draft.bio} onChange={event => change({ bio: event.target.value })} /></label>
       <div className="grid gap-4 sm:grid-cols-2">{field("athlete_quote", "Athlete quote", 600)}{field("athlete_quote_author", "Quote attribution")}</div>
@@ -131,6 +160,7 @@ export default function PreviewLockerForm({
     {busy === "save" && <p role="status">Saving privately…</p>}
     {busy === "complete" && <p role="status">Saving completion…</p>}
     {saved && <PreviewViewerAccess previewId={saved.id} initialAssigned={record ? viewerAssigned : false} />}
-    <nav className="flex flex-wrap gap-4" aria-label="Preview navigation"><Link className="underline" href="/admin/preview-lockers">Back to saved previews</Link>{saved && <><Link className="underline" href={`/preview-lockers/${saved.slug}`}>Open private Locker</Link><Link className="underline" href={`/preview-lockers/${saved.slug}/photos`}>Open private Photos</Link><Link className="underline" href={`/preview-lockers/${saved.slug}/videos`}>Open private Film Room</Link><a className="underline" href={`/admin/preview-lockers/${saved.id}/edit`}>Reload saved version (discards unsaved draft)</a></>}</nav>
+    {dirty && <p role="status" className="rounded-lg border p-3 text-sm">Unsaved scraped or manual changes remain here while this editor stays open. Same-tab links and page reload are guarded. Save this draft or use the explicit discard action before leaving.</p>}
+    <nav className="flex flex-wrap gap-4" aria-label="Preview navigation"><Link className="underline" href="/admin/preview-lockers">Back to saved previews</Link>{saved ? <><Link className="underline" href={`/preview-lockers/${saved.slug}`} target="_blank" rel="noopener noreferrer">Open last saved private Locker in new tab</Link><Link className="underline" href={`/preview-lockers/${saved.slug}/photos`} target="_blank" rel="noopener noreferrer">Open last saved private Photos in new tab</Link><Link className="underline" href={`/preview-lockers/${saved.slug}/videos`} target="_blank" rel="noopener noreferrer">Open last saved private Film Room in new tab</Link><a className="underline aria-disabled:cursor-not-allowed aria-disabled:opacity-50" aria-disabled={!!busy} href={`/admin/preview-lockers/${saved.id}/edit`} data-draft-discard="true" onClick={event => { if (busy) event.preventDefault(); else { allowDraftDiscard.current = true; window.setTimeout(() => { allowDraftDiscard.current = false; }, 0); } }}>Reload saved version (discards unsaved draft)</a></> : <a className="underline aria-disabled:cursor-not-allowed aria-disabled:opacity-50" aria-disabled={!!busy} href="/admin/preview-lockers" data-draft-discard="true" onClick={event => { if (busy) event.preventDefault(); else { allowDraftDiscard.current = true; window.setTimeout(() => { allowDraftDiscard.current = false; }, 0); } }}>Discard unsaved draft and return to saved previews</a>}</nav>
   </div>;
 }
