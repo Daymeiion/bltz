@@ -165,7 +165,8 @@ export type PreviewDatabase = { public: { Tables: { preview_lockers: {
       }
     }
     Functions: {
-      admit_preview_discovery: { Args: never; Returns: string }
+      admit_preview_discovery: { Args: { p_identity_hash: string }; Returns: string }
+      finalize_preview_discovery: { Args: { p_request_id: string; p_succeeded: boolean }; Returns: boolean }
       assign_preview_locker_viewer: { Args: { p_email: string; p_preview_locker_id: string }; Returns: string }
       complete_gtm_player_preview: { Args: { p_preview_locker_id: string; p_revision: number }; Returns: string }
       open_or_create_gtm_player_preview: { Args: { p_gsis_id: string }; Returns: Json }
