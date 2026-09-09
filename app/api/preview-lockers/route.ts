@@ -1,5 +1,5 @@
-import { createPreview, previewRecord, equivalentPreview } from "@/lib/preview-lockers/validation";
-import { previewAdmin, readBody, json, failure, PreviewError, PREVIEW_COLUMNS } from "@/lib/preview-lockers/server";
+import { createPreview, previewRecord, equivalentPreview, previewMediaBelongsTo } from "@/lib/preview-lockers/validation";
+import { assertPreviewMediaExists, previewAdmin, readBody, json, failure, PreviewError, PREVIEW_COLUMNS } from "@/lib/preview-lockers/server";
 import type { PreviewDatabase } from "@/types/preview-lockers.generated";
 
 export const runtime = "nodejs";
@@ -10,6 +10,8 @@ export async function POST(req: Request) {
     const parsed = createPreview.safeParse(await readBody(req));
     if (!parsed.success) throw new PreviewError("invalid_input", 400);
     const { id, content } = parsed.data;
+    if (!previewMediaBelongsTo(id, content)) throw new PreviewError("invalid_media_path", 400);
+    await assertPreviewMediaExists(client, content);
     const insert: PreviewDatabase["public"]["Tables"]["preview_lockers"]["Insert"] = { id, ...content };
     const { data, error } = await client.from("preview_lockers").insert(insert).select(PREVIEW_COLUMNS).single();
     if (error?.code === "23505") {

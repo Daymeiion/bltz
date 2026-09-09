@@ -1,8 +1,10 @@
 import type { LockerData } from "@/app/player/[slug]/LockerView";
 import type { PhotoRoomData } from "@/app/player/[slug]/photos/PhotoRoomView";
-import type { PreviewRecord } from "./validation";
+import { previewStatLabels, type PreviewRecord, type ResolvedPreviewRecord } from "./validation";
 
-export function previewLockerData(row: PreviewRecord): LockerData {
+export function previewLockerData(row: PreviewRecord | ResolvedPreviewRecord): LockerData {
+  const school = row.school ? { name: row.school, abbr: row.school, primaryColor: "#152238", logoUrl: null } : null;
+  const schools = row.schools.length ? row.schools : school ? [{ label: school.name, color: school.primaryColor, logo: school.logoUrl }] : [];
   return {
     privateDemo: true, athleteId: null, slug: row.slug, fullName: row.full_name,
     hometown: row.hometown || "", position: row.position || "", jersey: row.jersey || "",
@@ -14,14 +16,15 @@ export function previewLockerData(row: PreviewRecord): LockerData {
     heightDisplay: row.height_in ? `${Math.floor(row.height_in / 12)}′ ${row.height_in % 12}″` : "",
     weightLbs: row.weight_lbs, dobDisplay: "", gamesPlayed: row.games_played,
     highSchool: row.level === "hs" ? row.school || "" : "", classOf: "",
-    school: row.school ? { name: row.school, abbr: row.school, primaryColor: "#152238", logoUrl: null } : null,
-    nfl: null, schools: row.schools, proTeams: row.pro_teams, awards: row.awards, videos: row.videos,
-    photos: row.photos.map(photo => ({ ...photo, provenance: "Private demo suggestion", licenseLabel: "PRIVATE DEMO · RIGHTS UNVERIFIED" })),
+    school,
+    careerStats: [...row.career_stats].sort((a, b) => Object.keys(previewStatLabels).indexOf(a.key) - Object.keys(previewStatLabels).indexOf(b.key)).map(stat => ({ key: stat.key, label: previewStatLabels[stat.key], value: Number.isInteger(stat.value) ? stat.value : stat.value.toLocaleString("en-US", { maximumFractionDigits: 2 }) })),
+    nfl: null, schools, proTeams: row.pro_teams, awards: row.awards, videos: row.videos.filter((video): video is typeof video & { url: string } => "url" in video),
+    photos: row.photos.flatMap(photo => "url" in photo ? [{ ...photo, provenance: "Private demo suggestion", licenseLabel: "PRIVATE DEMO · RIGHTS UNVERIFIED" }] : []),
   };
 }
-export function previewPhotoData(row: PreviewRecord): PhotoRoomData {
+export function previewPhotoData(row: PreviewRecord | ResolvedPreviewRecord): PhotoRoomData {
   return { privateDemo: true, athleteId: null, slug: row.slug, athleteName: row.full_name,
     athleteHeadshotUrl: row.headshot_url || "/images/black-headshot-fallback.svg", accentColor: "#FFB940",
-    images: row.photos.map(photo => ({ ...photo, licenseLabel: "PRIVATE DEMO · RIGHTS UNVERIFIED", width: null, height: null })),
+    images: row.photos.flatMap(photo => "url" in photo ? [{ ...photo, licenseLabel: "PRIVATE DEMO · RIGHTS UNVERIFIED", width: null, height: null }] : []),
   };
 }

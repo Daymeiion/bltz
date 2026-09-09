@@ -737,7 +737,8 @@ export default function LockerView({
   const mediaPills = [["articles", "ARTICLES"], ["shorts", "SHORTS"], ["podcast", "PODCAST"], ["social", "SOCIAL"]]
     .map(([key, label]) => ({ key, label, active: mediaSort === key }));
 
-  // ---- STATS (all SAMPLE — no stats pipeline yet) ----
+  // Animated season cells remain legacy sample-only; private previews render
+  // only explicitly entered career totals through careerCells below.
   const seasonCells = [
     [stats.tackles, "TACKLES"], [stats.int, "INTERCEPTIONS"], [stats.pbu, "PASS BREAKUPS"],
     [stats.solo, "SOLO"], [stats.ff, "FORCED FUM."], [stats.dtd, "DEF. TD"],
@@ -800,6 +801,7 @@ export default function LockerView({
       : [];
   const displayPosition = hasKnownText(data.position) ? data.position : unknownText;
   const displayHighSchool = hasKnownText(data.highSchool) ? data.highSchool : unknownText;
+  const displayCollege = data.levelLabel === "hs" ? unknownText : data.school?.name || collegeTeams[0]?.label || unknownText;
 
   const tabIdx = { bio: 0, media: 1, stats: 2 }[tab];
   const earnedFmt = "$" + (stats.earned || 0).toLocaleString("en-US");
@@ -1168,6 +1170,7 @@ export default function LockerView({
                         <JerseyNumberRow values={displayJerseyNumbers} fallback={unknownText} />
                         <IdRow label="POSITION" value={displayPosition} />
                         <IdRow className="basic-info-high-school" label="HIGH SCHOOL" value={displayHighSchool} />
+                        <IdRow label="COLLEGE" value={displayCollege} />
                       </div>
                     </div>
                     <div style={{ gridColumn: "1/3", minHeight: 326, borderRadius: 14, border: "1px solid #1E2640", background: "#131829", padding: "22px 20px", display: "flex", flexDirection: "column", justifyContent: "flex-start" }}>

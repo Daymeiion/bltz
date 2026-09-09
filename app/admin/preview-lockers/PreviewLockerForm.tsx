@@ -5,13 +5,14 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { previewContent, previewIdentity, slugify, type PreviewContent, type PreviewRecord } from "@/lib/preview-lockers/validation";
+import { previewContent, previewIdentity, previewStatKeys, previewStatLabels, slugify, type PreviewContent, type PreviewMediaMime, type PreviewRecord } from "@/lib/preview-lockers/validation";
 import { readDiscovery } from "@/lib/preview-lockers/stream-client";
 import { mergeSuggestions } from "@/lib/preview-lockers/merge-suggestions";
 import PreviewViewerAccess from "./PreviewViewerAccess";
+import { createClient } from "@/lib/supabase/client";
 
 const initial = () => previewContent.parse({ slug: "private-preview", full_name: "".padEnd(2, "_") });
-type Scalar = Exclude<keyof PreviewContent, "schools" | "pro_teams" | "awards" | "videos" | "photos">;
+type Scalar = Exclude<keyof PreviewContent, "schools" | "pro_teams" | "awards" | "career_stats" | "videos" | "photos">;
 
 export default function PreviewLockerForm({
   record,
@@ -25,7 +26,7 @@ export default function PreviewLockerForm({
   gtmCompleted?: boolean;
 }) {
   const [draft, setDraft] = useState<PreviewContent>(() => record ? previewContent.parse(Object.fromEntries(Object.keys(previewContent.shape).map(k => [k, record[k as keyof PreviewRecord]]))) : { ...initial(), full_name: "", slug: "" });
-  const [busy, setBusy] = useState<"discovery" | "save" | "complete" | null>(null);
+  const [busy, setBusy] = useState<"discovery" | "upload" | "save" | "complete" | null>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [reviewed, setReviewed] = useState(false);
@@ -121,6 +122,35 @@ export default function PreviewLockerForm({
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Completion could not be saved. The preview remains draft / incomplete."); }
     finally { pending.current = false; setBusy(null); }
   }
+  async function uploadFiles(kind: "photo" | "video", files: FileList | null) {
+    if (!files?.length || !saved || pending.current) return;
+    const limit = kind === "photo" ? 40 : 24;
+    const selected = Array.from(files).slice(0, Math.max(0, limit - (kind === "photo" ? draft.photos.length : draft.videos.length)));
+    if (!selected.length) { setError(`${kind === "photo" ? "Photo" : "Video"} limit reached.`); return; }
+    pending.current = true; setBusy("upload"); setError(""); setMessage(`Uploading ${selected.length} ${kind}${selected.length === 1 ? "" : "s"} privately…`);
+    const uploaded: Array<{ id: string; title: string; storagePath: string; mimeType: PreviewMediaMime }> = [];
+    const retainUploaded = () => {
+      if (!uploaded.length) return;
+      if (kind === "photo") change({ photos: [...draft.photos, ...uploaded.map(item => ({ ...item, credits: null, sourceUrl: null, level: "off-field" as const, season: null }))] });
+      else change({ videos: [...draft.videos, ...uploaded.map(item => ({ ...item, thumb: null }))] });
+    };
+    try {
+      const storage = createClient().storage;
+      for (const file of selected) {
+        const response = await fetch(`/api/preview-lockers/${saved.id}/uploads`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind, mimeType: file.type, size: file.size }) });
+        if (!response.ok) throw new Error(response.status === 400 ? `${file.name} is not an allowed ${kind} type or exceeds the size limit.` : `Could not prepare ${file.name} for private upload.`);
+        const ticket = await response.json() as { path: string; token: string; bucket: string };
+        const result = await storage.from(ticket.bucket).uploadToSignedUrl(ticket.path, ticket.token, file, { contentType: file.type });
+        if (result.error) throw new Error(`Upload failed for ${file.name}.`);
+        uploaded.push({ id: crypto.randomUUID(), title: file.name.replace(/\.[^.]+$/, "").slice(0, 160) || "Uploaded media", storagePath: ticket.path, mimeType: file.type as PreviewMediaMime });
+      }
+      retainUploaded();
+      setMessage(`${uploaded.length} private ${kind}${uploaded.length === 1 ? "" : "s"} uploaded into this draft. Review metadata, then save the draft.`);
+    } catch (cause) {
+      retainUploaded();
+      setError(`${cause instanceof Error ? cause.message : "Private upload failed."}${uploaded.length ? ` ${uploaded.length} completed upload${uploaded.length === 1 ? " was" : "s were"} retained in this draft.` : ""}`);
+    } finally { pending.current = false; setBusy(null); }
+  }
   return <div className="space-y-6">
     <p className="text-sm">Private demo only. Media suggestions are unverified; saving does not grant rights or create an Athlete Career ID.</p>
     {message && <p role="status" className="rounded-lg border p-3">{message}</p>}
@@ -139,8 +169,9 @@ export default function PreviewLockerForm({
       <div className="grid gap-4 sm:grid-cols-2">{field("athlete_quote", "Athlete quote", 600)}{field("athlete_quote_author", "Quote attribution")}</div>
       {(["schools", "pro_teams"] as const).map(kind => <section key={kind} className="space-y-3"><h2 className="font-semibold">{kind === "schools" ? "School history" : "Pro team history"}</h2>{draft[kind].map((team, index) => <div key={index} className="grid gap-2 sm:grid-cols-4"><Input aria-label={`${kind} ${index + 1} label`} value={team.label} maxLength={80} onChange={e => change({ [kind]: draft[kind].map((v, i) => i === index ? { ...v, label: e.target.value } : v) })} /><Input aria-label={`${kind} ${index + 1} color`} type="color" value={team.color} onChange={e => change({ [kind]: draft[kind].map((v, i) => i === index ? { ...v, color: e.target.value } : v) })} /><Input aria-label={`${kind} ${index + 1} logo HTTPS URL`} value={team.logo ?? ""} maxLength={2048} onChange={e => change({ [kind]: draft[kind].map((v, i) => i === index ? { ...v, logo: e.target.value || null } : v) })} /><Button type="button" variant="outline" onClick={() => change({ [kind]: draft[kind].filter((_, i) => i !== index) })}>Remove from draft</Button></div>)}<Button type="button" variant="outline" disabled={draft[kind].length >= 12} onClick={() => change({ [kind]: [...draft[kind], { label: "", color: "#152238", logo: null }] })}>Add {kind === "schools" ? "school" : "pro team"}</Button></section>)}
       <section className="space-y-3"><h2 className="font-semibold">Awards</h2>{draft.awards.map((award, index) => <div key={index} className="grid gap-2 sm:grid-cols-3"><Input aria-label={`Award ${index + 1} year`} maxLength={20} value={award.year} onChange={e => change({ awards: draft.awards.map((v, i) => i === index ? { ...v, year: e.target.value } : v) })} /><Input aria-label={`Award ${index + 1} label`} maxLength={200} value={award.label} onChange={e => change({ awards: draft.awards.map((v, i) => i === index ? { ...v, label: e.target.value } : v) })} /><Button type="button" variant="outline" onClick={() => change({ awards: draft.awards.filter((_, i) => i !== index) })}>Remove from draft</Button></div>)}<Button type="button" variant="outline" disabled={draft.awards.length >= 40} onClick={() => change({ awards: [...draft.awards, { year: "", label: "" }] })}>Add award</Button></section>
-      <section className="space-y-3"><h2 className="font-semibold">Videos · {draft.videos.length}/24</h2>{draft.videos.map((video, index) => <fieldset className="space-y-2 rounded-lg border p-3" key={video.id}><legend>Video {index + 1}</legend>{(["title", "url", "thumb"] as const).map(key => <Input key={key} aria-label={`Video ${index + 1} ${key}`} placeholder={key === "title" ? "Title" : `${key} HTTPS URL`} maxLength={key === "title" ? 160 : 2048} value={video[key] ?? ""} onChange={e => change({ videos: draft.videos.map((v, i) => i === index ? { ...v, [key]: e.target.value || (key === "thumb" ? null : "") } : v) })} />)}<Button type="button" variant="outline" onClick={() => change({ videos: draft.videos.filter((_, i) => i !== index) })}>Remove video from draft</Button></fieldset>)}<Button type="button" variant="outline" disabled={draft.videos.length >= 24} onClick={() => change({ videos: [...draft.videos, { id: crypto.randomUUID(), title: "", url: "", thumb: null }] })}>Add video</Button></section>
-      <section className="space-y-3"><h2 className="font-semibold">Photos · {draft.photos.length}/40</h2>{draft.photos.map((photo, index) => <fieldset className="space-y-2 rounded-lg border p-3" key={photo.id}><legend>Photo {index + 1}</legend>{(["title", "url", "credits", "sourceUrl", "season"] as const).map(key => <Input key={key} aria-label={`Photo ${index + 1} ${key}`} placeholder={key} maxLength={key === "title" ? 160 : key === "credits" ? 300 : key === "season" ? 20 : 2048} value={photo[key] ?? ""} onChange={e => change({ photos: draft.photos.map((v, i) => i === index ? { ...v, [key]: e.target.value || (["title", "url"].includes(key) ? "" : null) } : v) })} />)}<select aria-label={`Photo ${index + 1} level`} className="h-10 rounded-md border bg-background px-3" value={photo.level} onChange={e => change({ photos: draft.photos.map((v, i) => i === index ? { ...v, level: e.target.value as typeof photo.level } : v) })}>{["hs", "cfb", "pro", "off-field"].map(level => <option key={level}>{level}</option>)}</select><Button type="button" variant="outline" onClick={() => change({ photos: draft.photos.filter((_, i) => i !== index) })}>Remove photo from draft</Button></fieldset>)}<Button type="button" variant="outline" disabled={draft.photos.length >= 40} onClick={() => change({ photos: [...draft.photos, { id: crypto.randomUUID(), title: "", url: "", credits: null, sourceUrl: null, season: null, level: "off-field" }] })}>Add photo</Button></section>
+      <section className="space-y-3"><div><h2 className="font-semibold">Career statistics</h2><p className="text-sm">Enter only sourced career totals. Blank statistics stay pending and are never replaced with sample values.</p></div><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{previewStatKeys.map(key => { const stat = draft.career_stats.find(item => item.key === key); return <label className="grid gap-2 text-sm" key={key}>{previewStatLabels[key]}<Input aria-label={previewStatLabels[key]} type="number" min="0" max="1000000" step={key === "sacks" ? "0.5" : "1"} value={stat?.value ?? ""} onChange={event => { const value = event.target.value; change({ career_stats: value === "" ? draft.career_stats.filter(item => item.key !== key) : [...draft.career_stats.filter(item => item.key !== key), { key, value: Number(value) }] }); }} /></label>; })}</div></section>
+      <section className="space-y-3"><h2 className="font-semibold">Videos · {draft.videos.length}/24</h2>{saved ? <label className="grid gap-2 text-sm font-medium">Upload multiple private videos<Input aria-label="Upload multiple private videos" type="file" multiple accept="video/mp4,video/webm,video/quicktime" onChange={event => { void uploadFiles("video", event.target.files); event.target.value = ""; }} /><span className="font-normal">MP4, WebM, or MOV. Up to 250 MB each. Uploads stay private and must be saved into this draft.</span></label> : <p className="text-sm">Save the private preview once before uploading video files.</p>}{draft.videos.map((video, index) => <fieldset className="space-y-2 rounded-lg border p-3" key={video.id}><legend>Video {index + 1}</legend><Input aria-label={`Video ${index + 1} title`} placeholder="Title" maxLength={160} value={video.title} onChange={e => change({ videos: draft.videos.map((v, i) => i === index ? { ...v, title: e.target.value } : v) })} />{"url" in video ? <><Input aria-label={`Video ${index + 1} url`} placeholder="url HTTPS URL" maxLength={2048} value={video.url} onChange={e => change({ videos: draft.videos.map((v, i) => i === index ? { id: v.id, title: v.title, url: e.target.value, thumb: v.thumb } : v) })} /><Input aria-label={`Video ${index + 1} thumb`} placeholder="thumb HTTPS URL" maxLength={2048} value={video.thumb ?? ""} onChange={e => change({ videos: draft.videos.map((v, i) => i === index && "url" in v ? { ...v, thumb: e.target.value || null } : v) })} /></> : <p className="text-sm">Private uploaded file · {video.mimeType}</p>}<Button type="button" variant="outline" onClick={() => change({ videos: draft.videos.filter((_, i) => i !== index) })}>Remove video from draft</Button></fieldset>)}<Button type="button" variant="outline" disabled={draft.videos.length >= 24} onClick={() => change({ videos: [...draft.videos, { id: crypto.randomUUID(), title: "", url: "", thumb: null }] })}>Add video</Button></section>
+      <section className="space-y-3"><h2 className="font-semibold">Photos · {draft.photos.length}/40</h2>{saved ? <label className="grid gap-2 text-sm font-medium">Upload multiple private photos<Input aria-label="Upload multiple private photos" type="file" multiple accept="image/jpeg,image/png,image/webp" onChange={event => { void uploadFiles("photo", event.target.files); event.target.value = ""; }} /><span className="font-normal">JPG, PNG, or WebP. Up to 10 MB each. Uploads stay private and must be saved into this draft.</span></label> : <p className="text-sm">Save the private preview once before uploading photo files.</p>}{draft.photos.map((photo, index) => <fieldset className="space-y-2 rounded-lg border p-3" key={photo.id}><legend>Photo {index + 1}</legend><Input aria-label={`Photo ${index + 1} title`} placeholder="title" maxLength={160} value={photo.title} onChange={e => change({ photos: draft.photos.map((v, i) => i === index ? { ...v, title: e.target.value } : v) })} />{"url" in photo ? <Input aria-label={`Photo ${index + 1} url`} placeholder="url" maxLength={2048} value={photo.url} onChange={e => change({ photos: draft.photos.map((v, i) => i === index ? { ...v, url: e.target.value } : v) })} /> : <p className="text-sm">Private uploaded file · {photo.mimeType}</p>}{(["credits", "sourceUrl", "season"] as const).map(key => <Input key={key} aria-label={`Photo ${index + 1} ${key}`} placeholder={key} maxLength={key === "credits" ? 300 : key === "season" ? 20 : 2048} value={photo[key] ?? ""} onChange={e => change({ photos: draft.photos.map((v, i) => i === index ? { ...v, [key]: e.target.value || null } : v) })} />)}<select aria-label={`Photo ${index + 1} level`} className="h-10 rounded-md border bg-background px-3" value={photo.level} onChange={e => change({ photos: draft.photos.map((v, i) => i === index ? { ...v, level: e.target.value as typeof photo.level } : v) })}>{["hs", "cfb", "pro", "off-field"].map(level => <option key={level}>{level}</option>)}</select><Button type="button" variant="outline" onClick={() => change({ photos: draft.photos.filter((_, i) => i !== index) })}>Remove photo from draft</Button></fieldset>)}<Button type="button" variant="outline" disabled={draft.photos.length >= 40} onClick={() => change({ photos: [...draft.photos, { id: crypto.randomUUID(), title: "", url: "", credits: null, sourceUrl: null, season: null, level: "off-field" }] })}>Add photo</Button></section>
       <label className="flex items-start gap-3"><input type="checkbox" checked={reviewed} onChange={e => setReviewed(e.target.checked)} className="mt-1 h-5 w-5" />I reviewed this draft for private demo use. This is not public publication or rights verification.</label>
       <Button type="button" disabled={!reviewed} onClick={save}>{saved ? "Save changes privately" : "Save private preview"}</Button>
       {saved && gtmLinked && <section className="space-y-3 rounded-lg border p-4" aria-labelledby="preview-completion-heading">
@@ -157,6 +188,7 @@ export default function PreviewLockerForm({
       </section>}
     </fieldset>
     {busy === "discovery" && <Button type="button" variant="outline" onClick={() => { abort.current?.abort(); setMessage("Discovery cancelled. Continue manually."); }}>Cancel discovery</Button>}
+    {busy === "upload" && <p role="status">Uploading directly to private storage…</p>}
     {busy === "save" && <p role="status">Saving privately…</p>}
     {busy === "complete" && <p role="status">Saving completion…</p>}
     {saved && <PreviewViewerAccess previewId={saved.id} initialAssigned={record ? viewerAssigned : false} />}

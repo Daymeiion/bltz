@@ -1,9 +1,10 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
-import { previewRecord, previewSlug } from "./validation";
+import { previewRecord, previewSlug, type PreviewContent, type PreviewRecord, type ResolvedPreviewRecord } from "./validation";
 
 export const PRIVATE_HEADERS = { "Cache-Control": "private, no-store", "Referrer-Policy": "no-referrer", "X-Robots-Tag": "noindex, nofollow, noarchive, noimageindex" };
-export const PREVIEW_COLUMNS = "id,slug,full_name,position,level,school,hometown,jersey,height_in,weight_lbs,games_played,headshot_url,hero_video_url,bio,athlete_quote,athlete_quote_author,schools,pro_teams,awards,videos,photos,revision,created_at,updated_at";
+export const PREVIEW_MEDIA_BUCKETS = { photo: "preview-locker-photos", video: "preview-locker-videos" } as const;
+export const PREVIEW_COLUMNS = "id,slug,full_name,position,level,school,hometown,jersey,height_in,weight_lbs,games_played,headshot_url,hero_video_url,bio,athlete_quote,athlete_quote_author,schools,pro_teams,awards,career_stats,videos,photos,revision,created_at,updated_at";
 export class PreviewError extends Error {
   constructor(public code: string, public status: number) { super(code); }
 }
@@ -54,7 +55,41 @@ export async function readBody(req: Request, limit = 128 * 1024): Promise<unknow
   } catch (error) { if (error instanceof PreviewError) throw error; throw new PreviewError("invalid_input", 400); }
   finally { reader.releaseLock(); }
 }
-export async function readPrivatePreview(slug: string) {
+async function resolvePrivateMedia(client: Awaited<ReturnType<typeof createClient>>, row: PreviewRecord): Promise<ResolvedPreviewRecord> {
+  const groups = [
+    { bucket: PREVIEW_MEDIA_BUCKETS.photo, items: row.photos.filter((item): item is typeof item & { storagePath: string } => "storagePath" in item) },
+    { bucket: PREVIEW_MEDIA_BUCKETS.video, items: row.videos.filter((item): item is typeof item & { storagePath: string } => "storagePath" in item) },
+  ];
+  const urls = new Map<string, string>();
+  for (const group of groups) {
+    if (!group.items.length) continue;
+    const { data, error } = await client.storage.from(group.bucket).createSignedUrls(group.items.map(item => item.storagePath), 15 * 60);
+    if (error || !data || data.some(item => !item.signedUrl)) throw new PreviewError("preview_media_unavailable", 503);
+    group.items.forEach((item, index) => urls.set(item.storagePath, data[index].signedUrl!));
+  }
+  return {
+    ...row,
+    photos: row.photos.map(item => "storagePath" in item ? { ...item, url: urls.get(item.storagePath)! } : item),
+    videos: row.videos.map(item => "storagePath" in item ? { ...item, url: urls.get(item.storagePath)! } : item),
+  } as ResolvedPreviewRecord;
+}
+export async function assertPreviewMediaExists(client: Awaited<ReturnType<typeof createClient>>, content: PreviewContent) {
+  for (const [kind, items] of [["photo", content.photos], ["video", content.videos]] as const) {
+    const stored = items.filter((item): item is typeof item & { storagePath: string } => "storagePath" in item);
+    if (!stored.length) continue;
+    const folder = stored[0].storagePath.split("/").slice(0, -1).join("/");
+    const missing = new Set(stored.map(item => item.storagePath));
+    const pageSize = 100;
+    for (let offset = 0; missing.size; offset += pageSize) {
+      const { data, error } = await client.storage.from(PREVIEW_MEDIA_BUCKETS[kind]).list(folder, { limit: pageSize, offset, sortBy: { column: "name", order: "asc" } });
+      if (error || !data) throw new PreviewError("preview_media_unavailable", 503);
+      data.forEach(item => missing.delete(`${folder}/${item.name}`));
+      if (data.length < pageSize) break;
+    }
+    if (missing.size) throw new PreviewError("invalid_media_path", 400);
+  }
+}
+export async function readPrivatePreview(slug: string): Promise<ResolvedPreviewRecord | null> {
   const authorization = await previewUser().catch(error => {
     if (error instanceof PreviewError && error.status === 401) return null;
     throw error;
@@ -64,5 +99,5 @@ export async function readPrivatePreview(slug: string) {
   if (!previewSlug.safeParse(slug).success) return null;
   const { data, error } = await client.from("preview_lockers").select(PREVIEW_COLUMNS).eq("slug", slug).maybeSingle();
   if (error) throw new PreviewError("preview_unavailable", 503);
-  return data ? previewRecord.parse(data) : null;
+  return data ? resolvePrivateMedia(client, previewRecord.parse(data)) : null;
 }

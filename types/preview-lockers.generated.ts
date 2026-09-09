@@ -7,6 +7,7 @@ export type PreviewDatabase = { public: { Tables: { preview_lockers: {
           athlete_quote_author: string | null
           awards: Json
           bio: string
+          career_stats: Json
           created_at: string
           created_by: string
           full_name: string
@@ -34,6 +35,7 @@ export type PreviewDatabase = { public: { Tables: { preview_lockers: {
           athlete_quote_author?: string | null
           awards?: Json
           bio?: string
+          career_stats?: Json
           created_at?: string
           created_by?: string
           full_name: string
@@ -61,6 +63,7 @@ export type PreviewDatabase = { public: { Tables: { preview_lockers: {
           athlete_quote_author?: string | null
           awards?: Json
           bio?: string
+          career_stats?: Json
           created_at?: string
           created_by?: string
           full_name?: string

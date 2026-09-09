@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { updatePreview } from "@/lib/preview-lockers/validation";
-import { previewAdmin, readBody, json, failure, PreviewError } from "@/lib/preview-lockers/server";
+import { updatePreview, previewMediaBelongsTo } from "@/lib/preview-lockers/validation";
+import { assertPreviewMediaExists, previewAdmin, readBody, json, failure, PreviewError } from "@/lib/preview-lockers/server";
 import type { PreviewDatabase } from "@/types/preview-lockers.generated";
 
 export const runtime = "nodejs";
@@ -13,6 +13,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const parsed = updatePreview.safeParse(await readBody(req));
     if (!parsed.success) throw new PreviewError("invalid_input", 400);
     const { revision, content } = parsed.data;
+    if (!previewMediaBelongsTo(id, content)) throw new PreviewError("invalid_media_path", 400);
+    await assertPreviewMediaExists(client, content);
     const update: PreviewDatabase["public"]["Tables"]["preview_lockers"]["Update"] = content;
     const { data, error } = await client.from("preview_lockers").update(update).eq("id", id).eq("revision", revision).select("id,slug,revision").maybeSingle();
     if (error?.code === "23505") throw new PreviewError("preview_conflict", 409);
