@@ -1,0 +1,2681 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Marcus Allen — BLTZ</title>
+<meta property="og:title" content="Marcus Allen · USC · #33 · Heisman 1981">
+<meta property="og:description" content="4,664 career rushing yards. The canonical career page.">
+<meta name="theme-color" content="#0B0E1A">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;900&family=Barlow:wght@400;500;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --bg-base:       #0B0E1A;
+    --bg-elevated:   #14182B;
+    --bg-card:       transparent;
+    --bg-hover:      #1C2138;
+    --fg-primary:    #F5F5F5;
+    --fg-muted:      #8A8FA3;
+    --fg-disabled:   #4A4F66;
+    --accent-gold:   #F5A623;
+    --accent-gold-dim: rgba(245,166,35,0.15);
+    --accent-blue:   #2952FF;
+    --error:         #FF4D4D;
+    --success:       #2ECC71;
+    --border-subtle: rgba(255,255,255,0.08);
+    --border-strong: rgba(255,255,255,0.16);
+    --border-gold:   rgba(245,166,35,0.4);
+
+    --font-display: 'Barlow Condensed', sans-serif;
+    --font-body:    'Barlow', sans-serif;
+    --font-mono:    'JetBrains Mono', monospace;
+
+    --r-sm: 2px;
+    --r-md: 4px;
+    --r-lg: 8px;
+    --r-xl: 12px;
+
+    --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+    --dur-micro:  200ms;
+    --dur-macro:  400ms;
+
+    --container: 1180px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg-base);
+    color: var(--fg-primary);
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+    text-align: center;
+  }
+
+  ::selection { background: var(--accent-gold); color: #0B0E1A; }
+
+  a { color: var(--accent-blue); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  .container {
+    max-width: var(--container);
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 32px;
+    padding-right: 32px;
+  }
+
+  button {
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    border: 0;
+    border-radius: var(--r-md);
+    min-height: 48px;
+    padding: 14px 24px;
+    text-transform: uppercase;
+    font-size: 15px;
+    transition: background var(--dur-micro) var(--ease-standard), transform var(--dur-micro) var(--ease-standard), box-shadow var(--dur-micro) var(--ease-standard);
+  }
+  button:focus-visible { outline: 2px solid var(--accent-gold); outline-offset: 3px; }
+  .btn-primary {
+    background: var(--accent-blue);
+    color: #fff;
+    box-shadow: 0 6px 20px rgba(41,82,255,0.35);
+  }
+  .btn-primary:hover { background: #1F40D6; transform: translateY(-1px); box-shadow: 0 10px 28px rgba(41,82,255,0.45); }
+  .btn-ghost {
+    background: transparent;
+    color: var(--accent-gold);
+    border: 1px solid var(--border-gold);
+  }
+  .btn-ghost:hover { background: var(--accent-gold-dim); }
+
+  /* TOPBAR — fixed, glass, with avatar */
+  .topbar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 50;
+    padding: 14px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    backdrop-filter: blur(18px) saturate(140%);
+    -webkit-backdrop-filter: blur(18px) saturate(140%);
+    background: rgba(11,14,26,0.55);
+    border-bottom: 1px solid var(--border-subtle);
+    transition: background var(--dur-macro) var(--ease-standard);
+  }
+  .topbar.is-scrolled { background: rgba(11,14,26,0.92); }
+  .topbar__brand {
+    font-family: var(--font-display);
+    font-weight: 900;
+    color: var(--accent-gold);
+    font-size: 22px;
+    letter-spacing: 0.06em;
+  }
+  .topbar__athlete {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    opacity: 0;
+    transform: translateY(-4px);
+    transition: opacity var(--dur-macro) var(--ease-standard), transform var(--dur-macro) var(--ease-standard);
+  }
+  .topbar__athlete.in { opacity: 1; transform: none; }
+  .topbar__athlete-name {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  /* AVATAR — gold-rimmed circle, monogram fallback */
+  .avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--bg-elevated);
+    border: 2px solid var(--accent-gold);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    font-family: var(--font-display);
+    font-weight: 900;
+    color: var(--accent-gold);
+    font-size: 15px;
+    letter-spacing: 0;
+    flex-shrink: 0;
+  }
+  .avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .avatar--lg {
+    width: 180px; height: 180px;
+    border-width: 4px;
+    font-size: 64px;
+    box-shadow: 0 14px 44px rgba(0,0,0,0.6), 0 0 0 8px var(--bg-base);
+  }
+  @media (max-width: 767px) {
+    .avatar--lg { width: 132px; height: 132px; font-size: 46px; box-shadow: 0 10px 32px rgba(0,0,0,0.6), 0 0 0 6px var(--bg-base); }
+  }
+
+  /* AVATAR EDIT — hover reveals overlay, click triggers file picker */
+  .avatar-edit {
+    position: relative;
+    display: inline-block;
+    cursor: pointer;
+    border-radius: 50%;
+  }
+  .avatar-edit input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    border-radius: 50%;
+    z-index: 3;
+  }
+  .avatar-edit__overlay {
+    position: absolute;
+    inset: 4px;                    /* sit inside the gold border */
+    border-radius: 50%;
+    background: rgba(11,14,26,0.72);
+    color: var(--accent-gold);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    opacity: 0;
+    transition: opacity var(--dur-micro) var(--ease-standard);
+    pointer-events: none;
+    z-index: 2;
+    backdrop-filter: blur(2px);
+  }
+  .avatar-edit:hover .avatar-edit__overlay,
+  .avatar-edit:focus-within .avatar-edit__overlay { opacity: 1; }
+  .avatar-edit__icon {
+    width: 32px; height: 32px;
+    display: block;
+    stroke: var(--accent-gold);
+    fill: none;
+    stroke-width: 1.6;
+  }
+  .avatar-edit__label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+  .avatar-edit:focus-within { outline: 2px solid var(--accent-gold); outline-offset: 4px; }
+
+  /* HERO — fixed 400px banner with video + parallax */
+  .hero {
+    position: relative;
+    height: 400px;
+    width: 100%;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .hero__bg {
+    position: absolute;
+    inset: -10% 0 -10% 0;       /* extra height for parallax travel */
+    z-index: 0;
+    will-change: transform;
+  }
+  .hero__bg video,
+  .hero__bg .poster {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .hero__bg .poster {
+    background-size: cover;
+    background-position: center 30%;
+    background-image:
+      linear-gradient(135deg, rgba(245,166,35,0.10) 0%, transparent 50%),
+      url('https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=2400&q=80&auto=format&fit=crop');
+  }
+  .hero__bg::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at 50% 30%, rgba(11,14,26,0.40) 0%, rgba(11,14,26,0.85) 70%, var(--bg-base) 100%),
+      linear-gradient(180deg, rgba(11,14,26,0.85) 0%, rgba(11,14,26,0.55) 35%, var(--bg-base) 100%);
+  }
+
+  /* PROFILE BLOCK — sits below the hero banner, avatar overlaps */
+  .profile {
+    position: relative;
+    margin: -90px auto 0;            /* pull up so avatar overlaps banner */
+    text-align: center;
+    padding: 0 32px 56px;
+    max-width: var(--container);
+    z-index: 2;
+  }
+  .profile__avatar-wrap {
+    margin-bottom: 24px;
+    display: inline-block;
+  }
+  .profile__name {
+    font-family: var(--font-display);
+    font-weight: 900;
+    color: var(--accent-gold);
+    text-transform: uppercase;
+    letter-spacing: -0.005em;
+    line-height: 0.92;
+    margin: 0 0 14px;
+    font-size: clamp(56px, 9vw, 128px);
+    text-shadow: 0 6px 40px rgba(0,0,0,0.6);
+  }
+  .profile__sub {
+    font-family: var(--font-mono);
+    font-weight: 500;
+    color: var(--fg-primary);
+    font-size: 14px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    margin: 0 0 14px;
+  }
+  .profile__sub .dot { color: var(--accent-gold); margin: 0 10px; }
+  .profile__tagline {
+    font-family: var(--font-body);
+    font-style: italic;
+    color: var(--fg-muted);
+    margin: 0 auto 32px;
+    font-size: 17px;
+    max-width: 540px;
+    line-height: 1.55;
+  }
+  .profile__actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  /* SECTIONS */
+  section.zone {
+    padding: 120px 0;
+    position: relative;
+  }
+  .section-head {
+    text-align: center;
+    margin-bottom: 64px;
+  }
+  .section-head h2 {
+    font-family: var(--font-display);
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    color: var(--fg-primary);
+    font-size: clamp(40px, 5vw, 64px);
+    margin: 0 0 12px;
+    line-height: 1;
+  }
+  .section-head .kicker {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--accent-gold);
+  }
+
+  /* CARD COMPONENT — base */
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-lg);
+    padding: 28px 24px;
+    transition: transform var(--dur-micro) var(--ease-standard),
+                border-color var(--dur-micro) var(--ease-standard),
+                box-shadow var(--dur-micro) var(--ease-standard);
+  }
+  .card:hover {
+    transform: translateY(-2px);
+    border-color: var(--border-strong);
+    box-shadow: 0 16px 40px rgba(0,0,0,0.4);
+  }
+  .card.is-featured {
+    border-color: var(--border-gold);
+    background: linear-gradient(160deg, var(--bg-card), rgba(245,166,35,0.06));
+  }
+
+  /* CAREER FEATURE SPREAD — 2x2 stat grid left, faded action image right */
+  /* CAREER FEATURE SPREAD — section header on top, then overlap layout (60/60) */
+  .career-feature__header {
+    text-align: center;
+    margin-bottom: 0;
+  }
+  .career-feature__overline {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent-gold);
+    margin: 0 0 12px;
+    text-align: center;
+  }
+  .career-feature__headline {
+    font-family: var(--font-display);
+    font-weight: 900;
+    text-transform: uppercase;
+    font-size: clamp(40px, 5vw, 64px);
+    line-height: 0.95;
+    letter-spacing: -0.01em;
+    margin: 0 0 14px;
+    color: var(--fg-primary);
+    text-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    text-align: center;
+  }
+  .career-feature__pull {
+    font-family: var(--font-body);
+    font-style: italic;
+    color: var(--fg-muted);
+    font-size: 17px;
+    line-height: 1.5;
+    margin: 0 auto;
+    max-width: 540px;
+    text-align: center;
+  }
+
+  /* Body: relative positioning context for the overlap */
+  .career-feature {
+    position: relative;
+    isolation: isolate;
+    min-height: 820px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding-top: 56px;
+  }
+  .career-feature__header {
+    position: relative;
+    z-index: 2;                  /* above the image */
+    width: 100%;
+  }
+  .career-feature__body {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    flex: 1 1 auto;
+  }
+  .career-feature__stats {
+    position: relative;
+    z-index: 2;
+    width: 60%;
+    flex-shrink: 0;
+  }
+  /* Image: absolute right, 60% width, full-bleeds to viewport right edge */
+  .career-feature__image {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: calc(50% - 50vw);                /* full-bleed to viewport right */
+    width: calc(60% + (50vw - 50%));        /* 60% of container + viewport margin */
+    z-index: 0;
+    overflow: hidden;
+    background: var(--bg-elevated);
+    background-image: url('https://images.unsplash.com/photo-1566577739112-5180d4bf9390?w=2400&q=85&auto=format&fit=crop');
+    background-size: cover;
+    background-position: center 35%;
+  }
+  /* Strong left-edge fade — image sits behind stats, blends into the bg */
+  .career-feature__image::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(90deg,  var(--bg-base) 0%, rgba(11,14,26,0.85) 18%, transparent 55%),
+      linear-gradient(270deg, var(--bg-base) 0%, rgba(11,14,26,0.55) 10%, transparent 30%),
+      linear-gradient(180deg, var(--bg-base) 0%, rgba(11,14,26,0.85) 18%, transparent 50%),
+      linear-gradient(0deg,   var(--bg-base) 0%, rgba(11,14,26,0.85) 18%, transparent 50%);
+  }
+  /* COLLEGE STAT VISUAL — hero number, the data IS the design */
+  .stat-hero {
+    text-align: center;
+    position: relative;
+    padding: 8px 0;
+  }
+  .stat-hero__honor {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent-gold);
+    margin: 0 auto 32px;
+    padding: 8px 16px;
+    border: 1px solid var(--border-gold);
+    border-radius: var(--r-sm);
+    background: rgba(245,166,35,0.08);
+    text-shadow: 0 2px 12px rgba(245,166,35,0.4);
+  }
+  .stat-hero__honor::before {
+    content: '★';
+    font-size: 11px;
+  }
+  /* THE NUMBER — Barlow regular (not condensed), oversized */
+  .stat-hero__num {
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: clamp(120px, 18vw, 220px);
+    line-height: 0.82;
+    letter-spacing: -0.04em;
+    margin: 0 auto;
+    color: var(--accent-gold);
+    background: linear-gradient(180deg, var(--accent-gold) 0%, #D88F1A 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    /* drop-shadow respects the gradient-filled text shape — paints OUTSIDE the glyphs only */
+    filter:
+      drop-shadow(0 4px 12px rgba(0,0,0,0.55))
+      drop-shadow(0 12px 32px rgba(0,0,0,0.45))
+      drop-shadow(0 0 40px rgba(245,166,35,0.35));
+  }
+  .stat-hero__caption {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    margin: 22px auto 40px;
+    padding-bottom: 28px;
+    border-bottom: 1px solid var(--border-subtle);
+    text-align: center;
+  }
+  .stat-hero__caption-label {
+    font-family: var(--font-display);
+    font-weight: 900;
+    text-transform: uppercase;
+    font-size: 26px;
+    letter-spacing: 0.03em;
+    color: var(--fg-primary);
+    margin: 0;
+    line-height: 1;
+    text-shadow: 0 4px 20px rgba(0,0,0,0.6);
+  }
+  .stat-hero__caption-meta {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+    margin: 0;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+  }
+
+  /* SEASON BREAKDOWN — three lean chips under the hero, centered */
+  .stat-hero__seasons {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+    max-width: 480px;
+    margin: 0 auto;
+  }
+  .season-chip {
+    background: transparent;
+    border: 0;
+    padding: 0 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    text-align: center;
+    position: relative;
+  }
+  .season-chip + .season-chip::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 10%;
+    bottom: 10%;
+    width: 1px;
+    background: var(--border-subtle);
+  }
+  .season-chip.is-peak::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: -10px;
+    transform: translateX(-50%);
+    width: 32px;
+    height: 2px;
+    background: var(--accent-gold);
+    box-shadow: 0 0 12px rgba(245,166,35,0.6);
+  }
+  .season-chip__year {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.5);
+  }
+  .season-chip.is-peak .season-chip__year { color: var(--accent-gold); }
+  .season-chip.is-peak .season-chip__year::after {
+    content: '★';
+    font-size: 10px;
+  }
+  /* Numbers in Barlow regular (not condensed) */
+  .season-chip__num {
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: clamp(34px, 3vw, 44px);
+    line-height: 0.95;
+    letter-spacing: -0.02em;
+    color: var(--fg-primary);
+    margin: 0;
+    text-shadow: 0 4px 16px rgba(0,0,0,0.5);
+  }
+  .season-chip.is-peak .season-chip__num { color: var(--accent-gold); }
+  .season-chip__label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--fg-disabled);
+    margin: 0;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.5);
+  }
+
+  @media (max-width: 1023px) {
+    .stat-hero__num { font-size: clamp(96px, 22vw, 168px); }
+  }
+  @media (max-width: 767px) {
+    .stat-hero__seasons { gap: 10px; max-width: 360px; }
+    .season-chip { padding-left: 12px; }
+    .stat-hero__caption-label { font-size: 22px; }
+  }
+  .stat-chart__head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding-bottom: 18px;
+    margin-bottom: 18px;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .stat-chart__title {
+    font-family: var(--font-display);
+    font-weight: 900;
+    text-transform: uppercase;
+    font-size: 13px;
+    letter-spacing: 0.1em;
+    color: var(--fg-primary);
+    margin: 0;
+  }
+  .stat-chart__axis {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+  }
+
+  .stat-chart__rows {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .stat-row {
+    display: grid;
+    grid-template-columns: 64px 1fr auto;
+    align-items: center;
+    gap: 14px;
+  }
+  .stat-row__year {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: 16px;
+    letter-spacing: 0.04em;
+    color: var(--fg-primary);
+    line-height: 1;
+  }
+  .stat-row__year small {
+    display: block;
+    font-family: var(--font-mono);
+    font-weight: 500;
+    font-size: 9px;
+    letter-spacing: 0.14em;
+    color: var(--fg-muted);
+    margin-top: 4px;
+    text-transform: uppercase;
+  }
+  .stat-row__bar {
+    position: relative;
+    height: 24px;
+    background: var(--bg-elevated);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .stat-row__fill {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 0;                 /* set inline via style */
+    background: linear-gradient(90deg, rgba(245,166,35,0.35) 0%, var(--fg-muted) 100%);
+    border-radius: 2px;
+    transition: width 1200ms cubic-bezier(0.2, 0.9, 0.2, 1) 200ms;
+  }
+  .stat-row.is-peak .stat-row__fill {
+    background: linear-gradient(90deg, rgba(245,166,35,0.5) 0%, var(--accent-gold) 100%);
+    box-shadow: 0 0 24px -2px rgba(245,166,35,0.5);
+  }
+  .stat-row.is-peak .stat-row__year { color: var(--accent-gold); }
+  .stat-row__num {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 16px;
+    color: var(--fg-primary);
+    line-height: 1;
+    min-width: 56px;
+    text-align: right;
+    letter-spacing: -0.01em;
+  }
+  .stat-row.is-peak .stat-row__num { color: var(--accent-gold); }
+  .stat-row__num .star {
+    color: var(--accent-gold);
+    margin-right: 4px;
+    font-size: 12px;
+  }
+
+  /* TOTAL footer — single emphatic number */
+  .stat-chart__total {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: 22px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-strong);
+  }
+  .stat-chart__total-label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+  }
+  .stat-chart__total-num {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: clamp(40px, 4vw, 56px);
+    color: var(--accent-gold);
+    line-height: 0.9;
+    letter-spacing: -0.02em;
+    margin: 0;
+  }
+  .stat-chart__total-sub {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+    margin-top: 6px;
+    display: block;
+  }
+
+  /* Trigger bar fills when section enters viewport */
+  .stat-chart.in .stat-row__fill[data-pct="20"]  { width: 20%; }
+  .stat-chart.in .stat-row__fill[data-pct="55"]  { width: 55%; }
+  .stat-chart.in .stat-row__fill[data-pct="83"]  { width: 83%; }
+  .stat-chart.in .stat-row__fill[data-pct="100"] { width: 100%; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .stat-row__fill { transition: none; width: var(--pct, 0%); }
+  }
+  /* STAT CARD — trading-card / scoreboard artifact */
+  .stat-card {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    background:
+      radial-gradient(ellipse at 50% 0%, rgba(245,166,35,0.06) 0%, transparent 50%),
+      linear-gradient(180deg, var(--bg-card) 0%, var(--bg-elevated) 100%);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-lg);
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    overflow: hidden;
+    transition:
+      transform var(--dur-micro) var(--ease-standard),
+      border-color var(--dur-micro) var(--ease-standard),
+      box-shadow var(--dur-micro) var(--ease-standard);
+  }
+  .stat-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--border-gold);
+    box-shadow: 0 14px 32px rgba(0,0,0,0.4), 0 0 0 1px rgba(245,166,35,0.2);
+  }
+  /* Subtle scanline / paper texture */
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px);
+    background-size: 100% 3px;
+    pointer-events: none;
+    z-index: 0;
+  }
+  /* Corner notch — small gold tab top-right */
+  .stat-card::after {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 24px; height: 4px;
+    background: var(--accent-gold);
+    z-index: 1;
+  }
+
+  /* TOP BAND — year + season tag */
+  .stat-card__year {
+    position: relative;
+    z-index: 1;
+    margin: 0;
+    padding: 10px 14px 8px;
+    font-family: var(--font-mono);
+    font-weight: 500;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent-gold);
+    border-bottom: 1px solid var(--border-subtle);
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .stat-card__year .yr {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: 14px;
+    letter-spacing: 0.04em;
+    color: var(--fg-primary);
+  }
+
+  /* CENTER — the number */
+  .stat-card__num {
+    position: relative;
+    z-index: 1;
+    align-self: center;
+    justify-self: center;
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: clamp(34px, 3vw, 48px);
+    color: var(--fg-primary);
+    line-height: 0.9;
+    letter-spacing: -0.02em;
+    margin: 0;
+    text-align: center;
+  }
+
+  /* BOTTOM — label with hairline rules + attribution */
+  .stat-card__label {
+    position: relative;
+    z-index: 1;
+    margin: 0;
+    padding: 8px 14px 12px;
+    font-family: var(--font-mono);
+    font-weight: 500;
+    font-size: 9px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+    text-align: center;
+    border-top: 1px solid var(--border-subtle);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .stat-card__label .attr {
+    font-size: 8px;
+    letter-spacing: 0.2em;
+    color: var(--fg-disabled);
+  }
+
+  /* FEATURED (Heisman) — gold dominates, number in gold, ★ corner */
+  .stat-card.is-featured {
+    background:
+      radial-gradient(ellipse at 50% 0%, rgba(245,166,35,0.22) 0%, transparent 60%),
+      linear-gradient(180deg, var(--bg-card) 0%, var(--bg-elevated) 100%);
+    border-color: var(--border-gold);
+  }
+  .stat-card.is-featured::after {
+    width: 100%; height: 4px;
+    background: linear-gradient(90deg, transparent 0%, var(--accent-gold) 50%, transparent 100%);
+  }
+  .stat-card.is-featured .stat-card__num { color: var(--accent-gold); }
+  .stat-card.is-featured .stat-card__year .yr { color: var(--accent-gold); }
+  .stat-card.is-featured .stat-card__year::after {
+    content: '★';
+    color: var(--accent-gold);
+    font-size: 10px;
+    margin-left: auto;
+  }
+
+  /* TOTALS — inverted, gold accents stronger */
+  .stat-card.is-totals {
+    background:
+      linear-gradient(180deg, var(--bg-elevated) 0%, #0F1224 100%);
+    border-color: var(--border-strong);
+  }
+  .stat-card.is-totals::after {
+    width: 100%;
+    background: var(--accent-gold);
+    opacity: 0.5;
+  }
+  .stat-card.is-totals .stat-card__num { color: var(--accent-gold); }
+  .stat-card.is-totals .stat-card__year { color: var(--fg-muted); }
+  .stat-card.is-totals .stat-card__year .yr { color: var(--accent-gold); font-size: 12px; }
+
+  /* VIDEO CAROUSEL — 16:9 cards in a horizontal scroll-snap row */
+  .video-row {
+    position: relative;
+  }
+  .video-row__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 28px;
+    gap: 16px;
+  }
+  .video-row__viewport {
+    position: relative;
+    isolation: isolate;
+  }
+  /* Gradient fades on each end — fade to page bg, signal more content + arrow legibility */
+  .video-row__viewport::before,
+  .video-row__viewport::after {
+    content: '';
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 110px;
+    z-index: 5;
+    pointer-events: none;
+    transition: opacity var(--dur-macro) var(--ease-standard);
+  }
+  .video-row__viewport::before {
+    left: 0;
+    background: linear-gradient(90deg, var(--bg-base) 0%, rgba(11,14,26,0.85) 35%, transparent 100%);
+  }
+  .video-row__viewport::after {
+    right: 0;
+    background: linear-gradient(270deg, var(--bg-base) 0%, rgba(11,14,26,0.85) 35%, transparent 100%);
+  }
+  /* Hide the matching gradient when scrolled to that edge (no more content that direction) */
+  .video-row__viewport.at-start::before { opacity: 0; }
+  .video-row__viewport.at-end::after   { opacity: 0; }
+  @media (max-width: 767px) {
+    .video-row__viewport::before, .video-row__viewport::after { width: 48px; }
+  }
+  .video-row__arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 6;                                         /* above gradient overlays */
+    width: 56px; height: 56px;
+    background: transparent;
+    border: 0;
+    color: var(--fg-primary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+    transition: color var(--dur-micro) var(--ease-standard),
+                opacity var(--dur-micro) var(--ease-standard),
+                transform var(--dur-micro) var(--ease-standard);
+    filter: drop-shadow(0 4px 12px rgba(0,0,0,0.6));
+  }
+  .video-row__arrow:hover {
+    color: var(--accent-gold);
+    transform: translateY(-50%) scale(1.15);
+  }
+  .video-row__arrow:focus-visible {
+    outline: 2px solid var(--accent-gold);
+    outline-offset: 4px;
+    border-radius: 50%;
+  }
+  .video-row__arrow[disabled] { opacity: 0; pointer-events: none; }
+  .video-row__arrow svg { width: 36px; height: 36px; stroke: currentColor; fill: none; stroke-width: 2.5; }
+  .video-row__arrow--prev { left: 4px; }
+  .video-row__arrow--next { right: 4px; }
+  @media (max-width: 767px) {
+    .video-row__arrow { display: none; }
+  }
+  .see-all {
+    font-family: var(--font-display);
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    color: var(--accent-gold);
+    background: transparent;
+    border: 1px solid var(--border-gold);
+    padding: 10px 16px;
+    border-radius: var(--r-md);
+    cursor: pointer;
+    min-height: 44px;
+    transition: background var(--dur-micro) var(--ease-standard);
+  }
+  .see-all:hover { background: var(--accent-gold-dim); }
+  .see-all:focus-visible { outline: 2px solid var(--accent-gold); outline-offset: 2px; }
+
+  .reel {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: calc((100% - 60px) / 3.5);   /* DESKTOP: 3.5 cards visible */
+    gap: 20px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    padding: 16px 0 24px;                           /* vertical bleed for hover lift */
+    margin: -16px 0 -24px;                          /* counteract vertical padding only */
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .reel::-webkit-scrollbar { display: none; }
+
+  /* FLOATING SEE ALL — pinned top-right above the carousel */
+  .see-all--floating {
+    position: absolute;
+    top: -8px;
+    right: 0;
+    z-index: 5;
+  }
+  .video-row { position: relative; padding-top: 10px; }
+  @media (max-width: 767px) {
+    .video-row { padding-top: 10px; }
+    .see-all--floating { top: 0; }
+  }
+  .visually-hidden {
+    position: absolute !important;
+    width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
+    clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+  }
+
+  /* CARD — matches BLTZ design system reference */
+  .reel-card {
+    position: relative;
+    border-radius: var(--r-lg);
+    overflow: hidden;
+    background: var(--bg-card);
+    cursor: pointer;
+    border: 1px solid var(--border-subtle);
+    scroll-snap-align: start;
+    display: flex;
+    flex-direction: column;
+    transition: transform var(--dur-micro) var(--ease-standard),
+                border-color var(--dur-micro) var(--ease-standard),
+                box-shadow var(--dur-micro) var(--ease-standard);
+  }
+  .reel-card {
+    will-change: transform;
+    transition:
+      transform 360ms cubic-bezier(0.2, 0.9, 0.2, 1),
+      border-color 240ms var(--ease-standard),
+      box-shadow 360ms var(--ease-standard);
+  }
+  .reel-card:hover, .reel-card:focus-visible {
+    transform: translateY(-12px) scale(1.025);
+    border-color: var(--accent-gold);
+    box-shadow:
+      0 36px 80px rgba(0,0,0,0.6),
+      0 0 0 1px rgba(245,166,35,0.35),
+      0 0 80px -10px rgba(245,166,35,0.35);
+  }
+  .reel-card:hover .reel-card__thumb {
+    transform: scale(1.06);
+  }
+  .reel-card__thumb {
+    transition: transform 700ms cubic-bezier(0.2, 0.9, 0.2, 1);
+  }
+  .reel-card:hover .reel-card__title { color: var(--accent-gold); }
+  .reel-card__title { transition: color 240ms var(--ease-standard); }
+
+  /* Card text scale at desktop — smaller now that cards are tighter */
+  @media (min-width: 1024px) {
+    .reel-card__meta { padding: 14px 16px 0; }
+    .reel-card__title { font-size: 15px; line-height: 1.25; margin-bottom: 6px; }
+    .reel-card__sub { font-size: 11px; }
+    .badge { padding: 5px 10px; font-size: 11px; }
+    .duration { font-size: 11px; padding: 4px 8px; bottom: 10px; right: 10px; }
+    .play-icon { width: 56px; height: 56px; margin: -28px 0 0 -28px; }
+    .play-icon::after { border-left-width: 14px; border-top-width: 9px; border-bottom-width: 9px; }
+  }
+
+  /* Pulsing glow on play button when card is hovered */
+  @keyframes playPulse {
+    0%, 100% { box-shadow: 0 0 0 8px rgba(245,166,35,0.18), 0 0 32px 6px rgba(245,166,35,0.4), 0 8px 24px rgba(0,0,0,0.5); }
+    50%      { box-shadow: 0 0 0 14px rgba(245,166,35,0.10), 0 0 48px 14px rgba(245,166,35,0.55), 0 8px 24px rgba(0,0,0,0.5); }
+  }
+  .reel-card:hover .play-icon { animation: playPulse 1.6s ease-in-out infinite; transform: scale(1.12); }
+
+  /* SEE ALL card — fills the same slot as a reel-card, no thumb, gold lockup */
+  .reel-card--see-all {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    background: linear-gradient(160deg, var(--bg-card) 0%, rgba(245,166,35,0.10) 100%);
+    border: 1px dashed var(--border-gold);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border-radius: var(--r-lg);
+    overflow: hidden;
+    scroll-snap-align: start;
+    will-change: transform;
+    transition:
+      transform 360ms cubic-bezier(0.2, 0.9, 0.2, 1),
+      border-color 240ms var(--ease-standard),
+      box-shadow 360ms var(--ease-standard),
+      background 360ms var(--ease-standard);
+  }
+  .reel-card--see-all:hover, .reel-card--see-all:focus-visible {
+    transform: translateY(-12px) scale(1.025);
+    border-color: var(--accent-gold);
+    border-style: solid;
+    background: linear-gradient(160deg, var(--bg-card) 0%, rgba(245,166,35,0.18) 100%);
+    box-shadow:
+      0 36px 80px rgba(0,0,0,0.6),
+      0 0 0 1px rgba(245,166,35,0.4),
+      0 0 80px -10px rgba(245,166,35,0.5);
+    outline: none;
+  }
+  .reel-card--see-all .lockup {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+  }
+  .reel-card--see-all .arrow-disc {
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    background: var(--accent-gold);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 0 8px rgba(245,166,35,0.18), 0 8px 24px rgba(0,0,0,0.5);
+    transition: transform var(--dur-micro) var(--ease-standard);
+  }
+  .reel-card--see-all:hover .arrow-disc { transform: scale(1.12); }
+  .reel-card--see-all .arrow-disc svg {
+    width: 26px; height: 26px;
+    stroke: #0B0E1A;
+    fill: none;
+    stroke-width: 2.5;
+  }
+  .reel-card--see-all .label {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: 22px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--accent-gold);
+    line-height: 1;
+  }
+  .reel-card--see-all .count {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+  }
+  @media (min-width: 1024px) {
+    .reel-card--see-all .label { font-size: 26px; }
+    .reel-card--see-all .arrow-disc { width: 76px; height: 76px; }
+    .reel-card--see-all .arrow-disc svg { width: 30px; height: 30px; }
+  }
+  .reel-card__thumb-wrap {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    background: var(--bg-elevated);
+    overflow: hidden;
+  }
+  .reel-card__thumb {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+  }
+  /* Subtle grid texture overlay (matches reference) */
+  .reel-card__thumb::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
+    background-size: 32px 32px;
+    pointer-events: none;
+  }
+  .reel-card__thumb::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(11,14,26,0.05) 60%, rgba(11,14,26,0.55) 100%);
+  }
+  .reel-card__meta {
+    padding: 16px 18px 0;
+    text-align: left;
+    background: var(--bg-card);
+  }
+  .reel-card__title {
+    font-family: var(--font-body);
+    font-weight: 700;
+    text-transform: none;
+    font-size: 16px;
+    line-height: 1.25;
+    margin: 0 0 8px;
+    color: var(--fg-primary);
+    letter-spacing: 0;
+  }
+  .reel-card__sub {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    color: var(--fg-muted);
+    text-transform: uppercase;
+  }
+  .reel-card__sub .dots {
+    display: inline-flex; gap: 5px;
+  }
+  .reel-card__sub .dots i {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--fg-disabled);
+    display: inline-block;
+  }
+  .reel-card__sub .dots i.gold { background: var(--accent-gold); }
+  .reel-card__sub .dots i.blue { background: var(--accent-blue); }
+
+  /* TOP-LEFT BADGE (earned / rising / etc) */
+  .badge {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    z-index: 2;
+    padding: 6px 11px;
+    border-radius: var(--r-md);
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .badge--earned    { background: var(--accent-gold); color: #0B0E1A; }
+  .badge--rising    { background: rgba(11,14,26,0.85); color: var(--accent-gold); border: 1px solid var(--border-gold); backdrop-filter: blur(6px); }
+  .badge--rising::before { content: '▲'; font-size: 9px; }
+  .badge--cal       { background: var(--accent-gold); color: #0B0E1A; }
+  .badge--nfl       { background: var(--accent-blue); color: #fff; }
+  .badge--personal  { background: rgba(11,14,26,0.78); color: #fff; backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.2); }
+
+  /* DURATION pill bottom-right of thumb */
+  .duration {
+    position: absolute;
+    bottom: 12px;
+    right: 12px;
+    z-index: 2;
+    padding: 4px 8px;
+    border-radius: var(--r-sm);
+    background: rgba(11,14,26,0.85);
+    color: var(--fg-primary);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    line-height: 1;
+    backdrop-filter: blur(6px);
+  }
+
+  /* GOLD PLAY BUTTON with glow */
+  .play-icon {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 64px; height: 64px;
+    margin: -32px 0 0 -32px;
+    border-radius: 50%;
+    background: var(--accent-gold);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+    box-shadow:
+      0 0 0 8px rgba(245,166,35,0.18),
+      0 0 32px 6px rgba(245,166,35,0.35),
+      0 8px 24px rgba(0,0,0,0.5);
+    transition: transform var(--dur-micro) var(--ease-standard), box-shadow var(--dur-micro) var(--ease-standard);
+  }
+  .reel-card:hover .play-icon {
+    transform: scale(1.08);
+    box-shadow:
+      0 0 0 10px rgba(245,166,35,0.22),
+      0 0 40px 10px rgba(245,166,35,0.5),
+      0 8px 24px rgba(0,0,0,0.5);
+  }
+  .play-icon::after {
+    content: '';
+    width: 0; height: 0;
+    border-left: 16px solid #0B0E1A;
+    border-top: 10px solid transparent;
+    border-bottom: 10px solid transparent;
+    margin-left: 4px;
+  }
+
+  /* BELIEVERS */
+  .believers__count-block {
+    margin-bottom: 56px;
+  }
+  .believers__count {
+    font-family: var(--font-display);
+    font-weight: 900;
+    color: var(--accent-gold);
+    font-size: clamp(96px, 14vw, 184px);
+    line-height: 0.85;
+    margin: 0 0 8px;
+    letter-spacing: -0.02em;
+    text-shadow: 0 8px 40px rgba(245,166,35,0.18);
+  }
+  .believers__count-label {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+  }
+  .believers__grid {
+    list-style: none;
+    margin: 0 auto;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    max-width: 980px;
+  }
+  .believer-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-lg);
+    padding: 20px 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    transition: transform var(--dur-micro) var(--ease-standard), border-color var(--dur-micro) var(--ease-standard);
+  }
+  .believer-card:hover { transform: translateY(-2px); border-color: var(--border-gold); }
+  .believer-card__name {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--fg-primary);
+    text-align: center;
+    line-height: 1.2;
+  }
+  .believer-card__jersey {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    color: var(--accent-gold);
+  }
+
+  /* CLAIM CTA */
+  .claim-cta {
+    padding: 96px 32px 120px;
+    text-align: center;
+    border-top: 1px solid var(--border-subtle);
+    background:
+      radial-gradient(ellipse at 50% 0%, var(--accent-gold-dim) 0%, transparent 50%);
+  }
+  .claim-cta h2 {
+    font-family: var(--font-display);
+    font-weight: 900;
+    color: var(--accent-gold);
+    text-transform: uppercase;
+    font-size: clamp(40px, 7vw, 88px);
+    line-height: 1;
+    margin: 0 0 16px;
+    letter-spacing: -0.005em;
+  }
+  .claim-cta p {
+    font-family: var(--font-body);
+    color: var(--fg-muted);
+    font-size: 17px;
+    margin: 0 auto 32px;
+    max-width: 540px;
+  }
+
+  /* FOOTER */
+  footer.foot {
+    border-top: 1px solid var(--border-subtle);
+    padding: 48px 32px;
+    text-align: center;
+  }
+  .foot__brand {
+    font-family: var(--font-display);
+    font-weight: 900;
+    color: var(--accent-gold);
+    font-size: 28px;
+    letter-spacing: 0.06em;
+    margin: 0 0 8px;
+  }
+  .foot__tag {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--fg-muted);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  /* VIDEO MODAL — full-screen overlay with sort tabs + 2x2 grid */
+  .modal {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    background: rgba(11,14,26,0.92);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    display: none;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 64px 32px;
+    overflow-y: auto;
+    text-align: left;
+  }
+  .modal.is-open { display: flex; }
+  .modal__inner {
+    width: 100%;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+  .modal__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+  .modal__title {
+    font-family: var(--font-display);
+    font-weight: 900;
+    text-transform: uppercase;
+    font-size: 40px;
+    color: var(--accent-gold);
+    margin: 0;
+    line-height: 1;
+  }
+  .modal__close {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    border: 1px solid var(--border-strong);
+    background: var(--bg-card);
+    color: var(--fg-primary);
+    cursor: pointer;
+    font-family: var(--font-mono);
+    font-size: 20px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal__close:hover { border-color: var(--border-gold); color: var(--accent-gold); }
+  .sort-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 32px;
+    background: var(--bg-card);
+    padding: 4px;
+    border-radius: var(--r-md);
+    border: 1px solid var(--border-subtle);
+    width: fit-content;
+  }
+  .sort-tab {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    background: transparent;
+    border: 0;
+    color: var(--fg-muted);
+    padding: 10px 18px;
+    border-radius: var(--r-sm);
+    cursor: pointer;
+    transition: background var(--dur-micro) var(--ease-standard), color var(--dur-micro) var(--ease-standard);
+    min-height: 36px;
+  }
+  .sort-tab:hover { color: var(--fg-primary); }
+  .sort-tab.is-active { background: var(--accent-gold); color: #0B0E1A; }
+  .modal-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+  }
+  .modal-grid .reel-card { aspect-ratio: 16 / 9; }
+  .modal-grid .reel-card[data-tier="hidden"] { display: none; }
+
+  /* PRESS GRID — 3 columns of floating-image cards */
+  .press-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 56px 56px;
+    padding: 16px 0;
+    text-align: left;
+  }
+  .press-card {
+    position: relative;
+    background: linear-gradient(135deg, #1F2D5C 0%, var(--accent-blue) 100%);
+    border-radius: var(--r-lg);
+    padding: 24px 24px 22px calc(40% + 12px); /* leave room for the 40% floating image */
+    min-height: 260px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    color: #fff;
+    text-decoration: none;
+    overflow: visible;
+    transition:
+      transform 360ms cubic-bezier(0.2, 0.9, 0.2, 1),
+      box-shadow 360ms var(--ease-standard);
+  }
+  .press-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+    text-decoration: none;
+  }
+  .press-card__image {
+    position: absolute;
+    left: -16px;
+    top: 24px;
+    bottom: 24px;
+    width: 40%;
+    background: var(--bg-elevated);
+    background-size: cover;
+    background-position: center;
+    border-radius: var(--r-md);
+    box-shadow: 0 18px 36px rgba(0,0,0,0.45);
+    border: 0;
+  }
+  .press-card__author {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 4px;
+  }
+  .press-card__avatar {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    background: var(--accent-gold);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-weight: 900;
+    color: #0B0E1A;
+    font-size: 11px;
+    flex-shrink: 0;
+    border: 2px solid rgba(255,255,255,0.85);
+  }
+  .press-card__author-name {
+    font-family: var(--font-body);
+    font-weight: 500;
+    font-size: 13px;
+    color: rgba(255,255,255,0.92);
+    line-height: 1;
+  }
+  .press-card__author-name small {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.55);
+    margin-top: 4px;
+    font-weight: 400;
+  }
+  .press-card__title {
+    font-family: var(--font-display);
+    font-weight: 900;
+    text-transform: uppercase;
+    font-size: 18px;
+    line-height: 1.1;
+    margin: 4px 0 6px;
+    color: #fff;
+    /* clamp 3 lines */
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .press-card__meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.65);
+    margin-bottom: 8px;
+  }
+  .press-card__meta .claps {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .press-card__excerpt {
+    font-family: var(--font-body);
+    font-size: 13px;
+    line-height: 1.5;
+    color: rgba(255,255,255,0.78);
+    margin: 0;
+    /* clamp 3 lines */
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .press-card__more {
+    font-family: var(--font-display);
+    font-weight: 700;
+    color: var(--accent-gold);
+    text-transform: uppercase;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+    margin-left: 4px;
+  }
+  @media (max-width: 640px) {
+    .press-grid { grid-template-columns: 1fr; gap: 24px; }
+  }
+
+  /* PHOTOS BAND — full-width strip, capped height, scrollable masonry */
+  .photos-band {
+    position: relative;
+    max-height: 600px;
+    overflow: hidden;
+    isolation: isolate;
+    margin: 0;
+    padding: 80px 50px 0;
+  }
+  @media (max-width: 767px) {
+    .photos-band { padding: 80px 20px 0; }
+  }
+  .photos-band::after {
+    content: '';
+    position: absolute;
+    inset: auto 0 0 0;
+    height: 80px;
+    background: linear-gradient(180deg, transparent, var(--bg-base));
+    pointer-events: none;
+    z-index: 2;
+  }
+  .photos-masonry {
+    column-count: 4;
+    column-gap: 12px;
+  }
+  .photos-masonry .photo {
+    display: block;
+    position: relative;
+    width: 100%;
+    margin: 0 0 12px;
+    border-radius: var(--r-lg);
+    overflow: hidden;
+    break-inside: avoid;
+    background: var(--bg-elevated);
+    cursor: pointer;
+    will-change: transform;
+    transition:
+      transform 420ms cubic-bezier(0.2, 0.9, 0.2, 1),
+      box-shadow 420ms cubic-bezier(0.2, 0.9, 0.2, 1);
+  }
+  .photos-masonry .photo:hover {
+    transform: translateY(-16px) scale(1.02);
+    z-index: 5;
+    box-shadow:
+      0 36px 70px rgba(0,0,0,0.6),
+      0 0 0 1px rgba(245,166,35,0.4),
+      0 0 60px -10px rgba(245,166,35,0.4);
+  }
+  .photos-masonry .photo img {
+    display: block;
+    width: 100%;
+    height: auto;
+    will-change: transform;
+    /* Default transition (used when entering/leaving) */
+    transition: transform 700ms cubic-bezier(0.2, 0.9, 0.2, 1);
+    transform: scale(1);
+  }
+  .photos-masonry .photo:hover img {
+    transform: scale(1.22);
+  }
+  /* While tracking the mouse, use a faster, finer transition for live following */
+  .photos-masonry .photo.is-tracking img {
+    transition: transform 180ms cubic-bezier(0.2, 0.9, 0.2, 1);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .photos-masonry .photo, .photos-masonry .photo img { transition: none; }
+    .photos-masonry .photo:hover { transform: none; }
+    .photos-masonry .photo:hover img { transform: none; }
+  }
+  @media (max-width: 1023px) {
+    .photos-masonry { column-count: 3; }
+  }
+  @media (max-width: 600px) {
+    .photos-masonry { column-count: 2; column-gap: 8px; }
+    .photos-masonry .photo { margin-bottom: 8px; }
+  }
+
+  /* ARTICLES LIST — vertical, thumbnail + meta */
+  .articles {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .article {
+    display: grid;
+    grid-template-columns: 96px 1fr;
+    gap: 14px;
+    padding: 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-lg);
+    text-decoration: none;
+    color: inherit;
+    transition: border-color var(--dur-micro) var(--ease-standard), transform var(--dur-micro) var(--ease-standard);
+  }
+  .article:hover { border-color: var(--border-gold); transform: translateY(-1px); text-decoration: none; }
+  .article__thumb {
+    width: 96px;
+    height: 64px;
+    border-radius: var(--r-md);
+    background-size: cover;
+    background-position: center;
+    background-color: var(--bg-elevated);
+  }
+  .article__meta { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .article__title {
+    font-family: var(--font-body);
+    font-weight: 500;
+    font-size: 15px;
+    line-height: 1.3;
+    color: var(--fg-primary);
+    margin: 0;
+    /* clamp 2 lines */
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .article__sub {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+  }
+  .article__sub .outlet { color: var(--accent-gold); }
+
+  /* NFL CAREER — mobile-first trading card. HOF banner, 3 stats, tight honors. */
+  .nfl-card {
+    background:
+      radial-gradient(ellipse at 50% 0%, rgba(245,166,35,0.18) 0%, transparent 55%),
+      var(--bg-card);
+    border: 1px solid var(--border-gold);
+    border-radius: var(--r-lg);
+    overflow: hidden;
+    text-align: center;
+    position: relative;
+  }
+  /* HOF banner — top strip, gold, instantly readable */
+  .nfl-banner {
+    background: var(--accent-gold);
+    color: #0B0E1A;
+    padding: 12px 16px;
+    font-family: var(--font-display);
+    font-weight: 900;
+    text-transform: uppercase;
+    font-size: 14px;
+    letter-spacing: 0.16em;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+  .nfl-banner__star {
+    font-size: 14px;
+    line-height: 1;
+  }
+  .nfl-card__body {
+    padding: 32px 24px 28px;
+  }
+  .nfl-card__title {
+    font-family: var(--font-display);
+    font-weight: 900;
+    text-transform: uppercase;
+    font-size: clamp(28px, 6vw, 36px);
+    margin: 0 0 6px;
+    line-height: 1;
+    color: var(--fg-primary);
+  }
+  .nfl-card__years {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent-gold);
+    margin: 0 0 32px;
+  }
+  /* 3 hero stats — equal columns desktop, stacked rows on mobile */
+  .nfl-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0;
+    border-top: 1px solid var(--border-subtle);
+    border-bottom: 1px solid var(--border-subtle);
+    margin: 0 -24px 28px;
+  }
+  .nfl-stat {
+    padding: 24px 12px;
+    border-right: 1px solid var(--border-subtle);
+  }
+  .nfl-stat:last-child { border-right: 0; }
+  .nfl-stat__num {
+    font-family: var(--font-display);
+    font-weight: 900;
+    color: var(--accent-gold);
+    font-size: clamp(36px, 7vw, 56px);
+    line-height: 0.9;
+    letter-spacing: -0.02em;
+    margin: 0 0 8px;
+  }
+  .nfl-stat__label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+    margin: 0;
+    line-height: 1.3;
+  }
+  /* Honors — single inline line, comma-separated, no chips */
+  .nfl-honors {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+    line-height: 1.7;
+    margin: 0;
+    max-width: 480px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .nfl-honors b {
+    color: var(--accent-gold);
+    font-weight: 500;
+  }
+
+  @media (max-width: 767px) {
+    .nfl-card { border-radius: var(--r-lg); }
+    .nfl-banner { font-size: 12px; padding: 10px 14px; letter-spacing: 0.14em; }
+    .nfl-card__body { padding: 24px 18px 22px; }
+    .nfl-card__title { font-size: 24px; }
+    .nfl-card__years { margin-bottom: 22px; font-size: 11px; }
+    .nfl-stats {
+      grid-template-columns: 1fr;
+      margin: 0 -18px 22px;
+    }
+    .nfl-stat {
+      padding: 18px 14px;
+      border-right: 0;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 16px;
+      text-align: left;
+    }
+    .nfl-stat:last-child { border-bottom: 0; }
+    .nfl-stat__num { font-size: 32px; margin: 0; }
+    .nfl-stat__label { text-align: right; max-width: 50%; }
+  }
+
+  /* REVEAL ANIMATIONS */
+  .reveal { opacity: 0; transform: translateY(12px); }
+  .reveal.in {
+    opacity: 1; transform: none;
+    transition: opacity 700ms var(--ease-standard), transform 700ms var(--ease-standard);
+  }
+  .reveal.in.delay-1 { transition-delay: 150ms; }
+  .reveal.in.delay-2 { transition-delay: 300ms; }
+  .reveal.in.delay-3 { transition-delay: 450ms; }
+  .reveal.in.delay-4 { transition-delay: 600ms; }
+
+  /* Scroll-reveal for sections */
+  .scroll-reveal {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 800ms var(--ease-standard), transform 800ms var(--ease-standard);
+  }
+  .scroll-reveal.in { opacity: 1; transform: none; }
+
+  /* LOCKER-OPEN stagger — videos + photos slide+scale in when first revealed */
+  .locker-stagger > * {
+    opacity: 0;
+    transform: translateY(20px) scale(0.96);
+    transition:
+      opacity 700ms cubic-bezier(0.2, 0.9, 0.2, 1),
+      transform 700ms cubic-bezier(0.2, 0.9, 0.2, 1);
+  }
+  .locker-stagger.in > * { opacity: 1; transform: none; }
+  /* per-child cascade — each card 80ms after the previous */
+  .locker-stagger.in > *:nth-child(1) { transition-delay:   0ms; }
+  .locker-stagger.in > *:nth-child(2) { transition-delay:  80ms; }
+  .locker-stagger.in > *:nth-child(3) { transition-delay: 160ms; }
+  .locker-stagger.in > *:nth-child(4) { transition-delay: 240ms; }
+  .locker-stagger.in > *:nth-child(5) { transition-delay: 320ms; }
+  .locker-stagger.in > *:nth-child(6) { transition-delay: 400ms; }
+  .locker-stagger.in > *:nth-child(7) { transition-delay: 480ms; }
+  .locker-stagger.in > *:nth-child(8) { transition-delay: 560ms; }
+
+  /* Variant: slide in from the LEFT instead of bottom */
+  .locker-stagger--left > * {
+    transform: translateX(-32px) scale(0.97);
+  }
+  .locker-stagger--left.in > * { transform: none; }
+
+  /* FEATURE IMAGE — pure opacity fade-in (no slide) */
+  .image-fade {
+    opacity: 0;
+    transition: opacity 1100ms cubic-bezier(0.2, 0.9, 0.2, 1) 200ms;
+  }
+  .image-fade.in { opacity: 1; }
+  @media (prefers-reduced-motion: reduce) {
+    .image-fade { opacity: 1; transition: none; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .reveal, .scroll-reveal, .locker-stagger > * { opacity: 1; transform: none; transition: none; }
+    .hero__bg { transform: none !important; }
+    .card, .reel-card, .believer-card { transition: none; animation: none; }
+    .card:hover, .reel-card:hover, .believer-card:hover { transform: none; }
+    .reel-card:hover .reel-card__thumb { transform: none; }
+    .reel-card:hover .play-icon { animation: none; }
+    html { scroll-behavior: auto; }
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 1023px) {
+    section.zone { padding: 96px 0; }
+    .career-feature { min-height: 480px; flex-direction: column; }
+    .career-feature__stats { width: 100%; order: 2; }
+    .career-feature__image {
+      position: relative;
+      width: auto;
+      right: auto;
+      min-height: 320px;
+      order: 1;
+      margin: 0 calc(50% - 50vw) 32px;
+      align-self: stretch;
+    }
+    .career-feature__image::after {
+      background:
+        linear-gradient(180deg, var(--bg-base) 0%, rgba(11,14,26,0.55) 8%, transparent 28%),
+        linear-gradient(0deg,   var(--bg-base) 0%, rgba(11,14,26,0.85) 18%, transparent 55%),
+        linear-gradient(90deg,  var(--bg-base) 0%, transparent 12%),
+        linear-gradient(270deg, var(--bg-base) 0%, transparent 12%);
+    }
+    .timeline { grid-template-columns: repeat(2, 1fr); }
+    .reel { grid-auto-columns: calc((100% - 36px) / 2.5); gap: 18px; }   /* 2.5 visible at tablet */
+    .believers__grid { grid-template-columns: repeat(3, 1fr); }
+    .media-row { grid-template-columns: 1fr; gap: 56px; }
+    .nfl-grid { grid-template-columns: repeat(2, 1fr); gap: 28px; }
+    .modal-grid { grid-template-columns: 1fr; }
+  }
+
+  @media (max-width: 767px) {
+    .container, .topbar { padding-left: 20px; padding-right: 20px; }
+    .topbar { padding-top: 12px; padding-bottom: 12px; }
+    .topbar__athlete-name { display: none; }
+    .hero { height: 280px; }
+    .profile { margin-top: -70px; padding: 0 20px 40px; }
+    .profile__sub { font-size: 12px; }
+    .profile__sub .dot { margin: 0 6px; }
+    .profile__tagline { font-size: 15px; }
+    section.zone { padding: 72px 0; }
+    .timeline { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .career-feature__image { min-height: 220px; }
+    .career-feature__header { margin-bottom: 36px; padding-bottom: 18px; }
+    .career-feature__headline { font-size: 36px; }
+    .career-feature__pull { font-size: 14px; }
+    .stat-card { padding: 12px 8px; gap: 3px; }
+    .stat-card__num { font-size: clamp(24px, 7vw, 32px); }
+    .reel { grid-auto-columns: 62%; gap: 12px; padding: 8px 0 16px; margin: -8px 0 -16px; }
+    .reel-card:hover { transform: none; box-shadow: 0 12px 28px rgba(0,0,0,0.5); }
+    .reel-card:hover .reel-card__thumb { transform: none; }
+    .reel-card:hover .play-icon { animation: none; }
+    .photos-masonry { column-count: 2; column-gap: 10px; }
+    .photos-masonry .photo { margin-bottom: 10px; }
+    .article { grid-template-columns: 80px 1fr; }
+    .article__thumb { width: 80px; height: 56px; }
+    .nfl-card { padding: 28px 22px; }
+    .nfl-grid { grid-template-columns: repeat(2, 1fr); gap: 20px; }
+    .nfl-stat__num { font-size: 28px; }
+    .nfl-card__title { font-size: 22px; }
+    .modal { padding: 32px 20px; }
+    .modal__title { font-size: 28px; }
+    .sort-tabs { width: 100%; overflow-x: auto; }
+    .believers__grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .claim-cta { padding: 64px 20px 88px; }
+  }
+
+  /* Skip-to-content for keyboard */
+  .skip-link {
+    position: absolute; left: -9999px; top: 8px;
+    background: var(--accent-gold); color: #0B0E1A;
+    padding: 10px 18px; font-family: var(--font-mono);
+    border-radius: var(--r-md); z-index: 100;
+    font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase;
+  }
+  .skip-link:focus { left: 8px; }
+</style>
+</head>
+<body>
+
+<a href="#main" class="skip-link">Skip to content</a>
+
+<nav class="topbar" id="topbar" aria-label="Site">
+  <span class="topbar__brand">BLTZ</span>
+  <div class="topbar__athlete" id="topbar-athlete" aria-hidden="true">
+    <span class="avatar" aria-label="Marcus Allen">
+      <!-- Replace src with athlete headshot. Falls back to monogram. -->
+      <img src="https://images.unsplash.com/photo-1521119989659-a83eee488004?w=160&q=80&auto=format&fit=crop&crop=faces" alt="">
+    </span>
+    <span class="topbar__athlete-name">Marcus Allen</span>
+  </div>
+</nav>
+
+<header class="hero" role="banner" aria-label="Athlete banner">
+  <div class="hero__bg" id="heroBg" aria-hidden="true">
+    <!-- Production: replace src with Mux HLS via hls.js or a real MP4. Poster fallback always renders. -->
+    <video autoplay muted loop playsinline preload="auto" poster="https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=2400&q=80&auto=format&fit=crop">
+      <source src="https://videos.pexels.com/video-files/4754030/4754030-uhd_2732_1440_25fps.mp4" type="video/mp4">
+    </video>
+    <div class="poster" aria-hidden="true"></div>
+  </div>
+</header>
+
+<div class="profile">
+  <div class="profile__avatar-wrap reveal">
+    <label class="avatar-edit" for="avatar-upload" title="Upload a new headshot">
+      <span class="avatar avatar--lg" aria-label="Marcus Allen">
+        <img id="avatar-img" src="https://images.unsplash.com/photo-1521119989659-a83eee488004?w=600&q=80&auto=format&fit=crop&crop=faces" alt="Marcus Allen headshot">
+      </span>
+      <span class="avatar-edit__overlay" aria-hidden="true">
+        <svg class="avatar-edit__icon" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z"/>
+          <path d="M14.06 6.19l3.75 3.75 2.12-2.12a1.5 1.5 0 0 0 0-2.12l-1.63-1.63a1.5 1.5 0 0 0-2.12 0L14.06 6.19z"/>
+        </svg>
+        <span class="avatar-edit__label">Edit Photo</span>
+      </span>
+      <input id="avatar-upload" type="file" accept="image/*" aria-label="Upload athlete headshot">
+    </label>
+  </div>
+  <h1 class="profile__name reveal delay-1" data-pretext>Marcus Allen</h1>
+  <p class="profile__sub reveal delay-2">
+    Running Back<span class="dot">·</span>USC<span class="dot">·</span>#33<span class="dot">·</span>1979&ndash;1981
+  </p>
+  <p class="profile__tagline reveal delay-3">Heisman Trophy 1981. 4,664 career rushing yards. The plays, the seasons, the team. Finally in one place.</p>
+  <div class="profile__actions reveal delay-4">
+    <button class="btn-primary" type="button">Claim This Locker</button>
+    <button class="btn-ghost" type="button">Share</button>
+  </div>
+</div>
+
+<main id="main">
+
+  <!-- VIDEOS — directly under the hero/profile, carousel up to 4 visible -->
+  <section class="zone scroll-reveal" aria-labelledby="videos-h" style="padding-top: 0; padding-bottom: 20px;">
+    <div class="container">
+      <div class="video-row">
+        <h2 id="videos-h" class="visually-hidden">Videos</h2>
+
+        <div class="video-row__viewport">
+          <button class="video-row__arrow video-row__arrow--prev" type="button" id="reel-prev" aria-label="Previous videos">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <button class="video-row__arrow video-row__arrow--next" type="button" id="reel-next" aria-label="Next videos">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+
+          <div class="reel locker-stagger" id="reel" role="list">
+            <article class="reel-card" tabindex="0" data-tier="college" role="listitem">
+              <div class="reel-card__thumb-wrap">
+                <div class="reel-card__thumb" style="background-image: linear-gradient(135deg, #1A2340 20%, #0B0E1A);"></div>
+                <span class="badge badge--earned">$247 earned</span>
+                <div class="play-icon" aria-hidden="true"></div>
+                <span class="duration">0:34</span>
+              </div>
+              <div class="reel-card__meta">
+                <h3 class="reel-card__title">Heisman Run vs Washington</h3>
+                <p class="reel-card__sub"><span>84,203 views · Week 6</span><span class="dots"><i class="gold"></i><i class="blue"></i><i></i></span></p>
+              </div>
+            </article>
+            <article class="reel-card" tabindex="0" data-tier="college" role="listitem">
+              <div class="reel-card__thumb-wrap">
+                <div class="reel-card__thumb" style="background-image: linear-gradient(135deg, #1A2A40 20%, #0B0E1A);"></div>
+                <span class="badge badge--rising">Rising</span>
+                <div class="play-icon" aria-hidden="true"></div>
+                <span class="duration">1:12</span>
+              </div>
+              <div class="reel-card__meta">
+                <h3 class="reel-card__title">Season Highlights Reel</h3>
+                <p class="reel-card__sub"><span>12,400 views · Season</span></p>
+              </div>
+            </article>
+            <article class="reel-card" tabindex="0" data-tier="pro" role="listitem">
+              <div class="reel-card__thumb-wrap">
+                <div class="reel-card__thumb" style="background-image: linear-gradient(135deg, #2D0A12 20%, #0B0E1A);"></div>
+                <span class="badge badge--nfl">Pro</span>
+                <div class="play-icon" aria-hidden="true"></div>
+                <span class="duration">0:18</span>
+              </div>
+              <div class="reel-card__meta">
+                <h3 class="reel-card__title">Super Bowl XVIII · 74-yd TD</h3>
+                <p class="reel-card__sub"><span>3,201 views · 1984 MVP</span></p>
+              </div>
+            </article>
+            <article class="reel-card" tabindex="0" data-tier="pro" role="listitem">
+              <div class="reel-card__thumb-wrap">
+                <div class="reel-card__thumb" style="background-image: linear-gradient(135deg, #2A1F0A 20%, #0B0E1A);"></div>
+                <span class="badge badge--nfl">Pro</span>
+                <div class="play-icon" aria-hidden="true"></div>
+                <span class="duration">2:48</span>
+              </div>
+              <div class="reel-card__meta">
+                <h3 class="reel-card__title">MVP Season Highlight Cut</h3>
+                <p class="reel-card__sub"><span>9,812 views · 1985</span></p>
+              </div>
+            </article>
+            <article class="reel-card" tabindex="0" data-tier="college" role="listitem">
+              <div class="reel-card__thumb-wrap">
+                <div class="reel-card__thumb" style="background-image: linear-gradient(135deg, #2A1A2A 20%, #0B0E1A);"></div>
+                <span class="badge badge--personal">Personal</span>
+                <div class="play-icon" aria-hidden="true"></div>
+                <span class="duration">1:33</span>
+              </div>
+              <div class="reel-card__meta">
+                <h3 class="reel-card__title">Practice Cut · Pre-Stanford</h3>
+                <p class="reel-card__sub"><span>847 views · 8mm transfer</span></p>
+              </div>
+            </article>
+            <article class="reel-card" tabindex="0" data-tier="hs" role="listitem">
+              <div class="reel-card__thumb-wrap">
+                <div class="reel-card__thumb" style="background-image: linear-gradient(135deg, #1F1F2A 20%, #0B0E1A);"></div>
+                <span class="badge badge--personal">High School</span>
+                <div class="play-icon" aria-hidden="true"></div>
+                <span class="duration">0:58</span>
+              </div>
+              <div class="reel-card__meta">
+                <h3 class="reel-card__title">Lincoln HS · Senior Year</h3>
+                <p class="reel-card__sub"><span>2,104 views · vs Hoover</span></p>
+              </div>
+            </article>
+            <article class="reel-card" tabindex="0" data-tier="pro" role="listitem">
+              <div class="reel-card__thumb-wrap">
+                <div class="reel-card__thumb" style="background-image: linear-gradient(135deg, #0F2A0F 20%, #0B0E1A);"></div>
+                <span class="badge badge--earned">$418 earned</span>
+                <div class="play-icon" aria-hidden="true"></div>
+                <span class="duration">0:42</span>
+              </div>
+              <div class="reel-card__meta">
+                <h3 class="reel-card__title">100th Career Rushing TD</h3>
+                <p class="reel-card__sub"><span>21,508 views · KC vs DEN</span></p>
+              </div>
+            </article>
+
+            <!-- SEE ALL card — terminal slot, opens modal -->
+            <button class="reel-card--see-all" type="button" id="see-all-btn" aria-haspopup="dialog" aria-controls="videos-modal" role="listitem">
+              <div class="lockup">
+                <span class="arrow-disc" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                    <polyline points="13 6 19 12 13 18"/>
+                  </svg>
+                </span>
+                <span class="label">See All</span>
+                <span class="count">7 videos · College + Pro + HS</span>
+              </div>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PHOTOS BAND — full-width strip, capped 500px, scrollable masonry -->
+  <section class="photos-band scroll-reveal" aria-label="Photo gallery">
+    <div class="photos-masonry locker-stagger" id="photos-masonry">
+      <figure class="photo"><img src="https://images.unsplash.com/photo-1471295253337-3ceaaedca402?w=600&q=70&auto=format&fit=crop" alt="Empty stadium" loading="lazy"></figure>
+      <figure class="photo"><img src="https://images.unsplash.com/photo-1607627000458-210e8d2bdb1d?w=600&q=70&auto=format&fit=crop" alt="Football on field" loading="lazy"></figure>
+      <figure class="photo"><img src="https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=600&q=70&auto=format&fit=crop" alt="Crowd in stands" loading="lazy"></figure>
+      <figure class="photo"><img src="https://images.unsplash.com/photo-1577471488278-16eec37ffcc2?w=600&q=70&auto=format&fit=crop" alt="Player silhouette" loading="lazy"></figure>
+      <figure class="photo"><img src="https://images.unsplash.com/photo-1495555687398-3f50d6e79e1e?w=600&q=70&auto=format&fit=crop" alt="Trophy on field" loading="lazy"></figure>
+      <figure class="photo"><img src="https://images.unsplash.com/photo-1543326727-cf6c39e8f84c?w=600&q=70&auto=format&fit=crop" alt="Locker room" loading="lazy"></figure>
+      <figure class="photo"><img src="https://images.unsplash.com/photo-1518604666860-9ed391f76460?w=600&q=70&auto=format&fit=crop" alt="Field markings" loading="lazy"></figure>
+      <figure class="photo"><img src="https://images.unsplash.com/photo-1517649763962-0c623066013b?w=600&q=70&auto=format&fit=crop" alt="Football game action" loading="lazy"></figure>
+      <figure class="photo"><img src="https://images.unsplash.com/photo-1521412644187-c49fa049e84d?w=600&q=70&auto=format&fit=crop" alt="Tunnel walk" loading="lazy"></figure>
+      <figure class="photo"><img src="https://images.unsplash.com/photo-1570498839593-e565b39455fc?w=600&q=70&auto=format&fit=crop" alt="Pre-game warmup" loading="lazy"></figure>
+    </div>
+  </section>
+
+  <!-- COLLEGE CAREER — feature spread: 2x2 stats left, faded action image right -->
+  <section class="zone scroll-reveal" aria-labelledby="career-h" style="padding: 0;">
+    <div class="container">
+      <h2 id="career-h" class="visually-hidden">College Career</h2>
+
+      <div class="career-feature">
+        <header class="career-feature__header">
+          <p class="career-feature__overline">USC · 1979–1981</p>
+          <h3 class="career-feature__headline">College Years</h3>
+          <p class="career-feature__pull">Heisman 1981. 4,664 rushing yards in three seasons. The years that started everything.</p>
+        </header>
+
+        <div class="career-feature__body">
+          <div class="stat-hero career-feature__stats">
+          <p class="stat-hero__honor">Heisman Trophy · 1981</p>
+
+          <p class="stat-hero__num">4,664</p>
+
+          <div class="stat-hero__caption">
+            <h3 class="stat-hero__caption-label">Career Rushing Yards</h3>
+            <p class="stat-hero__caption-meta">USC · 3 Seasons · #33</p>
+          </div>
+
+          <div class="stat-hero__seasons" role="list">
+            <div class="season-chip" role="listitem">
+              <p class="season-chip__year">Career</p>
+              <p class="season-chip__num">46</p>
+              <p class="season-chip__label">Rushing TDs</p>
+            </div>
+            <div class="season-chip" role="listitem">
+              <p class="season-chip__year">Career</p>
+              <p class="season-chip__num">415</p>
+              <p class="season-chip__label">Receiving Yds</p>
+            </div>
+            <div class="season-chip is-peak" role="listitem">
+              <p class="season-chip__year">'81 Final</p>
+              <p class="season-chip__num">2,342</p>
+              <p class="season-chip__label">Rushing Yds</p>
+            </div>
+          </div>
+        </div>
+
+          <figure class="career-feature__image image-fade" role="img" aria-label="Marcus Allen during his USC career, 1979–1981"></figure>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- NFL CAREER STATS — conditional, render only if athlete has NFL experience.
+       Server should add data-has-nfl="true" on <body> or omit this <section> entirely. -->
+  <section class="zone scroll-reveal" aria-labelledby="nfl-h" data-conditional="nfl">
+    <div class="container">
+      <div class="section-head">
+        <span class="kicker">Pro · 1982–1997</span>
+        <h2 id="nfl-h">NFL Career</h2>
+      </div>
+      <article class="nfl-card">
+        <div class="nfl-banner" aria-label="Hall of Fame inductee">
+          <span class="nfl-banner__star" aria-hidden="true">★</span>
+          Hall of Fame · 2003
+          <span class="nfl-banner__star" aria-hidden="true">★</span>
+        </div>
+
+        <div class="nfl-card__body">
+          <h3 class="nfl-card__title">16 NFL Seasons</h3>
+          <p class="nfl-card__years">Raiders 1982–92 · Chiefs 1993–97</p>
+
+          <div class="nfl-stats" role="list">
+            <div class="nfl-stat" role="listitem">
+              <p class="nfl-stat__num">12,243</p>
+              <p class="nfl-stat__label">Rushing Yards</p>
+            </div>
+            <div class="nfl-stat" role="listitem">
+              <p class="nfl-stat__num">145</p>
+              <p class="nfl-stat__label">Rushing TDs</p>
+            </div>
+            <div class="nfl-stat" role="listitem">
+              <p class="nfl-stat__num">17,654</p>
+              <p class="nfl-stat__label">Yards from Scrimmage</p>
+            </div>
+          </div>
+
+          <p class="nfl-honors">
+            <b>Super Bowl XVIII MVP</b> · <b>NFL MVP 1985</b> · 6× Pro Bowl · 2× First-Team All-Pro · NFL 1980s All-Decade Team
+          </p>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <!-- PRESS / ARTICLES — 3-col floating-image cards -->
+  <section class="zone scroll-reveal" aria-labelledby="press-h">
+    <div class="container">
+      <div class="section-head">
+        <span class="kicker">Features · Interviews · Profiles</span>
+        <h2 id="press-h">In The Press</h2>
+      </div>
+
+      <div class="press-grid locker-stagger">
+        <a class="press-card" href="#">
+          <div class="press-card__image" style="background-image: url('https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=400&q=80&auto=format&fit=crop');"></div>
+          <div class="press-card__author">
+            <span class="press-card__avatar">PK</span>
+            <span class="press-card__author-name">Peter King<small>Sports Illustrated</small></span>
+          </div>
+          <h3 class="press-card__title">Marcus Allen and the Heisman Year That Defined a Decade</h3>
+          <div class="press-card__meta"><span>6 min read</span><span class="claps">👏 24K</span></div>
+          <p class="press-card__excerpt">The 1981 season at USC didn't just produce a Heisman winner. It rewrote the playbook for what a tailback could be... <span class="press-card__more">Read more</span></p>
+        </a>
+
+        <a class="press-card" href="#">
+          <div class="press-card__image" style="background-image: url('https://images.unsplash.com/photo-1607627000458-210e8d2bdb1d?w=400&q=80&auto=format&fit=crop');"></div>
+          <div class="press-card__author">
+            <span class="press-card__avatar">JW</span>
+            <span class="press-card__author-name">Jenny Vrentas<small>The Players' Tribune</small></span>
+          </div>
+          <h3 class="press-card__title">Why That 74-Yard Run Still Hits Different</h3>
+          <div class="press-card__meta"><span>4 min read</span><span class="claps">👏 18K</span></div>
+          <p class="press-card__excerpt">Forty years on, the cutback at the Washington 26 is still the cleanest piece of footage in football... <span class="press-card__more">Read more</span></p>
+        </a>
+
+        <a class="press-card" href="#">
+          <div class="press-card__image" style="background-image: url('https://images.unsplash.com/photo-1495555687398-3f50d6e79e1e?w=400&q=80&auto=format&fit=crop');"></div>
+          <div class="press-card__author">
+            <span class="press-card__avatar">RW</span>
+            <span class="press-card__author-name">Rick Reilly<small>ESPN</small></span>
+          </div>
+          <h3 class="press-card__title">From USC to Canton: Inside the Hall of Fame Speech</h3>
+          <div class="press-card__meta"><span>8 min read</span><span class="claps">👏 31K</span></div>
+          <p class="press-card__excerpt">He had ten minutes at the podium. He used twelve. Every word picked, every coach named, every season earned... <span class="press-card__more">Read more</span></p>
+        </a>
+
+        <a class="press-card" href="#">
+          <div class="press-card__image" style="background-image: url('https://images.unsplash.com/photo-1577471488278-16eec37ffcc2?w=400&q=80&auto=format&fit=crop');"></div>
+          <div class="press-card__author">
+            <span class="press-card__avatar">SF</span>
+            <span class="press-card__author-name">Seth Davis<small>The Athletic</small></span>
+          </div>
+          <h3 class="press-card__title">A Conversation with Marcus Allen on Modern NIL</h3>
+          <div class="press-card__meta"><span>7 min read</span><span class="claps">👏 12K</span></div>
+          <p class="press-card__excerpt">"They're getting paid for what we built. That's not a complaint. That's the whole point." On the new era of college football... <span class="press-card__more">Read more</span></p>
+        </a>
+
+        <a class="press-card" href="#">
+          <div class="press-card__image" style="background-image: url('https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=400&q=80&auto=format&fit=crop');"></div>
+          <div class="press-card__author">
+            <span class="press-card__avatar">MS</span>
+            <span class="press-card__author-name">Mike Silver<small>Bleacher Report</small></span>
+          </div>
+          <h3 class="press-card__title">The Quiet Greatness of a Two-Decade Career</h3>
+          <div class="press-card__meta"><span>5 min read</span><span class="claps">👏 9K</span></div>
+          <p class="press-card__excerpt">Sixteen NFL seasons. Two franchises. One narrative thread that nobody talked about while it was happening... <span class="press-card__more">Read more</span></p>
+        </a>
+
+        <a class="press-card" href="#">
+          <div class="press-card__image" style="background-image: url('https://images.unsplash.com/photo-1543326727-cf6c39e8f84c?w=400&q=80&auto=format&fit=crop');"></div>
+          <div class="press-card__author">
+            <span class="press-card__avatar">AL</span>
+            <span class="press-card__author-name">Andrea Adelson<small>ESPN College</small></span>
+          </div>
+          <h3 class="press-card__title">The Locker Room Stories Nobody's Heard Yet</h3>
+          <div class="press-card__meta"><span>9 min read</span><span class="claps">👏 15K</span></div>
+          <p class="press-card__excerpt">Forty years of teammates. Three coaches who became second fathers. The text chain that still buzzes every Sunday morning... <span class="press-card__more">Read more</span></p>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- BELIEVERS -->
+  <section class="zone scroll-reveal" aria-labelledby="believers-h">
+    <div class="container">
+      <div class="section-head">
+        <span class="kicker">Teammates &amp; followers</span>
+        <h2 id="believers-h">Believers</h2>
+      </div>
+      <div class="believers__count-block">
+        <p class="believers__count">12</p>
+        <p class="believers__count-label">Believers Since 2026</p>
+      </div>
+      <ul class="believers__grid">
+        <li class="believer-card"><span class="avatar" aria-hidden="true">DH</span><span class="believer-card__name">Daymeiion Hill</span><span class="believer-card__jersey">#21 · CAL</span></li>
+        <li class="believer-card"><span class="avatar" aria-hidden="true">MW</span><span class="believer-card__name">Marcus Williams</span><span class="believer-card__jersey">#5 · CAL</span></li>
+        <li class="believer-card"><span class="avatar" aria-hidden="true">TR</span><span class="believer-card__name">Tyree Robinson</span><span class="believer-card__jersey">#82 · CAL</span></li>
+        <li class="believer-card"><span class="avatar" aria-hidden="true">JF</span><span class="believer-card__name">Justin Forsett</span><span class="believer-card__jersey">#20 · CAL</span></li>
+        <li class="believer-card"><span class="avatar" aria-hidden="true">DJ</span><span class="believer-card__name">DeSean Jackson</span><span class="believer-card__jersey">#1 · CAL</span></li>
+        <li class="believer-card"><span class="avatar" aria-hidden="true">AR</span><span class="believer-card__name">Aaron Rodgers</span><span class="believer-card__jersey">#8 · CAL</span></li>
+        <li class="believer-card"><span class="avatar" aria-hidden="true">KA</span><span class="believer-card__name">Keenan Allen</span><span class="believer-card__jersey">#21 · CAL</span></li>
+        <li class="believer-card"><span class="avatar" aria-hidden="true">ML</span><span class="believer-card__name">Marshawn Lynch</span><span class="believer-card__jersey">#10 · CAL</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- CLAIM CTA -->
+  <section class="claim-cta scroll-reveal" aria-labelledby="claim-h">
+    <h2 id="claim-h">This Locker Is Yours</h2>
+    <p>Built free, owned by you. Edit anything, share anywhere. One link. Forever.</p>
+    <button class="btn-primary" type="button">Claim This Locker</button>
+  </section>
+
+</main>
+
+<footer class="foot" role="contentinfo">
+  <p class="foot__brand">BLTZ</p>
+  <p class="foot__tag">Built by athletes · Owned by the player</p>
+</footer>
+
+<!-- VIDEOS MODAL — sort + 2x2 grid feed -->
+<div class="modal" id="videos-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" hidden>
+  <div class="modal__inner">
+    <div class="modal__head">
+      <h2 class="modal__title" id="modal-title">All Videos</h2>
+      <button class="modal__close" type="button" id="modal-close" aria-label="Close">×</button>
+    </div>
+
+    <div class="sort-tabs" role="tablist" aria-label="Sort videos by tier">
+      <button class="sort-tab is-active" type="button" role="tab" aria-selected="true" data-tier="all">All</button>
+      <button class="sort-tab" type="button" role="tab" aria-selected="false" data-tier="college">College</button>
+      <button class="sort-tab" type="button" role="tab" aria-selected="false" data-tier="pro">Pro</button>
+      <button class="sort-tab" type="button" role="tab" aria-selected="false" data-tier="hs">High School</button>
+    </div>
+
+    <div class="modal-grid" id="modal-grid">
+      <!-- Cards injected by JS, cloned from #reel and re-rendered as 2-col grid -->
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  // ---- Pretext via CDN for resize-aware hero name ----
+  let prepare, layout;
+  try {
+    const mod = await import('https://esm.sh/@chenglou/pretext');
+    prepare = mod.prepare;
+    layout = mod.layout;
+  } catch (e) {
+    console.warn('Pretext CDN unreachable; using native CSS layout', e);
+  }
+  await document.fonts.ready;
+
+  const nameEl = document.querySelector('[data-pretext]');
+  let prepared = null, lastWidth = 0;
+
+  function relayoutHeroName() {
+    if (!prepare || !layout || !nameEl) return;
+    const cs = getComputedStyle(nameEl);
+    const font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+    const lineHeight = parseFloat(cs.lineHeight) || parseFloat(cs.fontSize) * 0.92;
+    if (!prepared || lastWidth !== nameEl.clientWidth) {
+      prepared = prepare(nameEl.textContent, font);
+      lastWidth = nameEl.clientWidth;
+    }
+    const { height } = layout(prepared, nameEl.clientWidth, lineHeight);
+    nameEl.style.minHeight = `${height}px`;
+  }
+  relayoutHeroName();
+  new ResizeObserver(() => relayoutHeroName()).observe(document.body);
+
+  // ---- Reveal animations on profile (immediate) ----
+  requestAnimationFrame(() => {
+    document.querySelectorAll('.profile .reveal').forEach(el => el.classList.add('in'));
+  });
+
+  // ---- Avatar edit: swap headshot live on file pick ----
+  const avatarInput = document.getElementById('avatar-upload');
+  const avatarImg = document.getElementById('avatar-img');
+  if (avatarInput && avatarImg) {
+    avatarInput.addEventListener('change', (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      const url = URL.createObjectURL(file);
+      avatarImg.src = url;
+      // Production: POST file to /api/locker/{slug}/avatar; this preview uses object URL only.
+    });
+  }
+
+  // ---- Scroll-driven: parallax on hero bg + topbar avatar reveal + section reveal ----
+  const heroBg = document.getElementById('heroBg');
+  const hero = document.querySelector('.hero');
+  const topbar = document.getElementById('topbar');
+  const topbarAthlete = document.getElementById('topbar-athlete');
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  let ticking = false;
+  function onScroll() {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(() => {
+      const y = window.scrollY;
+
+      // Parallax — hero bg moves slower than scroll
+      if (heroBg && !reduce) {
+        const heroH = hero.offsetHeight;
+        if (y < heroH) {
+          heroBg.style.transform = `translate3d(0, ${y * 0.35}px, 0) scale(${1 + y * 0.0002})`;
+        }
+      }
+
+      // Topbar — solid background after first scroll
+      if (topbar) topbar.classList.toggle('is-scrolled', y > 24);
+
+      // Topbar athlete name appears once hero name scrolls past
+      if (topbarAthlete && nameEl) {
+        const nameRect = nameEl.getBoundingClientRect();
+        const showAthlete = nameRect.bottom < 60;
+        topbarAthlete.classList.toggle('in', showAthlete);
+        topbarAthlete.setAttribute('aria-hidden', showAthlete ? 'false' : 'true');
+      }
+
+      ticking = false;
+    });
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+
+  // ---- IntersectionObserver: fade in sections on scroll ----
+  const io = new IntersectionObserver((entries) => {
+    for (const e of entries) {
+      if (e.isIntersecting) {
+        e.target.classList.add('in');
+        io.unobserve(e.target);
+      }
+    }
+  }, { rootMargin: '0px 0px -10% 0px', threshold: 0.05 });
+  document.querySelectorAll('.scroll-reveal').forEach(el => io.observe(el));
+
+  // ---- Locker-open stagger: trigger child cascade when container enters viewport ----
+  const staggerIO = new IntersectionObserver((entries) => {
+    for (const e of entries) {
+      if (e.isIntersecting) {
+        e.target.classList.add('in');
+        staggerIO.unobserve(e.target);
+      }
+    }
+  }, { rootMargin: '0px 0px -8% 0px', threshold: 0.1 });
+  document.querySelectorAll('.locker-stagger').forEach(el => staggerIO.observe(el));
+
+  // Feature image fade-in (independent of stagger)
+  const imageIO = new IntersectionObserver((entries) => {
+    for (const e of entries) {
+      if (e.isIntersecting) { e.target.classList.add('in'); imageIO.unobserve(e.target); }
+    }
+  }, { rootMargin: '0px 0px -8% 0px', threshold: 0.15 });
+  document.querySelectorAll('.image-fade').forEach(el => imageIO.observe(el));
+
+  // ---- Photo grid: mouse-tracking pan-on-hover ----
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!reducedMotion) {
+    document.querySelectorAll('.photos-masonry .photo').forEach(photo => {
+      const img = photo.querySelector('img');
+      if (!img) return;
+      let raf = 0;
+      let lx = 0, ly = 0;
+
+      photo.addEventListener('mouseenter', () => {
+        photo.classList.add('is-tracking');
+      });
+
+      photo.addEventListener('mousemove', (e) => {
+        const rect = photo.getBoundingClientRect();
+        // 0..1 normalized cursor position inside the photo
+        const x = (e.clientX - rect.left) / rect.width;
+        const y = (e.clientY - rect.top)  / rect.height;
+        // Translate the image OPPOSITE the cursor so it reveals the side you move toward.
+        // Range: -8% .. 8% (subtle but noticeable, allowed by the 1.22x scale headroom)
+        lx = (0.5 - x) * 16;
+        ly = (0.5 - y) * 16;
+        if (!raf) {
+          raf = requestAnimationFrame(() => {
+            img.style.transform = `scale(1.22) translate(${lx}%, ${ly}%)`;
+            raf = 0;
+          });
+        }
+      });
+
+      photo.addEventListener('mouseleave', () => {
+        photo.classList.remove('is-tracking');
+        if (raf) { cancelAnimationFrame(raf); raf = 0; }
+        img.style.transform = '';   // reset to CSS default (scale(1))
+      });
+    });
+  }
+
+  // Stat chart bar fill — trigger when chart enters viewport
+  const chartIO = new IntersectionObserver((entries) => {
+    for (const e of entries) {
+      if (e.isIntersecting) { e.target.classList.add('in'); chartIO.unobserve(e.target); }
+    }
+  }, { rootMargin: '0px 0px -10% 0px', threshold: 0.2 });
+  document.querySelectorAll('.stat-chart').forEach(el => chartIO.observe(el));
+
+  // ---- Video carousel arrows ----
+  const reel = document.getElementById('reel');
+  const reelPrev = document.getElementById('reel-prev');
+  const reelNext = document.getElementById('reel-next');
+  function reelStep() {
+    const card = reel.querySelector('.reel-card');
+    if (!card) return 0;
+    const styles = getComputedStyle(reel);
+    const gap = parseFloat(styles.columnGap || styles.gap || 20);
+    return card.offsetWidth + gap;
+  }
+  function updateReelArrows() {
+    if (!reel) return;
+    const max = reel.scrollWidth - reel.clientWidth - 1;
+    const atStart = reel.scrollLeft <= 0;
+    const atEnd = reel.scrollLeft >= max;
+    reelPrev.toggleAttribute('disabled', atStart);
+    reelNext.toggleAttribute('disabled', atEnd);
+    const viewport = reel.parentElement;
+    if (viewport) {
+      viewport.classList.toggle('at-start', atStart);
+      viewport.classList.toggle('at-end', atEnd);
+    }
+  }
+  reelPrev?.addEventListener('click', () => reel.scrollBy({ left: -reelStep() * 2, behavior: 'smooth' }));
+  reelNext?.addEventListener('click', () => reel.scrollBy({ left:  reelStep() * 2, behavior: 'smooth' }));
+  reel?.addEventListener('scroll', updateReelArrows, { passive: true });
+  updateReelArrows();
+
+  // ---- Videos modal: open, close, populate, sort ----
+  const modal = document.getElementById('videos-modal');
+  const modalGrid = document.getElementById('modal-grid');
+  const seeAllBtn = document.getElementById('see-all-btn');
+  const modalClose = document.getElementById('modal-close');
+  const sortTabs = document.querySelectorAll('.sort-tab');
+
+  function populateModal() {
+    if (!modal || !modalGrid) return;
+    modalGrid.innerHTML = '';
+    reel.querySelectorAll('.reel-card').forEach(card => {
+      const clone = card.cloneNode(true);
+      clone.removeAttribute('tabindex');
+      clone.setAttribute('tabindex', '0');
+      modalGrid.appendChild(clone);
+    });
+  }
+  function openModal() {
+    populateModal();
+    modal.hidden = false;
+    modal.classList.add('is-open');
+    document.body.style.overflow = 'hidden';
+    setTimeout(() => modalClose?.focus(), 0);
+    applySort('all');
+  }
+  function closeModal() {
+    modal.classList.remove('is-open');
+    modal.hidden = true;
+    document.body.style.overflow = '';
+    seeAllBtn?.focus();
+  }
+  function applySort(tier) {
+    sortTabs.forEach(t => {
+      const active = t.dataset.tier === tier;
+      t.classList.toggle('is-active', active);
+      t.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+    modalGrid.querySelectorAll('.reel-card').forEach(card => {
+      const match = (tier === 'all') || (card.dataset.tier === tier);
+      card.dataset.tier = match ? card.dataset.tier : (card.dataset.tier);  // preserve
+      card.style.display = match ? '' : 'none';
+    });
+  }
+
+  seeAllBtn?.addEventListener('click', openModal);
+  modalClose?.addEventListener('click', closeModal);
+  modal?.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modal?.classList.contains('is-open')) closeModal();
+  });
+  sortTabs.forEach(tab => tab.addEventListener('click', () => applySort(tab.dataset.tier)));
+</script>
+
+</body>
+</html>
