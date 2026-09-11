@@ -54,7 +54,7 @@ export function shouldRedirectToOnboarding(args: {
   if (inAdmin) return false;
   // Preview authorization is enforced by authenticated Supabase RLS. Do not
   // divert an assigned player into onboarding before that row check can run.
-  if (isPrivatePreviewPath(args.pathname)) return false;
+  if (isPrivatePreviewPath(args.pathname) || args.pathname.startsWith("/preview-referrals/")) return false;
   if (isPublicPath(args.pathname)) return false;
   const isAthlete = args.profile?.role === "player";
   const hasClaim = Boolean(args.claimIntentCookie);

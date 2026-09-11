@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 const items = [
+  { href: "/admin/gtm/funnel", label: "Preview funnel", icon: IconChartDots3 },
   { href: "/admin/gtm", label: "Overview", icon: IconChartDots3 },
   { href: "/admin/gtm/contacts", label: "Contacts", icon: IconAddressBook },
   { href: "/admin/gtm/players", label: "Players", icon: IconUsersGroup },

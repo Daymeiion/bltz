@@ -16,16 +16,20 @@ type Scalar = Exclude<keyof PreviewContent, "schools" | "pro_teams" | "awards" |
 
 export default function PreviewLockerForm({
   record,
+  reservedId,
+  referralName,
   viewerAssigned = false,
   gtmLinked = false,
   gtmCompleted = false,
 }: {
   record?: PreviewRecord;
+  reservedId?: string;
+  referralName?: string;
   viewerAssigned?: boolean;
   gtmLinked?: boolean;
   gtmCompleted?: boolean;
 }) {
-  const [draft, setDraft] = useState<PreviewContent>(() => record ? previewContent.parse(Object.fromEntries(Object.keys(previewContent.shape).map(k => [k, record[k as keyof PreviewRecord]]))) : { ...initial(), full_name: "", slug: "" });
+  const [draft, setDraft] = useState<PreviewContent>(() => record ? previewContent.parse(Object.fromEntries(Object.keys(previewContent.shape).map(k => [k, record[k as keyof PreviewRecord]]))) : { ...initial(), full_name: referralName ?? "", slug: "" });
   const [busy, setBusy] = useState<"discovery" | "upload" | "save" | "complete" | null>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -35,7 +39,7 @@ export default function PreviewLockerForm({
   const [dirty, setDirty] = useState(false);
   const [saved, setSaved] = useState<{ id: string; slug: string; revision: number } | null>(record ?? null);
   const revision = useRef(record?.revision);
-  const createId = useRef<string | null>(null);
+  const createId = useRef<string | null>(reservedId ?? null);
   const pending = useRef(false);
   const abort = useRef<AbortController | null>(null);
   const allowDraftDiscard = useRef(false);

@@ -1,3 +1,4 @@
+import ConversionSurface from "@/components/preview-lockers/ConversionSurface";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { readPrivatePreview } from "@/lib/preview-lockers/server";
@@ -12,5 +13,5 @@ export default async function PreviewVideos({ params }: { params: Promise<{ slug
     ...(row.hero_video_url ? [{ id: "hero-video", title: "Hero video source", url: row.hero_video_url }] : []),
     ...row.videos,
   ];
-  return <main className="mx-auto max-w-5xl space-y-6 p-6 text-white"><Link className="underline" href={`/preview-lockers/${row.slug}`}>Back to private Locker</Link><h1 className="text-3xl">{row.full_name} · Private Film Room</h1><p>PRIVATE DEMO · RIGHTS UNVERIFIED. Private access does not grant copyright, download, or reuse rights.</p>{!sources.length && <p>No videos saved in this preview.</p>}{sources.map(video => <PreviewVideoSource key={video.id} video={video} />)}</main>;
+  return <main className="mx-auto max-w-5xl space-y-6 p-6 text-white"><Link className="underline" href={`/preview-lockers/${row.slug}`}>Back to private Locker</Link><ConversionSurface previewId={row.id} room="film_view"/><h1 className="text-3xl">{row.full_name} · Private Film Room</h1><p>PRIVATE DEMO · RIGHTS UNVERIFIED. Private access does not grant copyright, download, or reuse rights.</p>{!sources.length && <p>No videos saved in this preview.</p>}{sources.map(video => <PreviewVideoSource key={video.id} video={video} />)}</main>;
 }

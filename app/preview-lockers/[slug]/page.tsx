@@ -1,3 +1,4 @@
+import ConversionSurface from "@/components/preview-lockers/ConversionSurface";
 import { notFound } from "next/navigation";
 import LockerView from "@/app/player/[slug]/LockerView";
 import { readPrivatePreview } from "@/lib/preview-lockers/server";
@@ -7,5 +8,5 @@ export default async function PreviewLocker({ params }: { params: Promise<{ slug
   const row = await readPrivatePreview((await params).slug); if (!row) notFound();
   const data = previewLockerData(row);
   data.structuredStats = await readPreviewStructuredStats(row.id);
-  return <LockerView data={data} />;
+  return <><ConversionSurface previewId={row.id}/><LockerView data={data} /></>;
 }

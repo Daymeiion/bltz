@@ -3,7 +3,7 @@ import { type NextRequest } from "next/server";
 
 export async function proxy(request: NextRequest) {
   const response = await updateSession(request);
-  if (/^\/(?:admin\/|api\/)?preview-lockers(?:\/|$)/.test(request.nextUrl.pathname)) {
+  if (request.nextUrl.pathname.startsWith("/preview-referrals/") || request.nextUrl.pathname.startsWith("/admin/gtm/funnel") || /^\/(?:admin\/|api\/)?preview-lockers(?:\/|$)/.test(request.nextUrl.pathname)) {
     response.headers.set("Cache-Control", "private, no-store");
     response.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive, noimageindex");
     response.headers.set("Referrer-Policy", "no-referrer");
