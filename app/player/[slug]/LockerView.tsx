@@ -5,6 +5,8 @@ import { ChevronDown, ChevronUp, Mic } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { SearchResult } from "@/components/ui/search-modal";
 import { trackProductEvent } from "@/lib/analytics/client";
+import { StructuredStats } from "@/components/player/StructuredStats";
+import type { StoredStats } from "@/lib/player/structured-stats-types";
 
 // ---------------------------------------------------------------------------
 // LockerView — fan-facing athlete locker, ported from the standalone design.
@@ -39,6 +41,7 @@ export type LockerData = {
   dobDisplay: string;
   age?: number;
   gamesPlayed: number | null;
+  structuredStats?: StoredStats[];
   careerStats?: {
     key: string;
     label: string;
@@ -1686,6 +1689,9 @@ export default function LockerView({
                           {showAllCareerStats ? "SHOW FEATURED STATS" : `VIEW ALL ${careerCells.length} STATS`}
                         </button>
                       </div>
+                    ) : null}
+                    {data.structuredStats?.length ? (
+                      <StructuredStats records={data.structuredStats} />
                     ) : null}
                     <div ref={careerGamesRef} style={{ borderRadius: 16, padding: 18, border: "1px solid #1E2640", background: "#131829", overflow: "hidden" }}>
                       <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: ".16em", color: "#FFB940", marginBottom: 16 }}>◆ GAMES PLAYED BY SEASON</div>
