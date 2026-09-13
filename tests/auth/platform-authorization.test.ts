@@ -36,6 +36,12 @@ describe("platform assignment authorization", () => {
         continue;
       }
 
+      if (file.endsWith(join("logout", "route.ts"))) {
+        expect(route).toContain('supabase.auth.signOut({ scope: "local" })');
+        expect(route).toContain("isTrustedAdminLogoutOrigin");
+        continue;
+      }
+
       expect(route).not.toContain("getCurrentUserProfile");
       expect(route).toMatch(/getCurrentAuthorizationProfile|isInternalAdmin/);
     }

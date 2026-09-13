@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { getDefaultAuthenticatedPath, getSafeInternalNext, getSafeInternalPath } from "@/lib/auth/redirects";
+import {
+  getDefaultAuthenticatedPath,
+  getPasswordRecoveryRedirectUrl,
+  getSafeInternalNext,
+  getSafeInternalPath,
+} from "@/lib/auth/redirects";
 
 describe("authenticated redirect selection", () => {
   it("preserves a requested private dashboard route", () => {
@@ -27,5 +32,19 @@ describe("authenticated redirect selection", () => {
     expect(getDefaultAuthenticatedPath("admin")).toBe("/admin/beta");
     expect(getDefaultAuthenticatedPath("player")).toBe("/dashboard");
     expect(getDefaultAuthenticatedPath("fan")).toBe("/");
+  });
+
+  it("routes password recovery through the server callback before the update form", () => {
+    expect(getPasswordRecoveryRedirectUrl("http://localhost:3100")).toBe(
+      "http://localhost:3100/auth/callback?next=%2Fauth%2Fupdate-password",
+    );
+  });
+
+  it.each(["/\\evil.example", "/%2fevil.example", "/%252fevil.example", "/foo\nbar", "/%00evil", "/x/..//evil.example", "/auth/sign-up?next=foo"])("rejects unsafe destination %s", next => {
+    expect(getSafeInternalPath(next)).toBeNull();
+  });
+
+  it("retains ordinary local query and fragment destinations", () => {
+    expect(getSafeInternalPath("/admin/gtm/contacts?queue=identity_review#table")).toBe("/admin/gtm/contacts?queue=identity_review#table");
   });
 });

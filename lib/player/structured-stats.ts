@@ -2,6 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { League, SeasonStats } from "@/lib/sportradar/types";
+import { createServiceClient } from "@/lib/supabase/service";
 import type { StoredStats } from "./structured-stats-types";
 
 const Bundle = z.object({ version: z.literal(1), league: League, seasons: z.array(SeasonStats) });
@@ -26,4 +27,24 @@ export async function readStructuredStats(db: SupabaseClient, playerId: string |
     }
     return [...grouped.values()];
   } catch { return []; }
+}
+
+/**
+ * Reads a preview's canonical athlete link only after the preview route has
+ * already authorized the current viewer. The service-only lookup keeps the
+ * canonical player id out of the private preview payload and browser bundle.
+ */
+export async function readPreviewStructuredStats(previewId: string): Promise<StoredStats[]> {
+  try {
+    const db = createServiceClient();
+    const { data, error } = await db
+      .from("preview_lockers")
+      .select("player_id")
+      .eq("id", previewId)
+      .maybeSingle();
+    if (error || !data?.player_id) return [];
+    return readStructuredStats(db, data.player_id);
+  } catch {
+    return [];
+  }
 }

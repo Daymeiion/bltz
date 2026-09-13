@@ -21,7 +21,7 @@ describe("admin stats authorization", () => {
     const id = "3069db07-aa43-4503-ab11-2ae5c0002721";
     mocks.ingest.mockResolvedValue(id);
     const result = await post({ action: "import", ingestionId: id, previewId: id, approved: true, actorId: "spoofed" });
-    expect(result.status).toBe(200); expect(mocks.ingest).toHaveBeenCalledWith(id,id,"admin-id");
+    expect(result.status).toBe(200); expect(mocks.ingest).toHaveBeenCalledWith(expect.any(Object),id,id,"admin-id");
     expect(result.headers.get("cache-control")).toContain("no-store");
   });
 });

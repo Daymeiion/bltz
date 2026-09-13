@@ -1,4 +1,5 @@
 import "server-only";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createServiceClient } from "@/lib/supabase/service";
 import { fetchProfile, profileEndpoint, responseError } from "./client";
 import { normalizeProfile, hasStatistics } from "./normalize";
@@ -69,8 +70,8 @@ export async function previewProfile(playerId: string, providerId: string, leagu
   throw new StatsError("provider_unavailable", 502);
 }
 
-export async function importProfile(ingestionId: string, previewId: string, actorId: string) {
-  const result = await createServiceClient().rpc("import_sportradar_stats", {
+export async function importProfile(db: SupabaseClient, ingestionId: string, previewId: string, actorId: string) {
+  const result = await db.rpc("import_sportradar_stats", {
     p_ingestion_id: ingestionId, p_preview_id: previewId, p_actor_id: actorId,
   });
   if (result.error) {

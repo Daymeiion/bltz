@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import React, { useState } from "react";
 import { motion } from "framer-motion";
+import { Sheet, SheetTrigger, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import {
   IconLayoutDashboard,
   IconUsers,
@@ -12,11 +13,10 @@ import {
   IconSettings,
   IconLogout,
   IconMenu2,
-  IconX,
   IconShield,
   IconMessageCircle,
   IconFlask,
-  IconUserSearch,
+  IconAddressBook,
 } from "@tabler/icons-react";
 
 interface SidebarLink {
@@ -25,8 +25,13 @@ interface SidebarLink {
   icon: React.ReactNode;
 }
 
+export function isAdminSidebarLinkActive(pathname: string, href: string) {
+  return pathname === href || (["/admin/gtm", "/admin/preview-lockers"].includes(href) && pathname.startsWith(`${href}/`));
+}
+
 export function AdminSidebar() {
   const [open, setOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
 
   const links: SidebarLink[] = [
@@ -61,15 +66,16 @@ export function AdminSidebar() {
       icon: <IconFlask className="h-5 w-5 flex-shrink-0" />,
     },
     {
-      label: "Preview Lockers",
-      href: "/admin/preview-lockers",
-      icon: <IconUserSearch className="h-5 w-5 flex-shrink-0" />,
+      label: "GTM",
+      href: "/admin/gtm",
+      icon: <IconAddressBook className="h-5 w-5 flex-shrink-0" />,
     },
     {
       label: "Settings",
       href: "/admin/settings",
       icon: <IconSettings className="h-5 w-5 flex-shrink-0" />,
     },
+    { label: "Preview Lockers", href: "/admin/preview-lockers", icon: <IconUsers className="h-5 w-5 flex-shrink-0" /> },
   ];
 
   return (
@@ -114,10 +120,11 @@ export function AdminSidebar() {
             <Link
               key={idx}
               href={link.href}
-              aria-current={pathname === link.href ? "page" : undefined}
+              aria-label={link.label}
+              aria-current={isAdminSidebarLinkActive(pathname, link.href) ? "page" : undefined}
               className={cn(
                 "flex items-center gap-3 rounded-xl px-3 py-3 text-neutral-500 transition-all duration-200 hover:translate-x-0.5 hover:bg-neutral-200/70 hover:text-neutral-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ffbb00] dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-white",
-                pathname === link.href && "bg-neutral-950 text-white shadow-sm hover:bg-neutral-950 hover:text-white dark:bg-white dark:text-neutral-950 dark:hover:bg-white dark:hover:text-neutral-950",
+                isAdminSidebarLinkActive(pathname, link.href) && "bg-neutral-950 text-white shadow-sm hover:bg-neutral-950 hover:text-white dark:bg-white dark:text-neutral-950 dark:hover:bg-white dark:hover:text-neutral-950",
               )}
             >
               {link.icon}
@@ -135,7 +142,10 @@ export function AdminSidebar() {
         </nav>
 
         {/* Logout */}
+        <form action="/api/admin/logout" method="post" className="mt-auto">
         <button
+          type="submit"
+          aria-label="Logout"
           className={cn(
             "mt-auto flex items-center gap-3 rounded-xl px-3 py-3 text-neutral-500 transition-all duration-200 hover:bg-red-50 hover:text-red-700 dark:text-neutral-400 dark:hover:bg-red-500/10 dark:hover:text-red-300"
           )}
@@ -151,9 +161,11 @@ export function AdminSidebar() {
             Logout
           </motion.span>
         </button>
+        </form>
       </motion.div>
 
       {/* Mobile Sidebar */}
+      <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
       <div className="fixed left-0 right-0 top-0 z-50 flex items-center justify-between border-b border-neutral-200 bg-[#f7f6f3]/95 px-4 py-3 backdrop-blur-xl md:hidden dark:border-neutral-800 dark:bg-neutral-950/95">
         <div className="flex items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#ffbb00] text-sm font-bold text-black">
@@ -161,43 +173,41 @@ export function AdminSidebar() {
           </div>
           <span className="text-lg font-bold text-neutral-950 dark:text-white">BLTZ Admin</span>
         </div>
-        <button onClick={() => setOpen(!open)} className="rounded-lg p-1 text-neutral-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ffbb00] dark:text-white">
-          {open ? <IconX className="h-6 w-6" /> : <IconMenu2 className="h-6 w-6" />}
-        </button>
+        <SheetTrigger asChild>
+          <button type="button" aria-label="Open admin navigation" className="inline-flex h-11 w-11 items-center justify-center rounded-lg text-neutral-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ffbb00] dark:text-white">
+            <IconMenu2 className="h-6 w-6" aria-hidden="true" />
+          </button>
+        </SheetTrigger>
       </div>
 
       {/* Mobile Menu */}
-      {open && (
-        <motion.div
-          initial={{ x: "-100%" }}
-          animate={{ x: 0 }}
-          exit={{ x: "-100%" }}
-          className="fixed inset-0 z-40 bg-[#f7f6f3] pt-16 md:hidden dark:bg-neutral-950"
-        >
+        <SheetContent side="left" aria-modal="true" aria-describedby={undefined} className="w-full sm:max-w-none bg-[#f7f6f3] dark:bg-neutral-950">
+          <SheetTitle className="px-4 pt-4">BLTZ Admin navigation</SheetTitle>
           <nav className="flex flex-col p-4 space-y-1">
             {links.map((link, idx) => (
               <Link
                 key={idx}
                 href={link.href}
-                onClick={() => setOpen(false)}
-                aria-current={pathname === link.href ? "page" : undefined}
+                onClick={() => setMobileOpen(false)}
+                aria-current={isAdminSidebarLinkActive(pathname, link.href) ? "page" : undefined}
                 className={cn(
                   "flex items-center gap-3 rounded-xl px-4 py-3 text-neutral-600 transition-all hover:bg-neutral-200 hover:text-neutral-950 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-white",
-                  pathname === link.href && "bg-neutral-950 text-white dark:bg-white dark:text-neutral-950",
+                  isAdminSidebarLinkActive(pathname, link.href) && "bg-neutral-950 text-white dark:bg-white dark:text-neutral-950",
                 )}
               >
                 {link.icon}
                 <span className="text-sm font-medium">{link.label}</span>
               </Link>
             ))}
-            <button className="flex items-center gap-3 px-4 py-3 rounded-lg text-neutral-400 hover:text-red-400 hover:bg-neutral-800/50 transition-all mt-8">
+            <form action="/api/admin/logout" method="post" className="mt-8">
+            <button type="submit" className="flex w-full justify-start items-center gap-3 px-4 py-3 rounded-lg text-neutral-400 hover:text-red-400 hover:bg-neutral-800/50 transition-all">
               <IconLogout className="h-5 w-5" />
               <span className="text-sm font-medium">Logout</span>
             </button>
+            </form>
           </nav>
-        </motion.div>
-      )}
+        </SheetContent>
+      </Sheet>
     </>
   );
 }
-

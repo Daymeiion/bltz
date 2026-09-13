@@ -94,9 +94,13 @@ grant execute on function public.reserve_sportradar_request(uuid,uuid,text,text,
 -- Import only the server-stored reviewed payload, never statistics posted by a
 -- browser. Mapping, season replacement, preview link, and audit are one commit.
 create function public.import_sportradar_stats(p_ingestion_id uuid, p_preview_id uuid,
-  p_actor_id uuid) returns uuid language plpgsql security invoker set search_path = '' as $$
+  p_actor_id uuid) returns uuid language plpgsql security definer set search_path = '' as $$
 declare r public.player_stat_ingestions; existing_id text; linked_id uuid;
 begin
+  if (select auth.uid()) is null or p_actor_id <> (select auth.uid())
+    or not (select public.is_internal_admin()) then
+    raise exception 'forbidden' using errcode = '42501';
+  end if;
   select * into strict r from public.player_stat_ingestions where id=p_ingestion_id for update;
   perform pg_advisory_xact_lock(hashtextextended(r.player_id::text || r.league, 0));
   if r.status not in ('MANUAL_REVIEW','IMPORTED') then raise exception 'no_statistics'; end if;
@@ -128,8 +132,9 @@ begin
   return r.player_id;
 end $$;
 revoke all on function public.import_sportradar_stats(uuid,uuid,uuid) from public,anon,authenticated;
-grant execute on function public.import_sportradar_stats(uuid,uuid,uuid) to service_role;
+grant execute on function public.import_sportradar_stats(uuid,uuid,uuid) to authenticated;
 
 comment on table public.player_stat_ingestions is 'Admin-only review/cache. No provider calls on Locker reads. Never contains credentials.';
 comment on table public.player_external_ids is 'Verified provider mappings to canonical players.id; no inferred account or ownership relationship.';
+comment on column public.preview_lockers.player_id is 'Optional admin-reviewed link to the canonical Athlete Career ID used to render sourced structured statistics in this private preview.';
 commit;

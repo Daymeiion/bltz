@@ -56,3 +56,6 @@ Thumbs.db
 bltz
 desktop.ini
 .gstack/
+/output/conversion/
+/output/playwright/
+/.playwright-cli/

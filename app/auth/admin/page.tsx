@@ -14,6 +14,7 @@ const errorMessages: Record<string, string> = {
   not_admin: "This account does not have BLTZ administrator access.",
   profile_unavailable: "The administrator profile could not be verified.",
   missing_fields: "Email and password are required.",
+  logout_unavailable: "This browser session was cleared, but server sign-out could not be confirmed. Please try signing in again when the service is available.",
 };
 
 export const metadata = {

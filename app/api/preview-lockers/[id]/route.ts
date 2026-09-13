@@ -1,74 +1,36 @@
-import { NextResponse } from "next/server";
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
-import { createServiceClient } from "@/lib/supabase/service";
-import { isInternalAdmin } from "@/lib/rbac";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { updatePreview, previewMediaBelongsTo } from "@/lib/preview-lockers/validation";
+import { assertPreviewMediaExists, previewAdmin, readBody, json, failure, PreviewError } from "@/lib/preview-lockers/server";
+import type { PreviewDatabase } from "@/types/preview-lockers.generated";
 
 export const runtime = "nodejs";
-
-const VideoInput = z.object({
-  id: z.string(),
-  title: z.string().min(1).max(160),
-  thumb: z.string().nullable(),
-  url: z.string().nullable(),
-});
-
-const Body = z.object({
-  bio: z.string().max(4000).optional(),
-  athlete_quote: z.string().max(600).nullable().optional(),
-  athlete_quote_author: z.string().max(160).nullable().optional(),
-  hero_video_url: z.string().url().nullable().optional(),
-  headshot_url: z.string().url().nullable().optional(),
-  videos: z.array(VideoInput).optional(),
-});
-
-async function requireAdmin() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { ok: false as const, status: 401, error: "unauthorized" };
-  if (!(await isInternalAdmin())) {
-    return { ok: false as const, status: 403, error: "forbidden" };
-  }
-  return { ok: true as const };
-}
-
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const auth = await requireAdmin();
-  if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
-
-  const { id } = await params;
-  let body: z.infer<typeof Body>;
   try {
-    body = Body.parse(await req.json());
-  } catch (e: unknown) {
-    const detail = e instanceof Error ? e.message : String(e);
-    return NextResponse.json({ error: "invalid_input", detail }, { status: 400 });
-  }
-
-  const sb = createServiceClient();
-  const { data, error } = await sb
-    .from("preview_lockers")
-    .update(body)
-    .eq("id", id)
-    .select("id, slug")
-    .maybeSingle();
-
-  if (error) return NextResponse.json({ error: "could_not_update", detail: error.message }, { status: 500 });
-  if (!data) return NextResponse.json({ error: "not_found" }, { status: 404 });
-
-  return NextResponse.json(data);
+    const { client } = await previewAdmin();
+    const { id } = await params;
+    if (!z.uuid().safeParse(id).success) throw new PreviewError("invalid_input", 400);
+    const parsed = updatePreview.safeParse(await readBody(req));
+    if (!parsed.success) throw new PreviewError("invalid_input", 400);
+    const { revision, content } = parsed.data;
+    if (!previewMediaBelongsTo(id, content)) throw new PreviewError("invalid_media_path", 400);
+    await assertPreviewMediaExists(client, content);
+    const update: PreviewDatabase["public"]["Tables"]["preview_lockers"]["Update"] = content;
+    const { data, error } = await client.from("preview_lockers").update(update).eq("id", id).eq("revision", revision).select("id,slug,revision").maybeSingle();
+    if (error?.code === "23505") throw new PreviewError("preview_conflict", 409);
+    if (error) throw new PreviewError("could_not_update", 503);
+    if (!data) throw new PreviewError("preview_conflict", 409);
+    const relationship = await (client as unknown as SupabaseClient)
+      .from("gtm_player_preview_lockers")
+      .select("completed_revision")
+      .eq("preview_locker_id", id)
+      .maybeSingle();
+    const completionStatus = relationship.error ? "unavailable" : "available";
+    return json({
+      ...data,
+      complete: relationship.data != null && Number(relationship.data.completed_revision) === data.revision,
+      completionStatus,
+    });
+  } catch (error) { return failure(error); }
 }
-
-export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const auth = await requireAdmin();
-  if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
-
-  const { id } = await params;
-  const sb = createServiceClient();
-  const { error } = await sb.from("preview_lockers").delete().eq("id", id);
-  if (error) return NextResponse.json({ error: "could_not_delete", detail: error.message }, { status: 500 });
-
-  return NextResponse.json({ ok: true });
-}
+// No DELETE handler: permanent deletion is not an approved preview operation.

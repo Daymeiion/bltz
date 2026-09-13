@@ -1,19 +1,12 @@
-import { readStructuredStats } from "@/lib/player/structured-stats";
-import { readPrivatePreview } from "@/lib/preview-lockers/read";
-import { toLockerData } from "@/lib/preview-lockers/mapper";
-import type { PreviewLockerRow } from "@/lib/preview-lockers/types";
+import ConversionSurface from "@/components/preview-lockers/ConversionSurface";
+import { notFound } from "next/navigation";
 import LockerView from "@/app/player/[slug]/LockerView";
-import { enrichPreviewSchoolBranding } from "@/lib/preview-lockers/school-branding";
-
-export default async function PreviewLockerPage({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}) {
-  const { slug } = await params;
-  const { data, supabase } = await readPrivatePreview(slug, { photoLimit: 10 });
-
-  const data_ = toLockerData(await enrichPreviewSchoolBranding(supabase, data as PreviewLockerRow));
-  data_.structuredStats = await readStructuredStats(supabase, data.player_id ?? null);
-  return <LockerView data={data_} />;
+import { readPrivatePreview } from "@/lib/preview-lockers/server";
+import { previewLockerData } from "@/lib/preview-lockers/mapper";
+import { readPreviewStructuredStats } from "@/lib/player/structured-stats";
+export default async function PreviewLocker({ params }: { params: Promise<{ slug: string }> }) {
+  const row = await readPrivatePreview((await params).slug); if (!row) notFound();
+  const data = previewLockerData(row);
+  data.structuredStats = await readPreviewStructuredStats(row.id);
+  return <><ConversionSurface previewId={row.id}/><LockerView data={data} /></>;
 }

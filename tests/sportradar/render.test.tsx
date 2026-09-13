@@ -4,13 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { StructuredStats } from "@/components/player/StructuredStats";
 import { readStructuredStats } from "@/lib/player/structured-stats";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { toLockerData } from "@/lib/preview-lockers/mapper";
-import type { PreviewLockerRow } from "@/lib/preview-lockers/types";
 describe("stored statistics rendering", () => {
-  it("treats the Preview Locker schema's empty school object as missing", () => {
-    const row = { full_name: "Fixture Player", school_info: {} } as PreviewLockerRow;
-    expect(toLockerData(row).school).toBeNull();
-  });
   it("renders one shared NFL/NCAA view with provenance and separate phases", () => {
     const seasons = [{ year: 2023, seasonType: "REG" as const, team: "Test Team", providerTeamId: "team", position: "DE", gamesPlayed: 17, gamesStarted: 16, statistics: { sacks: 7.5 } }];
     const html = renderToStaticMarkup(<StructuredStats records={[{ league: "nfl", source: "Sportradar", syncedAt: "2026-09-10", seasons }, { league: "ncaafb", source: "Sportradar", syncedAt: "2026-09-10", seasons }]} />);

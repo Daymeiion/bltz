@@ -14,7 +14,7 @@ async function authorize() {
   const { data: { user } } = await db.auth.getUser();
   if (!user) throw new StatsError("unauthorized", 401);
   if (!(await isInternalAdmin())) throw new StatsError("forbidden", 403);
-  return user.id;
+  return { actorId: user.id, db };
 }
 function failure(error: unknown) {
   if (error instanceof StatsError) return json({ error: error.code }, error.status);
@@ -51,11 +51,11 @@ const Body = z.discriminatedUnion("action", [
 ]);
 export async function POST(request: Request) {
   try {
-    const actorId = await authorize();
+    const { actorId, db } = await authorize();
     if (request.headers.get("origin") && request.headers.get("origin") !== new URL(request.url).origin) return json({ error: "invalid_origin" }, 403);
     let body: z.infer<typeof Body>;
     try { body = Body.parse(await request.json()); } catch { return json({ error: "invalid_input" }, 400); }
     if (body.action === "preview") return json(await previewProfile(body.playerId, body.providerId, body.league, body.refresh));
-    return json({ playerId: await importProfile(body.ingestionId, body.previewId, actorId), status: "IMPORTED" });
+    return json({ playerId: await importProfile(db, body.ingestionId, body.previewId, actorId), status: "IMPORTED" });
   } catch (error) { return failure(error); }
 }

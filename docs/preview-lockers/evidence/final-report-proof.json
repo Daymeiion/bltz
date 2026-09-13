@@ -1,0 +1,91 @@
+{
+  "enrolled": 3,
+  "sent": 2,
+  "counts": {
+    "accepted": {
+      "previews": 2,
+      "events": 2
+    },
+    "booking_click": {
+      "previews": 1,
+      "events": 1
+    },
+    "booking_confirmed": {
+      "previews": 1,
+      "events": 1
+    },
+    "claim_click": {
+      "previews": 2,
+      "events": 2
+    },
+    "claim_submit": {
+      "previews": 2,
+      "events": 2
+    },
+    "dashboard_interest": {
+      "previews": 1,
+      "events": 1
+    },
+    "declined": {
+      "previews": 1,
+      "events": 1
+    },
+    "film_view": {
+      "previews": 1,
+      "events": 1
+    },
+    "photos_view": {
+      "previews": 1,
+      "events": 1
+    },
+    "referral_copied": {
+      "previews": 1,
+      "events": 1
+    },
+    "referral_created": {
+      "previews": 1,
+      "events": 1
+    },
+    "referral_submit": {
+      "previews": 1,
+      "events": 1
+    },
+    "referred_claimed": {
+      "previews": 1,
+      "events": 1
+    },
+    "referred_prepared": {
+      "previews": 1,
+      "events": 1
+    },
+    "sent": {
+      "previews": 2,
+      "events": 2
+    },
+    "view": {
+      "previews": 3,
+      "events": 4
+    },
+    "walkthrough_completed": {
+      "previews": 1,
+      "events": 1
+    }
+  },
+  "responses": [
+    {
+      "preview_id": "ffb465c4-9539-463a-a0a1-737021b8bc93",
+      "state": "accepted",
+      "dashboard_interest": true
+    },
+    {
+      "preview_id": "a0bc3dad-da13-4e19-8dc7-531279593a77",
+      "state": "accepted",
+      "dashboard_interest": false
+    },
+    {
+      "preview_id": "8614617b-bc8a-4354-9a5b-556382524411",
+      "state": "declined",
+      "dashboard_interest": false
+    }
+  ]
+}
