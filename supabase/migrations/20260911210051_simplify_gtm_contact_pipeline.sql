@@ -227,4 +227,3 @@ revoke all on function public.get_gtm_foundation_metrics(timestamptz)
   from public, anon, authenticated, service_role;
 grant execute on function public.get_gtm_foundation_metrics(timestamptz)
   to authenticated, service_role;
-
