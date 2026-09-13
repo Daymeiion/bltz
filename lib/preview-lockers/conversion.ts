@@ -1,6 +1,11 @@
 import { z } from "zod";
 
 export const attributionCode = z.string().regex(/^[a-zA-Z0-9_-]{1,80}$/);
+export const previewEnrollment = z.object({
+  contact_id: z.uuid(), campaign: attributionCode, source: attributionCode,
+  channel: z.enum(["email", "linkedin", "sms", "in_person", "referral", "other"]),
+  relationship: z.enum(["warm", "cold"]), is_test: z.boolean().default(false),
+}).strict();
 export const conversionInput = z.object({
   preview_id: z.uuid().nullable(),
   action: z.enum(["state", "view", "photos_view", "film_view", "claim_click", "declined", "claim_submit", "booking_click", "referral_created", "referral_copied", "referral_intake"]),

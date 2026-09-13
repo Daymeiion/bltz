@@ -38,6 +38,6 @@ describe("Prompt 6 live import contract", () => {
   it("shows evidence and score provenance in the contact drawer", () => {
     expect(drawer).toContain("Classification evidence");
     expect(drawer).toContain("Deterministic import evidence");
-    expect(drawer).toContain("Why this score changed");
+    expect(drawer).toContain("Enterprise priority evidence");
   });
 });

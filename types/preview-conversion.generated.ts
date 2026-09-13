@@ -236,5 +236,9 @@ preview_conversion: {
         }
         Returns: Json
       }
+preview_conversion_create: {
+        Args: { p_content: Json; p_enrollment: Json; p_id: string }
+        Returns: Json
+      }
 }
 Enums:Record<string,never>;CompositeTypes:Record<string,never>}};

@@ -9,7 +9,7 @@ export function StatusForm({preview,action,label,referral,contacts}:{preview:str
 }
 export function EnrollmentForm({previews,contacts}:{previews:{id:string;label:string}[];contacts:{id:string;label:string}[]}) {
   const [state,submit,pending]=useActionState(conversionAdminAction,{message:""});
-  return <details className="rounded border p-4"><summary>Enroll an existing private preview</summary><form action={submit} className="mt-4 grid gap-4 sm:grid-cols-2">
+  return <details className="rounded-xl border border-neutral-200 bg-white dark:border-slate-800 dark:bg-[#0c1524] lg:max-w-xl"><summary className="min-h-12 cursor-pointer px-4 py-3 text-sm font-semibold">Enroll an existing private preview</summary><form action={submit} className="grid gap-4 border-t border-neutral-200 p-4 sm:grid-cols-2 dark:border-slate-800">
     <input type="hidden" name="action" value="enroll"/>
     <label>Private preview<select name="preview" required className={field}><option value="">Select preview</option>{previews.map(p=><option key={p.id} value={p.id}>{p.label}</option>)}</select></label>
     <label>Intended athlete / GTM contact<select name="contact" required className={field}><option value="">Select contact</option>{contacts.map(c=><option key={c.id} value={c.id}>{c.label}</option>)}</select></label>

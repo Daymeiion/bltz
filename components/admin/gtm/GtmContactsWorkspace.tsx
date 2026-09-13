@@ -5,6 +5,7 @@ import {
   IconChevronRight, IconFilter, IconSearch, IconShieldLock, IconUsersGroup,
 } from "@tabler/icons-react";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { GtmContactIntake } from "@/components/admin/gtm/GtmContactIntake";
 import { GtmNavigation } from "@/components/admin/gtm/GtmNavigation";
@@ -17,6 +18,7 @@ import {
   GTM_RELATIONSHIP_OBJECTIVES,
   GTM_RELATIONSHIP_PRIORITIES,
 } from "@/lib/gtm/types";
+import type { GtmMetricsPeriod } from "@/lib/gtm/metrics-period";
 import { cn } from "@/lib/utils";
 
 const GtmContactDrawer = dynamic(
@@ -110,7 +112,7 @@ export function filterGtmContacts(contacts: GtmContactRow[], filters: GtmContact
     if (filters.source !== "all" && normalize(contact.source) !== filters.source) return false;
     if (filters.doNotAutomate !== "all" && contact.doNotAutomate !== (filters.doNotAutomate === "yes")) return false;
     if (filters.hasPlayerMatch !== "all" && Boolean(contact.playerMatch || contact.playerMaster) !== (filters.hasPlayerMatch === "yes")) return false;
-    const needsFollowUp = Boolean(contact.nextActionAt && new Date(contact.nextActionAt) <= now);
+    const needsFollowUp = Boolean(contact.pipelineStage !== "closed" && contact.nextActionAt && new Date(contact.nextActionAt) <= now);
     if (filters.needsFollowUp !== "all" && needsFollowUp !== (filters.needsFollowUp === "yes")) return false;
     if (filters.classificationStatus !== "all" && contact.classificationStatus !== filters.classificationStatus) return false;
     if (filters.identityReviewStatus !== "all" && contact.identityReviewStatus !== filters.identityReviewStatus) return false;
@@ -129,7 +131,7 @@ export function filterGtmContacts(contacts: GtmContactRow[], filters: GtmContact
       case "Strategic Player Network": return Boolean(contact.playerMaster);
       case "Enterprise Decision Makers": return contact.contactType === "enterprise" && ((contact.buyingAuthority ?? -1) >= 4 || contact.personas.includes("Enterprise Decision Maker"));
       case "Multipliers": return contact.contactType === "multiplier";
-      case "Needs Follow-Up": return Boolean(contact.nextActionAt && new Date(contact.nextActionAt) <= now);
+      case "Needs Follow-Up": return Boolean(contact.pipelineStage !== "closed" && contact.nextActionAt && new Date(contact.nextActionAt) <= now);
       case "New LinkedIn Connections": return contact.source === "linkedin_connections" && !contact.lastInteractionAt;
       case "Enterprise Prospects": return contact.contactType === "enterprise";
       case "Athletic Directors": return normalize(contact.currentTitle).includes("athletic director");
@@ -138,7 +140,7 @@ export function filterGtmContacts(contacts: GtmContactRow[], filters: GtmContact
       case "Former Players": return contact.contactType === "athlete" && normalize(contact.segment).includes("former");
       case "High Network Leverage": return (contact.networkLeverage ?? -1) >= 4;
       case "Potential Introductions": return (contact.networkLeverage ?? -1) >= 4 && (contact.relationshipStrength ?? -1) >= 3;
-      case "No Contact Yet": return !contact.lastInteractionAt;
+      case "No Contact Yet": return contact.pipelineStage === "identified";
       case "Locker Candidates": return normalize(contact.segment).includes("locker");
       default: return true;
     }
@@ -176,8 +178,8 @@ function formatDate(value: string | null, includeTime = false) {
 
 function badgeClass(value: string | null) {
   switch (normalize(value)) {
-    case "a": case "converted": case "active_pilot": return "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300";
-    case "b": case "engaged": case "discovery": return "border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-300";
+    case "a": case "closed": return "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300";
+    case "b": case "in_conversation": return "border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-300";
     case "identified": case "connected": case "demo_candidate": case "pilot_candidate": case "nurture": return "border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300";
     default: return "border-neutral-200 bg-neutral-100 text-neutral-700 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300";
   }
@@ -209,13 +211,14 @@ function EmptySurface({ configured, filtered, onReset }: { configured: boolean; 
   );
 }
 
-function MetricsSummary({ metrics }: { metrics: GtmMetrics | null }) {
+function MetricsSummary({ metrics, period, contactId }: { metrics: GtmMetrics | null; period: GtmMetricsPeriod; contactId: string | null }) {
   if (!metrics) return <section className="mt-6 rounded-2xl border border-dashed border-neutral-300 p-5 text-sm text-neutral-500 dark:border-neutral-700">Deploy the Prompt 3 metrics function to enable reliable GTM instrumentation.</section>;
   const cards = [
     ["Total contacts", metrics.totalContacts], ["Tier A", metrics.tierAContacts], ["Tier B", metrics.tierBContacts],
-    ["Priority", metrics.priorityContacts], ["Active conversations", metrics.activeConversations], ["Needs follow-up", metrics.contactsNeedingFollowUp],
-    ["Discovery conversations", metrics.discoveryConversations], ["Player-linked", metrics.playerLinkedContacts], ["Demo candidates", metrics.demoCandidates],
-    ["Pilot candidates", metrics.pilotCandidates], ["Active pilots", metrics.activePilots], ["Conversions", metrics.conversions],
+    ["Priority", metrics.priorityContacts], ["Needs follow-up", metrics.contactsNeedingFollowUp],
+    ["Discovery conversations", metrics.discoveryConversations],
+    ["Identified", metrics.stageCounts?.identified ?? 0], ["Contacted", metrics.stageCounts?.contacted ?? 0], ["In conversation", metrics.stageCounts?.in_conversation ?? 0], ["Follow up later", metrics.stageCounts?.follow_up_later ?? 0], ["Closed", metrics.stageCounts?.closed ?? 0], ["Player-linked", metrics.playerLinkedContacts],
+
     ["Auto classified", metrics.autoClassifiedContacts ?? 0], ["Manually verified", metrics.manuallyVerifiedContacts ?? 0], ["Needs classification", metrics.needsClassificationContacts ?? 0],
     ["Players in network", metrics.playersInFounderNetwork ?? metrics.playerLinkedContacts], ["Ambiguous identity", metrics.ambiguousIdentityContacts ?? 0],
   ] as const;
@@ -227,7 +230,7 @@ function MetricsSummary({ metrics }: { metrics: GtmMetrics | null }) {
   ] as const;
   return (
     <section className="mt-6 rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-900" aria-labelledby="gtm-metrics">
-      <div className="flex flex-wrap items-end justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-[0.1em] text-neutral-500">Last 30 days</p><h2 id="gtm-metrics" className="mt-1 text-xl font-semibold">GTM metrics</h2></div><p className="text-xs text-neutral-500">Generated {formatDate(metrics.generatedAt, true)}</p></div>
+      <div className="flex flex-wrap items-end justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-[0.1em] text-neutral-500">Current contact portfolio · {period === "all" ? "all-time discovery signals" : `discovery signals from last ${period} days`}</p><div className="mt-1 flex flex-wrap items-center gap-3"><h2 id="gtm-metrics" className="text-xl font-semibold">GTM metrics</h2><form action="/admin/gtm/contacts" method="get">{contactId && <input type="hidden" name="contact" value={contactId} />}<label className="sr-only" htmlFor="gtm-metrics-period">GTM metrics reporting period</label><select id="gtm-metrics-period" name="period" defaultValue={period} onChange={(event) => event.currentTarget.form?.requestSubmit()} className="min-h-11 rounded-lg border border-neutral-300 bg-white px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ffbb00] dark:border-neutral-700 dark:bg-neutral-900"><option value="30">Last 30 days</option><option value="90">Last 90 days</option><option value="all">All time</option></select><noscript><button type="submit">Apply period</button></noscript></form></div></div><p className="text-xs text-neutral-500">Generated {formatDate(metrics.generatedAt, true)}</p></div>
       <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">{cards.map(([name, value]) => <div key={name} className="rounded-xl border border-neutral-200 bg-neutral-50 p-3 dark:border-neutral-800 dark:bg-neutral-950"><p className="font-mono text-xl font-semibold">{value}</p><p className="mt-1 text-xs text-neutral-500">{name}</p></div>)}</div>
       <details className="mt-4 rounded-xl border border-neutral-200 p-4 dark:border-neutral-800">
         <summary className="cursor-pointer text-sm font-semibold">Contact mix and discovery signals</summary>
@@ -242,6 +245,11 @@ function MetricsSummary({ metrics }: { metrics: GtmMetrics | null }) {
   );
 }
 
+function PreviewLink({ contact }: { contact: GtmContactRow }) {
+  if (!contact.previewLocker) return null;
+  return <Link href={`/preview-lockers/${encodeURIComponent(contact.previewLocker.slug)}`} aria-label={`Open preview locker for ${contact.displayName}`} className="inline-flex min-h-11 items-center rounded-lg border border-neutral-300 px-3 text-xs font-semibold hover:bg-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ffbb00] dark:border-neutral-700 dark:hover:bg-neutral-800">Open preview locker</Link>;
+}
+
 function distinctOptions(contacts: GtmContactRow[], field: "segment" | "currentCompany" | "sport" | "leagueLevel" | "source") {
   return [...new Map(contacts.flatMap((contact) => {
     const value = contact[field]?.trim();
@@ -253,7 +261,7 @@ function FilterSelect({ value, onChange, label: filterLabel, children }: { value
   return <label><span className="sr-only">{filterLabel}</span><select aria-label={filterLabel} value={value} onChange={(event) => onChange(event.target.value)} className="min-h-11 w-full rounded-xl border border-neutral-300 bg-white px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ffbb00] dark:border-neutral-700 dark:bg-neutral-950">{children}</select></label>;
 }
 
-export function GtmContactsWorkspace({ data, metrics = null, initialContactId = null }: { data: GtmContactsReadModel; metrics?: GtmMetrics | null; initialContactId?: string | null }) {
+export function GtmContactsWorkspace({ data, metrics = null, initialContactId = null, metricsPeriod = "30" }: { data: GtmContactsReadModel; metrics?: GtmMetrics | null; initialContactId?: string | null; metricsPeriod?: GtmMetricsPeriod }) {
   const [contacts, setContacts] = useState<GtmContactRow[]>(data.contacts);
   const [filters, setFilters] = useState<GtmContactFilters>(initialFilters);
   const [sortKey, setSortKey] = useState<SortKey>("priorityScore");
@@ -283,13 +291,13 @@ export function GtmContactsWorkspace({ data, metrics = null, initialContactId = 
   return (
     <div className="mx-auto max-w-[1600px] px-4 pb-16 pt-6 sm:px-8 sm:pt-8">
       <header className="flex flex-col justify-between gap-5 border-b border-neutral-300 pb-6 lg:flex-row lg:items-end dark:border-neutral-800"><div><p className="text-xs font-semibold uppercase tracking-[0.12em] text-neutral-500">GTM relationship management</p><h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em] sm:text-4xl">Contacts</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-600 dark:text-neutral-300">Prioritize trusted relationships, preserve discovery intelligence, and keep the next action visible.</p></div><div className="flex flex-col items-start gap-3 lg:items-end"><GtmNavigation /><div className="flex flex-wrap items-center gap-3"><span className="font-mono text-sm font-semibold">{data.state === "ready" ? contacts.length : "–"} contacts</span><GtmContactIntake /></div></div></header>
-      {data.state === "ready" && <MetricsSummary metrics={metrics} />}
+      {data.state === "ready" && <MetricsSummary metrics={metrics} period={metricsPeriod} contactId={initialContactId} />}
       <div className="mt-6 rounded-2xl border border-neutral-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
         <div className="grid gap-3 border-b border-neutral-200 p-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[minmax(14rem,1fr)_12rem_repeat(4,minmax(8rem,10rem))] dark:border-neutral-800">
           <label className="relative block"><span className="sr-only">Search contacts</span><IconSearch className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-neutral-500" /><input value={filters.search} onChange={(event) => updateFilter("search", event.target.value)} placeholder="Search name, company, role, sport…" className="min-h-11 w-full rounded-xl border border-neutral-300 bg-white pl-10 pr-3 text-sm dark:border-neutral-700 dark:bg-neutral-950" /></label>
           <FilterSelect label="Saved view" value={filters.savedView} onChange={(value) => updateFilter("savedView", value)}>{builtInViews.map((view) => <option key={view}>{view}</option>)}</FilterSelect>
           <FilterSelect label="Contact type" value={filters.contactType} onChange={(value) => updateFilter("contactType", value)}><option value="all">All contact types</option>{GTM_CONTACT_TYPES.map((type) => <option key={type} value={type}>{label(type)}</option>)}</FilterSelect>
-          <FilterSelect label="Priority tier" value={filters.priorityTier} onChange={(value) => updateFilter("priorityTier", value)}><option value="all">All priority tiers</option>{["A", "B", "C", "D"].map((tier) => <option key={tier}>{tier}</option>)}</FilterSelect>
+          <FilterSelect label="Enterprise priority tier" value={filters.priorityTier} onChange={(value) => updateFilter("priorityTier", value)}><option value="all">All enterprise priority tiers</option>{["A", "B", "C", "D"].map((tier) => <option key={tier}>{tier}</option>)}</FilterSelect>
           <FilterSelect label="Pipeline stage" value={filters.pipelineStage} onChange={(value) => updateFilter("pipelineStage", value)}><option value="all">All pipeline stages</option>{GTM_PIPELINE_STAGES.map((stage) => <option key={stage} value={stage}>{label(stage)}</option>)}</FilterSelect>
           <FilterSelect label="Needs follow-up" value={filters.needsFollowUp} onChange={(value) => updateFilter("needsFollowUp", value)}><option value="all">Any follow-up status</option><option value="yes">Needs follow-up</option><option value="no">No follow-up due</option></FilterSelect>
         </div>
@@ -324,6 +332,6 @@ function ContactResults({ contacts, sortKey, sortDirection, onSort, onSelect }: 
   contacts: GtmContactRow[]; sortKey: SortKey; sortDirection: SortDirection;
   onSort: (key: SortKey) => void; onSelect: (id: string) => void;
 }) {
-  const headings: Array<[string, SortKey | null]> = [["Contact", "displayName"], ["Organization", "currentCompany"], ["Type", "contactType"], ["Role", "currentTitle"], ["Score", "priorityScore"], ["Tier", "priorityTier"], ["Stage", "pipelineStage"], ["Last interaction", "lastInteractionAt"], ["Next action", "nextAction"], ["Next action date", "nextActionAt"], ["Actions", null]];
-  return <><div className="hidden overflow-x-auto lg:block"><table className="w-full min-w-[1320px] border-collapse text-left text-sm"><thead className="bg-neutral-50 text-[11px] uppercase tracking-[0.08em] text-neutral-500 dark:bg-neutral-950"><tr>{headings.map(([title, key]) => <th key={title} className="whitespace-nowrap px-4 py-3">{key ? <SortButton title={title} sortKey={key} currentKey={sortKey} direction={sortDirection} onSort={onSort} /> : title}</th>)}</tr></thead><tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">{contacts.map((contact) => <tr key={contact.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-800/50"><td className="px-4 py-3"><button type="button" onClick={() => onSelect(contact.id)} className="group flex min-h-11 items-center gap-3 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ffbb00]"><span className="flex h-9 w-9 items-center justify-center rounded-lg bg-neutral-950 text-xs font-semibold text-white dark:bg-white dark:text-black">{contact.displayName.split(/\s+/).slice(0, 2).map((part) => part[0]).join("")}</span><span><span className="flex items-center gap-1.5 font-semibold group-hover:underline">{contact.displayName}{contact.doNotAutomate && <IconShieldLock className="h-3.5 w-3.5 text-amber-700" aria-label="Do not automate" />}</span><span className="block text-xs text-neutral-500">{contact.segment ?? contact.source ?? "No segment"}</span></span></button></td><td className="max-w-44 px-4 py-3"><span className="line-clamp-2">{contact.currentCompany ?? "Not linked"}</span></td><td className="px-4 py-3"><StatusBadge value={contact.contactType} /></td><td className="max-w-48 px-4 py-3 text-neutral-600 dark:text-neutral-300">{contact.currentTitle ?? "Not recorded"}</td><td className="px-4 py-3 font-mono font-semibold">{contact.priorityScore ?? "–"}</td><td className="px-4 py-3"><StatusBadge value={contact.priorityTier} fallback="–" /></td><td className="px-4 py-3"><StatusBadge value={contact.pipelineStage} /></td><td className="whitespace-nowrap px-4 py-3 font-mono text-xs text-neutral-500">{formatDate(contact.lastInteractionAt)}</td><td className="max-w-52 px-4 py-3">{contact.nextAction ?? "No action"}</td><td className="whitespace-nowrap px-4 py-3 font-mono text-xs text-neutral-500">{formatDate(contact.nextActionAt)}</td><td className="px-4 py-3"><button type="button" onClick={() => onSelect(contact.id)} className="min-h-10 rounded-lg border border-neutral-300 px-3 text-xs font-semibold transition-colors hover:bg-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ffbb00] dark:border-neutral-700 dark:hover:bg-neutral-800">Open</button></td></tr>)}</tbody></table></div><div className="divide-y divide-neutral-200 lg:hidden dark:divide-neutral-800">{contacts.map((contact) => <button key={contact.id} type="button" onClick={() => onSelect(contact.id)} className="flex min-h-24 w-full items-center gap-3 p-4 text-left transition-colors hover:bg-neutral-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#ffbb00] dark:hover:bg-neutral-800"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-neutral-950 text-xs font-semibold text-white dark:bg-white dark:text-black">{contact.displayName.split(/\s+/).slice(0, 2).map((part) => part[0]).join("")}</span><span className="min-w-0 flex-1"><span className="block font-semibold">{contact.displayName}</span><span className="mt-1 block truncate text-sm text-neutral-500">{contact.currentTitle ?? "Role not recorded"}{contact.currentCompany ? ` · ${contact.currentCompany}` : ""}</span><span className="mt-2 flex flex-wrap gap-2"><StatusBadge value={contact.contactType} /><StatusBadge value={contact.pipelineStage} /><span className="font-mono text-xs text-neutral-500">Score {contact.priorityScore ?? "–"}</span></span>{contact.nextAction && <span className="mt-2 block truncate text-xs text-neutral-500">Next: {contact.nextAction} · {formatDate(contact.nextActionAt)}</span>}</span><IconChevronRight className="h-5 w-5 shrink-0 text-neutral-400" /></button>)}</div></>;
+  const headings: Array<[string, SortKey | null]> = [["Contact", "displayName"], ["Organization", "currentCompany"], ["Type", "contactType"], ["Role", "currentTitle"], ["Enterprise priority", "priorityScore"], ["Tier", "priorityTier"], ["Stage", "pipelineStage"], ["Last interaction", "lastInteractionAt"], ["Next action", "nextAction"], ["Next action date", "nextActionAt"], ["Actions", null]];
+  return <><div className="hidden overflow-x-auto lg:block"><table className="w-full min-w-[1320px] border-collapse text-left text-sm"><thead className="bg-neutral-50 text-[11px] uppercase tracking-[0.08em] text-neutral-500 dark:bg-neutral-950"><tr>{headings.map(([title, key]) => <th key={title} className="whitespace-nowrap px-4 py-3">{key ? <SortButton title={title} sortKey={key} currentKey={sortKey} direction={sortDirection} onSort={onSort} /> : title}</th>)}</tr></thead><tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">{contacts.map((contact) => <tr key={contact.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-800/50"><td className="px-4 py-3"><button type="button" onClick={() => onSelect(contact.id)} className="group flex min-h-11 items-center gap-3 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ffbb00]"><span className="flex h-9 w-9 items-center justify-center rounded-lg bg-neutral-950 text-xs font-semibold text-white dark:bg-white dark:text-black">{contact.displayName.split(/\s+/).slice(0, 2).map((part) => part[0]).join("")}</span><span><span className="flex items-center gap-1.5 font-semibold group-hover:underline">{contact.displayName}{contact.doNotAutomate && <IconShieldLock className="h-3.5 w-3.5 text-amber-700" aria-label="Do not automate" />}</span><span className="block text-xs text-neutral-500">{contact.segment ?? contact.source ?? "No segment"}</span></span></button></td><td className="max-w-44 px-4 py-3"><span className="line-clamp-2">{contact.currentCompany ?? "Not linked"}</span></td><td className="px-4 py-3"><StatusBadge value={contact.contactType} /></td><td className="max-w-48 px-4 py-3 text-neutral-600 dark:text-neutral-300">{contact.currentTitle ?? "Not recorded"}</td><td className="px-4 py-3 font-mono font-semibold">{contact.priorityScore ?? "–"}</td><td className="px-4 py-3"><StatusBadge value={contact.priorityTier} fallback="–" /></td><td className="px-4 py-3"><StatusBadge value={contact.pipelineStage} /></td><td className="whitespace-nowrap px-4 py-3 font-mono text-xs text-neutral-500">{formatDate(contact.lastInteractionAt)}</td><td className="max-w-52 px-4 py-3">{contact.nextAction ?? "No action"}</td><td className="whitespace-nowrap px-4 py-3 font-mono text-xs text-neutral-500">{formatDate(contact.nextActionAt)}</td><td className="px-4 py-3"><button type="button" onClick={() => onSelect(contact.id)} className="min-h-10 rounded-lg border border-neutral-300 px-3 text-xs font-semibold transition-colors hover:bg-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ffbb00] dark:border-neutral-700 dark:hover:bg-neutral-800">Open</button><PreviewLink contact={contact} /></td></tr>)}</tbody></table></div><div className="divide-y divide-neutral-200 lg:hidden dark:divide-neutral-800">{contacts.map((contact) => <div key={contact.id}><button type="button" onClick={() => onSelect(contact.id)} className="flex min-h-24 w-full items-center gap-3 p-4 text-left transition-colors hover:bg-neutral-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#ffbb00] dark:hover:bg-neutral-800"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-neutral-950 text-xs font-semibold text-white dark:bg-white dark:text-black">{contact.displayName.split(/\s+/).slice(0, 2).map((part) => part[0]).join("")}</span><span className="min-w-0 flex-1"><span className="block font-semibold">{contact.displayName}</span><span className="mt-1 block truncate text-sm text-neutral-500">{contact.currentTitle ?? "Role not recorded"}{contact.currentCompany ? ` · ${contact.currentCompany}` : ""}</span><span className="mt-2 flex flex-wrap gap-2"><StatusBadge value={contact.contactType} /><StatusBadge value={contact.pipelineStage} /><span className="font-mono text-xs text-neutral-500">Enterprise priority {contact.priorityScore ?? "–"}</span></span>{contact.nextAction && <span className="mt-2 block truncate text-xs text-neutral-500">Next: {contact.nextAction} · {formatDate(contact.nextActionAt)}</span>}</span><IconChevronRight className="h-5 w-5 shrink-0 text-neutral-400" /></button><div className="px-4 pb-3"><PreviewLink contact={contact} /></div></div>)}</div></>;
 }

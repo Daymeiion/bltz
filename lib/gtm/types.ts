@@ -134,17 +134,11 @@ export const GTM_PRIORITY_TIERS = ["A", "B", "C", "D"] as const;
 export type GtmPriorityTier = (typeof GTM_PRIORITY_TIERS)[number];
 
 export const GTM_PIPELINE_STAGES = [
-  "identified",
-  "connected",
-  "engaged",
-  "discovery",
-  "demo_candidate",
-  "pilot_candidate",
-  "active_pilot",
-  "converted",
-  "nurture",
-  "not_now",
+  "identified", "contacted", "in_conversation", "follow_up_later", "closed",
 ] as const;
+
+export const GTM_PIPELINE_DESCRIPTION = "Identified: potential contact. Contacted: outreach or introduction made. In conversation: two-way exchange underway. Follow up later: paused for a future opportunity. Closed: no further outreach planned; outcomes are recorded separately.";
+
 
 export type GtmPipelineStage = (typeof GTM_PIPELINE_STAGES)[number];
 

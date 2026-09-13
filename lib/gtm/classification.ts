@@ -1,5 +1,4 @@
 import type { NormalizedGtmImportRow } from "@/lib/gtm/import-contract";
-import { calculateEnterprisePriority } from "@/lib/gtm/scoring";
 import type { GtmContactType } from "@/lib/gtm/types";
 
 export const GTM_CLASSIFICATION_STATUSES = [
@@ -17,7 +16,7 @@ export type GtmPrimaryContactType = GtmContactType;
 export interface GtmAutomaticPriorityExplanation {
   model: "enterprise_v1";
   factors: {
-    relationshipStrength: number;
+    relationshipStrength: number | null;
     bltzRelevance: number;
     buyingAuthority: number;
     networkLeverage: number;
@@ -25,8 +24,8 @@ export interface GtmAutomaticPriorityExplanation {
   };
   inferredFields: string[];
   reasons: string[];
-  score: number;
-  tier: string;
+  score: number | null;
+  tier: string | null;
 }
 
 export interface GtmClassificationResult {
@@ -97,7 +96,7 @@ function priorityExplanation(
 ): Pick<GtmClassificationResult,
   "relationshipStrength" | "bltzRelevance" | "buyingAuthority" |
   "networkLeverage" | "timingScore" | "priorityScoreExplanation"> {
-  const relationshipStrength = 2;
+  const relationshipStrength = null;
   const bltzRelevance = /athletic|sports?|football|player|nil|team|league/i.test(text) ? 5 : 3;
   const buyingAuthority = /general manager|athletic director|director of athletics|chief|\bceo\b|president/i.test(text)
     ? 5
@@ -112,7 +111,6 @@ function priorityExplanation(
     networkLeverage,
     timing: timingScore,
   };
-  const result = calculateEnterprisePriority(factors);
   return {
     relationshipStrength,
     bltzRelevance,
@@ -131,10 +129,10 @@ function priorityExplanation(
       ],
       reasons: [
         ...reasons,
-        "Relationship strength and timing use neutral inferred values until the founder verifies them.",
+        "Relationship strength is unscored until reviewed. Other factors are inferred suggestions; timing defaults to 2 until reviewed.",
       ],
-      score: result.score,
-      tier: result.tier,
+      score: null,
+      tier: null,
     },
   };
 }

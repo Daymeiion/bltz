@@ -11,7 +11,8 @@ describe("Prompt 6 deterministic GTM classification", () => {
     const result = classifyGtmImportRow(row("Athletic Director", "University of California"));
     expect(result).toMatchObject({ contactType: "enterprise", segment: "Athletic Director", classificationStatus: "auto_classified" });
     expect(result.classificationConfidence).toBeGreaterThanOrEqual(0.9);
-    expect(result.priorityScoreExplanation).toMatchObject({ model: "enterprise_v1", tier: expect.any(String), score: expect.any(Number) });
+    expect(result.priorityScoreExplanation).toMatchObject({ model: "enterprise_v1", tier: null, score: null });
+    expect(result.relationshipStrength).toBeNull();
     expect(result.priorityScoreExplanation?.inferredFields).toContain("relationshipStrength");
   });
 

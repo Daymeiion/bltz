@@ -15,14 +15,14 @@ const metrics: GtmMetrics = {
   totalContacts: 24, contactTypeCounts: { enterprise: 9, athlete: 6, multiplier: 5, investor: 4 }, segmentCounts: {},
   tierAContacts: 4, tierBContacts: 7, priorityContacts: 6, enterpriseContacts: 9, athleteContacts: 6,
   multiplierContacts: 5, activeConversations: 8, contactsNeedingFollowUp: 3, discoveryConversations: 5,
-  demoCandidates: 2, pilotCandidates: 2, activePilots: 1, conversions: 1, playerLinkedContacts: 4,
+  stageCounts: { identified: 2, contacted: 2, in_conversation: 7, follow_up_later: 1, closed: 1 }, playerLinkedContacts: 4,
   discoveryAnalysis: { problems: [], useCases: [], features: [], objections: [], pilotIntent: { yes: 0, no: 0, unknown: 0 }, willingnessToPay: { yes: 0, no: 0, unknown: 0 } },
 };
 
 describe("Prompt 4 GTM Admin experience", () => {
   it("renders the executive overview metrics and operating queues", () => {
     const markup = renderToStaticMarkup(<GtmOverview data={{ state: "ready", contacts: [], generatedAt: metrics.generatedAt }} metrics={metrics} />);
-    for (const label of ["Total relevant contacts", "Enterprise", "Athletes", "Multipliers", "Priority contacts", "Needs follow-up", "Discovery conversations", "Demo candidates", "Pilot candidates", "Active pilots", "Conversions", "Needs attention", "Upcoming follow-ups", "Recent activity", "Pipeline summary"]) {
+    for (const label of ["Total relevant contacts", "Enterprise", "Athletes", "Multipliers", "Priority contacts", "Needs follow-up", "Discovery conversations", "Identified", "Contacted", "In conversation", "Follow up later", "Closed", "Needs attention", "Upcoming follow-ups", "Recent activity", "Pipeline summary"]) {
       expect(markup).toContain(label);
     }
   });

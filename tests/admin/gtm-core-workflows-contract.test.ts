@@ -39,9 +39,9 @@ describe("GTM Prompt 3 workflow contracts", () => {
 
   it("shows the complete source-derived GTM metrics and discovery signals", () => {
     for (const label of [
-      "Total contacts", "Tier A", "Tier B", "Priority", "Active conversations",
+      "Total contacts", "Tier A", "Tier B", "Priority", "In conversation",
       "Needs follow-up", "Discovery conversations", "Player-linked",
-      "Demo candidates", "Pilot candidates", "Active pilots", "Conversions",
+      "Identified", "Contacted", "Follow up later", "Closed",
       "Reported problems", "BLTZ use cases", "Requested features", "Objections",
     ]) expect(workspace).toContain(label);
     expect(server).toContain('rpc("get_gtm_metrics_v1"');

@@ -53,11 +53,11 @@ export function GtmOverview({ data, metrics }: { data: GtmContactsReadModel; met
   const contacts = data.contacts;
   const now = Date.now();
   const needsAttention = contacts
-    .filter((contact) => contact.nextActionAt && new Date(contact.nextActionAt).getTime() <= now)
+    .filter((contact) => contact.pipelineStage !== "closed" && contact.nextActionAt && new Date(contact.nextActionAt).getTime() <= now)
     .sort((left, right) => String(left.nextActionAt).localeCompare(String(right.nextActionAt)))
     .slice(0, 6);
   const upcoming = contacts
-    .filter((contact) => contact.nextActionAt && new Date(contact.nextActionAt).getTime() > now)
+    .filter((contact) => contact.pipelineStage !== "closed" && contact.nextActionAt && new Date(contact.nextActionAt).getTime() > now)
     .sort((left, right) => String(left.nextActionAt).localeCompare(String(right.nextActionAt)))
     .slice(0, 6);
   const priority = [...contacts]
@@ -68,7 +68,7 @@ export function GtmOverview({ data, metrics }: { data: GtmContactsReadModel; met
     .flatMap((contact) => contact.interactions.map((interaction) => ({ contact, interaction })))
     .sort((left, right) => right.interaction.interactionAt.localeCompare(left.interaction.interactionAt))
     .slice(0, 6);
-  const stageCounts = Object.fromEntries(GTM_PIPELINE_STAGES.map((stage) => [stage, contacts.filter((contact) => contact.pipelineStage === stage).length]));
+  const stageCounts = Object.fromEntries(GTM_PIPELINE_STAGES.map((stage) => [stage, metrics?.stageCounts?.[stage] ?? 0]));
   const maxStage = Math.max(1, ...Object.values(stageCounts));
   const metricCards = metrics ? [
     ["Total relevant contacts", metrics.totalContacts, IconUsersGroup],
@@ -78,10 +78,11 @@ export function GtmOverview({ data, metrics }: { data: GtmContactsReadModel; met
     ["Priority contacts", metrics.priorityContacts, IconTargetArrow],
     ["Needs follow-up", metrics.contactsNeedingFollowUp, IconCalendarDue],
     ["Discovery conversations", metrics.discoveryConversations, IconMessageCircle],
-    ["Demo candidates", metrics.demoCandidates, IconTargetArrow],
-    ["Pilot candidates", metrics.pilotCandidates, IconTargetArrow],
-    ["Active pilots", metrics.activePilots, IconBolt],
-    ["Conversions", metrics.conversions, IconRosetteDiscountCheck],
+    ["Identified", metrics.stageCounts?.identified ?? 0, IconMessageCircle], ["Contacted", metrics.stageCounts?.contacted ?? 0, IconMessageCircle], ["In conversation", metrics.stageCounts?.in_conversation ?? 0, IconMessageCircle], ["Follow up later", metrics.stageCounts?.follow_up_later ?? 0, IconMessageCircle], ["Closed", metrics.stageCounts?.closed ?? 0, IconMessageCircle],
+
+
+
+
   ] as const : [];
 
   return (

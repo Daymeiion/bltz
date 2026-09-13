@@ -96,6 +96,8 @@ export interface GtmContactRow {
   identityReviewStatus: string;
   identityReviewReason: string | null;
   priorityScoreExplanation: Record<string, unknown> | null;
+  priorityFactorsReviewed?: boolean;
+  previewLocker?: { id: string; slug: string } | null;
   playerMaster?: {
     gsisId: string;
     displayName: string;
@@ -157,10 +159,7 @@ export interface GtmMetrics {
   activeConversations: number;
   contactsNeedingFollowUp: number;
   discoveryConversations: number;
-  demoCandidates: number;
-  pilotCandidates: number;
-  activePilots: number;
-  conversions: number;
+  stageCounts: Record<string, number>;
   playerLinkedContacts: number;
   classificationCounts?: Record<string, number>;
   autoClassifiedContacts?: number;
@@ -239,7 +238,7 @@ export async function getGtmContacts(): Promise<GtmContactsReadModel> {
   for (let offset = 0; ; offset += GTM_READ_PAGE_SIZE) {
     const result = await gtm
       .from("gtm_contacts")
-      .select("id,display_name,first_name,last_name,email,phone,geography,current_company,current_title,contact_type,contact_type_other,potential_roles,relationship_objective,relationship_priority,relationship_context,segment,sport,league_level,relationship_strength,network_leverage,bltz_relevance,buying_authority,timing_score,priority_score,priority_tier,priority_score_explanation,pipeline_stage,source,linkedin_url,do_not_automate,is_priority,last_interaction_at,next_action,next_action_at,investor_type,investor_relationship_stage,what_they_need_to_see,investor_thesis_feedback,historical_signal,future_trigger,prior_outcome,relationship_source,next_trigger,player_master_gsis_id,personas,classification_source,classification_confidence,classification_status,classification_reasons,identity_review_status,identity_review_reason")
+      .select("id,display_name,first_name,last_name,email,phone,geography,current_company,current_title,contact_type,contact_type_other,potential_roles,relationship_objective,relationship_priority,relationship_context,segment,sport,league_level,relationship_strength,network_leverage,bltz_relevance,buying_authority,timing_score,priority_score,priority_tier,priority_score_explanation,manual_field_locks,pipeline_stage,source,linkedin_url,do_not_automate,is_priority,last_interaction_at,next_action,next_action_at,investor_type,investor_relationship_stage,what_they_need_to_see,investor_thesis_feedback,historical_signal,future_trigger,prior_outcome,relationship_source,next_trigger,player_master_gsis_id,personas,classification_source,classification_confidence,classification_status,classification_reasons,identity_review_status,identity_review_reason")
       .eq("archived", false)
       .order("is_priority", { ascending: false })
       .order("priority_score", { ascending: false, nullsFirst: false })
@@ -283,7 +282,30 @@ export async function getGtmContacts(): Promise<GtmContactsReadModel> {
     }
   }
 
+  const previewsByContact = new Map<string, { id: string; slug: string }>();
+  const masterPreviews = new Map<string, { id: string; slug: string }>();
+  for (const ids of chunks(playerMasterIds, GTM_CONTACT_ID_CHUNK_SIZE)) {
+    const result = await gtm.from("gtm_player_preview_lockers").select("gsis_id,preview_lockers(id,slug)").in("gsis_id", ids);
+    if (result.error) throw new Error(`gtm_preview_links_query_failed:${result.error.code}`);
+    for (const row of result.data ?? []) {
+      const preview = row.preview_lockers as unknown as { id: string; slug: string } | null;
+      if (preview) masterPreviews.set(String(row.gsis_id), preview);
+    }
+  }
+  for (const contact of rawContacts) {
+    const preview = masterPreviews.get(String(contact.player_master_gsis_id));
+    if (preview) previewsByContact.set(String(contact.id), preview);
+  }
   if (contactIds.length > 0) {
+    const campaigns = await fetchContactChildren(gtm, "preview_conversion_campaigns", "contact_id,preview_id,preview_lockers(id,slug)", contactIds, "created_at");
+    for (const campaign of campaigns) {
+      const preview = campaign.preview_lockers as { id: string; slug: string } | null;
+      if (preview) {
+        const existing = previewsByContact.get(String(campaign.contact_id));
+        if (existing && existing.id !== preview.id) previewsByContact.delete(String(campaign.contact_id));
+        else previewsByContact.set(String(campaign.contact_id), preview);
+      }
+    }
     const [rawMatches, rawNotes, rawInteractions, rawDiscoveries] = await Promise.all([
       fetchContactChildren(gtm, "gtm_contact_players", "contact_id,player_id,verified,updated_at", contactIds, "updated_at"),
       fetchContactChildren(gtm, "gtm_notes", "id,contact_id,note_type,body,created_at", contactIds, "created_at"),
@@ -396,6 +418,7 @@ export async function getGtmContacts(): Promise<GtmContactsReadModel> {
     priorityScore: contact.priority_score as number | null,
     priorityTier: contact.priority_tier as string | null,
     pipelineStage: contact.pipeline_stage as string | null,
+    previewLocker: previewsByContact.get(String(contact.id)) ?? null,
     source: contact.source as string | null,
     linkedinUrl: contact.linkedin_url as string | null,
     doNotAutomate: contact.do_not_automate === true,
@@ -421,6 +444,7 @@ export async function getGtmContacts(): Promise<GtmContactsReadModel> {
     identityReviewReason: contact.identity_review_reason as string | null,
     priorityScoreExplanation: contact.priority_score_explanation && typeof contact.priority_score_explanation === "object" && !Array.isArray(contact.priority_score_explanation)
       ? contact.priority_score_explanation as Record<string, unknown> : null,
+    priorityFactorsReviewed: ["relationship_strength", "bltz_relevance", "buying_authority", "network_leverage", "timing_score"].every(field => (contact.manual_field_locks as string[] | null)?.includes(field)),
     playerMaster,
     playerMatch: contact.contact_type === "athlete"
       ? (matchesByContact.get(contact.id as string) ?? null)
@@ -468,6 +492,7 @@ export async function getGtmMetrics(since?: string | null): Promise<GtmMetrics |
   if (network.error && network.error.code !== "42883" && network.error.code !== "PGRST202") {
     throw new Error(`gtm_network_metrics_query_failed:${network.error.code ?? "unknown"}`);
   }
+  if (!(data as Record<string, unknown>).stageCounts) return null; // Require the matching pipeline migration; never display missing counts as zero.
   const networkMetrics = network.data && typeof network.data === "object" && !Array.isArray(network.data)
     ? network.data as Record<string, unknown> : {};
   return { ...(data as unknown as GtmMetrics), ...networkMetrics };

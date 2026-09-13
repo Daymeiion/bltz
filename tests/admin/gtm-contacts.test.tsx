@@ -57,7 +57,7 @@ function contact(overrides: Partial<GtmContactRow> = {}): GtmContactRow {
     timingScore: 3,
     priorityScore: 86,
     priorityTier: "A",
-    pipelineStage: "engaged",
+    pipelineStage: "in_conversation",
     source: "linkedin_csv",
     linkedinUrl: "https://www.linkedin.com/in/jordan-reed",
     doNotAutomate: true,
@@ -127,10 +127,7 @@ const metrics: GtmMetrics = {
   activeConversations: 7,
   contactsNeedingFollowUp: 2,
   discoveryConversations: 4,
-  demoCandidates: 2,
-  pilotCandidates: 1,
-  activePilots: 1,
-  conversions: 1,
+  stageCounts: { identified: 2, contacted: 2, in_conversation: 7, follow_up_later: 1, closed: 1 },
   playerLinkedContacts: 3,
   discoveryAnalysis: {
     problems: [{ value: "Fragmented athlete media", count: 3 }],
@@ -143,6 +140,15 @@ const metrics: GtmMetrics = {
 };
 
 describe("GTM contacts workspace", () => {
+  it("links existing previews directly on desktop and mobile without creating a link for other contacts", () => {
+    const linked = contact({ previewLocker: { id: "preview", slug: "jordan-preview" } });
+    const markup = renderToStaticMarkup(<GtmContactsWorkspace data={{ state: "ready", contacts: [linked, contact({ id: "unlinked", displayName: "No preview" })], generatedAt: metrics.generatedAt }} metrics={metrics} />);
+    expect(markup.match(/href="\/preview-lockers\/jordan-preview"/g)).toHaveLength(2);
+    expect(markup).not.toContain('Open preview locker for No preview');
+    expect(markup).not.toContain('Demo candidates');
+    expect(markup).not.toContain('>Conversions<');
+  });
+
   it("searches across identity and organization fields and combines explicit filters", () => {
     const contacts = [
       contact(),
@@ -292,7 +298,7 @@ describe("GTM contacts workspace", () => {
     const markup = renderToStaticMarkup(<GtmContactsWorkspace data={{ state: "ready", contacts: [contact()], generatedAt: metrics.generatedAt }} metrics={metrics} />);
 
     expect(markup).toContain("GTM metrics");
-    expect(markup).toContain("Active conversations");
+    expect(markup).toContain("In conversation");
     expect(markup).toContain("Player-linked");
     expect(markup).toContain("Fragmented athlete media");
     expect(markup).toContain("Would pilot · Yes");

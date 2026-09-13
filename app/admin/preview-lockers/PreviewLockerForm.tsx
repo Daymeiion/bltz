@@ -2,10 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { previewContent, previewIdentity, previewStatKeys, previewStatLabels, slugify, type PreviewContent, type PreviewMediaMime, type PreviewRecord } from "@/lib/preview-lockers/validation";
+import { previewEnrollment } from "@/lib/preview-lockers/conversion";
 import { readDiscovery } from "@/lib/preview-lockers/stream-client";
 import { mergeSuggestions } from "@/lib/preview-lockers/merge-suggestions";
 import PreviewViewerAccess from "./PreviewViewerAccess";
@@ -16,6 +18,8 @@ type Scalar = Exclude<keyof PreviewContent, "schools" | "pro_teams" | "awards" |
 
 export default function PreviewLockerForm({
   record,
+  enrollmentEnabled = false,
+  enrollmentContacts = [],
   reservedId,
   referralName,
   viewerAssigned = false,
@@ -23,12 +27,16 @@ export default function PreviewLockerForm({
   gtmCompleted = false,
 }: {
   record?: PreviewRecord;
+  enrollmentEnabled?: boolean;
+  enrollmentContacts?: {id:string;label:string}[];
   reservedId?: string;
   referralName?: string;
   viewerAssigned?: boolean;
   gtmLinked?: boolean;
   gtmCompleted?: boolean;
 }) {
+  const [enroll, setEnroll] = useState(enrollmentEnabled && !record && !reservedId);
+  const [enrollment, setEnrollment] = useState({contact_id:"",campaign:"",source:"",channel:"email",relationship:"warm",is_test:false});
   const [draft, setDraft] = useState<PreviewContent>(() => record ? previewContent.parse(Object.fromEntries(Object.keys(previewContent.shape).map(k => [k, record[k as keyof PreviewRecord]]))) : { ...initial(), full_name: referralName ?? "", slug: "" });
   const [busy, setBusy] = useState<"discovery" | "upload" | "save" | "complete" | null>(null);
   const [message, setMessage] = useState("");
@@ -36,8 +44,12 @@ export default function PreviewLockerForm({
   const [reviewed, setReviewed] = useState(false);
   const [completionReviewed, setCompletionReviewed] = useState(false);
   const [completed, setCompleted] = useState(gtmCompleted);
-  const [dirty, setDirty] = useState(false);
+  const [touched, setDirty] = useState(false);
+  const [leaveHref, setLeaveHref] = useState<string | null>(null);
   const [saved, setSaved] = useState<{ id: string; slug: string; revision: number } | null>(record ?? null);
+  const savedDraft = useRef(JSON.stringify(draft));
+  const initialEnrollment = useRef(JSON.stringify({enroll,enrollment}));
+  const dirty = touched && (JSON.stringify(draft) !== savedDraft.current || (!saved && JSON.stringify({enroll,enrollment}) !== initialEnrollment.current));
   const revision = useRef(record?.revision);
   const createId = useRef<string | null>(reservedId ?? null);
   const pending = useRef(false);
@@ -59,6 +71,7 @@ export default function PreviewLockerForm({
       if (target.dataset.draftDiscard === "true" && !busy) { allowDraftDiscard.current = true; return; }
       event.preventDefault();
       event.stopPropagation();
+      if (!busy) { setLeaveHref(target.href); return; }
       setMessage(busy === "discovery"
         ? "Discovery is still running in this editor. Wait for it to finish or cancel it before leaving; navigating away would stop the admitted run."
         : busy
@@ -91,23 +104,25 @@ export default function PreviewLockerForm({
     } catch (cause) { if (!controller.signal.aborted) setError(cause instanceof Error ? cause.message : "Discovery unavailable. Continue manually."); }
     finally { pending.current = false; setBusy(null); abort.current = null; }
   }
-  async function save() {
-    if (pending.current || !reviewed) return;
+  async function save(asDraft = false) {
+    if (pending.current || (!asDraft && !reviewed)) return;
     const parsed = previewContent.safeParse(draft);
     if (!parsed.success) { setError(parsed.error.issues.map(issue => `${issue.path.join(".")}: ${issue.message}`).slice(0, 5).join("; ")); return; }
+    const enrollmentData = !asDraft && !saved && enroll ? previewEnrollment.safeParse(enrollment) : null;
+    if (enrollmentData && !enrollmentData.success) { setError("Choose a GTM contact and enter campaign and source codes (letters, numbers, hyphens or underscores)."); return; }
     pending.current = true; setBusy("save"); setError("");
     createId.current ??= crypto.randomUUID();
     try {
       const response = await fetch(saved ? `/api/preview-lockers/${saved.id}` : "/api/preview-lockers", {
         method: saved ? "PATCH" : "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(saved ? { revision: revision.current, content: parsed.data } : { id: createId.current, content: parsed.data }),
+        body: JSON.stringify(saved ? { revision: revision.current, content: parsed.data } : { id: createId.current, content: parsed.data, ...(enrollmentData?.success ? { enrollment: enrollmentData.data } : {}) }),
       });
-      if (!response.ok) throw new Error(response.status === 409 ? "Save conflict: this slug is in use, the record changed, or an earlier save may have completed. Your draft is retained. Open the saved list before retrying." : response.status === 401 || response.status === 403 ? "Your Admin session is no longer authorized. Sign in again before saving." : "Save failed. Your draft is retained; retry is safe.");
-      const data = await response.json(); setSaved(data); revision.current = data.revision; setReviewed(false); setCompletionReviewed(false); setDirty(false);
+      if (!response.ok) throw new Error(response.status === 409 ? "Save conflict: this slug or GTM contact may already be linked, enrollment details changed, or the record changed. Your draft is retained. Open the saved list before retrying." : response.status === 401 || response.status === 403 ? "Your Admin session is no longer authorized. Sign in again before saving." : "Save failed. Your draft is retained; retry is safe.");
+      const data = await response.json(); savedDraft.current = JSON.stringify(parsed.data); setSaved(data); revision.current = data.revision; setReviewed(false); setCompletionReviewed(false); setDirty(false);
       if (gtmLinked) setCompleted(data.complete === true);
-      setMessage(data.completionStatus === "unavailable"
+      setMessage(asDraft ? "Draft saved privately. You can close this editor and resume from the preview list. No new enrollment or completion was recorded." : data.completionStatus === "unavailable"
         ? "Saved privately. Completion status could not be refreshed; reload before marking this preview complete."
-        : "Saved privately. No canonical athlete, claim, or public Locker was created.");
+        : data.enrolled ? "Preview created and enrolled in the conversion funnel. Assign viewer access separately, then mark the invitation sent after outreach." : "Saved privately. No canonical athlete, claim, or public Locker was created.");
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Save failed. Your draft is retained."); }
     finally { pending.current = false; setBusy(null); }
   }
@@ -156,13 +171,18 @@ export default function PreviewLockerForm({
     } finally { pending.current = false; setBusy(null); }
   }
   return <div className="space-y-6">
+    <div className="flex flex-wrap justify-end gap-3"><Button type="button" variant="outline" disabled={!!busy} onClick={()=>void save(true)}>Save draft</Button><Link href="/admin/preview-lockers" className="inline-flex min-h-11 items-center rounded-lg border px-4 text-sm font-semibold focus-visible:outline focus-visible:outline-[#ffbb00]">Close preview</Link></div>
+    <AlertDialog open={leaveHref !== null} onOpenChange={open=>{if(!open)setLeaveHref(null);}}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Leave this preview?</AlertDialogTitle><AlertDialogDescription>Your unsaved changes will be discarded. The last saved preview, if any, will remain unchanged.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Stay and edit</AlertDialogCancel><AlertDialogAction onClick={()=>{if(leaveHref){allowDraftDiscard.current=true;window.location.assign(leaveHref);}}}>Discard and leave</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
+
     <p className="text-sm">Private demo only. Media suggestions are unverified; saving does not grant rights or create an Athlete Career ID.</p>
     {message && <p role="status" className="rounded-lg border p-3">{message}</p>}
     {error && <p role="alert" className="rounded-lg border border-red-500 p-3">{error}</p>}
     <fieldset disabled={!!busy} className="space-y-6 disabled:opacity-70">
       <legend className="mb-4 text-xl font-semibold">Identity and presentation</legend>
+        {!saved && enrollmentEnabled && !reservedId && <section className="space-y-4 rounded-xl border border-neutral-300 p-4 dark:border-slate-700"><h2 className="font-semibold">Conversion tracking</h2><label className="flex min-h-11 items-center gap-3"><input type="checkbox" checked={enroll} onChange={e=>{setEnroll(e.target.checked);setDirty(true);setReviewed(false);}}/>Create and enroll in the preview funnel</label>{enroll ? <><div className="grid gap-4 sm:grid-cols-2"><label className="grid gap-2 text-sm">GTM contact<select aria-label="Enrollment GTM contact" className="min-h-11 rounded border bg-background p-2" value={enrollment.contact_id} onChange={e=>{setEnrollment({...enrollment,contact_id:e.target.value});setDirty(true);setReviewed(false);}}><option value="">Select the intended athlete</option>{enrollmentContacts.map(c=><option key={c.id} value={c.id}>{c.label}</option>)}</select></label>{([['campaign','Campaign / batch'],['source','Source code']] as const).map(([key,label])=><label key={key} className="grid gap-2 text-sm">{label}<Input aria-label={label} maxLength={80} value={enrollment[key]} onChange={e=>{setEnrollment({...enrollment,[key]:e.target.value});setDirty(true);setReviewed(false);}}/></label>)}<label className="grid gap-2 text-sm">Outreach channel<select className="min-h-11 rounded border bg-background p-2" value={enrollment.channel} onChange={e=>{setEnrollment({...enrollment,channel:e.target.value});setDirty(true);setReviewed(false);}}>{['email','linkedin','sms','in_person','referral','other'].map(v=><option key={v} value={v}>{v.replaceAll('_',' ')}</option>)}</select></label><label className="grid gap-2 text-sm">Relationship<select className="min-h-11 rounded border bg-background p-2" value={enrollment.relationship} onChange={e=>{setEnrollment({...enrollment,relationship:e.target.value});setDirty(true);setReviewed(false);}}><option value="warm">Warm</option><option value="cold">Cold</option></select></label><label className="flex min-h-11 items-center gap-3 text-sm"><input type="checkbox" checked={enrollment.is_test} onChange={e=>{setEnrollment({...enrollment,is_test:e.target.checked});setDirty(true);setReviewed(false);}}/>Test preview (exclude from metrics)</label></div><p className="text-xs text-neutral-500">One preview per GTM contact. Campaign attribution is saved once. Creating and enrolling does not send an invitation or grant viewer access.</p>{!enrollmentContacts.length && <p className="text-sm">No active GTM contacts. Add the athlete in GTM first, or turn off enrollment to save a preview-only draft.</p>}</> : <p className="text-sm text-neutral-500">Save a private draft now. You can enroll it later from the preview funnel.</p>}</section>}
       <div className="grid gap-4 sm:grid-cols-2">
-        <label className="grid gap-2 text-sm">Full name<Input aria-label="Full name" maxLength={120} value={draft.full_name} onChange={event => change({ full_name: event.target.value, ...(!saved ? { slug: slugify(event.target.value) } : {}) })} /></label>
+
+      <label className="grid gap-2 text-sm">Full name<Input aria-label="Full name" maxLength={120} value={draft.full_name} onChange={event => change({ full_name: event.target.value, ...(!saved ? { slug: slugify(event.target.value) } : {}) })} /></label>
         {field("slug", "Private URL slug", 80)}{field("school", "School")}{field("position", "Position", 60)}
         <label className="grid gap-2 text-sm">Career level<select aria-label="Career level" className="h-10 rounded-md border bg-background px-3" value={draft.level ?? ""} onChange={event => change({ level: (event.target.value || null) as PreviewContent["level"] })}><option value="">Not recorded</option><option value="hs">High school</option><option value="college">College</option><option value="pro">Professional</option><option value="former">Former athlete</option></select></label>
         {field("hometown", "Hometown")}{field("jersey", "Jersey", 10)}{field("height_in", "Height (inches)", 2, true)}{field("weight_lbs", "Weight (lbs)", 3, true)}{field("games_played", "Games played", 4, true)}
@@ -177,7 +197,7 @@ export default function PreviewLockerForm({
       <section className="space-y-3"><h2 className="font-semibold">Videos · {draft.videos.length}/24</h2>{saved ? <label className="grid gap-2 text-sm font-medium">Upload multiple private videos<Input aria-label="Upload multiple private videos" type="file" multiple accept="video/mp4,video/webm,video/quicktime" onChange={event => { void uploadFiles("video", event.target.files); event.target.value = ""; }} /><span className="font-normal">MP4, WebM, or MOV. Up to 250 MB each. Uploads stay private and must be saved into this draft.</span></label> : <p className="text-sm">Save the private preview once before uploading video files.</p>}{draft.videos.map((video, index) => <fieldset className="space-y-2 rounded-lg border p-3" key={video.id}><legend>Video {index + 1}</legend><Input aria-label={`Video ${index + 1} title`} placeholder="Title" maxLength={160} value={video.title} onChange={e => change({ videos: draft.videos.map((v, i) => i === index ? { ...v, title: e.target.value } : v) })} />{"url" in video ? <><Input aria-label={`Video ${index + 1} url`} placeholder="url HTTPS URL" maxLength={2048} value={video.url} onChange={e => change({ videos: draft.videos.map((v, i) => i === index ? { id: v.id, title: v.title, url: e.target.value, thumb: v.thumb } : v) })} /><Input aria-label={`Video ${index + 1} thumb`} placeholder="thumb HTTPS URL" maxLength={2048} value={video.thumb ?? ""} onChange={e => change({ videos: draft.videos.map((v, i) => i === index && "url" in v ? { ...v, thumb: e.target.value || null } : v) })} /></> : <p className="text-sm">Private uploaded file · {video.mimeType}</p>}<Button type="button" variant="outline" onClick={() => change({ videos: draft.videos.filter((_, i) => i !== index) })}>Remove video from draft</Button></fieldset>)}<Button type="button" variant="outline" disabled={draft.videos.length >= 24} onClick={() => change({ videos: [...draft.videos, { id: crypto.randomUUID(), title: "", url: "", thumb: null }] })}>Add video</Button></section>
       <section className="space-y-3"><h2 className="font-semibold">Photos · {draft.photos.length}/40</h2>{saved ? <label className="grid gap-2 text-sm font-medium">Upload multiple private photos<Input aria-label="Upload multiple private photos" type="file" multiple accept="image/jpeg,image/png,image/webp" onChange={event => { void uploadFiles("photo", event.target.files); event.target.value = ""; }} /><span className="font-normal">JPG, PNG, or WebP. Up to 10 MB each. Uploads stay private and must be saved into this draft.</span></label> : <p className="text-sm">Save the private preview once before uploading photo files.</p>}{draft.photos.map((photo, index) => <fieldset className="space-y-2 rounded-lg border p-3" key={photo.id}><legend>Photo {index + 1}</legend><Input aria-label={`Photo ${index + 1} title`} placeholder="title" maxLength={160} value={photo.title} onChange={e => change({ photos: draft.photos.map((v, i) => i === index ? { ...v, title: e.target.value } : v) })} />{"url" in photo ? <Input aria-label={`Photo ${index + 1} url`} placeholder="url" maxLength={2048} value={photo.url} onChange={e => change({ photos: draft.photos.map((v, i) => i === index ? { ...v, url: e.target.value } : v) })} /> : <p className="text-sm">Private uploaded file · {photo.mimeType}</p>}{(["credits", "sourceUrl", "season"] as const).map(key => <Input key={key} aria-label={`Photo ${index + 1} ${key}`} placeholder={key} maxLength={key === "credits" ? 300 : key === "season" ? 20 : 2048} value={photo[key] ?? ""} onChange={e => change({ photos: draft.photos.map((v, i) => i === index ? { ...v, [key]: e.target.value || null } : v) })} />)}<select aria-label={`Photo ${index + 1} level`} className="h-10 rounded-md border bg-background px-3" value={photo.level} onChange={e => change({ photos: draft.photos.map((v, i) => i === index ? { ...v, level: e.target.value as typeof photo.level } : v) })}>{["hs", "cfb", "pro", "off-field"].map(level => <option key={level}>{level}</option>)}</select><Button type="button" variant="outline" onClick={() => change({ photos: draft.photos.filter((_, i) => i !== index) })}>Remove photo from draft</Button></fieldset>)}<Button type="button" variant="outline" disabled={draft.photos.length >= 40} onClick={() => change({ photos: [...draft.photos, { id: crypto.randomUUID(), title: "", url: "", credits: null, sourceUrl: null, season: null, level: "off-field" }] })}>Add photo</Button></section>
       <label className="flex items-start gap-3"><input type="checkbox" checked={reviewed} onChange={e => setReviewed(e.target.checked)} className="mt-1 h-5 w-5" />I reviewed this draft for private demo use. This is not public publication or rights verification.</label>
-      <Button type="button" disabled={!reviewed} onClick={save}>{saved ? "Save changes privately" : "Save private preview"}</Button>
+      <div className="flex flex-wrap gap-3"><Button type="button" variant="outline" onClick={()=>void save(true)}>Save draft</Button><Button type="button" disabled={!reviewed} onClick={()=>void save()}>{saved ? "Save changes privately" : (!saved && enroll ? "Create and enroll preview" : "Save private preview")}</Button></div><p className="text-sm text-muted-foreground">Save draft keeps your progress without enrollment or completion review. Enter a name and valid URL slug; other sections can wait. Existing assigned viewers can still see saved changes.</p>
       {saved && gtmLinked && <section className="space-y-3 rounded-lg border p-4" aria-labelledby="preview-completion-heading">
         <div>
           <h2 id="preview-completion-heading" className="font-semibold">Cohort preview status</h2>
