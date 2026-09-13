@@ -3,8 +3,10 @@ import { resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import {
   OrganizationContextAccessError,
+  listAccessibleOrganizationsWithReader,
   resolveOrganizationContextWithReader,
   type OrganizationContextReader,
+  type OrganizationDirectoryReader,
 } from "@/lib/organization/context";
 import { hasOrganizationRole, type OrganizationContext } from "@/lib/organization/types";
 
@@ -27,6 +29,32 @@ function createReader(
       status: "approved",
       school_id: null,
     }),
+    isInternalAdmin: vi.fn().mockResolvedValue(false),
+    ...overrides,
+  };
+}
+
+function createDirectoryReader(
+  overrides: Partial<OrganizationDirectoryReader> = {},
+): OrganizationDirectoryReader {
+  return {
+    getAuthenticatedUserId: vi.fn().mockResolvedValue(USER_ID),
+    getActiveMemberships: vi.fn().mockResolvedValue([
+      {
+        id: "33333333-3333-4333-8333-333333333333",
+        organization_id: ORGANIZATION_ID,
+        role: "media_manager",
+      },
+    ]),
+    getOperationalOrganizations: vi.fn().mockResolvedValue([
+      {
+        id: ORGANIZATION_ID,
+        name: "BLTZ Test Organization",
+        organization_type: "team",
+        status: "approved",
+        school_id: null,
+      },
+    ]),
     isInternalAdmin: vi.fn().mockResolvedValue(false),
     ...overrides,
   };
@@ -162,5 +190,88 @@ describe("server organization context", () => {
     expect(normalized).toContain('supabase.rpc("is_internal_admin")');
     expect(normalized).not.toContain("profiles.role");
     expect(normalized).not.toContain("user_metadata");
+  });
+});
+
+describe("server organization directory", () => {
+  it("requires the authenticated server session before listing tenant access", async () => {
+    const reader = createDirectoryReader({
+      getAuthenticatedUserId: vi.fn().mockResolvedValue(null),
+    });
+
+    await expect(listAccessibleOrganizationsWithReader(reader)).resolves.toEqual({
+      ok: false,
+      reason: "unauthenticated",
+    });
+    expect(reader.getActiveMemberships).not.toHaveBeenCalled();
+    expect(reader.getOperationalOrganizations).not.toHaveBeenCalled();
+  });
+
+  it("lists only operational organizations reached through active valid memberships", async () => {
+    const reader = createDirectoryReader();
+    const result = await listAccessibleOrganizationsWithReader(reader);
+
+    expect(result).toEqual({
+      ok: true,
+      userId: USER_ID,
+      organizations: [
+        {
+          organization: {
+            id: ORGANIZATION_ID,
+            name: "BLTZ Test Organization",
+            organizationType: "team",
+            status: "approved",
+            schoolId: null,
+          },
+          access: {
+            scope: "organization",
+            membershipId: "33333333-3333-4333-8333-333333333333",
+            role: "media_manager",
+          },
+        },
+      ],
+    });
+    expect(reader.getActiveMemberships).toHaveBeenCalledWith(USER_ID);
+    expect(reader.getOperationalOrganizations).toHaveBeenCalledWith([ORGANIZATION_ID]);
+  });
+
+  it("allows a database-assigned super admin to switch across operational tenants", async () => {
+    const secondOrganizationId = "44444444-4444-4444-8444-444444444444";
+    const reader = createDirectoryReader({
+      isInternalAdmin: vi.fn().mockResolvedValue(true),
+      getOperationalOrganizations: vi.fn().mockResolvedValue([
+        {
+          id: secondOrganizationId,
+          name: "Alpha Athletics",
+          organization_type: "school",
+          status: "restricted",
+          school_id: null,
+        },
+        {
+          id: ORGANIZATION_ID,
+          name: "BLTZ Test Organization",
+          organization_type: "team",
+          status: "approved",
+          school_id: null,
+        },
+      ]),
+    });
+
+    const result = await listAccessibleOrganizationsWithReader(reader);
+
+    expect(reader.getOperationalOrganizations).toHaveBeenCalledWith(undefined);
+    expect(result).toMatchObject({
+      ok: true,
+      organizations: [
+        {
+          organization: { id: secondOrganizationId },
+          access: { scope: "platform", role: "super_admin" },
+        },
+        {
+          organization: { id: ORGANIZATION_ID },
+          access: { scope: "organization", role: "media_manager" },
+        },
+      ],
+    });
   });
 });

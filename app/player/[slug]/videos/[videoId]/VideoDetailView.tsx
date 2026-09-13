@@ -28,6 +28,7 @@ import styles from "./video-detail.module.css";
 
 export type VideoDetailData = {
   slug: string;
+  lockerHref?: string;
   athleteName: string;
   athleteHeadshotUrl: string;
   accentColor: string;
@@ -94,10 +95,10 @@ function teammateInitials(name: string): string {
     .toUpperCase();
 }
 
-function VideoListItem({ video, slug, current }: { video: PublicVideo; slug: string; current: boolean }) {
+function VideoListItem({ video, lockerHref, current }: { video: PublicVideo; lockerHref: string; current: boolean }) {
   return (
     <Link
-      href={`/player/${slug}/videos/${video.id}`}
+      href={`${lockerHref}/videos/${video.id}`}
       className={`${styles.episode} ${current ? styles.episodeActive : ""}`}
       aria-current={current ? "page" : undefined}
     >
@@ -345,18 +346,18 @@ export default function VideoDetailView({ data }: { data: VideoDetailData }) {
   return (
     <main className={styles.page} style={{ "--video-accent": data.accentColor } as React.CSSProperties}>
       <header className={styles.header}>
-        <Link href={`/player/${data.slug}`} className={styles.brand} aria-label={`${data.athleteName} Player Locker`}>
+        <Link href={data.lockerHref ?? `/player/${data.slug}`} className={styles.brand} aria-label={`${data.athleteName} Player Locker`}>
           <Image src="/images/bltz-mark.svg" alt="BLTZ" width={44} height={46} priority />
         </Link>
         <nav className={styles.headerNav} aria-label="Film navigation">
-          <Link href={`/player/${data.slug}`}>Locker</Link>
-          <Link href={`/player/${data.slug}/videos`}>Film Room</Link>
+          <Link href={data.lockerHref ?? `/player/${data.slug}`}>Locker</Link>
+          <Link href={`${data.lockerHref ?? `/player/${data.slug}`}/videos`}>Film Room</Link>
         </nav>
         <div className={styles.headerActions}>
-          <Link href={`/player/${data.slug}/videos`} className={styles.searchAction} aria-label="Browse Film Room">
+          <Link href={`${data.lockerHref ?? `/player/${data.slug}`}/videos`} className={styles.searchAction} aria-label="Browse Film Room">
             <Search aria-hidden="true" />
           </Link>
-          <Link href={`/player/${data.slug}`} className={styles.avatar} aria-label={`View ${data.athleteName}'s Locker`}>
+          <Link href={data.lockerHref ?? `/player/${data.slug}`} className={styles.avatar} aria-label={`View ${data.athleteName}'s Locker`}>
             <Image src={data.athleteHeadshotUrl} alt="" fill sizes="40px" />
           </Link>
         </div>
@@ -364,9 +365,9 @@ export default function VideoDetailView({ data }: { data: VideoDetailData }) {
 
       <div className={styles.shell}>
         <nav className={styles.breadcrumbs} aria-label="Breadcrumb">
-          <Link href={`/player/${data.slug}`}>{data.athleteName}</Link>
+          <Link href={data.lockerHref ?? `/player/${data.slug}`}>{data.athleteName}</Link>
           <span>/</span>
-          <Link href={`/player/${data.slug}/videos`}>Film Room</Link>
+          <Link href={`${data.lockerHref ?? `/player/${data.slug}`}/videos`}>Film Room</Link>
           <span>/</span>
           <span>{data.video.title}</span>
         </nav>
@@ -380,7 +381,9 @@ export default function VideoDetailView({ data }: { data: VideoDetailData }) {
               onMouseMove={handlePlayerInteraction}
               onPointerDown={handlePlayerInteraction}
             >
-              {data.video.playbackUrl ? (
+              {data.video.embedUrl ? (
+                <iframe src={data.video.embedUrl} title={data.video.title} allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0, zIndex: 4 }} />
+              ) : data.video.playbackUrl ? (
                 <video
                   ref={videoRef}
                   src={data.video.playbackUrl}
@@ -514,7 +517,7 @@ export default function VideoDetailView({ data }: { data: VideoDetailData }) {
                     </summary>
                     <div className={styles.episodeList}>
                       {group.videos.map((video) => (
-                        <VideoListItem key={video.id} video={video} slug={data.slug} current={video.id === data.video.id} />
+                        <VideoListItem key={video.id} video={video} lockerHref={data.lockerHref ?? `/player/${data.slug}`} current={video.id === data.video.id} />
                       ))}
                     </div>
                   </details>
@@ -611,7 +614,7 @@ export default function VideoDetailView({ data }: { data: VideoDetailData }) {
               </section>
             )}
 
-            <Link href={`/player/${data.slug}/videos`} className={styles.backLink}>
+            <Link href={`${data.lockerHref ?? `/player/${data.slug}`}/videos`} className={styles.backLink}>
               <Link2 aria-hidden="true" />
               View full Film Room
             </Link>

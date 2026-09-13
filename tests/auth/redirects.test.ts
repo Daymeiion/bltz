@@ -16,6 +16,13 @@ describe("authenticated redirect selection", () => {
     expect(getSafeInternalNext("?next=%2Fauth%2Flogin")).toBeNull();
   });
 
+  it.each(["/\\evil.invalid", "/a/..//evil.invalid", "/%2fevil.invalid", "/%252fevil.invalid",
+    "/%5cevil.invalid", "/%0a/evil.invalid", "/\n/evil.invalid", "/\t/evil.invalid"])(
+    "rejects ambiguous or encoded redirect %s", next => {
+      expect(getSafeInternalPath(next)).toBeNull();
+    },
+  );
+
   it("selects a useful default by role", () => {
     expect(getDefaultAuthenticatedPath("admin")).toBe("/admin/beta");
     expect(getDefaultAuthenticatedPath("player")).toBe("/dashboard");

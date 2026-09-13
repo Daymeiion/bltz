@@ -1,7 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { isPublicPath, shouldRedirectToOnboarding, shouldUseTestAuth } from "@/lib/supabase/middleware";
 
 describe("isPublicPath", () => {
+  afterEach(() => vi.unstubAllEnvs());
+
   it("treats root, auth, api, and locker pages as public", () => {
     expect(isPublicPath("/")).toBe(true);
     expect(isPublicPath("/favicon.ico")).toBe(true);
@@ -9,12 +11,24 @@ describe("isPublicPath", () => {
     expect(isPublicPath("/api/onboarding/start")).toBe(true);
     expect(isPublicPath("/_next/static/foo.js")).toBe(true);
     expect(isPublicPath("/player/daymeion-hughes")).toBe(true);
+    expect(isPublicPath("/preview-lockers/demo-player")).toBe(true);
   });
 
-  it("treats /dashboard and /onboarding as private", () => {
+  it("treats application routes as private outside development preview mode", () => {
     expect(isPublicPath("/dashboard")).toBe(false);
     expect(isPublicPath("/onboarding")).toBe(false);
     expect(isPublicPath("/onboarding/loader")).toBe(false);
+    expect(isPublicPath("/organization/preview")).toBe(false);
+    expect(isPublicPath("/organization/preview/media")).toBe(false);
+  });
+
+  it("allows the complete CRM preview tree in development only", () => {
+    vi.stubEnv("NODE_ENV", "development");
+
+    expect(isPublicPath("/organization/preview")).toBe(true);
+    expect(isPublicPath("/organization/preview/players")).toBe(true);
+    expect(isPublicPath("/organization/preview/reports")).toBe(true);
+    expect(isPublicPath("/organization/not-preview")).toBe(false);
   });
 });
 

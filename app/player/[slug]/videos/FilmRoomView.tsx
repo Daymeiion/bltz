@@ -7,6 +7,7 @@ import { ArrowUpRight, ChevronLeft, ChevronRight, Maximize, Minimize, Pause, Pla
 import type { SearchResult } from "@/components/ui/search-modal";
 import type { PublicVideo } from "@/lib/player/public-video";
 import { trackProductEvent } from "@/lib/analytics/client";
+import { VideoPreview } from "@/components/player/VideoPreview";
 import styles from "./film-room.module.css";
 
 export type FilmRoomVideo = PublicVideo;
@@ -14,6 +15,7 @@ export type FilmRoomVideo = PublicVideo;
 export type FilmRoomData = {
   athleteId: string | null;
   slug: string;
+  lockerHref?: string;
   athleteName: string;
   athleteHeadshotUrl: string;
   accentColor: string;
@@ -59,11 +61,7 @@ function FilmCard({
       data-gallery-id={video.id}
     >
       <span className={styles.cardVisual}>
-        {video.thumbnailUrl ? (
-          <Image src={video.thumbnailUrl} alt="" fill sizes="(max-width: 640px) 46vw, 260px" />
-        ) : (
-          <span className={styles.cardFallback} />
-        )}
+        <VideoPreview title={video.title} thumbnailUrl={video.thumbnailUrl} playbackUrl={video.playbackUrl} embedUrl={video.embedUrl} />
         <span className={styles.cardStatus}>RISING</span>
         <span className={styles.cardPlay}><Play aria-hidden="true" fill="currentColor" /></span>
         <span className={styles.cardDuration}>{formatDuration(video.durationSeconds)}</span>
@@ -356,14 +354,14 @@ export default function FilmRoomView({ data }: { data: FilmRoomData }) {
     <main className={styles.page} style={{ "--film-accent": data.accentColor } as React.CSSProperties}>
       <div className={styles.shell}>
         <header className={styles.header}>
-          <Link href={`/player/${data.slug}`} className={styles.brand} aria-label="BLTZ Player Locker">
+          <Link href={data.lockerHref ?? `/player/${data.slug}`} className={styles.brand} aria-label="BLTZ Player Locker">
             <Image src="/images/bltz-mark.svg" alt="BLTZ" width={38} height={39} priority />
           </Link>
           <div className={styles.headerActions}>
             <button type="button" className={styles.iconButton} onClick={() => setSearchOpen(true)} aria-label="Search BLTZ">
               <Search aria-hidden="true" />
             </button>
-            <Link href={`/player/${data.slug}`} className={styles.avatar} aria-label={`View ${data.athleteName}'s locker`}>
+            <Link href={data.lockerHref ?? `/player/${data.slug}`} className={styles.avatar} aria-label={`View ${data.athleteName}'s locker`}>
               <Image src={data.athleteHeadshotUrl} alt="" fill sizes="42px" />
             </Link>
           </div>
@@ -384,7 +382,9 @@ export default function FilmRoomView({ data }: { data: FilmRoomData }) {
                 onFocusCapture={() => setControlsVisible(true)}
               >
                 <div className={styles.featuredViewport}>
-                {selected.playbackUrl ? (
+                {selected.embedUrl ? (
+                  <iframe src={selected.embedUrl} title={selected.title} allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen style={{ position: "absolute", inset: 0, width: "100%", height: "calc(100% - 90px)", border: 0, zIndex: 4 }} />
+                ) : selected.playbackUrl ? (
                   <video
                     ref={videoRef}
                     src={selected.playbackUrl}
@@ -431,8 +431,8 @@ export default function FilmRoomView({ data }: { data: FilmRoomData }) {
                 ) : null}
                 <div className={styles.sourceBadge}>{selected.sourceLabel}</div>
                 <div className={`${styles.mediaShade} ${controlsVisible ? styles.mediaShadeVisible : styles.mediaShadeHidden}`} />
-                <div className={`${styles.controls} ${controlsVisible ? styles.controlsVisible : styles.controlsHidden}`}>
-                  <div className={styles.controlRow}>
+                <div className={`${styles.controls} ${controlsVisible || selected.embedUrl ? styles.controlsVisible : styles.controlsHidden}`}>
+                  <div className={styles.controlRow} style={selected.embedUrl ? { display: "none" } : undefined}>
                     <button type="button" onClick={togglePlayback} disabled={!selected.playbackUrl} aria-label={playing ? "Pause film" : "Play film"}>
                       {playing ? <Pause aria-hidden="true" fill="currentColor" /> : <Play aria-hidden="true" fill="currentColor" />}
                     </button>
@@ -465,7 +465,7 @@ export default function FilmRoomView({ data }: { data: FilmRoomData }) {
                     </span>
                     <Link
                       className={styles.detailLink}
-                      href={`/player/${data.slug}/videos/${selected.id}`}
+                      href={`${data.lockerHref ?? `/player/${data.slug}`}/videos/${selected.id}`}
                       aria-label={`Open details for ${selected.title}`}
                     >
                       <ArrowUpRight aria-hidden="true" />

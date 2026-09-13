@@ -16,6 +16,7 @@ import {
   IconShield,
   IconMessageCircle,
   IconFlask,
+  IconUserSearch,
 } from "@tabler/icons-react";
 
 interface SidebarLink {
@@ -58,6 +59,11 @@ export function AdminSidebar() {
       label: "Beta Intelligence",
       href: "/admin/beta",
       icon: <IconFlask className="h-5 w-5 flex-shrink-0" />,
+    },
+    {
+      label: "Preview Lockers",
+      href: "/admin/preview-lockers",
+      icon: <IconUserSearch className="h-5 w-5 flex-shrink-0" />,
     },
     {
       label: "Settings",

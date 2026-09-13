@@ -6,6 +6,7 @@ export type PublicVideo = {
   description: string | null;
   thumbnailUrl: string | null;
   playbackUrl: string | null;
+  embedUrl?: string | null;
   durationSeconds: number | null;
   level: PublicVideoLevel;
   season: string | null;
@@ -79,33 +80,19 @@ export function toPublicVideo(row: PublicVideoRow, athleteName: string): PublicV
 }
 
 export function createMockPublicVideos(athleteName: string): PublicVideo[] {
-  const base = [
-    ["hs-2021", "HIGH SCHOOL SENIOR FILM", "hs", "2021", 126],
-    ["hs-2020", "BREAKOUT JUNIOR SEASON", "hs", "2020", 98],
-    ["cfb-2025", "2025 SEASON HIGHLIGHTS", "cfb", "2025", 167],
-    ["cfb-2024", "2024 SEASON HIGHLIGHTS", "cfb", "2024", 132],
-    ["cfb-2023", "TOP PLAYS: SOPHOMORE SEASON", "cfb", "2023", 104],
-    ["cfb-2022", "FRESHMAN ARRIVAL", "cfb", "2022", 89],
-    ["pro-2028", "PRO SEASON FILM", "pro", "2028", 143],
-    ["pro-2027", "SUNDAYS: THE FULL CUT", "pro", "2027", 118],
-    ["pro-2026", "ROOKIE YEAR HIGHLIGHTS", "pro", "2026", 96],
-    ["off-field-2025", "COMMUNITY DAY FEATURE", "off-field", "2025", 74],
-    ["off-field-2024", "LOCKER ROOM INTERVIEW", "off-field", "2024", 92],
-    ["off-field-2023", "TRAINING CAMP PROFILE", "off-field", "2023", 81],
-  ] as const;
-
-  return base.map(([id, title, level, season, durationSeconds], index) => ({
-    id,
-    title,
-    description: `${athleteName}'s ${season} film collection, preserved in the BLTZ Player Locker.`,
-    thumbnailUrl: null,
-    playbackUrl: "/videos/demo-reel.mp4",
-    durationSeconds,
-    level,
-    season,
-    attribution: `${athleteName} / BLTZ`,
-    sourceLabel: "BLTZ FILM",
-    tags: [level, season, "highlights"],
-    publishedAt: new Date(Date.UTC(2026, 6, Math.max(1, 28 - index))).toISOString(),
+  return MOCK_VIDEOS.map((video) => ({
+    id: video.id,
+    title: video.title,
+    description: video.description,
+    thumbnailUrl: video.thumbnail,
+    playbackUrl: video.src,
+    durationSeconds: video.durationSeconds,
+    level: video.level,
+    season: video.season,
+    attribution: athleteName,
+    sourceLabel: "PRIVATE FILM",
+    tags: video.tags,
+    publishedAt: null,
   }));
 }
+import { MOCK_VIDEOS } from "@/lib/mock";

@@ -39,6 +39,29 @@ export interface OrganizationContext {
   access: OrganizationAccess;
 }
 
+export interface AccessibleOrganization {
+  organization: OrganizationSummary;
+  access: OrganizationAccess;
+}
+
+export interface OrganizationTeamOption {
+  id: string;
+  name: string;
+  sport: string | null;
+}
+
+export interface OrganizationSeasonOption {
+  id: string;
+  seasonCode: string;
+  sport: string;
+  status: string;
+}
+
+export interface OrganizationWorkspaceOptions {
+  teams: OrganizationTeamOption[];
+  seasons: OrganizationSeasonOption[];
+}
+
 export function isOrganizationRole(value: string): value is OrganizationRole {
   return ORGANIZATION_ROLES.some((role) => role === value);
 }

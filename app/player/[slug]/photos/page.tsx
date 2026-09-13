@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { MOCK_PLAYERS } from "@/lib/mock";
+import { MOCK_MEDIA, MOCK_PLAYERS } from "@/lib/mock";
 import { createClient } from "@/lib/supabase/server";
 import PhotoRoomView, { type PhotoRoomData, type PhotoRoomImage } from "./PhotoRoomView";
 
@@ -93,28 +93,30 @@ function toPhotoRoomImage(row: MediaPhotoRow, index: number): PhotoRoomImage {
 function mockPhotoRoom(slug: string): PhotoRoomData {
   const player = MOCK_PLAYERS.find((item) => item.slug === slug) ?? MOCK_PLAYERS[0];
   const athleteName = player?.full_name ?? "Demo Player";
-  const sourceImages = [
-    "/images/media-5.jpg",
-    "/images/media-6.jpg",
-    "/images/media-9.jpg",
-    "/images/Media-4.avif",
-    "/images/SilverHero1.png",
-    "/images/Awards/CardImage.png",
-  ];
-  const base = [
-    ["hs-2021-1", "High school Friday night", "hs", "2021", sourceImages[4]],
-    ["hs-2020-1", "Senior season portrait", "hs", "2020", sourceImages[5]],
-    ["cfb-2025-1", "2025 sideline arrival", "cfb", "2025", sourceImages[0]],
-    ["cfb-2025-2", "Fourth quarter focus", "cfb", "2025", sourceImages[1]],
-    ["cfb-2024-1", "Practice field work", "cfb", "2024", sourceImages[2]],
-    ["cfb-2023-1", "Tunnel walk", "cfb", "2023", sourceImages[3]],
-    ["pro-2028-1", "Pro media day", "pro", "2028", sourceImages[4]],
-    ["pro-2027-1", "Sunday warmups", "pro", "2027", sourceImages[5]],
-    ["pro-2026-1", "Rookie portrait", "pro", "2026", sourceImages[0]],
-    ["off-field-2025-1", "Community visit", "off-field", "2025", sourceImages[1]],
-    ["off-field-2024-1", "Interview room", "off-field", "2024", sourceImages[2]],
-    ["off-field-2023-1", "Training day", "off-field", "2023", sourceImages[3]],
-  ] as const;
+  const photoContext: Record<string, { level: PhotoLevel; season: string | null }> = {
+    "dante-01": { level: "cfb", season: "2006" },
+    "dante-02": { level: "cfb", season: "2006" },
+    "dante-03": { level: "off-field", season: null },
+    "dante-04": { level: "cfb", season: "2004" },
+    "dante-05": { level: "pro", season: "2007" },
+    "dante-06": { level: "pro", season: "2007" },
+    "dante-07": { level: "pro", season: "2007" },
+    "dante-08": { level: "pro", season: "2007" },
+    "dante-09": { level: "pro", season: "2008" },
+    "dante-10": { level: "pro", season: "2009" },
+    "dante-11": { level: "pro", season: "2011" },
+    "dante-12": { level: "cfb", season: "2006" },
+    "dante-13": { level: "pro", season: "2011" },
+    "dante-14": { level: "pro", season: "2011" },
+    "dante-15": { level: "pro", season: "2008" },
+    "dante-16": { level: "off-field", season: null },
+    "dante-17": { level: "cfb", season: "2006" },
+    "dante-18": { level: "pro", season: "2008" },
+    "dante-19": { level: "pro", season: "2010" },
+    "dante-20": { level: "pro", season: "2011" },
+    "dante-21": { level: "pro", season: "2007" },
+    "dante-22": { level: "pro", season: "2007" },
+  };
 
   return {
     athleteId: null,
@@ -122,15 +124,13 @@ function mockPhotoRoom(slug: string): PhotoRoomData {
     athleteName,
     athleteHeadshotUrl: "/images/Headshot.png",
     accentColor: "#ffbb00",
-    images: base.map(([id, title, level, season, url]) => ({
-      id,
-      title,
-      url,
-      credits: `${athleteName} / BLTZ`,
+    images: MOCK_MEDIA.map((photo) => ({
+      ...photo,
+      credits: null,
       sourceUrl: null,
-      level,
-      season,
-      licenseLabel: "BLTZ CLEARED",
+      level: photoContext[photo.id]?.level ?? "off-field",
+      season: photoContext[photo.id]?.season ?? null,
+      licenseLabel: "",
       width: null,
       height: null,
     })),

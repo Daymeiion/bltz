@@ -24,10 +24,13 @@ export type PhotoRoomImage = {
 export type PhotoRoomData = {
   athleteId: string | null;
   slug: string;
+  lockerHref?: string;
   athleteName: string;
   athleteHeadshotUrl: string;
   accentColor: string;
   images: PhotoRoomImage[];
+  totalImages?: number;
+  loadMoreUrl?: string;
 };
 
 type FilterKey = "hs" | "cfb" | "pro" | "off-field";
@@ -46,6 +49,9 @@ function searchHref(result: SearchResult) {
 }
 
 export default function PhotoRoomView({ data }: { data: PhotoRoomData }) {
+  const [images, setImages] = useState(data.images);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [loadMoreError, setLoadMoreError] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const [activeFilter, setActiveFilter] = useState<FilterKey>("cfb");
   const [searchOpen, setSearchOpen] = useState(false);
@@ -66,28 +72,27 @@ export default function PhotoRoomView({ data }: { data: PhotoRoomData }) {
       source: "public_locker",
       athleteId: data.athleteId,
       athleteSlug: data.slug,
-      properties: { photo_count: data.images.length },
+      properties: { photo_count: data.totalImages ?? data.images.length },
       dedupeKey: `photo_gallery_opened:${data.slug}:${window.location.pathname}`,
     });
-  }, [data.athleteId, data.images.length, data.slug]);
+  }, [data.athleteId, data.images.length, data.slug, data.totalImages]);
 
-  const slideshowImages = data.images.length ? data.images : [];
-  const hasAnyImages = data.images.length > 0;
-  const activeImage = slideshowImages[activeIndex % Math.max(slideshowImages.length, 1)] ?? null;
+  const slideshowImages = images;
+  const hasAnyImages = images.length > 0;
   const filteredImages = useMemo(
-    () => data.images.filter((image) => image.level === activeFilter),
-    [activeFilter, data.images],
+    () => images.filter((image) => image.level === activeFilter),
+    [activeFilter, images],
   );
   const filterCounts = useMemo(
     () =>
       FILTERS.reduce<Record<FilterKey, number>>(
         (counts, filter) => {
-          counts[filter.key] = data.images.filter((image) => image.level === filter.key).length;
+          counts[filter.key] = images.filter((image) => image.level === filter.key).length;
           return counts;
         },
         { hs: 0, cfb: 0, pro: 0, "off-field": 0 },
       ),
-    [data.images],
+    [images],
   );
   const sparseSlotCount = hasAnyImages && filteredImages.length > 0 && filteredImages.length < 4
     ? 4 - filteredImages.length
@@ -189,7 +194,7 @@ export default function PhotoRoomView({ data }: { data: PhotoRoomData }) {
       properties: { media_id: id, media_type: "photo", section: activeFilter },
       dedupeKey: `media_viewed:photo:${id}`,
     });
-    const nextIndex = data.images.findIndex((image) => image.id === id);
+    const nextIndex = images.findIndex((image) => image.id === id);
     if (nextIndex >= 0) setActiveIndex(nextIndex);
     resumeTriggeredRef.current = false;
     setAutoplayEnabled(false);
@@ -203,18 +208,39 @@ export default function PhotoRoomView({ data }: { data: PhotoRoomData }) {
     setAutoplayEnabled(true);
   }
 
+  async function loadMorePhotos() {
+    if (!data.loadMoreUrl || loadingMore) return;
+    setLoadingMore(true);
+    setLoadMoreError(false);
+    try {
+      const separator = data.loadMoreUrl.includes("?") ? "&" : "?";
+      const response = await fetch(`${data.loadMoreUrl}${separator}offset=${images.length}`);
+      if (!response.ok) throw new Error("Unable to load photos");
+      const payload = await response.json() as { photos?: PhotoRoomImage[] };
+      const incoming = Array.isArray(payload.photos) ? payload.photos : [];
+      setImages((current) => {
+        const known = new Set(current.map((image) => image.id));
+        return [...current, ...incoming.filter((image) => !known.has(image.id))];
+      });
+    } catch {
+      setLoadMoreError(true);
+    } finally {
+      setLoadingMore(false);
+    }
+  }
+
   return (
     <main className={styles.page} style={{ "--photo-accent": data.accentColor } as React.CSSProperties}>
       <div className={styles.shell}>
         <header className={styles.header}>
-          <Link href={`/player/${data.slug}`} className={styles.brand} aria-label="BLTZ Player Locker">
+          <Link href={data.lockerHref ?? `/player/${data.slug}`} className={styles.brand} aria-label="BLTZ Player Locker">
             <Image src="/images/bltz-mark.svg" alt="BLTZ" width={38} height={39} priority />
           </Link>
           <div className={styles.headerActions}>
             <button type="button" className={styles.iconButton} onClick={() => setSearchOpen(true)} aria-label="Search BLTZ">
               <Search aria-hidden="true" />
             </button>
-            <Link href={`/player/${data.slug}`} className={styles.avatar} aria-label={`View ${data.athleteName}'s locker`}>
+            <Link href={data.lockerHref ?? `/player/${data.slug}`} className={styles.avatar} aria-label={`View ${data.athleteName}'s locker`}>
               <Image src={data.athleteHeadshotUrl} alt="" fill sizes="42px" />
             </Link>
           </div>
@@ -227,7 +253,7 @@ export default function PhotoRoomView({ data }: { data: PhotoRoomData }) {
                 <img
                   key={image.id}
                   src={image.url}
-                  alt=""
+                  alt={image.title || `${data.athleteName} photo`}
                   className={`${styles.heroImage} ${index === activeIndex ? styles.heroImageActive : ""}`}
                 />
               ))
@@ -238,14 +264,6 @@ export default function PhotoRoomView({ data }: { data: PhotoRoomData }) {
               </div>
             )}
             <div className={styles.scrollShade} style={{ opacity: scrollOverlayOpacity }} />
-            <div className={styles.sourceBadge}>{activeImage?.licenseLabel ?? "PHOTO ROOM"}</div>
-            <div className={styles.featuredInfo}>
-              <span className={styles.featuredAvatar} aria-hidden="true" />
-              <span>
-                <strong>{activeImage?.title ?? "Photo archive loading soon"}</strong>
-                <small>{activeImage?.credits ?? "BLTZ will add approved images here"}</small>
-              </span>
-            </div>
             {!autoplayEnabled && slideshowImages.length > 1 ? (
               <button
                 type="button"
@@ -308,11 +326,6 @@ export default function PhotoRoomView({ data }: { data: PhotoRoomData }) {
                       aria-label={`View ${image.title}`}
                     >
                       <img src={image.url} alt="" />
-                      <span className={styles.tileShade} />
-                      <span className={styles.tileMeta}>
-                        <strong>{image.title}</strong>
-                        <small>{image.licenseLabel}{image.season ? ` · ${image.season}` : ""}</small>
-                      </span>
                     </button>
                   ))}
                   {Array.from({ length: sparseSlotCount }).map((_, index) => (
@@ -329,6 +342,14 @@ export default function PhotoRoomView({ data }: { data: PhotoRoomData }) {
                 <span>{hasAnyImages ? "Try another category, or check back as more images are verified." : "BLTZ will add this section as photos are discovered, approved, or shared by the athlete."}</span>
               </div>
             )}
+            {data.loadMoreUrl && images.length < (data.totalImages ?? images.length) ? (
+              <div className={styles.loadMoreRow}>
+                <button type="button" onClick={loadMorePhotos} disabled={loadingMore}>
+                  {loadingMore ? "LOADING..." : `LOAD MORE · ${(data.totalImages ?? images.length) - images.length} REMAINING`}
+                </button>
+                {loadMoreError ? <span role="alert">Photos could not load. Try again.</span> : null}
+              </div>
+            ) : null}
           </section>
         </div>
 

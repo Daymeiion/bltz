@@ -90,6 +90,7 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center center;
   opacity: 0;
   transform: scale(1.04);
   transition: opacity 900ms ease, transform 3800ms ease;
@@ -134,40 +135,6 @@
     );
   transition: opacity 120ms linear;
 }
-
-.sourceBadge {
-  position: absolute;
-  top: 14px;
-  left: 14px;
-  z-index: 2;
-  padding: 7px 10px;
-  border: 1px solid rgba(255,255,255,.22);
-  border-radius: 999px;
-  background: rgba(5,7,14,.72);
-  color: #fff;
-  font-family: "JetBrains Mono", monospace;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: .08em;
-}
-
-.featuredInfo {
-  position: absolute;
-  z-index: 2;
-  left: 12px;
-  right: 12px;
-  bottom: 12px;
-  display: grid;
-  grid-template-columns: 28px minmax(0, 1fr);
-  align-items: center;
-  gap: 8px;
-  padding-right: 48px;
-}
-
-.featuredAvatar { width: 28px; height: 28px; border-radius: 50%; background: #f3f4f6; }
-.featuredInfo span:last-child { min-width: 0; display: flex; flex-direction: column; }
-.featuredInfo strong { overflow: hidden; font-size: 15px; line-height: 1.05; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
-.featuredInfo small { margin-top: 3px; overflow: hidden; color: var(--photo-accent); font-family: "JetBrains Mono", monospace; font-size: 9px; line-height: 1.25; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
 
 .slideshowPlayButton {
   position: absolute;
@@ -310,32 +277,12 @@
   height: 100%;
   display: block;
   object-fit: cover;
+  object-position: center center;
   transition: transform 420ms ease, filter 420ms ease;
 }
 
 .photoTile:focus-visible { outline: 2px solid var(--photo-accent); outline-offset: -2px; }
 .photoTile:hover img { transform: scale(1.035); filter: saturate(1.08); }
-
-.tileShade {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(to top, rgba(0,0,0,.82), transparent 58%);
-  pointer-events: none;
-}
-
-.tileMeta {
-  position: absolute;
-  left: 9px;
-  right: 9px;
-  bottom: 9px;
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  text-align: left;
-}
-
-.tileMeta strong { overflow: hidden; font-size: 11px; line-height: 1.05; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
-.tileMeta small { margin-top: 5px; overflow: hidden; color: rgba(255,255,255,.62); font-family: "JetBrains Mono", monospace; font-size: 7px; line-height: 1.2; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
 
 .photoTilePlaceholder {
   min-height: 168px;
@@ -379,6 +326,32 @@
 .emptyState strong { font-size: 18px; text-transform: uppercase; }
 .emptyState span { max-width: 310px; color: rgba(255,255,255,.58); font-size: 13px; }
 
+.loadMoreRow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 20px 0 4px;
+}
+
+.loadMoreRow button {
+  min-height: 42px;
+  padding: 0 18px;
+  border: 1px solid rgba(255,187,0,.58);
+  border-radius: 999px;
+  background: rgba(255,187,0,.1);
+  color: var(--photo-accent);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  cursor: pointer;
+}
+
+.loadMoreRow button:disabled { cursor: wait; opacity: .58; }
+.loadMoreRow button:focus-visible { outline: 2px solid var(--photo-accent); outline-offset: 3px; }
+.loadMoreRow span { color: #ff8f8f; font-family: "JetBrains Mono", monospace; font-size: 9px; }
+
 .searchOverlay { position: fixed; z-index: 50; inset: 0; display: grid; align-items: start; justify-items: center; padding: 76px 18px 18px; }
 .searchBackdrop { position: absolute; inset: 0; border: 0; background: rgba(0,0,0,.78); backdrop-filter: blur(5px); }
 .searchPanel { position: relative; width: min(100%, 520px); padding: 16px; border: 1px solid #252c42; border-radius: 8px; background: #0b0e18; }
@@ -405,8 +378,6 @@
     height: 60svh;
     min-height: 430px;
   }
-  .sourceBadge { top: 20px; left: 20px; }
-  .featuredInfo { left: 22px; right: 22px; bottom: 18px; }
   .gridStack { margin-top: 0; padding-top: 16px; }
   .sectionHeading h1 { font-size: 28px; }
   .sectionHeading span { font-size: 11px; }

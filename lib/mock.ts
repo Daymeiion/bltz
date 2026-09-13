@@ -2,73 +2,86 @@ export const MOCK_PLAYERS = [
   {
     id: "p1",
     slug: "demo-player",
-    full_name: "Demo Player",
+    full_name: "Dante Hughes",
     city: "Los Angeles, CA",
+    position: "CB",
     image_url: "/images/Headshot.png",
     banner_url: "/images/SilverHero1.png",
+    video_url: "/videos/dante-hughes/hoggy-interception-uhd-restoration.mp4",
+    bio: "Daymeion Dante Hughes is a Los Angeles-born former NFL cornerback who played five seasons with Indianapolis and San Diego. At California, he became a consensus All-American, won the Lott IMPACT Trophy, and earned Pac-10 Defensive Player of the Year after leading the nation with eight interceptions in 2006. Indianapolis selected him in the third round of the 2007 NFL Draft, 95th overall. The Crenshaw High School graduate also earned a degree in art practice from UC Berkeley.",
+    story: "Early Life: Hughes grew up in Los Angeles and attended Crenshaw High School, where he lettered in football, basketball, tennis, and track. He earned all-league and all-city recognition before being named the Coliseum League co-Player of the Year as a senior.\n\nCollege: Hughes played for the California Golden Bears from 2003 through 2006. A shutdown corner, he led the nation with eight interceptions as a senior and finished 2006 as the Lott IMPACT Trophy winner, Pac-10 Defensive Player of the Year, and a consensus All-American.\n\nProfessional: The Indianapolis Colts drafted Hughes in the third round with the 95th overall pick in 2007. He later played for the San Diego Chargers and joined the New York Giants during the 2012 offseason. He appeared in 53 regular-season NFL games.",
+    meta: {
+      dob: "1985-08-21",
+      height_in: 70,
+      weight_lbs: 190,
+      games_played: 53,
+    },
   },
 ];
 
 export const MOCK_VIDEOS = [
-  { 
-    id: "v1", 
-    title: "Amazing Goal Compilation", 
-    description: "Best goals from the season",
-    thumbnail: "/images/Awards/video-thumb.png",
-    src: "/videos/demo.mp4", // placeholder video path
-    duration: "2:13",
-    author: { name: "Demo Player", avatar: "/images/Headshot.png" }
+  {
+    id: "dante-film-01",
+    title: "California vs. Arizona State",
+    description: "Dante Hughes game film from California's matchup with Arizona State.",
+    thumbnail: "/images/dante-hughes/video-poster-01.jpg",
+    src: "/videos/dante-hughes/dante-film-01.mp4",
+    duration: "0:22",
+    durationSeconds: 22,
+    level: "cfb" as const,
+    season: "2006",
+    tags: ["cfb", "california", "game-film"],
+    author: { name: "Dante Hughes", avatar: "/images/Headshot.png" },
   },
-  { 
-    id: "v2", 
-    title: "Training Highlights", 
-    description: "Intensive training session",
-    thumbnail: "/images/Awards/video-thumb.png",
-    src: "/videos/demo.mp4",
-    duration: "1:45",
-    author: { name: "Demo Player", avatar: "/images/Headshot.png" }
+  {
+    id: "dante-film-02",
+    title: "California vs. UCLA",
+    description: "Dante Hughes game film from California's matchup with UCLA.",
+    thumbnail: "/images/dante-hughes/video-poster-02.jpg",
+    src: "/videos/dante-hughes/dante-film-02.mp4",
+    duration: "1:27",
+    durationSeconds: 87,
+    level: "cfb" as const,
+    season: "2006",
+    tags: ["cfb", "california", "game-film"],
+    author: { name: "Dante Hughes", avatar: "/images/Headshot.png" },
   },
-  { 
-    id: "v3", 
-    title: "Match Analysis", 
-    description: "Tactical breakdown of key plays",
-    thumbnail: "/images/Awards/video-thumb.png",
-    src: "/videos/demo.mp4",
-    duration: "3:22",
-    author: { name: "Demo Player", avatar: "/images/Headshot.png" }
+  {
+    id: "dante-film-03",
+    title: "San Diego Chargers Film",
+    description: "Dante Hughes pro footage with the San Diego Chargers.",
+    thumbnail: "/images/dante-hughes/video-poster-03.jpg",
+    src: "/videos/dante-hughes/dante-film-03.mp4",
+    duration: "0:12",
+    durationSeconds: 12,
+    level: "pro" as const,
+    season: "2011",
+    tags: ["pro", "nfl", "chargers"],
+    author: { name: "Dante Hughes", avatar: "/images/Headshot.png" },
   },
-  { 
-    id: "v4", 
-    title: "Skills Showcase", 
-    description: "Technical skills demonstration",
-    thumbnail: "/images/Awards/video-thumb.png",
-    src: "/videos/demo.mp4",
-    duration: "1:58",
-    author: { name: "Demo Player", avatar: "/images/Headshot.png" }
-  },
-  { 
-    id: "v5", 
-    title: "Behind the Scenes", 
-    description: "Exclusive behind the scenes content",
-    thumbnail: "/images/Awards/video-thumb.png",
-    src: "/videos/demo.mp4",
-    duration: "4:07",
-    author: { name: "Demo Player", avatar: "/images/Headshot.png" }
-  },
-  { 
-    id: "v6", 
-    title: "Fan Reactions", 
-    description: "Best fan moments and reactions",
-    thumbnail: "/images/Awards/video-thumb.png",
-    src: "/videos/demo.mp4",
-    duration: "2:34",
-    author: { name: "Demo Player", avatar: "/images/Headshot.png" }
-  }
 ];
 
 export const MOCK_MEDIA = [
-  { id: "m1", title: "Photo #1", url: "/images/media-5.jpg" },
-  { id: "m2", title: "Photo #2", url: "/images/media-6.jpg" },
-  { id: "m3", title: "Photo #3", url: "/images/media-9.jpg" },
+  { id: "dante-01", title: "2006 Lott Trophy", url: "/images/dante-hughes/01-lott-trophy.jpg" },
+  { id: "dante-02", title: "California interception", url: "/images/dante-hughes/02-cal-interception.jpeg" },
+  { id: "dante-03", title: "Fifth Bridge celebrity kickoff", url: "/images/dante-hughes/03-fifth-bridge.jpg" },
+  { id: "dante-04", title: "California vs. USC", url: "/images/dante-hughes/04-cal-usc-end-zone.jpg" },
+  { id: "dante-05", title: "Colts coverage", url: "/images/dante-hughes/05-colts-bengals-coverage.jpg" },
+  { id: "dante-06", title: "Indianapolis celebration", url: "/images/dante-hughes/06-colts-celebration.jpg" },
+  { id: "dante-07", title: "Colts vs. Falcons", url: "/images/dante-hughes/07-colts-falcons-coverage.jpg" },
+  { id: "dante-08", title: "Colts pursuit", url: "/images/dante-hughes/08-colts-falcons-pursuit.jpg" },
+  { id: "dante-09", title: "Indianapolis game action", url: "/images/dante-hughes/09-colts-bengals-game.jpg" },
+  { id: "dante-10", title: "Chargers coverage", url: "/images/dante-hughes/10-chargers-redskins-coverage.jpg" },
+  { id: "dante-11", title: "San Diego Chargers", url: "/images/dante-hughes/11-chargers-portrait.jpg" },
+  { id: "dante-12", title: "California kickoff program", url: "/images/dante-hughes/12-cal-kickoff-program.jpg" },
+  { id: "dante-13", title: "Chargers profile", url: "/images/dante-hughes/13-chargers-profile.png" },
+  { id: "dante-14", title: "Chargers sideline", url: "/images/dante-hughes/14-chargers-sideline.jpg" },
+  { id: "dante-15", title: "Indianapolis tackle", url: "/images/dante-hughes/15-colts-tackle.jpg" },
+  { id: "dante-16", title: "Offseason training", url: "/images/dante-hughes/16-offseason-training.jpg" },
+  { id: "dante-17", title: "California game action", url: "/images/dante-hughes/17-cal-game-action.jpg" },
+  { id: "dante-18", title: "Colts game action", url: "/images/dante-hughes/18-colts-game-action.jpg" },
+  { id: "dante-19", title: "Chargers defensive stance", url: "/images/dante-hughes/19-chargers-defensive-stance.jpg" },
+  { id: "dante-20", title: "Chargers home uniform", url: "/images/dante-hughes/20-chargers-home-uniform.jpg" },
+  { id: "dante-21", title: "Colts rookie card", url: "/images/dante-hughes/21-colts-rookie-card.jpg" },
+  { id: "dante-22", title: "Colts autograph card", url: "/images/dante-hughes/22-colts-autograph-card.jpg" },
 ];
-  

@@ -1,19 +1,22 @@
 import { notFound } from "next/navigation";
+import { readStructuredStats } from "@/lib/player/structured-stats";
 import { createClient } from "@/lib/supabase/server";
-import { MOCK_PLAYERS } from "@/lib/mock";
+import { MOCK_MEDIA, MOCK_PLAYERS, MOCK_VIDEOS } from "@/lib/mock";
+import {
+  LEVEL_LABEL,
+  calcAge,
+  formatDob,
+  heightDisplay,
+  nflLogo,
+  nflTeamColor,
+  nflTeamName,
+} from "@/lib/player/locker-format";
 import LockerView, { type LockerData } from "./LockerView";
 
 // Mock data is only available in non-production builds. Production never returns
 // mock players, regardless of how `NEXT_PUBLIC_USE_MOCK` is set.
 const useMock =
   process.env.NEXT_PUBLIC_USE_MOCK === "1" && process.env.NODE_ENV !== "production";
-
-const LEVEL_LABEL: Record<string, string> = {
-  hs: "High school",
-  college: "College",
-  pro: "Pro",
-  former: "Former pro",
-};
 
 type LockerPhotoRow = {
   id: string;
@@ -39,103 +42,95 @@ function photoLicenseLabel(photo: LockerPhotoRow): string {
   return photo.source_url ? "SOURCE VERIFIED" : "LICENSED";
 }
 
-// 3-letter team codes used by nflverse / NFL.com.
-const NFL_TEAM_NAMES: Record<string, string> = {
-  ARI: "Arizona Cardinals", ATL: "Atlanta Falcons", BAL: "Baltimore Ravens",
-  BUF: "Buffalo Bills", CAR: "Carolina Panthers", CHI: "Chicago Bears",
-  CIN: "Cincinnati Bengals", CLE: "Cleveland Browns", DAL: "Dallas Cowboys",
-  DEN: "Denver Broncos", DET: "Detroit Lions", GB: "Green Bay Packers",
-  HOU: "Houston Texans", IND: "Indianapolis Colts", JAX: "Jacksonville Jaguars",
-  KC: "Kansas City Chiefs", LA: "Los Angeles Rams", LAC: "Los Angeles Chargers",
-  LAR: "Los Angeles Rams", LV: "Las Vegas Raiders", MIA: "Miami Dolphins",
-  MIN: "Minnesota Vikings", NE: "New England Patriots", NO: "New Orleans Saints",
-  NYG: "New York Giants", NYJ: "New York Jets", PHI: "Philadelphia Eagles",
-  PIT: "Pittsburgh Steelers", SEA: "Seattle Seahawks", SF: "San Francisco 49ers",
-  TB: "Tampa Bay Buccaneers", TEN: "Tennessee Titans", WAS: "Washington Commanders",
-};
-
-function nflTeamName(code: string | null | undefined): string | null {
-  if (!code) return null;
-  return NFL_TEAM_NAMES[code] ?? code;
-}
-
-// Primary team colors for the rotating pro-teams pill (nflverse 2/3-letter codes).
-const NFL_TEAM_COLORS: Record<string, string> = {
-  ARI: "#97233F", ATL: "#A71930", BAL: "#241773", BUF: "#00338D", CAR: "#0085CA",
-  CHI: "#0B162A", CIN: "#FB4F14", CLE: "#311D00", DAL: "#003594", DEN: "#FB4F14",
-  DET: "#0076B6", GB: "#203731", HOU: "#03202F", IND: "#002C5F", JAX: "#006778",
-  KC: "#E31837", LA: "#003594", LAC: "#0080C6", LAR: "#003594", LV: "#000000",
-  MIA: "#008E97", MIN: "#4F2683", NE: "#002244", NO: "#D3BC8D", NYG: "#0B2265",
-  NYJ: "#125740", PHI: "#004C54", PIT: "#FFB612", SEA: "#002244", SF: "#AA0000",
-  TB: "#D50A0A", TEN: "#4B92DB", WAS: "#5A1414",
-};
-
-function nflTeamColor(code: string | null | undefined): string {
-  if (!code) return "#1A3DCC";
-  return NFL_TEAM_COLORS[code] ?? "#1A3DCC";
-}
-
-// ESPN's logo CDN keys mostly match nflverse codes once lowercased; these are
-// the few that differ. a.espncdn.com is whitelisted in next.config.ts.
-const NFL_ESPN_ABBR: Record<string, string> = { WAS: "wsh", LA: "lar" };
-
-function nflLogo(code: string | null | undefined): string | null {
-  if (!code) return null;
-  const abbr = (NFL_ESPN_ABBR[code] ?? code).toLowerCase();
-  return `https://a.espncdn.com/i/teamlogos/nfl/500/${abbr}.png`;
-}
-
-function formatDob(dob?: string | null) {
-  if (!dob) return "—";
-  const d = new Date(dob);
-  if (isNaN(d.getTime())) return "—";
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  return `${mm}-${dd}-${d.getFullYear()}`;
-}
-
-function calcAge(dob?: string | null) {
-  if (!dob) return undefined;
-  const d = new Date(dob);
-  if (isNaN(d.getTime())) return undefined;
-  const now = new Date();
-  let a = now.getFullYear() - d.getFullYear();
-  const m = now.getMonth() - d.getMonth();
-  if (m < 0 || (m === 0 && now.getDate() < d.getDate())) a--;
-  return a;
-}
-
-function heightDisplay(heightIn?: number | null) {
-  if (!heightIn) return "";
-  const feet = Math.floor(heightIn / 12);
-  const inches = heightIn % 12;
-  return `${feet}'${inches}"`;
-}
-
-type LockerGameLog = NonNullable<LockerData["gameLogs"]>[number];
-
-const MOCK_DEFENSIVE_GAME_LOG_COLUMNS: LockerGameLog["columns"] = [
-  { key: "opponent", label: "OPPONENT", width: 150, align: "left" },
-  { key: "result", label: "RESULT", width: 88 },
-  { key: "tackles", label: "TKL", width: 72 },
-  { key: "solo", label: "SOLO", width: 72 },
-  { key: "assists", label: "AST", width: 72 },
-  { key: "sacks", label: "SACK", width: 72 },
-  { key: "tfl", label: "TFL", width: 72 },
-  { key: "interceptions", label: "INT", width: 72 },
-  { key: "pass_breakups", label: "PBU", width: 72 },
-  { key: "forced_fumbles", label: "FF", width: 72 },
-  { key: "fumble_recoveries", label: "FR", width: 72 },
-  { key: "qb_hits", label: "QB HIT", width: 76 },
-];
-
-const MOCK_DEFENSIVE_GAME_ROWS: LockerGameLog["seasons"][number]["rows"] = [
-  { id: "rival", resultTone: "win", values: { opponent: "@ RIVAL", result: "W 27-20", tackles: 5, solo: 3, assists: 2, sacks: 1, tfl: 1, interceptions: 2, pass_breakups: 3, forced_fumbles: 1, fumble_recoveries: 0, qb_hits: 1 } },
-  { id: "state", resultTone: "win", values: { opponent: "STATE", result: "W 31-24", tackles: 6, solo: 4, assists: 2, sacks: 0.5, tfl: 2, interceptions: 1, pass_breakups: 2, forced_fumbles: 0, fumble_recoveries: 1, qb_hits: 2 } },
-  { id: "tech", resultTone: "loss", values: { opponent: "@ TECH", result: "L 21-28", tackles: 7, solo: 5, assists: 2, sacks: 0, tfl: 1, interceptions: 0, pass_breakups: 2, forced_fumbles: 0, fumble_recoveries: 0, qb_hits: 1 } },
-  { id: "north", resultTone: "win", values: { opponent: "NORTH", result: "W 34-17", tackles: 4, solo: 2, assists: 2, sacks: 1.5, tfl: 2, interceptions: 1, pass_breakups: 4, forced_fumbles: 1, fumble_recoveries: 1, qb_hits: 3 } },
-  { id: "south", resultTone: "win", values: { opponent: "SOUTH", result: "W 41-10", tackles: 3, solo: 3, assists: 0, sacks: 0, tfl: 0, interceptions: 2, pass_breakups: 1, forced_fumbles: 0, fumble_recoveries: 0, qb_hits: 0 } },
-  { id: "west", resultTone: "win", values: { opponent: "@ WEST", result: "W 24-14", tackles: 5, solo: 4, assists: 1, sacks: 1, tfl: 1, interceptions: 0, pass_breakups: 2, forced_fumbles: 1, fumble_recoveries: 0, qb_hits: 2 } },
+const danteHughesNflGameLogs: NonNullable<LockerData["gameLogs"]> = [
+  {
+    key: "nflverse-defense",
+    label: "NFL DEFENSE",
+    meta: "NFLVERSE WEEKLY PLAYER STATS · REGULAR SEASON · RECORDED DEFENSIVE ROWS",
+    columns: [
+      { key: "week", label: "WK", width: 44 },
+      { key: "opponent", label: "OPP", width: 78, align: "left" },
+      { key: "result", label: "RESULT", width: 78, align: "left" },
+      { key: "total", label: "TKL", width: 50, align: "right" },
+      { key: "solo", label: "SOLO", width: 56, align: "right" },
+      { key: "ast", label: "AST", width: 48, align: "right" },
+      { key: "pd", label: "PD", width: 44, align: "right" },
+      { key: "int", label: "INT", width: 46, align: "right" },
+      { key: "intYds", label: "YDS", width: 48, align: "right" },
+      { key: "ff", label: "FF", width: 44, align: "right" },
+    ],
+    seasons: [
+      {
+        year: "2011",
+        summary: "14 stat rows · SD · 40 TKL · 3 PD · 0 INT",
+        rows: [
+          { id: "nfl-2011-wk2", resultTone: "loss", values: { week: 2, opponent: "@ NE", result: "L 21-35", total: 1, solo: 0, ast: 1, pd: 0, int: 0, intYds: 0, ff: 0 } },
+          { id: "nfl-2011-wk3", resultTone: "win", values: { week: 3, opponent: "vs KC", result: "W 20-17", total: 4, solo: 4, ast: 0, pd: 0, int: 0, intYds: 0, ff: 0 } },
+          { id: "nfl-2011-wk4", resultTone: "win", values: { week: 4, opponent: "vs MIA", result: "W 26-16", total: 4, solo: 0, ast: 4, pd: 0, int: 0, intYds: 0, ff: 0 } },
+          { id: "nfl-2011-wk5", resultTone: "win", values: { week: 5, opponent: "@ DEN", result: "W 29-24", total: 2, solo: 2, ast: 0, pd: 1, int: 0, intYds: 0, ff: 0 } },
+          { id: "nfl-2011-wk7", resultTone: "loss", values: { week: 7, opponent: "@ NYJ", result: "L 21-27", total: 1, solo: 1, ast: 0, pd: 0, int: 0, intYds: 0, ff: 0 } },
+          { id: "nfl-2011-wk8", resultTone: "loss", values: { week: 8, opponent: "@ KC", result: "L 20-23", total: 1, solo: 1, ast: 0, pd: 0, int: 0, intYds: 0, ff: 0 } },
+          { id: "nfl-2011-wk9", resultTone: "loss", values: { week: 9, opponent: "vs GB", result: "L 38-45", total: 5, solo: 3, ast: 2, pd: 0, int: 0, intYds: 0, ff: 0 } },
+          { id: "nfl-2011-wk10", resultTone: "loss", values: { week: 10, opponent: "vs OAK", result: "L 17-24", total: 6, solo: 5, ast: 1, pd: 1, int: 0, intYds: 0, ff: 0 } },
+          { id: "nfl-2011-wk11", resultTone: "loss", values: { week: 11, opponent: "@ CHI", result: "L 20-31", total: 1, solo: 0, ast: 1, pd: 0, int: 0, intYds: 0, ff: 0 } },
+          { id: "nfl-2011-wk12", resultTone: "loss", values: { week: 12, opponent: "vs DEN", result: "L 13-16", total: 2, solo: 2, ast: 0, pd: 0, int: 0, intYds: 0, ff: 0 } },
+          { id: "nfl-2011-wk13", resultTone: "win", values: { week: 13, opponent: "@ JAX", result: "W 38-14", total: 1, solo: 1, ast: 0, pd: 1, int: 0, intYds: 0, ff: 0 } },
+          { id: "nfl-2011-wk14", resultTone: "win", values: { week: 14, opponent: "vs BUF", result: "W 37-10", total: 3, solo: 3, ast: 0, pd: 0, int: 0, intYds: 0, ff: 0 } },
+          { id: "nfl-2011-wk15", resultTone: "win", values: { week: 15, opponent: "vs BAL", result: "W 34-14", total: 4, solo: 3, ast: 1, pd: 0, int: 0, intYds: 0, ff: 0 } },
+          { id: "nfl-2011-wk16", resultTone: "loss", values: { week: 16, opponent: "@ DET", result: "L 10-38", total: 5, solo: 5, ast: 0, pd: 0, int: 0, intYds: 0, ff: 0 } },
+        ],
+      },
+      {
+        year: "2010",
+        summary: "7 stat rows · SD · 25 TKL · 0 PD · 0 INT",
+        rows: [
+          { id: "nfl-2010-wk5", resultTone: "loss", values: { week: 5, opponent: "@ OAK", result: "L 27-35", total: 1, solo: 1, ast: 0, pd: 0, int: 0, intYds: 0, ff: 1 } },
+          { id: "nfl-2010-wk8", resultTone: "win", values: { week: 8, opponent: "vs TEN", result: "W 33-25", total: 1, solo: 1, ast: 0, pd: 0, int: 0, intYds: 0, ff: 0 } },
+          { id: "nfl-2010-wk12", resultTone: "win", values: { week: 12, opponent: "@ IND", result: "W 36-14", total: 8, solo: 7, ast: 1, pd: 0, int: 0, intYds: 0, ff: 0 } },
+          { id: "nfl-2010-wk14", resultTone: "win", values: { week: 14, opponent: "vs KC", result: "W 31-0", total: 4, solo: 4, ast: 0, pd: 0, int: 0, intYds: 0, ff: 0 } },
+          { id: "nfl-2010-wk15", resultTone: "win", values: { week: 15, opponent: "vs SF", result: "W 34-7", total: 6, solo: 5, ast: 1, pd: 0, int: 0, intYds: 0, ff: 0 } },
+          { id: "nfl-2010-wk16", resultTone: "loss", values: { week: 16, opponent: "@ CIN", result: "L 20-34", total: 2, solo: 1, ast: 1, pd: 0, int: 0, intYds: 0, ff: 0 } },
+          { id: "nfl-2010-wk17", resultTone: "win", values: { week: 17, opponent: "@ DEN", result: "W 33-28", total: 3, solo: 3, ast: 0, pd: 0, int: 0, intYds: 0, ff: 0 } },
+        ],
+      },
+      {
+        year: "2009",
+        summary: "1 stat row · SD · 1 TKL · 0 PD · 0 INT",
+        rows: [
+          { id: "nfl-2009-wk17", resultTone: "win", values: { week: 17, opponent: "vs WAS", result: "W 23-20", total: 1, solo: 1, ast: 0, pd: 0, int: 0, intYds: 0, ff: 0 } },
+        ],
+      },
+      {
+        year: "2008",
+        summary: "9 stat rows · IND · 16 TKL · 2 PD · 1 INT",
+        rows: [
+          { id: "nfl-2008-wk3", resultTone: "loss", values: { week: 3, opponent: "vs JAX", result: "L 21-23", total: 1, solo: 0, ast: 1, pd: 0, int: 0, intYds: 0, ff: 0 } },
+          { id: "nfl-2008-wk5", resultTone: "win", values: { week: 5, opponent: "@ HOU", result: "W 31-27", total: 1, solo: 1, ast: 0, pd: 0, int: 0, intYds: 0, ff: 0 } },
+          { id: "nfl-2008-wk6", resultTone: "win", values: { week: 6, opponent: "vs BAL", result: "W 31-3", total: 3, solo: 3, ast: 0, pd: 0, int: 0, intYds: 0, ff: 0 } },
+          { id: "nfl-2008-wk8", resultTone: "loss", values: { week: 8, opponent: "@ TEN", result: "L 21-31", total: 1, solo: 0, ast: 1, pd: 1, int: 0, intYds: 0, ff: 0 } },
+          { id: "nfl-2008-wk11", resultTone: "win", values: { week: 11, opponent: "vs HOU", result: "W 33-27", total: 1, solo: 1, ast: 0, pd: 0, int: 0, intYds: 0, ff: 0 } },
+          { id: "nfl-2008-wk14", resultTone: "win", values: { week: 14, opponent: "vs CIN", result: "W 35-3", total: 4, solo: 3, ast: 1, pd: 1, int: 1, intYds: 16, ff: 0 } },
+          { id: "nfl-2008-wk15", resultTone: "win", values: { week: 15, opponent: "vs DET", result: "W 31-21", total: 1, solo: 0, ast: 1, pd: 0, int: 0, intYds: 0, ff: 0 } },
+          { id: "nfl-2008-wk16", resultTone: "win", values: { week: 16, opponent: "@ JAX", result: "W 31-24", total: 1, solo: 1, ast: 0, pd: 0, int: 0, intYds: 0, ff: 0 } },
+          { id: "nfl-2008-wk17", resultTone: "win", values: { week: 17, opponent: "vs TEN", result: "W 23-0", total: 3, solo: 2, ast: 1, pd: 0, int: 0, intYds: 0, ff: 0 } },
+        ],
+      },
+      {
+        year: "2007",
+        summary: "8 stat rows · IND · 10 TKL · 2 PD · 0 INT",
+        rows: [
+          { id: "nfl-2007-wk1", resultTone: "win", values: { week: 1, opponent: "vs NO", result: "W 41-10", total: 1, solo: 1, ast: 0, pd: 1, int: 0, intYds: 0, ff: 0 } },
+          { id: "nfl-2007-wk2", resultTone: "win", values: { week: 2, opponent: "@ TEN", result: "W 22-20", total: 0, solo: 0, ast: 0, pd: 0, int: 0, intYds: 0, ff: 0 } },
+          { id: "nfl-2007-wk4", resultTone: "win", values: { week: 4, opponent: "vs DEN", result: "W 38-20", total: 1, solo: 1, ast: 0, pd: 0, int: 0, intYds: 0, ff: 0 } },
+          { id: "nfl-2007-wk5", resultTone: "win", values: { week: 5, opponent: "vs TB", result: "W 33-14", total: 2, solo: 2, ast: 0, pd: 0, int: 0, intYds: 0, ff: 0 } },
+          { id: "nfl-2007-wk7", resultTone: "win", values: { week: 7, opponent: "@ JAX", result: "W 29-7", total: 1, solo: 1, ast: 0, pd: 0, int: 0, intYds: 0, ff: 0 } },
+          { id: "nfl-2007-wk8", resultTone: "win", values: { week: 8, opponent: "@ CAR", result: "W 31-7", total: 3, solo: 3, ast: 0, pd: 1, int: 0, intYds: 0, ff: 0 } },
+          { id: "nfl-2007-wk9", resultTone: "loss", values: { week: 9, opponent: "vs NE", result: "L 20-24", total: 2, solo: 2, ast: 0, pd: 0, int: 0, intYds: 0, ff: 0 } },
+          { id: "nfl-2007-wk10", resultTone: "loss", values: { week: 10, opponent: "@ SD", result: "L 21-23", total: 0, solo: 0, ast: 0, pd: 0, int: 0, intYds: 0, ff: 0 } },
+        ],
+      },
+    ],
+  },
 ];
 
 export default async function PlayerLocker({ params }: { params: Promise<{ slug: string }> }) {
@@ -154,80 +149,87 @@ export default async function PlayerLocker({ params }: { params: Promise<{ slug:
       fullName: (player as any).full_name || (player as any).name || "Unknown Player",
       hometown: "LOS ANGELES, CA",
       position: (player as any).position || "CB",
-      jersey: "#1",
-      jerseyNumbers: ["#1", "#7", "#21"],
-      levelLabel: "Pro",
+      jersey: "#33",
+      jerseyNumbers: ["#13", "#20", "#33"],
+      levelLabel: "Former pro",
       headshotUrl: "/images/Headshot.png",
-      headshotYear: "2025",
+      headshotYear: null,
       heroVideoUrl: (player as any).video_url ?? null,
       logoSrc: "/bltz-white-logo.svg",
       bio: (player as any).bio || "Mock biography goes here.",
-      athleteQuote: "Pressure is a privilege. It means you earned the moment.",
-      athleteQuoteAuthor: "Demo Player",
+      story: (player as any).story,
+      athleteQuote: "If I had a team full of Hughes’s we would undoubtedly be competing for the national championship every year.",
+      athleteQuoteAuthor: "Jeff Tedford",
       heightDisplay: heightDisplay(heightIn),
-      weightLbs: meta.weight_lbs ?? 210,
-      dobDisplay: formatDob(meta.dob ?? "1985-08-07"),
-      age: calcAge(meta.dob ?? "1985-08-07"),
-      gamesPlayed: meta.games_played ?? 116,
+      weightLbs: meta.weight_lbs ?? 190,
+      dobDisplay: formatDob(meta.dob ?? "1985-08-21"),
+      age: calcAge(meta.dob ?? "1985-08-21"),
+      gamesPlayed: meta.games_played ?? 53,
       careerStats: [
-        { key: "tackles", label: "TACKLES", value: 187 },
-        { key: "solo_tackles", label: "SOLO", value: 126 },
-        { key: "interceptions", label: "INTERCEPTIONS", value: 15 },
-        { key: "pass_breakups", label: "PASS BREAKUPS", value: 41 },
-        { key: "forced_fumbles", label: "FORCED FUMBLES", value: 6 },
-        { key: "sacks", label: "SACKS", value: 4.5 },
-        { key: "tackles_for_loss", label: "TACKLES FOR LOSS", value: 12 },
-        { key: "defensive_touchdowns", label: "DEFENSIVE TD", value: 4 },
-        { key: "starts", label: "STARTS", value: 35 },
+        { key: "tackles", label: "TOTAL TACKLES", value: 105 },
+        { key: "solo_tackles", label: "SOLO TACKLES", value: 74 },
+        { key: "assists", label: "ASSISTS", value: 18 },
+        { key: "pass_deflections", label: "PASS DEFLECTIONS", value: 7 },
+        { key: "interceptions", label: "INTERCEPTIONS", value: 1 },
+        { key: "fumble_recoveries", label: "FUMBLE RECOVERIES", value: 1 },
+        { key: "starts", label: "STARTS", value: 2 },
+        { key: "interception_yards", label: "INT RETURN YARDS", value: 16 },
+        { key: "sacks", label: "SACKS", value: 0 },
       ],
-      careerSeasons: Array.from({ length: 16 }, (_, index) => ({
-        year: String(2009 + index),
-        gamesPlayed: index < 4 ? [12, 13, 13, 14][index] : index >= 12 ? 17 : 16,
-        level: index < 4 ? "cfb" : "pro",
-        team: index < 4 ? "CAL" : "LAC",
-      })),
-      gameLogs: [
-        {
-          key: "cfb",
-          label: "CFB",
-          meta: "4 seasons · organization / scrape data",
-          columns: MOCK_DEFENSIVE_GAME_LOG_COLUMNS,
-          seasons: ["2024", "2023", "2022", "2021"].map((year, index) => ({
-            year,
-            summary: `${6 - Math.min(index, 2)} games · ${58 - index * 7} tackles · ${Math.max(1, 6 - index)} INT`,
-            rows: MOCK_DEFENSIVE_GAME_ROWS.slice(0, index === 0 ? 6 : 4).map((row) => ({ ...row, id: `cfb-${year}-${row.id}` })),
-          })),
-        },
-        {
-          key: "pro",
-          label: "PRO",
-          meta: "3 seasons · league / team data",
-          columns: MOCK_DEFENSIVE_GAME_LOG_COLUMNS,
-          seasons: ["2027", "2026", "2025"].map((year, index) => ({
-            year,
-            summary: `${12 - index} games · ${42 - index * 6} tackles · ${Math.max(0, 3 - index)} INT`,
-            rows: MOCK_DEFENSIVE_GAME_ROWS.slice(0, 4).map((row) => ({ ...row, id: `pro-${year}-${row.id}` })),
-          })),
-        },
+      careerSeasons: [
+        { year: "2007", gamesPlayed: 10, level: "pro", team: "IND" },
+        { year: "2008", gamesPlayed: 14, level: "pro", team: "IND" },
+        { year: "2009", gamesPlayed: 1, level: "pro", team: "SD" },
+        { year: "2010", gamesPlayed: 12, level: "pro", team: "SD" },
+        { year: "2011", gamesPlayed: 16, level: "pro", team: "SD" },
       ],
+      gameLogs: danteHughesNflGameLogs,
       highSchool: "CRENSHAW",
-      classOf: "2025",
-      school: { name: "California", abbr: "CAL", primaryColor: "#003262", logoUrl: null },
-      nfl: null,
-      // Two of each so the rotation is visible in the mock preview.
-      // Stand-in mark (public/images/bltz-mark.svg) sized/shaped like a real
-      // team crest; production uses real ESPN school + NFL team logos.
+      classOf: "2003",
+      school: { name: "University of California, Berkeley", abbr: "CAL", primaryColor: "#003262", logoUrl: "https://a.espncdn.com/i/teamlogos/ncaa/500/25.png" },
+      nfl: {
+        latestTeam: "San Diego Chargers",
+        draftYear: 2007,
+        draftRound: 3,
+        draftPick: 95,
+        draftTeam: "Indianapolis Colts",
+      },
       schools: [
-        { label: "CAL", color: "#003262", logo: "/images/bltz-mark.svg" },
-        { label: "USC", color: "#990000", logo: "/images/bltz-mark.svg" },
+        { label: "CAL", color: "#003262", logo: "https://a.espncdn.com/i/teamlogos/ncaa/500/25.png" },
       ],
       proTeams: [
-        { label: "NO", color: "#D3BC8D", logo: "/images/bltz-mark.svg" },
-        { label: "LAC", color: "#0080C6", logo: "/images/bltz-mark.svg" },
+        { label: "IND", color: "#002C5F", logo: nflLogo("IND") },
+        { label: "SD", color: "#0080C6", logo: nflLogo("LAC") },
+        { label: "NYG", color: "#0B2265", logo: nflLogo("NYG") },
       ],
-      awards: [],
-      videos: [],
-      photos: [],
+      awards: [
+        { year: "2006", label: "LOTT IMPACT TROPHY" },
+        { year: "2006", label: "CONSENSUS ALL-AMERICAN" },
+        { year: "2006", label: "PAC-10 DEFENSIVE PLAYER OF THE YEAR" },
+        { year: "2006", label: "FIRST-TEAM ALL-PAC-10" },
+        { year: "2005", label: "FIRST-TEAM ALL-PAC-10" },
+      ],
+      timeline: [
+        { year: "2003", tag: "CAL DEBUT", title: "BOB SIMMONS AWARD", note: "Started five games as a freshman and tied for the team lead with two interceptions." },
+        { year: "2005", tag: "ALL-CONFERENCE", title: "FIRST-TEAM ALL-PAC-10", note: "Led the Pac-10 with 17 defended passes and finished the season with five interceptions." },
+        { year: "2006", tag: "NATIONAL HONORS", title: "LOTT TROPHY WINNER", note: "Consensus All-American and Pac-10 Defensive Player of the Year after leading the nation with eight interceptions." },
+        { year: "2007", tag: "NFL DRAFT", title: "INDIANAPOLIS COLTS", note: "Selected in the third round with the 95th overall pick." },
+        { year: "2009", tag: "SAN DIEGO", title: "JOINED THE CHARGERS", note: "Continued his NFL career in San Diego through the 2011 season." },
+        { year: "2012", tag: "NEW YORK", title: "GIANTS OFFSEASON ROSTER", note: "Joined the New York Giants during the 2012 offseason." },
+      ],
+      videos: MOCK_VIDEOS.map((video) => ({
+        id: video.id,
+        title: video.title,
+        thumb: video.thumbnail,
+        playbackUrl: video.src,
+      })),
+      photos: MOCK_MEDIA.map((photo) => ({
+        ...photo,
+        credits: null,
+        sourceUrl: null,
+        provenance: "private_preview",
+        licenseLabel: "",
+      })),
     };
     return <LockerView data={data} />;
   }
@@ -295,7 +297,7 @@ export default async function PlayerLocker({ params }: { params: Promise<{ slug:
   // Videos (project-managed table).
   const { data: vids } = await supabase
     .from("videos")
-    .select("id,title,thumbnail_url")
+    .select("id,title,thumbnail_url,playback_url")
     .eq("player_id", player.id)
     .eq("visibility", "public")
     .order("created_at", { ascending: false })
@@ -361,6 +363,7 @@ export default async function PlayerLocker({ params }: { params: Promise<{ slug:
 
   const data: LockerData = {
     athleteId: player.id,
+    structuredStats: await readStructuredStats(supabase, player.id),
     slug,
     fullName: playerFullName,
     hometown: (player.hometown || "").toUpperCase() || "—",
@@ -412,6 +415,7 @@ export default async function PlayerLocker({ params }: { params: Promise<{ slug:
       id: String(v.id),
       title: (v.title || "HIGHLIGHT").toUpperCase(),
       thumb: v.thumbnail_url ?? null,
+      playbackUrl: v.playback_url ?? null,
     })),
     photos: lockerPhotos.map((p) => ({
       id: String(p.id),

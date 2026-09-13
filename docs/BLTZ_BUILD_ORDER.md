@@ -91,6 +91,8 @@ The ordered implementation and verification slices are defined in `docs/platform
 - RLS review
 - Audit-log foundation
 
+Status: **Implementation complete locally on August 18, 2026; production promotion deferred.** The four ordered migrations, generated staging types, server organization context, platform authorization cutover, and staging Beta RLS regression proof are complete. Full staging tenant canary evidence, production reconciliation, backup/PITR confirmation, and an approved production change window remain documented release blockers rather than local Phase 3 blockers.
+
 ## Phase 3 — School/Team CRM Shell
 
 - CRM route layout and navigation
@@ -99,6 +101,13 @@ The ordered implementation and verification slices are defined in `docs/platform
 - Dashboard shell
 - Member access
 - Shared table, filter, status, modal, and empty-state components
+- Discoverable destinations for every approved CRM workstream, including Players,
+  Media, Agreements, Rights, Approvals, Campaigns, Attribution, Reports, Messages,
+  Revenue, and Settings
+- Development-only preview states for later workstreams so navigation and hierarchy
+  can be validated without presenting fixture data as live organization data
+
+Status: **In progress.** Phase 3 adds the protected responsive shell, authenticated organization entry and switching, server-supplied team and season filters, complete planned-workspace information architecture, and dashboard loading, empty, error, and access-denied states. Later workflows may appear in the development preview but remain locked in authenticated tenant routes until their server contracts and permissions exist. Roster, media, rights, approval, campaign, intelligence, analytics, revenue, settings, and member-management behavior remain in their scheduled phases.
 
 ## Phase 4 — Roster and Athlete Records
 
@@ -109,6 +118,8 @@ The ordered implementation and verification slices are defined in `docs/platform
 - Manual creation and CSV import
 - Duplicate warnings
 - Locker preview
+- Player social-source summary and the future Digital Intelligence entry point; live
+  scores and recommendations remain unavailable until Phase 11A contracts exist
 
 ## Phase 5 — BLTZ Media Graph
 
@@ -198,6 +209,26 @@ Initial metrics:
 
 Direct revenue and estimated media value must remain separate.
 
+## Phase 11A — Digital Presence Intelligence and Organization Reporting
+
+This workstream is intentionally visible in the CRM information architecture before
+its production implementation. Preview values must remain labelled fixture data; live
+tenant routes show `Not scanned` until the contracts below exist.
+
+- Verified official-source and social-profile inventory
+- Reproducible scan snapshots and review status
+- Explainable, versioned Digital Presence Score and category scores
+- Confidence and coverage calculation
+- Evidence-linked recommendations with assignment and dismissal state
+- Historical score and source-change tracking
+- Athlete and roster-level intelligence reports
+- Server-generated PDF reports with immutable snapshot, methodology, audit, storage,
+  and authorization metadata
+
+Every percentage must identify its scale or denominator and selected time window.
+Measured observations, modeled estimates, and BLTZ recommendations remain visibly
+separate. No unsupported reach, visibility, valuation, or revenue claim may be shown.
+
 ## Phase 12 — Revenue Attribution and Financial Review
 
 - Revenue records and sources
@@ -205,6 +236,12 @@ Direct revenue and estimated media value must remain separate.
 - Status workflows
 - Disputes and Admin review
 - Append-only adjustment history where practical
+- Financial document and invoice-PDF support only after an authoritative invoice,
+  line-item, currency, payment-status, versioning, and authorization contract is approved
+
+Automated invoicing remains deferred in the current School/Team CRM PRD. Its CRM
+destination may be previewed in Phase 3, but no production invoice generation is
+authorized by this phase entry alone.
 
 ## Phase 13 — Production Hardening
 
@@ -232,6 +269,9 @@ For every task:
 
 ## Current Priority
 
-`Phase 2 — Shared Platform Foundation`.
+`Phase 3 — School/Team CRM Shell`.
 
-Phase 1 is complete, with remaining Locker items explicitly deferred. Phase 1.5 is complete. Do not design Phase 5 Media Graph tables during Phase 2. Do not begin the CRM shell until the shared identity, organization, membership, team, season, and event foundation exists.
+Phase 1 and Phase 1.5 are complete. Phase 2 is implemented locally with production
+promotion deferred behind its documented release gates. Continue Phase 3 without
+designing Phase 5 Media Graph tables or presenting later-phase preview fixtures as
+live organization data.

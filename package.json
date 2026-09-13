@@ -4,7 +4,7 @@
     "node": ">=22.12.0 <25"
   },
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "node --use-system-ca node_modules/next/dist/bin/next dev --turbopack",
     "build": "next build",
     "start": "next start",
     "lint": "eslint app components hooks lib tests types *.ts *.tsx *.mjs --no-error-on-unmatched-pattern",

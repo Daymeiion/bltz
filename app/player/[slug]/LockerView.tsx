@@ -5,6 +5,8 @@ import { ChevronDown, ChevronUp, Mic } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { SearchResult } from "@/components/ui/search-modal";
 import { trackProductEvent } from "@/lib/analytics/client";
+import { VideoPreview } from "@/components/player/VideoPreview";
+import { StructuredStats } from "@/components/player/StructuredStats";
 
 // ---------------------------------------------------------------------------
 // LockerView — fan-facing athlete locker, ported from the standalone design.
@@ -20,6 +22,7 @@ import { trackProductEvent } from "@/lib/analytics/client";
 export type LockerData = {
   athleteId: string | null;
   slug: string;
+  lockerHref?: string;
   fullName: string;
   hometown: string;
   position: string;
@@ -31,6 +34,7 @@ export type LockerData = {
   heroVideoUrl: string | null;
   logoSrc: string;
   bio: string;
+  story?: string;
   athleteQuote?: string | null;
   athleteQuoteAuthor?: string | null;
   heightDisplay: string;
@@ -38,6 +42,7 @@ export type LockerData = {
   dobDisplay: string;
   age?: number;
   gamesPlayed: number | null;
+  structuredStats?: import("@/lib/player/structured-stats-types").StoredStats[];
   careerStats?: {
     key: string;
     label: string;
@@ -90,7 +95,8 @@ export type LockerData = {
   schools: { label: string; color: string; logo: string | null }[];
   proTeams: { label: string; color: string; logo: string | null }[];
   awards: { year: string; label: string }[];
-  videos: { id: string; title: string; thumb: string | null }[];
+  timeline?: { year: string; tag: string; title: string; note: string }[];
+  videos: { id: string; title: string; thumb: string | null; playbackUrl?: string | null; embedUrl?: string | null }[];
   podcastAppearances?: {
     id: string;
     type: "podcast" | "interview";
@@ -108,6 +114,7 @@ export type LockerData = {
     provenance: string | null;
     licenseLabel: string;
   }[];
+  photoCount?: number;
 };
 
 // Shape returned by GET /api/spotify/now-playing when a track is live.
@@ -187,6 +194,7 @@ export default function LockerView({
   const [careerGamesInView, setCareerGamesInView] = useState(false);
   const [careerGamesNeedsScroll, setCareerGamesNeedsScroll] = useState(false);
   const [showAllCareerStats, setShowAllCareerStats] = useState(false);
+  const [photoAspectRatios, setPhotoAspectRatios] = useState<Record<string, number>>({});
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
@@ -198,6 +206,7 @@ export default function LockerView({
   });
   const statsAnimated = useRef(false);
   const screenRef = useRef<HTMLDivElement | null>(null);
+  const heroBackdropVideoRef = useRef<HTMLVideoElement | null>(null);
   const heroVideoRef = useRef<HTMLVideoElement | null>(null);
   const shortsScrollRef = useRef<HTMLDivElement | null>(null);
   const shortsScrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -217,6 +226,7 @@ export default function LockerView({
   const shortRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const shortVideoRefs = useRef<(HTMLVideoElement | null)[]>([]);
   const [heroPlaying, setHeroPlaying] = useState(true);
+  const [heroMuted, setHeroMuted] = useState(true);
   const showAthleteNav = viewerMode === "athlete";
   const isEmbedded = presentation === "embedded";
 
@@ -261,8 +271,7 @@ export default function LockerView({
     }
 
     const measure = () => {
-      const isPhone = window.matchMedia("(max-width: 640px)").matches;
-      setTeamHistoryNeedsScroll(isPhone && primary.scrollWidth > viewport.clientWidth + 1);
+      setTeamHistoryNeedsScroll(primary.scrollWidth > viewport.clientWidth + 1);
     };
     measure();
 
@@ -527,8 +536,23 @@ export default function LockerView({
   const toggleHeroVideo = () => {
     const v = heroVideoRef.current;
     if (!v) return;
-    if (v.paused) { v.play(); setHeroPlaying(true); }
-    else { v.pause(); setHeroPlaying(false); }
+    const backdrop = heroBackdropVideoRef.current;
+    if (v.paused) {
+      void Promise.allSettled([v.play(), backdrop?.play()]);
+      setHeroPlaying(true);
+    } else {
+      v.pause();
+      backdrop?.pause();
+      setHeroPlaying(false);
+    }
+  };
+
+  const toggleHeroMute = () => {
+    const video = heroVideoRef.current;
+    if (!video) return;
+    const nextMuted = !video.muted;
+    video.muted = nextMuted;
+    setHeroMuted(nextMuted);
   };
 
   const animateStats = () => {
@@ -582,7 +606,7 @@ export default function LockerView({
   const realVideos = data.videos.map((v, i) => ({
     ...v,
     ...sampleMeta[i % sampleMeta.length],
-    img: v.thumb || poolAt(i),
+    img: v.thumb,
     isPlaceholder: false,
   }));
   const placeholderTitles = ["SEASON HIGHLIGHTS", "GAME DAY CUT", "TOP PLAYS", "FULL SEASON REEL"];
@@ -590,6 +614,8 @@ export default function LockerView({
     ...realVideos,
     ...Array.from({ length: Math.max(0, 4 - realVideos.length) }, (_, i) => ({
       id: `placeholder-${i}`,
+      playbackUrl: null,
+      embedUrl: null,
       title: placeholderTitles[(realVideos.length + i) % placeholderTitles.length],
       thumb: null,
       tag: "UP NEXT",
@@ -733,7 +759,7 @@ export default function LockerView({
   const mediaPills = [["articles", "ARTICLES"], ["shorts", "SHORTS"], ["podcast", "PODCAST"], ["social", "SOCIAL"]]
     .map(([key, label]) => ({ key, label, active: mediaSort === key }));
 
-  // ---- STATS (all SAMPLE — no stats pipeline yet) ----
+  // ---- STATS ----
   const seasonCells = [
     [stats.tackles, "TACKLES"], [stats.int, "INTERCEPTIONS"], [stats.pbu, "PASS BREAKUPS"],
     [stats.solo, "SOLO"], [stats.ff, "FORCED FUM."], [stats.dtd, "DEF. TD"],
@@ -767,7 +793,7 @@ export default function LockerView({
     value: formatStatNumber(season.gamesPlayed),
     barStyle: { width: 26, height: Math.max(8, season.gamesPlayed / maxCareerGames * 100) + "%", borderRadius: 5, background: season.level.toLowerCase() === "pro" ? "linear-gradient(180deg,#FFB940,#C77D00)" : "linear-gradient(180deg,#2952FF,#1A3DCC)", transformOrigin: "bottom", animation: "barGrow .6s cubic-bezier(.16,1,.3,1) both" } as React.CSSProperties,
   }));
-  const timeline = [
+  const timeline = data.timeline ?? [
     { year: "2021", tag: "TRUE FRESHMAN", title: "BROKE THE ROTATION", note: "Started 4 games, first career INT. Freshman All-American nod." },
     { year: "2022", tag: "RB1 SHUTDOWN", title: "LOCKDOWN ISLAND", note: "Held opposing WR1s to 38% completion. Named team captain." },
     { year: "2023", tag: "ALL-CONFERENCE", title: "FIRST-TEAM ALL-CONFERENCE", note: "4 INT, 2 returned for scores. Led conference in PBU." },
@@ -784,7 +810,9 @@ export default function LockerView({
       : "Bio has not been added yet. BLTZ will show an athlete-written summary or a verified profile snippet once signup, scraped source, school, or team data is available.";
   const displayHometown = hasKnownText(data.hometown) ? data.hometown : unknownText;
   const displayStory =
-    hasBio
+    hasKnownText(data.story)
+      ? data.story!
+      : hasBio
       ? `Early Life: ${data.bio}\n\nCollege: BLTZ will expand this section with scraped school history, roster context, awards, and career milestones from verified sources.\n\nProfessional: Pro team, draft, media, and post-college details will appear here when available from organization/team data.`
       : `Early Life: Verified early-life details have not been added yet.\n\nCollege: School history, roster context, awards, and major performances will appear here once signup, scraped source, school, or team data is available.\n\nProfessional: Draft notes, pro affiliations, media coverage, and career milestones will populate here as verified organization and league data becomes available.`;
   const displayDob = hasKnownText(data.dobDisplay) ? `${data.dobDisplay}${data.age ? ` (${data.age})` : ""}` : unknownText;
@@ -798,6 +826,59 @@ export default function LockerView({
   const displayHighSchool = hasKnownText(data.highSchool) ? data.highSchool : unknownText;
 
   const tabIdx = { bio: 0, media: 1, stats: 2 }[tab];
+  const normalizedHeadshotUrl = safeExternalUrl(data.headshotUrl);
+  const seenPhotoAssets = new Set<string>();
+  const eligiblePhotos = data.photos.filter((photo) => {
+    const photoUrl = safeExternalUrl(photo.url);
+    if (!photoUrl || photoUrl === normalizedHeadshotUrl || /headshot/i.test(photo.title)) return false;
+    const parsed = new URL(photoUrl);
+    const assetKey = `${parsed.origin}${decodeURIComponent(parsed.pathname)}`.toLowerCase();
+    if (seenPhotoAssets.has(assetKey)) return false;
+    seenPhotoAssets.add(assetKey);
+    return true;
+  });
+  const photoRatio = (photoId: string) => photoAspectRatios[photoId] ?? 1;
+  const landscapePhotos = eligiblePhotos.filter((photo) => photoRatio(photo.id) >= 1);
+  const portraitPhotos = eligiblePhotos.filter((photo) => photoRatio(photo.id) < 1);
+  const usedPhotoIds = new Set<string>();
+  const takePhoto = (preferred: typeof eligiblePhotos) => {
+    const photo = preferred.find((candidate) => !usedPhotoIds.has(candidate.id))
+      ?? eligiblePhotos.find((candidate) => !usedPhotoIds.has(candidate.id));
+    if (photo) usedPhotoIds.add(photo.id);
+    return photo;
+  };
+  const previewPhotos = [
+    takePhoto(landscapePhotos), takePhoto(portraitPhotos), takePhoto(landscapePhotos),
+    takePhoto(portraitPhotos), takePhoto(landscapePhotos), takePhoto(portraitPhotos),
+  ].filter((photo): photo is (typeof eligiblePhotos)[number] => Boolean(photo));
+  const eligiblePhotoCount = Math.max(
+    eligiblePhotos.length,
+    (data.photoCount ?? data.photos.length) - (data.photos.length - eligiblePhotos.length),
+  );
+  const desktopSpans = [6, 2, 4, 2, 6, 4];
+  const mobileSpans = [7, 5, 5, 7, 8, 4];
+  const recordPhotoAspectRatio = (photoId: string, img: HTMLImageElement) => {
+    if (!img.naturalWidth || !img.naturalHeight) return;
+    const ratio = img.naturalWidth / img.naturalHeight;
+    setPhotoAspectRatios((current) => (
+      current[photoId] === ratio ? current : { ...current, [photoId]: ratio }
+    ));
+  };
+  useEffect(() => {
+    const loaders = data.photos.slice(0, 10).flatMap((photo) => {
+      const url = safeExternalUrl(photo.url);
+      if (!url) return [];
+      const loader = new window.Image();
+      loader.onload = () => {
+        if (!loader.naturalWidth || !loader.naturalHeight) return;
+        const ratio = loader.naturalWidth / loader.naturalHeight;
+        setPhotoAspectRatios((current) => current[photo.id] === ratio ? current : { ...current, [photo.id]: ratio });
+      };
+      loader.src = url;
+      return [loader];
+    });
+    return () => loaders.forEach((loader) => { loader.onload = null; });
+  }, [data.photos]);
   const earnedFmt = "$" + (stats.earned || 0).toLocaleString("en-US");
   const viewsFmt = Math.round((stats.views || 0) / 1000) + "K";
 
@@ -881,19 +962,34 @@ export default function LockerView({
 
           {/* ===== HERO ===== */}
           <section className="locker-hero-section" style={{ padding: "0 18px" }}>
-            <div className="locker-hero-card" style={{ position: "relative", height: 600, borderRadius: 24, overflow: "hidden", background: "linear-gradient(180deg,#161B30 0%,#10142404 55%,#0B0E1A 100%)" }}>
+            <div className="locker-hero-card" style={{ position: "relative", height: 610, borderRadius: 24, overflow: "hidden", background: "linear-gradient(180deg,#161B30 0%,#10142404 55%,#0B0E1A 100%)" }}>
               {/* video / photo-reel background */}
               <div className="locker-hero-media">
                 {data.heroVideoUrl ? (
-                  <video
-                    ref={heroVideoRef}
-                    src={data.heroVideoUrl}
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                    style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
-                  />
+                  <>
+                    <video
+                      ref={heroBackdropVideoRef}
+                      className="locker-hero-video-backdrop"
+                      src={data.heroVideoUrl}
+                      autoPlay
+                      loop
+                      muted
+                      playsInline
+                      aria-hidden="true"
+                    />
+                    <video
+                      ref={heroVideoRef}
+                      className="locker-hero-video"
+                      src={data.heroVideoUrl}
+                      autoPlay
+                      loop
+                      muted
+                      playsInline
+                      aria-label={`${data.fullName} hero video`}
+                    >
+                      Your browser does not support video playback.
+                    </video>
+                  </>
                 ) : (
                   [0, 6, 12].map((delay, i) => {
                     const img = poolAt(i);
@@ -906,7 +1002,7 @@ export default function LockerView({
                 <div style={{ position: "absolute", top: -60, left: -80, width: 340, height: 340, borderRadius: 9999, background: "radial-gradient(circle,rgba(41,82,255,.35),transparent 70%)", animation: "glowA 7s ease-in-out infinite", pointerEvents: "none" }} />
                 <div style={{ position: "absolute", bottom: 120, right: -70, width: 260, height: 260, borderRadius: 9999, background: "radial-gradient(circle,rgba(245,166,35,.28),transparent 70%)", animation: "glowB 8s ease-in-out infinite", pointerEvents: "none" }} />
                 {/* bottom blend */}
-                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom,rgba(11,14,26,.15) 0%,rgba(11,14,26,0) 30%,rgba(11,14,26,.15) 52%,rgba(11,14,26,.72) 78%,#0B0E1A 100%)", pointerEvents: "none" }} />
+                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom,rgba(11,14,26,.08) 0%,rgba(11,14,26,0) 24%,rgba(11,14,26,.28) 44%,rgba(11,14,26,.72) 64%,rgba(11,14,26,.94) 82%,#0B0E1A 100%)", pointerEvents: "none" }} />
               </div>
 
               {/* Spotify "now playing" — live. Collapses entirely when the athlete
@@ -948,41 +1044,52 @@ export default function LockerView({
                 </a>
               )}
 
-              {/* center play/pause — only meaningful when a real hero video is playing */}
+              {/* Hero playback controls */}
               {data.heroVideoUrl && (
-                <button
-                  onClick={toggleHeroVideo}
-                  aria-label={heroPlaying ? "Pause background video" : "Play background video"}
-                  style={{ position: "absolute", top: "40%", left: "50%", transform: "translate(-50%,-50%)", zIndex: 5, width: 62, height: 62, borderRadius: 9999, border: "1.5px solid rgba(255,255,255,.55)", background: "rgba(11,14,26,.3)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
-                >
-                  {heroPlaying ? (
-                    <span style={{ display: "flex", gap: 5, alignItems: "center", width: 16, height: 18 }}>
-                      <span style={{ width: 5, height: 18, background: "#fff", borderRadius: 1 }} />
-                      <span style={{ width: 5, height: 18, background: "#fff", borderRadius: 1 }} />
-                    </span>
-                  ) : (
-                    <span style={{ display: "block", width: 0, height: 0, borderLeft: "18px solid #fff", borderTop: "12px solid transparent", borderBottom: "12px solid transparent", marginLeft: 5 }} />
-                  )}
-                </button>
+                <div style={{ position: "absolute", top: 16, right: 16, zIndex: 6, display: "flex", flexDirection: "column", gap: 8 }}>
+                  <button
+                    type="button"
+                    onClick={toggleHeroVideo}
+                    aria-label={heroPlaying ? "Pause hero video" : "Play hero video"}
+                    style={{ width: 44, height: 44, borderRadius: 9999, border: "1px solid rgba(209,213,219,.72)", background: "rgba(11,14,26,.56)", color: "#D1D5DB", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 8px 22px rgba(0,0,0,.24)" }}
+                  >
+                    {heroPlaying ? (
+                      <span style={{ display: "flex", gap: 4, alignItems: "center", width: 14, height: 16 }}>
+                        <span style={{ width: 4, height: 16, background: "currentColor", borderRadius: 1 }} />
+                        <span style={{ width: 4, height: 16, background: "currentColor", borderRadius: 1 }} />
+                      </span>
+                    ) : (
+                      <span style={{ display: "block", width: 0, height: 0, borderLeft: "14px solid currentColor", borderTop: "9px solid transparent", borderBottom: "9px solid transparent", marginLeft: 3 }} />
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={toggleHeroMute}
+                    aria-label={heroMuted ? "Unmute hero video" : "Mute hero video"}
+                    style={{ width: 44, height: 44, borderRadius: 9999, border: "1px solid rgba(209,213,219,.72)", background: "rgba(11,14,26,.56)", color: "#D1D5DB", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 8px 22px rgba(0,0,0,.24)" }}
+                  >
+                    {heroMuted ? (
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4V5Z" /><path d="m22 9-6 6" /><path d="m16 9 6 6" /></svg>
+                    ) : (
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4V5Z" /><path d="M15.5 8.5a5 5 0 0 1 0 7" /><path d="M18.5 5.5a9 9 0 0 1 0 13" /></svg>
+                    )}
+                  </button>
+                </div>
               )}
 
-              {/* cutout headshot — bottom edge masked so it dissolves into the
-                  container background, letting the name/hometown read clearly */}
-              <img className="locker-hero-headshot" src={data.headshotUrl} alt={data.fullName} style={{ position: "absolute", bottom: 96, left: "50%", transform: "translateX(-50%)", height: 268, width: 210, objectFit: "cover", objectPosition: "top", zIndex: 3, filter: "drop-shadow(0 24px 40px rgba(0,0,0,.55))", WebkitMaskImage: "linear-gradient(to bottom,#000 74%,transparent 100%)", maskImage: "linear-gradient(to bottom,#000 74%,transparent 100%)" }} />
+              {/* Fully opaque headshot */}
+              <img className="locker-hero-headshot" src={data.headshotUrl} alt={data.fullName} style={{ position: "absolute", bottom: 74, left: "50%", transform: "translateX(-50%)", height: 268, width: "80vw", objectFit: "cover", objectPosition: "top", zIndex: 4, opacity: 1, clipPath: "inset(0 0 39px 0)" }} />
+              <img className="locker-hero-headshot locker-hero-headshot-gradient" src={data.headshotUrl} alt="" aria-hidden="true" style={{ position: "absolute", bottom: 74, left: "50%", transform: "translateX(-50%)", height: 268, width: "80vw", objectFit: "cover", objectPosition: "top", zIndex: 4, clipPath: "inset(0 0 39px 0)", filter: "brightness(0)", WebkitMaskImage: "linear-gradient(to bottom, transparent 66%, rgba(0,0,0,.72) 82%, #000 100%)", maskImage: "linear-gradient(to bottom, transparent 66%, rgba(0,0,0,.72) 82%, #000 100%)", pointerEvents: "none" }} />
 
-              {/* small solid-navy fade pinned to the bottom of the headshot — same
-                  color as the container background, so name + hometown pop */}
-              <div style={{ position: "absolute", left: 0, right: 0, bottom: 96, height: 90, zIndex: 3, background: "linear-gradient(to bottom, rgba(11,14,26,0) 0%, rgba(11,14,26,.55) 55%, #0B0E1A 100%)", pointerEvents: "none" }} />
-
-              {/* name-readability gradient — on top of the headshot, behind the name/pills */}
-              <div style={{ position: "absolute", inset: 0, zIndex: 4, background: "linear-gradient(to bottom, transparent 0%, transparent 58%, rgba(5,7,15,.5) 78%, rgba(11,14,26,.95) 100%)", pointerEvents: "none" }} />
+              {/* hero-video gradient — behind the headshot and name */}
+              <div style={{ position: "absolute", inset: 0, zIndex: 3, background: "linear-gradient(to bottom, transparent 0%, transparent 30%, rgba(5,7,15,.35) 38%, rgba(5,7,15,.65) 52%, rgba(5,7,15,.85) 68%, rgba(11,14,26,.98) 86%, #0B0E1A 100%)", pointerEvents: "none" }} />
 
               {/* name block */}
-              <div className="locker-hero-copy" style={{ position: "absolute", bottom: 18, left: 0, right: 0, zIndex: 5, textAlign: "center", padding: "0 16px" }}>
-                <h1 style={{ fontFamily: disp, fontWeight: 900, fontSize: heroNameSize, lineHeight: ".9", letterSpacing: "-.005em", textTransform: "uppercase", color: "#fff", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{data.fullName}</h1>
-                <div style={{ fontFamily: mono, fontSize: 14, letterSpacing: ".14em", color: "#F5A623", margin: "8px 0 14px", fontWeight: 700 }}>{data.hometown}</div>
+            <div className="locker-hero-copy" style={{ position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 5, textAlign: "center", padding: "0 16px" }}>
+                <h1 style={{ fontFamily: disp, fontWeight: 900, fontSize: heroNameSize, lineHeight: ".9", letterSpacing: "-.005em", textTransform: "uppercase", color: "#fff", margin: 0, paddingTop: 5, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{data.fullName}</h1>
+                <div style={{ fontFamily: mono, fontSize: 14, letterSpacing: ".14em", color: "#F5A623", margin: "4px 0 8px", fontWeight: 700 }}>{data.hometown}</div>
                 <div style={{ display: "flex", gap: 8, alignItems: "center", width: "100%" }}>
-                  <RotatingPill items={data.schools} fallback={{ label: "SCHOOL", color: "#1A3DCC" }} />
+                  <RotatingPill items={collegeTeams} fallback={{ label: "SCHOOL", color: "#1A3DCC" }} />
                   <div style={{ width: 46, height: 46, borderRadius: 9999, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(255,255,255,.1)", border: "1px solid rgba(255,255,255,.28)", backdropFilter: "blur(8px)", fontFamily: disp, fontWeight: 800, fontSize: 16, color: "#fff", flex: "none" }}>{data.position || "—"}</div>
                   <RotatingPill items={data.proTeams} fallback={{ label: data.levelLabel.toUpperCase(), color: "#1A3DCC" }} />
                 </div>
@@ -994,7 +1101,7 @@ export default function LockerView({
           </section>
 
           {hasAthleteQuote && (
-            <section style={{ padding: "10px 18px 0" }}>
+            <section style={{ marginTop: 25, padding: "10px 18px 0" }}>
               <div style={{ padding: "0 2px", textAlign: "center" }}>
                 <p className="locker-athlete-quote" style={{ margin: 0, fontFamily: mono, fontWeight: 700, lineHeight: 1.5, color: "rgba(255,255,255,.86)" }}>
                   “{displayAthleteQuote}”
@@ -1011,7 +1118,7 @@ export default function LockerView({
             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 10 }}>
               <h2 style={{ fontFamily: disp, fontWeight: 700, fontSize: 24, lineHeight: 1, letterSpacing: "-.02em", textTransform: "uppercase", color: "#fff", margin: 0 }}>FILM ROOM</h2>
               <a
-                href={`/player/${data.slug}/videos`}
+                href={`${data.lockerHref ?? `/player/${data.slug}`}/videos`}
                 aria-label="View all videos"
                 style={{ width: 34, height: 34, borderRadius: 9999, border: "1px solid #1E2640", background: "rgba(255,255,255,.05)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none", textDecoration: "none" }}
               >
@@ -1022,7 +1129,7 @@ export default function LockerView({
               {videos.map((v, i) => (
                 <div key={v.id + i} style={{ flex: "none", width: 262, scrollSnapAlign: "start", cursor: v.isPlaceholder ? "default" : "pointer" }}>
                   <div style={{ position: "relative", height: 150, borderRadius: 14, overflow: "hidden", border: "1px solid #1E2640", background: GRAD_FIELD }}>
-                    {v.img ? <img src={v.img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", opacity: .92 }} /> : null}
+                    <VideoPreview title={v.title} thumbnailUrl={v.img} playbackUrl={v.playbackUrl} embedUrl={v.embedUrl} />
                     <div style={{ position: "absolute", inset: 0, background: "linear-gradient(0deg, #05070F, rgba(5,7,15,.05) 55%)" }} />
                     <div style={{ position: "absolute", top: 10, left: 10, display: "flex", alignItems: "center", gap: 5, padding: "4px 8px", borderRadius: 9999, background: "rgba(11,14,26,.6)", border: "1px solid rgba(245,166,35,.4)", backdropFilter: "blur(6px)" }}>
                       <span style={{ fontFamily: mono, fontSize: 8.5, letterSpacing: ".14em", color: "#FFB940" }}>▲ {v.tag}</span>
@@ -1049,45 +1156,46 @@ export default function LockerView({
             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 14 }}>
               <h1 style={{ fontFamily: disp, fontWeight: 700, fontSize: 24, lineHeight: 1, letterSpacing: "-.02em", textTransform: "uppercase", color: "#fff", margin: 0 }}>PHOTOS</h1>
               <a
-                href={`/player/${data.slug}/photos`}
+                href={`${data.lockerHref ?? `/player/${data.slug}`}/photos`}
                 aria-label="View all photos"
                 style={{ width: 34, height: 34, borderRadius: 9999, border: "1px solid #1E2640", background: "rgba(255,255,255,.05)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none", textDecoration: "none" }}
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFB940" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
               </a>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gridAutoRows: 104, gap: 8 }}>
-              <div style={{ gridColumn: "1/3", gridRow: "1/3", borderRadius: 14, overflow: "hidden", position: "relative", border: "1px solid #1E2640", background: GRAD_FIELD }}>
-                {data.photos[0] ? (
-                  <>
-                    <img src={data.photos[0].url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                  <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top,rgba(5,7,15,.7),transparent 50%)" }} />
-                  <div style={{ position: "absolute", top: 10, left: 10, padding: "4px 8px", borderRadius: 9999, background: "rgba(11,14,26,.72)", border: "1px solid rgba(255,255,255,.14)", backdropFilter: "blur(6px)", fontFamily: mono, fontSize: 8.5, letterSpacing: ".14em", color: "#FFB940" }}>{data.photos[0].licenseLabel}</div>
-                  <div style={{ position: "absolute", left: 12, right: 12, bottom: 11 }}>
-                    {data.photos[0].title ? <div style={{ fontFamily: disp, fontWeight: 700, fontSize: 16, textTransform: "uppercase", color: "#fff", letterSpacing: ".02em", textShadow: "0 2px 8px rgba(0,0,0,.6)", lineHeight: ".95" }}>{data.photos[0].title}</div> : null}
-                    {data.photos[0].credits ? <div style={{ fontFamily: mono, fontSize: 8.5, letterSpacing: ".1em", color: "rgba(255,255,255,.62)", marginTop: 6, textTransform: "uppercase" }}>{data.photos[0].credits}</div> : null}
+            <div className="locker-photo-contact-sheet">
+              {previewPhotos.length ? (
+                previewPhotos.map((photo, index) => (
+                  <div
+                    key={photo.id}
+                    className="locker-photo-tile"
+                    style={{
+                      "--photo-desktop-span": desktopSpans[index] ?? 2,
+                      "--photo-mobile-span": mobileSpans[index] ?? 2,
+                    } as React.CSSProperties}
+                  >
+                    <img
+                      src={photo.url}
+                      alt={photo.title}
+                      ref={(img) => {
+                        if (img?.complete) recordPhotoAspectRatio(photo.id, img);
+                      }}
+                      onLoad={(event) => recordPhotoAspectRatio(photo.id, event.currentTarget)}
+                      style={{ display: "block", width: "100%", height: "100%", objectFit: "cover" }}
+                    />
+                    {index === previewPhotos.length - 1 && eligiblePhotoCount > previewPhotos.length ? (
+                      <div className="locker-photo-more" style={{ fontFamily: mono }}>+{eligiblePhotoCount - previewPhotos.length} MORE</div>
+                    ) : null}
                   </div>
-                  </>
-                ) : (
+                ))
+              ) : (
+                <div className="locker-photo-empty" style={{ background: GRAD_FIELD }}>
                   <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: 14, background: "linear-gradient(145deg,rgba(19,24,41,.95),rgba(10,26,110,.62))" }}>
                     <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: ".16em", color: "#FFB940", marginBottom: 8 }}>LICENSE CHECK</div>
                     <div style={{ fontFamily: disp, fontWeight: 800, fontSize: 21, lineHeight: ".92", textTransform: "uppercase", color: "#fff" }}>Awaiting Approved Photos</div>
                   </div>
-                )}
-              </div>
-              {[1, 2, 3].map((idx, k) => (
-                <div key={idx} style={{ gridColumn: k === 2 ? "1/2" : "3/4", gridRow: k === 0 ? "1/2" : k === 1 ? "2/3" : "3/4", borderRadius: 14, overflow: "hidden", border: "1px solid #1E2640", position: "relative", background: "#131829" }}>
-                  {data.photos[idx] ? <img src={data.photos[idx].url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : null}
-                  <div style={{ position: "absolute", inset: 0, background: data.photos[idx] ? "linear-gradient(to top,rgba(5,7,15,.55),transparent 60%)" : "linear-gradient(135deg,rgba(255,255,255,.04),rgba(10,26,110,.28))" }} />
-                  <div style={{ position: "absolute", left: 8, right: 8, bottom: 8, fontFamily: mono, fontSize: 7.5, letterSpacing: ".12em", color: "rgba(255,255,255,.72)", textTransform: "uppercase", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{data.photos[idx]?.licenseLabel ?? "READY SLOT"}</div>
                 </div>
-              ))}
-              <div style={{ gridColumn: "2/4", gridRow: "3/4", borderRadius: 14, overflow: "hidden", position: "relative", border: "1px solid #1E2640", background: GRAD_FIELD }}>
-                {data.photos[4] ? <img src={data.photos[4].url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", opacity: .9 }} /> : null}
-                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(120deg,rgba(10,26,110,.5),transparent)" }} />
-                <div style={{ position: "absolute", left: 12, bottom: 11, fontFamily: mono, fontSize: 8.5, letterSpacing: ".12em", color: "rgba(255,255,255,.72)", textTransform: "uppercase" }}>{data.photos[4]?.licenseLabel ?? "SCRAPED / UPLOADED MEDIA"}</div>
-                {data.photos.length > 5 ? <div style={{ position: "absolute", right: 12, bottom: 11, fontFamily: mono, fontSize: 10, letterSpacing: ".14em", color: "#fff" }}>+{data.photos.length - 5} MORE</div> : null}
-              </div>
+              )}
             </div>
           </section>
 
@@ -1637,7 +1745,7 @@ export default function LockerView({
                 )}
 
                 {statsSort === "career" && (
-                  <div style={{ animation: "tabIn .35s ease", padding: "14px 18px 4px" }}>
+                  <div style={{ padding: "14px 18px 0" }}>
                     <div ref={teamHistoryRef} className="team-history-container" style={{ width: "100%", minHeight: 66, marginBottom: 12, padding: "11px 14px", borderRadius: 12, border: "1px solid #1E2640", background: "#131829", display: "flex", alignItems: "center", gap: 14, overflow: "hidden" }}>
                       <span className="team-history-heading" style={{ flex: "none", fontFamily: mono, fontSize: 9, fontWeight: 700, letterSpacing: ".12em", color: lockerAccent, whiteSpace: "nowrap" }}>TEAM HISTORY</span>
                       <div ref={teamHistoryViewportRef} className="team-history-viewport">
@@ -1646,11 +1754,8 @@ export default function LockerView({
                             {[false, true].map((duplicate) => (
                               <div ref={duplicate ? undefined : teamHistoryPrimaryRef} className="team-history-sequence" aria-hidden={duplicate || undefined} key={duplicate ? "duplicate" : "primary"}>
                                 {careerTeams.map((team, index) => (
-                                  <div key={`${team.label}-${index}`} style={{ flex: "none", display: "flex", alignItems: "center", gap: 8, padding: "0 14px", borderLeft: "1px solid rgba(255,255,255,.12)" }}>
-                                    <div style={{ width: 28, height: 28, flex: "none", borderRadius: 6, background: team.color, display: "grid", placeItems: "center", overflow: "hidden" }}>
-                                      {team.logo ? <img src={team.logo} alt="" style={{ width: 21, height: 21, objectFit: "contain" }} /> : <span style={{ fontFamily: disp, fontSize: 11, fontWeight: 900, color: "#fff" }}>{team.label.slice(0, 2)}</span>}
-                                    </div>
-                                    <span style={{ fontFamily: disp, fontSize: 16, fontWeight: 800, color: "#fff", textTransform: "uppercase" }}>{team.label}</span>
+                                  <div key={`${team.label}-${index}`} style={{ flex: "none", marginRight: 8, borderRadius: 9999, overflow: "hidden", border: "1px solid rgba(255,255,255,.28)" }}>
+                                    <PillContent item={team} />
                                   </div>
                                 ))}
                               </div>
@@ -1661,6 +1766,11 @@ export default function LockerView({
                         )}
                       </div>
                     </div>
+                  </div>
+                )}
+                {statsSort === "career" && !!data.structuredStats?.length && <StructuredStats records={data.structuredStats} />}
+                {statsSort === "career" && !data.structuredStats?.length && (
+                  <div style={{ animation: "tabIn .35s ease", padding: "14px 18px 4px" }}>
                     <div style={{ marginBottom: 12, padding: "11px 12px", borderRadius: 12, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.04)", fontFamily: mono, fontSize: 8, letterSpacing: ".11em", color: "rgba(255,255,255,.52)", textTransform: "uppercase", lineHeight: 1.35, textAlign: "center" }}>
                       Career metrics adapt by sport and position from onboarding scrape, athlete upload, or organization data.
                     </div>
@@ -1720,7 +1830,7 @@ export default function LockerView({
                           {awards.map((award: any, i) => (
                             <div key={i} style={{ minHeight: 184, borderRadius: 14, border: "1px solid #1E2640", background: "linear-gradient(160deg,#1a2035,#131829)", overflow: "hidden", position: "relative" }}>
                               <div style={{ height: 82, background: GRAD_FIELD, overflow: "hidden" }}>
-                                {award.img ? <img src={award.img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", opacity: .9 }} /> : null}
+                                {award.img ? <img src={award.img} alt="" style={{ width: "100%", height: "100%", objectFit: "contain", objectPosition: "center center", opacity: 1 }} /> : null}
                               </div>
                               <div style={{ padding: 13, display: "flex", flexDirection: "column", gap: 10 }}>
                                 <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: ".11em", color: lockerAccent, textTransform: "uppercase" }}>★ {award.year}</div>
@@ -1922,7 +2032,7 @@ function PillContent({ item }: { item: PillItem }) {
   const fg = readableText(item.color);
   const hasLogo = !!item.logo;
   return (
-    <div style={{ height: PILL_H, display: "flex", alignItems: "center", justifyContent: "center", gap: hasLogo ? 8 : 0, padding: "0 14px", background: `linear-gradient(135deg, ${item.color}, ${item.color}cc)` }}>
+    <div style={{ height: PILL_H, display: "flex", alignItems: "center", justifyContent: "center", gap: hasLogo ? 8 : 0, padding: "0 14px", background: item.color }}>
       {hasLogo ? (
         <img src={item.logo!} alt="" style={{ height: 22, width: 22, objectFit: "contain", flex: "none", filter: "drop-shadow(0 1px 3px rgba(0,0,0,.35))" }} />
       ) : null}
@@ -2021,6 +2131,15 @@ const styleSheet = `
 .bltz-frame{position:relative;width:390px;height:844px;background:#0B0E1A;overflow:hidden;box-shadow:0 30px 90px rgba(0,0,0,.6);border-radius:0}
 .locker-hero-card{contain:paint;isolation:isolate;transform:translateZ(0);clip-path:inset(0 round 24px);outline:1px solid rgba(255,255,255,.12);outline-offset:-1px}
 .locker-hero-media{position:absolute;inset:3px;overflow:hidden;border-radius:21px;clip-path:inset(0 round 21px)}
+.locker-hero-video-backdrop,.locker-hero-video{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.locker-hero-video-backdrop{z-index:0;object-fit:cover;transform:scale(1.1);filter:blur(24px) saturate(.82) brightness(.62)}
+.locker-hero-video{z-index:1;object-fit:contain;object-position:center;background:transparent}
+.locker-photo-contact-sheet{height:390px;display:grid;grid-template-columns:repeat(12,minmax(0,1fr));grid-template-rows:repeat(3,minmax(0,1fr));grid-auto-flow:row;gap:8px;overflow:hidden}
+.locker-photo-tile{position:relative;min-width:0;grid-column:span var(--photo-mobile-span,2);overflow:hidden;border:1px solid #1E2640;border-radius:14px;background:${GRAD_FIELD}}
+.locker-photo-tile img{transition:transform .35s ease}
+.locker-photo-tile:hover img{transform:scale(1.025)}
+.locker-photo-more{position:absolute;right:10px;bottom:9px;padding:5px 7px;border-radius:999px;background:rgba(5,7,15,.76);color:#fff;font-size:9px;font-weight:700;letter-spacing:.12em;text-shadow:0 1px 6px rgba(0,0,0,.8)}
+.locker-photo-empty{position:relative;min-height:228px;grid-column:1/-1;overflow:hidden;border:1px solid #1E2640;border-radius:14px}
 .locker-hero-stroke{border-radius:24px}
 .bio-headshot-card{height:250px;overflow:hidden;border:1px solid #1E2640;border-radius:14px;background:#131829;display:flex;flex-direction:column}
 .bio-headshot-image{position:relative;height:216px;flex:0 0 216px;overflow:hidden;background:${GRAD_FIELD}}
@@ -2029,7 +2148,8 @@ const styleSheet = `
 .team-history-viewport{min-width:0;flex:1;overflow:hidden;white-space:nowrap}
 .team-history-track{display:flex;width:max-content;will-change:transform}
 .team-history-sequence{display:flex;align-items:center;flex:none}
-.team-history-track:not(.is-active) .team-history-sequence:first-child>div:first-child{border-left:none!important;padding-left:0!important}
+.team-history-track.is-active{animation:teamHistoryMarquee 24s linear infinite}
+.team-history-track:not(.is-active) .team-history-sequence[aria-hidden="true"]{display:none}
 .career-games-viewport{width:100%;overflow:hidden}
 .career-games-track{display:flex;width:max-content;will-change:transform}
 .career-games-sequence{display:flex;align-items:flex-end;flex:none}
@@ -2069,8 +2189,11 @@ const styleSheet = `
 .basic-info-grid>div{grid-column:1/-1}
 @media (min-width:640px){.bltz-frame{border-radius:28px}}
 @media (min-width:641px){.bio-headshot-card{height:216px}.bio-headshot-image{height:178px;flex-basis:178px}.bio-headshot-photo{object-fit:contain;object-position:center bottom}.bio-headshot-year{height:38px;flex-basis:38px}.basic-info-grid>div{grid-column:auto}.basic-info-grid>.basic-info-high-school{grid-column:1/-1}}
+@media (min-width:641px){.locker-photo-contact-sheet{height:420px;grid-template-columns:repeat(12,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr));gap:10px}.locker-photo-tile{grid-column:span var(--photo-desktop-span,4)}}
 @media (max-width:640px){
   .bltz-frame{width:100vw;height:100dvh;box-shadow:none}
+  .locker-hero-video{object-fit:cover;object-position:center center}
+  .locker-hero-video-backdrop{transform:scale(1.16);filter:blur(20px) saturate(.82) brightness(.58)}
   .locker-filter-row{gap:6px!important;padding-right:12px!important;padding-left:12px!important}
   .locker-filter-pill{min-width:0;padding:7px 9px!important;font-size:9px!important;letter-spacing:.08em!important}
   .team-history-container{flex-direction:column;gap:10px!important}
@@ -2080,8 +2203,8 @@ const styleSheet = `
   .team-history-track:not(.is-active) .team-history-sequence[aria-hidden="true"]{display:none}
   .team-history-track.is-active{animation:teamHistoryMarquee 24s linear infinite}
 }
-@media (min-width:641px){.team-history-viewport{overflow-x:auto}.team-history-sequence[aria-hidden="true"]{display:none}}
-@media (prefers-reduced-motion:reduce){.team-history-track.is-active,.career-games-track.is-active{animation:none}.team-history-viewport,.career-games-viewport{overflow-x:auto}.career-games-track.is-active .career-games-sequence[aria-hidden="true"]{display:none}}
+
+@media (prefers-reduced-motion:reduce){.team-history-track.is-active,.career-games-track.is-active{animation:none}.team-history-viewport,.career-games-viewport{overflow-x:auto}.career-games-track.is-active .career-games-sequence[aria-hidden="true"],.team-history-sequence[aria-hidden="true"]{display:none}}
 .bltz-frame.bltz-frame-embedded{width:100%;max-width:575px;height:100%;border-radius:18px;box-shadow:none}
 @media (min-width:641px) and (max-width:899px){
   .bltz-frame:not(.bltz-frame-embedded){width:100vw;height:100dvh;border-radius:0;box-shadow:none}
@@ -2107,10 +2230,10 @@ const styleSheet = `
   .bltz-frame:not(.bltz-frame-embedded) .locker-topbar{width:min(1240px,calc(100% - 64px));margin:0 auto;padding:22px 0 16px!important}
   .bltz-frame:not(.bltz-frame-embedded) .scr>section{width:min(1180px,calc(100% - 64px));margin-right:auto;margin-left:auto}
   .bltz-frame:not(.bltz-frame-embedded) .locker-hero-section{width:calc(100% - 32px)!important;max-width:none!important;padding:0!important}
-  .bltz-frame:not(.bltz-frame-embedded) .locker-hero-card{height:min(76vh,760px)!important;min-height:640px;border-radius:8px!important;clip-path:inset(0 round 8px)}
+  .bltz-frame:not(.bltz-frame-embedded) .locker-hero-card{height:min(calc(76vh + 10px),770px)!important;min-height:650px;border-radius:8px!important;clip-path:inset(0 round 8px)}
   .bltz-frame:not(.bltz-frame-embedded) .locker-hero-media{border-radius:5px;clip-path:inset(0 round 5px)}
   .bltz-frame:not(.bltz-frame-embedded) .locker-hero-stroke{border-radius:8px}
-  .bltz-frame:not(.bltz-frame-embedded) .locker-hero-headshot{bottom:104px!important;width:220px!important;height:282px!important}
+  .bltz-frame:not(.bltz-frame-embedded) .locker-hero-headshot{bottom:82px!important;width:80vw!important;height:282px!important;clip-path:inset(0 0 clamp(47px,4.5vw,68px) 0)!important}
   .bltz-frame:not(.bltz-frame-embedded) .locker-hero-copy{right:50%!important;left:50%!important;width:min(560px,calc(100% - 48px));padding:0!important;transform:translateX(-50%)}
   .bltz-frame:not(.bltz-frame-embedded) .locker-hero-copy h1{font-size:clamp(52px,5vw,76px)!important}
   .bltz-frame:not(.bltz-frame-embedded) .locker-film-section,
@@ -2118,7 +2241,7 @@ const styleSheet = `
   .bltz-frame:not(.bltz-frame-embedded) .locker-film-section .hs{gap:16px!important;padding-bottom:16px!important}
   .bltz-frame:not(.bltz-frame-embedded) .locker-film-section .hs>div{width:320px!important}
   .bltz-frame:not(.bltz-frame-embedded) .locker-film-section .hs>div>div{height:182px!important;border-radius:8px!important}
-  .bltz-frame:not(.bltz-frame-embedded) .locker-photos-section>div:last-child{grid-auto-rows:160px!important;gap:12px!important}
+  .bltz-frame:not(.bltz-frame-embedded) .locker-photos-section>div:last-child{gap:12px!important}
   .bltz-frame:not(.bltz-frame-embedded) .locker-tabs-section{padding-top:34px!important}
 }
 .scr::-webkit-scrollbar,.hs::-webkit-scrollbar{display:none;width:0;height:0}

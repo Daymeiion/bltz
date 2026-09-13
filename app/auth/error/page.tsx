@@ -1,9 +1,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import Link from "next/link";
 
 export default async function Page({
   searchParams,
 }: {
-  searchParams: Promise<{ error: string }>;
+  searchParams: Promise<{ error?: string }>;
 }) {
   const params = await searchParams;
 
@@ -18,15 +19,15 @@ export default async function Page({
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {params?.error ? (
-                <p className="text-sm text-muted-foreground">
-                  Code error: {params.error}
-                </p>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  An unspecified error occurred.
-                </p>
-              )}
+              <p role="alert" className="text-sm text-muted-foreground">
+                {params.error === "verification_unavailable"
+                  ? "The sign-in service is temporarily unavailable. Please try again later."
+                  : "This sign-in link could not be verified. It may be invalid or expired."}
+              </p>
+              <div className="mt-4 flex flex-col gap-2 text-sm">
+                <Link href="/auth/forgot-password" className="underline">Request a new password-reset link</Link>
+                <Link href="/auth/login" className="underline">Return to sign in</Link>
+              </div>
             </CardContent>
           </Card>
         </div>
