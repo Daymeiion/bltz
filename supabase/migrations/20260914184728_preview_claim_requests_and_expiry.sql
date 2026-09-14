@@ -212,7 +212,7 @@ returns text
 language plpgsql
 security definer
 set search_path = ''
-as $
+as $$
 declare
   actor uuid := auth.uid();
   normalized_email text := lower(btrim(p_email));
@@ -227,8 +227,7 @@ begin
   if normalized_email is null
     or length(normalized_email) not between 3 and 254
     or normalized_email ~ '[[:cntrl:][:space:]]'
-    or normalized_email !~ '^[^@]+@[^@]+\.[^@]+
- then
+    or normalized_email !~ '^[^@]+@[^@]+\.[^@]+$' then
     raise exception 'invalid email' using errcode = '22023';
   end if;
 
@@ -309,14 +308,14 @@ begin
 
   return case when previous_user_id is null then 'assigned' else 'reassigned' end;
 end;
-$;
+$$;
 
 -- Bound signed media links to the same viewer access window. Admin previews stay editable.
-create function private.preview_media_ttl(p_preview uuid) returns integer language sql stable security definer set search_path='' as $
+create function private.preview_media_ttl(p_preview uuid) returns integer language sql stable security definer set search_path='' as $$
  select case when auth.uid() is null then 0 when public.is_internal_admin() then 900 else
  coalesce((select greatest(0,least(900,floor(extract(epoch from (assigned_at + interval '48 hours' - now())))::integer))
  from public.preview_locker_viewer_grants where preview_locker_id=p_preview and viewer_user_id=auth.uid()),0) end;
-$;
+$$;
 revoke all on function private.preview_media_ttl(uuid) from public,anon,authenticated,service_role;
 grant execute on function private.preview_media_ttl(uuid) to authenticated;
 create function public.preview_media_ttl(p_preview uuid) returns integer language sql security invoker set search_path='' begin atomic;
