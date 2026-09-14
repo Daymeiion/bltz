@@ -985,7 +985,7 @@ export default function LockerView({
 
           {/* ===== HERO ===== */}
           <section className="locker-hero-section" style={{ padding: "0 18px" }}>
-            <div className="locker-hero-card" style={{ position: "relative", height: 610, borderRadius: 24, overflow: "hidden", background: "linear-gradient(180deg,#161B30 0%,#10142404 55%,#0B0E1A 100%)" }}>
+            <div className={`locker-hero-card${isPrivatePreview ? " locker-hero-card--preview" : ""}`} style={{ position: "relative", height: 610, borderRadius: 24, overflow: "hidden", background: "linear-gradient(180deg,#161B30 0%,#10142404 55%,#0B0E1A 100%)" }}>
               {/* video / photo-reel background */}
               <div className="locker-hero-media">
                 {heroVideoUrl ? (
@@ -1116,6 +1116,9 @@ export default function LockerView({
 
               {/* name block */}
             <div className="locker-hero-copy" style={{ position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 5, textAlign: "center", padding: "0 16px" }}>
+                {isPrivatePreview && <div className="locker-hero-portrait-stage">
+                  <img src={data.headshotUrl} alt={data.fullName} />
+                </div>}
                 <h1 style={{ fontFamily: disp, fontWeight: 900, fontSize: heroNameSize, lineHeight: ".9", letterSpacing: "-.005em", textTransform: "uppercase", color: "#fff", margin: 0, paddingTop: 5, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{data.fullName}</h1>
                 <div style={{ fontFamily: mono, fontSize: 14, letterSpacing: ".14em", color: "#F5A623", margin: "4px 0 8px", fontWeight: 700 }}>{data.hometown}</div>
                 <div style={{ display: "flex", gap: 8, alignItems: "center", width: "100%" }}>
@@ -2140,6 +2143,12 @@ const styleSheet = `
 .locker-photo-tile:hover img{transform:scale(1.025)}
 .locker-photo-empty{position:relative;min-height:228px;grid-column:1/-1;overflow:hidden;border:1px solid #1E2640;border-radius:14px}
 .locker-hero-stroke{border-radius:24px}
+.locker-hero-portrait-stage{display:none}
+@media (min-width:641px){
+  .locker-hero-card--preview>.locker-hero-headshot{display:none}
+  .locker-hero-portrait-stage{display:block;position:absolute;bottom:100%;left:0;width:100%;height:282px;pointer-events:none}
+  .locker-hero-portrait-stage img{display:block;width:100%;height:100%;object-fit:contain;object-position:center bottom}
+}
 .bio-headshot-card{height:250px;overflow:hidden;border:1px solid #1E2640;border-radius:14px;background:#131829;display:flex;flex-direction:column}
 .bio-headshot-image{position:relative;height:216px;flex:0 0 216px;overflow:hidden;background:${GRAD_FIELD}}
 .bio-headshot-photo{object-fit:cover;object-position:50% 12%}

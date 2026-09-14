@@ -1,5 +1,12 @@
 # Preview Locker claim and card refresh — 2026-09-14
 
+## Desktop/tablet hero headshot alignment
+
+- Fixed private hero portrait cropping in `app/player/[slug]/LockerView.tsx`. At widths above 640px, the full portrait uses `object-fit: contain` in a 282px stage anchored directly above the name block. Removes dependence on the clipped, viewport-wide image and fixed offset on these devices. Existing mobile positioning and public Locker rendering retained.
+- Route: private preview main Locker. No database, migration, environment, permission, or graph changes; no workflow duplication or media-management expansion. Claim modal unchanged.
+- Validation: TypeScript and component lint passed (existing warnings). Browser checked desktop 1440px and tablet 768px; tablet measured portrait bottom aligned to heading top, entirely inside hero. Temporary viewport reset. No additional unit tests/full build for this CSS/layout correction.
+- Status: local change, not yet committed or deployed. No other deferred work from this correction; prior release limitations remain documented below.
+
 ## Production database activation — 2026-09-14
 
 - User explicitly approved the production Supabase dashboard and GitHub destination. The dashboard verified BLTZ / main / PRODUCTION (`drxtzxnwdtgxwueiqygf`). Physical backup available: 2026-09-14 08:03:47 UTC.
