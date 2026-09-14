@@ -8,5 +8,5 @@ export default async function PreviewLocker({ params }: { params: Promise<{ slug
   const row = await readPrivatePreview((await params).slug); if (!row) notFound();
   const data = previewLockerData(row);
   data.structuredStats = await readPreviewStructuredStats(row.id);
-  return <><ConversionSurface previewId={row.id}/><LockerView data={data} /></>;
+  return <LockerView data={data} footer={<ConversionSurface previewId={row.id}/>} />;
 }

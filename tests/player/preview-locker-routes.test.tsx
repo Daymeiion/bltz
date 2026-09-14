@@ -9,6 +9,10 @@ vi.mock("@/lib/preview-lockers/read", () => ({ readPrivatePreview: async () => {
   if (result.error || !result.data) throw new Error("NOT_FOUND");
   return { data: result.data };
 } }));
+vi.mock("@/lib/preview-lockers/server", () => ({ readPrivatePreview: async () => {
+  const result = await mocks.maybeSingle();
+  return result.error ? null : result.data;
+} }));
 vi.mock("@/app/player/[slug]/videos/FilmRoomView", () => ({ default: () => null }));
 vi.mock("@/app/player/[slug]/videos/[videoId]/VideoDetailView", () => ({ default: () => null }));
 

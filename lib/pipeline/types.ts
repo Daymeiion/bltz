@@ -64,6 +64,7 @@ export interface PlayerIdentityInput {
 }
 
 export interface ScrapedAward {
+  description?: string;
   name: string;
   year?: string;
   organization?: string;

@@ -62,9 +62,19 @@ async function resolvePrivateMedia(client: Awaited<ReturnType<typeof createClien
     { bucket: PREVIEW_MEDIA_BUCKETS.video, items: row.videos.filter((item): item is typeof item & { storagePath: string } => "storagePath" in item) },
   ];
   const urls = new Map<string, string>();
+  let ttl = 900;
+  if (groups.some(group => group.items.length)) {
+    const result = await client.rpc("preview_media_ttl", { p_preview: row.id });
+    if (result.error) {
+      // Staff can inspect drafts while the migration rolls out; viewer access must fail closed.
+      const role = result.error.code === "PGRST202" ? await client.rpc("is_internal_admin") : null;
+      if (role?.error || role?.data !== true) throw new PreviewError("preview_media_unavailable", 503);
+    } else ttl = Number(result.data);
+    if (!Number.isFinite(ttl) || ttl < 1) throw new PreviewError("preview_expired", 403);
+  }
   for (const group of groups) {
     if (!group.items.length) continue;
-    const { data, error } = await client.storage.from(group.bucket).createSignedUrls(group.items.map(item => item.storagePath), 15 * 60);
+    const { data, error } = await client.storage.from(group.bucket).createSignedUrls(group.items.map(item => item.storagePath), ttl);
     if (error || !data || data.some(item => !item.signedUrl)) throw new PreviewError("preview_media_unavailable", 503);
     group.items.forEach((item, index) => urls.set(item.storagePath, data[index].signedUrl!));
   }

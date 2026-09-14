@@ -32,7 +32,7 @@ describe("private preview validation", () => {
   it("projects full views without a canonical identity or raw input", () => {
     const row = { ...previewContent.parse({ slug: "demo-person", full_name: "Demo Person" }), id: "00000000-0000-4000-8000-000000000001", revision: 1, created_at: "", updated_at: "" };
     for (const dto of [previewLockerData(row), previewPhotoData(row)]) {
-      expect(dto).toMatchObject({ athleteId: null, privateDemo: true });
+      expect(dto).toMatchObject({ athleteId: null, lockerHref: "/preview-lockers/demo-person" });
       expect(dto).not.toHaveProperty("created_by"); expect(dto).not.toHaveProperty("raw_sources");
     }
   });

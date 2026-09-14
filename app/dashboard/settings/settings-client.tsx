@@ -1,5 +1,6 @@
 "use client";
 
+import HeroVideoSettings from "./HeroVideoSettings";
 import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -229,6 +230,7 @@ export default function SettingsClient() {
       </div>
 
       <div className="space-y-6">
+        <HeroVideoSettings />
         {/* Social Media Settings */}
         <Card>
           <CardHeader>

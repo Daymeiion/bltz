@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import PreviewRoomNav from "@/components/preview-lockers/PreviewRoomNav";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowUpRight, ChevronLeft, ChevronRight, Maximize, Minimize, Pause, Play, Search, Volume2, VolumeX, X } from "lucide-react";
@@ -170,6 +171,7 @@ function FilmShelf({
 }
 
 export default function FilmRoomView({ data }: { data: FilmRoomData }) {
+  const isPrivatePreview = data.lockerHref?.startsWith("/preview-lockers/") === true;
   const [selectedId, setSelectedId] = useState(data.videos[0]?.id ?? null);
   const [playing, setPlaying] = useState(false);
   const [controlsVisible, setControlsVisible] = useState(true);
@@ -180,7 +182,7 @@ export default function FilmRoomView({ data }: { data: FilmRoomData }) {
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
 
   useEffect(() => {
-    void trackProductEvent({
+    if (!isPrivatePreview) void trackProductEvent({
       eventName: "film_room_opened",
       source: "public_locker",
       athleteId: data.athleteId,
@@ -188,7 +190,7 @@ export default function FilmRoomView({ data }: { data: FilmRoomData }) {
       properties: { video_count: data.videos.length },
       dedupeKey: `film_room_opened:${data.slug}:${window.location.pathname}`,
     });
-  }, [data.athleteId, data.slug, data.videos.length]);
+  }, [data.athleteId, data.slug, data.videos.length, isPrivatePreview]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -329,7 +331,7 @@ export default function FilmRoomView({ data }: { data: FilmRoomData }) {
   }
 
   function chooseVideo(id: string) {
-    void trackProductEvent({
+    if (!isPrivatePreview) void trackProductEvent({
       eventName: "media_viewed",
       source: "public_locker",
       athleteId: data.athleteId,
@@ -351,9 +353,9 @@ export default function FilmRoomView({ data }: { data: FilmRoomData }) {
   }
 
   return (
-    <main className={styles.page} style={{ "--film-accent": data.accentColor } as React.CSSProperties}>
+    <main className={`${styles.page} ${isPrivatePreview ? styles.previewPage : ""}`} style={{ "--film-accent": data.accentColor } as React.CSSProperties}>
       <div className={styles.shell}>
-        <header className={styles.header}>
+        {isPrivatePreview ? <PreviewRoomNav athleteName={data.athleteName} headshotUrl={data.athleteHeadshotUrl} lockerHref={data.lockerHref!} onSearch={() => setSearchOpen(true)} /> : <header className={styles.header}>
           <Link href={data.lockerHref ?? `/player/${data.slug}`} className={styles.brand} aria-label="BLTZ Player Locker">
             <Image src="/images/bltz-mark.svg" alt="BLTZ" width={38} height={39} priority />
           </Link>
@@ -365,7 +367,7 @@ export default function FilmRoomView({ data }: { data: FilmRoomData }) {
               <Image src={data.athleteHeadshotUrl} alt="" fill sizes="42px" />
             </Link>
           </div>
-        </header>
+        </header>}
 
         <section ref={playerRef} className={styles.featured} aria-label="Featured film">
           {selected ? (
@@ -485,43 +487,43 @@ export default function FilmRoomView({ data }: { data: FilmRoomData }) {
         </section>
 
         <div ref={libraryStackRef} className={styles.libraryStack}>
-          {hsVideos.length > 0 && (
+          {(hsVideos.length > 0 || isPrivatePreview) && (
             <section className={styles.library} aria-labelledby="hs-heading">
               <div className={styles.sectionHeading}>
-                <h1 id="hs-heading">HIGH SCHOOL</h1>
+                <h1 id="hs-heading">HS</h1>
                 <span>{yearRange(hsVideos)}</span>
               </div>
-              <FilmShelf videos={hsVideos} selectedId={selected?.id ?? null} onSelect={chooseVideo} />
+              {hsVideos.length ? <FilmShelf videos={hsVideos} selectedId={selected?.id ?? null} onSelect={chooseVideo} /> : <p className="py-6 text-sm text-white/50">No videos added in this category yet.</p>}
             </section>
           )}
 
-          {cfbVideos.length > 0 && (
+          {(cfbVideos.length > 0 || isPrivatePreview) && (
             <section className={styles.library} aria-labelledby="cfb-heading">
               <div className={styles.sectionHeading}>
                 <h1 id="cfb-heading">CFB</h1>
                 <span>{yearRange(cfbVideos)}</span>
               </div>
-              <FilmShelf videos={cfbVideos} selectedId={selected?.id ?? null} onSelect={chooseVideo} />
+              {cfbVideos.length ? <FilmShelf videos={cfbVideos} selectedId={selected?.id ?? null} onSelect={chooseVideo} /> : <p className="py-6 text-sm text-white/50">No videos added in this category yet.</p>}
             </section>
           )}
 
-          {proVideos.length > 0 && (
+          {(proVideos.length > 0 || isPrivatePreview) && (
             <section className={styles.library} aria-labelledby="pro-heading">
               <div className={styles.sectionHeading}>
                 <h1 id="pro-heading">PRO</h1>
                 <span>{yearRange(proVideos)}</span>
               </div>
-              <FilmShelf videos={proVideos} selectedId={selected?.id ?? null} onSelect={chooseVideo} />
+              {proVideos.length ? <FilmShelf videos={proVideos} selectedId={selected?.id ?? null} onSelect={chooseVideo} /> : <p className="py-6 text-sm text-white/50">No videos added in this category yet.</p>}
             </section>
           )}
 
-          {offFieldVideos.length > 0 && (
+          {(offFieldVideos.length > 0 || isPrivatePreview) && (
             <section className={styles.library} aria-labelledby="off-field-heading">
               <div className={styles.sectionHeading}>
-                <h1 id="off-field-heading">OFF-THE FIELD</h1>
+                <h1 id="off-field-heading">OFF THE FIELD</h1>
                 <span>{yearRange(offFieldVideos)}</span>
               </div>
-              <FilmShelf videos={offFieldVideos} selectedId={selected?.id ?? null} onSelect={chooseVideo} />
+              {offFieldVideos.length ? <FilmShelf videos={offFieldVideos} selectedId={selected?.id ?? null} onSelect={chooseVideo} /> : <p className="py-6 text-sm text-white/50">No videos added in this category yet.</p>}
             </section>
           )}
         </div>

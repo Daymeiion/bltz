@@ -472,3 +472,35 @@
   .filmRow { scroll-behavior: auto; }
   .filmCard, .controls, .mediaShade { transition: none; }
 }
+.previewPage .featuredMedia {
+  height: 60svh;
+  min-height: 360px;
+  aspect-ratio: auto;
+}
+.previewPage .featuredViewport > video { object-fit: contain; }
+.previewPage .scrollShade {
+  background: linear-gradient(180deg, rgba(0,0,0,.4) 0%, rgba(0,0,0,.7) 24%, rgba(0,0,0,.92) 48%, var(--film-surface) 72%);
+}
+.previewPage .libraryStack {
+  height: auto;
+  max-height: none;
+  overflow: visible;
+  background: var(--film-surface);
+  isolation: isolate;
+}
+.previewPage .filmRow {
+  grid-auto-columns: minmax(220px, 280px);
+  gap: 12px;
+  padding: 8px 0 14px;
+  scroll-padding-inline: 0;
+  scroll-snap-type: x proximity;
+}
+.previewPage .filmCard {
+  opacity: 1;
+  transform: none;
+  scroll-snap-align: start;
+  border-radius: 20px;
+}
+@media (min-width: 720px) {
+  .previewPage .featuredMedia { min-height: 430px; }
+}

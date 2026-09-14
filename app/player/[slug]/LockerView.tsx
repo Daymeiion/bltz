@@ -1,4 +1,6 @@
 "use client";
+import { awardDescription } from "@/lib/preview-lockers/award-descriptions";
+import { EditorialCard } from "@/components/player/EditorialCard";
 
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { ChevronDown, ChevronUp, Mic } from "lucide-react";
@@ -32,6 +34,7 @@ export type LockerData = {
   headshotUrl: string;
   headshotYear?: string | null;
   heroVideoUrl: string | null;
+  heroVideos?: { mobile: string | null; desktop: string | null };
   logoSrc: string;
   bio: string;
   story?: string;
@@ -94,7 +97,7 @@ export type LockerData = {
   // made the NFL), the right pill falls back to level/status.
   schools: { label: string; color: string; logo: string | null }[];
   proTeams: { label: string; color: string; logo: string | null }[];
-  awards: { year: string; label: string }[];
+  awards: { year: string; label: string; description?: string | null; sourceUrl?: string | null }[];
   timeline?: { year: string; tag: string; title: string; note: string }[];
   videos: { id: string; title: string; thumb: string | null; playbackUrl?: string | null; embedUrl?: string | null }[];
   podcastAppearances?: {
@@ -167,10 +170,12 @@ export default function LockerView({
   data,
   viewerMode = "public",
   presentation = "page",
+  footer,
 }: {
   data: LockerData;
   viewerMode?: LockerViewerMode;
   presentation?: LockerPresentation;
+  footer?: React.ReactNode;
 }) {
   const [tab, setTab] = useState<"bio" | "media" | "stats">("bio");
   const [bioSort, setBioSort] = useState("all");
@@ -230,6 +235,20 @@ export default function LockerView({
   const showAthleteNav = viewerMode === "athlete";
   const isEmbedded = presentation === "embedded";
   const isPrivatePreview = data.lockerHref?.startsWith("/preview-lockers/") === true;
+  const [heroMobile, setHeroMobile] = useState<boolean | null>(null);
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 767px)");
+    const update = () => setHeroMobile(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+  const [failedHeroVideo, setFailedHeroVideo] = useState<string | null>(null);
+  const selectedHeroVideoUrl = data.heroVideos
+    ? heroMobile === null ? null : data.heroVideos[heroMobile ? "mobile" : "desktop"]
+    : data.heroVideoUrl;
+  const heroVideoUrl = selectedHeroVideoUrl === failedHeroVideo ? null : selectedHeroVideoUrl;
+
 
   useEffect(() => {
     if (isEmbedded || isPrivatePreview) return;
@@ -672,7 +691,7 @@ export default function LockerView({
     ? data.awards
     : [];
   const awards = awardSrc.map((a, index) => ({
-    cat: "awards", isAward: true, year: a.year, label: a.label, img: poolAt(index),
+    cat: "awards", isAward: true, year: a.year, label: a.label, sourceUrl: a.sourceUrl, description: awardDescription(a.label, a.description), img: poolAt(index),
     style: { flex: "none", width: 164, scrollSnapAlign: "start", borderRadius: 16, border: "1px solid #1E2640", background: "linear-gradient(160deg,#1a2035,#131829)" } as React.CSSProperties,
   }));
 
@@ -939,8 +958,11 @@ export default function LockerView({
             >
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#FFB940" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
             </button>
-            <button onClick={() => setFollowing((f) => !f)} style={following ? followOff : followOn}>
-              {following ? "FOLLOWING" : "+ FOLLOW"}
+            <button type="button" aria-haspopup={isPrivatePreview ? "dialog" : undefined} onClick={() => {
+              if (isPrivatePreview) document.getElementById("preview-locker-claim-trigger")?.click();
+              else setFollowing((f) => !f);
+            }} style={!isPrivatePreview && following ? followOff : followOn}>
+              {isPrivatePreview ? "CLAIM" : following ? "FOLLOWING" : "+ FOLLOW"}
             </button>
           </div>
         </div>
@@ -955,9 +977,9 @@ export default function LockerView({
               <button type="button" aria-label="Search BLTZ" onClick={openSiteSearch} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", display: "flex", alignItems: "center" }}>
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFB940" strokeWidth="2.4" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
               </button>
-              <div style={{ width: 38, height: 38, borderRadius: 9999, overflow: "hidden", background: "#0A1A6E", border: "1px solid rgba(255,255,255,.2)" }}>
+              {isPrivatePreview ? <button type="button" aria-haspopup="dialog" onClick={() => document.getElementById("preview-locker-claim-trigger")?.click()} style={followOn}>CLAIM</button> : <div style={{ width: 38, height: 38, borderRadius: 9999, overflow: "hidden", background: "#0A1A6E", border: "1px solid rgba(255,255,255,.2)" }}>
                 <img src={data.headshotUrl} alt="" style={{ width: "150%", height: "150%", objectFit: "cover", objectPosition: "50% 6%" }} />
-              </div>
+              </div>}
             </div>
           </div>
 
@@ -966,12 +988,12 @@ export default function LockerView({
             <div className="locker-hero-card" style={{ position: "relative", height: 610, borderRadius: 24, overflow: "hidden", background: "linear-gradient(180deg,#161B30 0%,#10142404 55%,#0B0E1A 100%)" }}>
               {/* video / photo-reel background */}
               <div className="locker-hero-media">
-                {data.heroVideoUrl ? (
+                {heroVideoUrl ? (
                   <>
                     <video
                       ref={heroBackdropVideoRef}
                       className="locker-hero-video-backdrop"
-                      src={data.heroVideoUrl}
+                      src={heroVideoUrl}
                       autoPlay
                       loop
                       muted
@@ -980,12 +1002,16 @@ export default function LockerView({
                     />
                     <video
                       ref={heroVideoRef}
+                      key={heroVideoUrl}
                       className="locker-hero-video"
-                      src={data.heroVideoUrl}
+                      src={heroVideoUrl}
                       autoPlay
                       loop
-                      muted
+                      muted={heroMuted}
                       playsInline
+                      onError={() => setFailedHeroVideo(heroVideoUrl)}
+                      onPlay={() => setHeroPlaying(true)}
+                      onPause={() => setHeroPlaying(false)}
                       aria-label={`${data.fullName} hero video`}
                     >
                       Your browser does not support video playback.
@@ -994,11 +1020,14 @@ export default function LockerView({
                 ) : (
                   [0, 6, 12].map((delay, i) => {
                     const img = poolAt(i);
-                    return img ? <div key={i} style={{ ...reelBase, backgroundImage: `url(${img})`, animationDelay: `${delay}s` }} /> : null;
+                    return img ? isPrivatePreview ? (
+                      <div key={i} style={{ ...reelBase, animationDelay: `${delay}s` }}>
+                        <img src={img} alt="" aria-hidden="true" className="locker-hero-photo-backdrop" />
+                        <img src={img} alt="" className="locker-hero-photo" />
+                      </div>
+                    ) : <div key={i} style={{ ...reelBase, backgroundImage: `url(${img})`, animationDelay: `${delay}s` }} /> : null;
                   })
                 )}
-                {/* stadium grid */}
-                <div style={{ position: "absolute", inset: "-40%", backgroundImage: "linear-gradient(rgba(41,82,255,.10) 1px,transparent 1px),linear-gradient(90deg,rgba(41,82,255,.10) 1px,transparent 1px)", backgroundSize: "46px 46px", transformOrigin: "50% 40%", animation: "drift 20s ease-in-out infinite alternate", pointerEvents: "none" }} />
                 {/* glows */}
                 <div style={{ position: "absolute", top: -60, left: -80, width: 340, height: 340, borderRadius: 9999, background: "radial-gradient(circle,rgba(41,82,255,.35),transparent 70%)", animation: "glowA 7s ease-in-out infinite", pointerEvents: "none" }} />
                 <div style={{ position: "absolute", bottom: 120, right: -70, width: 260, height: 260, borderRadius: 9999, background: "radial-gradient(circle,rgba(245,166,35,.28),transparent 70%)", animation: "glowB 8s ease-in-out infinite", pointerEvents: "none" }} />
@@ -1046,7 +1075,7 @@ export default function LockerView({
               )}
 
               {/* Hero playback controls */}
-              {data.heroVideoUrl && (
+              {heroVideoUrl && (
                 <div style={{ position: "absolute", top: 16, right: 16, zIndex: 6, display: "flex", flexDirection: "column", gap: 8 }}>
                   <button
                     type="button"
@@ -1346,27 +1375,19 @@ export default function LockerView({
 
             {/* MEDIA TAB */}
             {tab === "media" && (
-              <div style={{ animation: "tabIn .4s cubic-bezier(.16,1,.3,1)", paddingTop: 16 }}>
+              <div className={isPrivatePreview ? "preview-media" : undefined} style={{ animation: "tabIn .4s cubic-bezier(.16,1,.3,1)", paddingTop: 16 }}>
                 <div className="hs locker-filter-row" style={{ display: "flex", gap: 9, justifyContent: "center", overflowX: "auto", padding: "0 18px 4px" }}>
                   {mediaPills.map((p) => (
                     <button className="locker-filter-pill" key={p.key} onClick={() => setMediaSort(p.key)} style={pillStyle(p.active)}>{p.label}</button>
                   ))}
                 </div>
                 {mediaSort === "articles" ? (
-                  <div style={{ padding: "14px 18px 10px" }}>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  <div className={isPrivatePreview ? "preview-article-list" : undefined} style={{ padding: "14px 18px 10px" }}>
+                    <div className={isPrivatePreview ? "preview-articles-grid grid grid-cols-[repeat(auto-fit,260px)] justify-center gap-3" : "grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"}>
                       {mediaArticles.slice(0, 3).map((article) => (
-                        <button key={article.title} type="button" onClick={() => setArticleModalOpen(true)} style={{ display: "grid", gridTemplateColumns: "74px 1fr", gap: 10, alignItems: "center", border: "1px solid #1E2640", borderRadius: 12, background: "#131829", padding: 8, textAlign: "left", cursor: "pointer" }}>
-                          <div style={{ width: 74, height: 58, borderRadius: 8, overflow: "hidden", background: GRAD_FIELD }}>
-                            {article.img ? <img src={article.img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : null}
-                          </div>
-                          <div style={{ minWidth: 0 }}>
-                            <div style={{ fontFamily: mono, fontSize: 8, letterSpacing: ".13em", color: lockerAccent, textTransform: "uppercase", marginBottom: 4 }}>{article.source} · {article.meta}</div>
-                            <div style={{ fontFamily: disp, fontWeight: 800, fontSize: 15, lineHeight: .95, color: "#fff", textTransform: "uppercase" }}>{article.title}</div>
-                          </div>
-                        </button>
+                        <EditorialCard compactMobile={isPrivatePreview} key={article.title} title={article.title} image={article.img} description={article.dek} meta={[article.source, article.meta].filter(Boolean).join(' · ')} onClick={() => setArticleModalOpen(true)} />
                       ))}
-                      <button type="button" onClick={() => setArticleModalOpen(true)} style={{ alignSelf: "center", marginTop: 2, border: "1px solid rgba(255,185,64,.45)", borderRadius: 9999, background: "rgba(255,185,64,.08)", color: lockerAccent, padding: "9px 13px", fontFamily: mono, fontWeight: 700, fontSize: 9, letterSpacing: ".12em", textTransform: "uppercase", cursor: "pointer" }}>
+                      <button type="button" className={isPrivatePreview ? "col-span-full justify-self-center" : undefined} onClick={() => setArticleModalOpen(true)} style={{ alignSelf: "center", marginTop: 2, border: "1px solid rgba(255,185,64,.45)", borderRadius: 9999, background: "rgba(255,185,64,.08)", color: lockerAccent, padding: "9px 13px", fontFamily: mono, fontWeight: 700, fontSize: 9, letterSpacing: ".12em", textTransform: "uppercase", cursor: "pointer" }}>
                         View all articles
                       </button>
                     </div>
@@ -1378,7 +1399,7 @@ export default function LockerView({
                         className="media-inner-scroll locker-shorts-grid"
                         ref={shortsScrollRef}
                         onScroll={handleShortsScroll}
-                        style={{ height: 408, overflowY: "auto", overscrollBehavior: "auto", paddingRight: 6, display: "grid", gap: 10 }}
+                        style={{ height: isPrivatePreview ? "auto" : 408, overflowY: isPrivatePreview ? "visible" : "auto", overscrollBehavior: "auto", paddingRight: 6, display: "grid", gap: 10 }}
                       >
                       {mediaShorts.map((short, index) => (
                         <button
@@ -1413,7 +1434,7 @@ export default function LockerView({
                         </button>
                       ))}
                       </div>
-                      <div style={{ position: "absolute", top: 14 + shortsScrollProgress * 286, right: 1, width: 2, height: 54, borderRadius: 9999, background: "rgba(210,214,224,.72)", boxShadow: "0 0 8px rgba(210,214,224,.22)", opacity: shortsScrolling ? 1 : 0, transition: "opacity .22s ease, top .08s linear", pointerEvents: "none" }} />
+                      {!isPrivatePreview && <div style={{ position: "absolute", top: 14 + shortsScrollProgress * 286, right: 1, width: 2, height: 54, borderRadius: 9999, background: "rgba(210,214,224,.72)", boxShadow: "0 0 8px rgba(210,214,224,.22)", opacity: shortsScrolling ? 1 : 0, transition: "opacity .22s ease, top .08s linear", pointerEvents: "none" }} />}
                     </div>
                   </div>
                 ) : mediaSort === "podcast" ? (
@@ -1459,7 +1480,7 @@ export default function LockerView({
                         className="media-inner-scroll locker-social-scroll"
                         ref={socialScrollRef}
                         onScroll={handleSocialScroll}
-                        style={{ height: 408, overflowY: "auto", overscrollBehavior: "auto" }}
+                        style={{ height: isPrivatePreview ? "auto" : 408, overflowY: isPrivatePreview ? "visible" : "auto", overscrollBehavior: "auto" }}
                       >
                         <div className="locker-social-layout locker-social-layout--mobile">
                           {[0, 1].map((column) => (
@@ -1476,7 +1497,7 @@ export default function LockerView({
                           ))}
                         </div>
                       </div>
-                      <div style={{ position: "absolute", top: 14 + socialScrollProgress * 286, right: 1, width: 2, height: 54, borderRadius: 9999, background: "rgba(210,214,224,.72)", boxShadow: "0 0 8px rgba(210,214,224,.22)", opacity: socialScrolling ? 1 : 0, transition: "opacity .22s ease, top .08s linear", pointerEvents: "none" }} />
+                      {!isPrivatePreview && <div style={{ position: "absolute", top: 14 + socialScrollProgress * 286, right: 1, width: 2, height: 54, borderRadius: 9999, background: "rgba(210,214,224,.72)", boxShadow: "0 0 8px rgba(210,214,224,.22)", opacity: socialScrolling ? 1 : 0, transition: "opacity .22s ease, top .08s linear", pointerEvents: "none" }} />}
                     </div>
                     <div style={{ marginTop: 10, padding: "10px 12px", borderRadius: 12, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.04)", fontFamily: mono, fontSize: 8, letterSpacing: ".11em", color: "rgba(255,255,255,.52)", textTransform: "uppercase", lineHeight: 1.35 }}>
                       Connected social accounts will be managed from the athlete dashboard.
@@ -1624,27 +1645,9 @@ export default function LockerView({
                         </div>
                         <button type="button" onClick={() => setArticleModalOpen(false)} aria-label="Close articles" style={{ width: 36, height: 36, borderRadius: 9999, border: "1px solid rgba(255,255,255,.14)", background: "rgba(255,255,255,.06)", color: "#fff", fontFamily: disp, fontSize: 20, cursor: "pointer" }}>×</button>
                       </div>
-                      <div className="locker-modal-scroll" style={{ overflowY: "auto", padding: "12px 18px 22px", display: "flex", flexDirection: "column", gap: 10 }}>
+                      <div className={isPrivatePreview ? "locker-modal-scroll preview-article-list" : "locker-modal-scroll"} style={{ overflowY: "auto", padding: "12px 18px 22px", display: "flex", flexDirection: "column", gap: 10 }}>
                         {mediaArticles.map((article) => (
-                          <button
-                            type="button"
-                            key={article.title}
-                            onClick={() => {
-                              const url = safeExternalUrl(article.originalUrl);
-                              if (url) setPendingArticleRedirect({ source: article.source, title: article.title, url });
-                            }}
-                            style={{ width: "100%", display: "grid", gridTemplateColumns: "88px 1fr", gap: 12, border: "1px solid #1E2640", borderRadius: 12, background: "#131829", padding: 10, color: "inherit", textAlign: "left", cursor: "pointer" }}
-                          >
-                            <div style={{ height: 76, borderRadius: 8, overflow: "hidden", background: GRAD_FIELD }}>
-                              {article.img ? <img src={article.img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : null}
-                            </div>
-                            <div>
-                              <div style={{ fontFamily: mono, fontSize: 8, letterSpacing: ".12em", color: lockerAccent, textTransform: "uppercase", marginBottom: 5 }}>{article.source} · {article.meta}</div>
-                              <h3 style={{ fontFamily: disp, fontWeight: 800, fontSize: 14, lineHeight: 1, color: "#fff", textTransform: "uppercase", margin: "0 0 7px" }}>{article.title}</h3>
-                              <p style={{ display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 2, overflow: "hidden", fontFamily: body, fontSize: 12.5, lineHeight: 1.45, color: "rgba(255,255,255,.62)", margin: 0 }}>{article.dek}</p>
-                              <div style={{ marginTop: 8, fontFamily: mono, fontSize: 8, fontWeight: 700, letterSpacing: ".11em", color: lockerAccent, textTransform: "uppercase" }}>Open original source ↗</div>
-                            </div>
-                          </button>
+                          <EditorialCard compactMobile={isPrivatePreview} key={article.title} title={article.title} image={article.img} description={article.dek} meta={[article.source, article.meta].filter(Boolean).join(' · ')} onClick={safeExternalUrl(article.originalUrl) ? () => { const url = safeExternalUrl(article.originalUrl); if (url) setPendingArticleRedirect({ source: article.source, title: article.title, url }); } : undefined} />
                         ))}
                       </div>
                     </div>
@@ -1819,28 +1822,20 @@ export default function LockerView({
                 )}
 
                 {statsSort === "awards" && (
-                  <div style={{ animation: "tabIn .35s ease", padding: "14px 18px 10px" }}>
+                  <div style={{ animation: "tabIn .35s ease", padding: isPrivatePreview ? "14px 6px 10px" : "14px 18px 10px" }}>
                     {awards.length ? (
                       <div style={{ position: "relative" }}>
                         <div
-                          className="media-inner-scroll"
+                          className={isPrivatePreview ? "media-inner-scroll flex flex-wrap content-start items-start justify-center gap-3 sm:justify-start" : "media-inner-scroll"}
                           ref={awardsScrollRef}
                           onScroll={handleAwardsScroll}
-                          style={{ height: 408, overflowY: "auto", overscrollBehavior: "auto", paddingRight: 6, display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 10 }}
+                          style={isPrivatePreview ? { height: "auto", overflowY: "visible", paddingRight: 6 } : { height: 408, overflowY: "auto", overscrollBehavior: "auto", paddingRight: 6, display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 10 }}
                         >
                           {awards.map((award: any, i) => (
-                            <div key={i} style={{ minHeight: 184, borderRadius: 14, border: "1px solid #1E2640", background: "linear-gradient(160deg,#1a2035,#131829)", overflow: "hidden", position: "relative" }}>
-                              <div style={{ height: 82, background: GRAD_FIELD, overflow: "hidden" }}>
-                                {award.img ? <img src={award.img} alt="" style={{ width: "100%", height: "100%", objectFit: "contain", objectPosition: "center center", opacity: 1 }} /> : null}
-                              </div>
-                              <div style={{ padding: 13, display: "flex", flexDirection: "column", gap: 10 }}>
-                                <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: ".11em", color: lockerAccent, textTransform: "uppercase" }}>★ {award.year}</div>
-                                <div style={{ fontFamily: disp, fontWeight: 800, fontSize: 17, lineHeight: .95, textTransform: "uppercase", color: "#fff" }}>{award.label}</div>
-                              </div>
-                            </div>
+                            <EditorialCard key={i} title={award.label} description={award.description} image={award.img} meta={String(award.year || '')} award={isPrivatePreview} href={safeExternalUrl(award.sourceUrl)} />
                           ))}
                         </div>
-                        <div style={{ position: "absolute", top: 14 + awardsScrollProgress * 286, right: 1, width: 2, height: 54, borderRadius: 9999, background: "rgba(210,214,224,.72)", boxShadow: "0 0 8px rgba(210,214,224,.22)", opacity: awardsScrolling ? 1 : 0, transition: "opacity .22s ease, top .08s linear", pointerEvents: "none" }} />
+                        {!isPrivatePreview && <div style={{ position: "absolute", top: 14 + awardsScrollProgress * 286, right: 1, width: 2, height: 54, borderRadius: 9999, background: "rgba(210,214,224,.72)", boxShadow: "0 0 8px rgba(210,214,224,.22)", opacity: awardsScrolling ? 1 : 0, transition: "opacity .22s ease, top .08s linear", pointerEvents: "none" }} />}
                       </div>
                     ) : (
                       <div style={{ minHeight: 260, borderRadius: 16, border: "1px solid #1E2640", background: "#131829", padding: "26px 22px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center" }}>
@@ -1941,6 +1936,7 @@ export default function LockerView({
             </Tabs>
           </section>
 
+          {footer}
           <div style={{ height: showAthleteNav ? 104 : 28 }} />
         </div>
 
@@ -2132,6 +2128,9 @@ const styleSheet = `
 .bltz-frame{position:relative;width:390px;height:844px;background:#0B0E1A;overflow:hidden;box-shadow:0 30px 90px rgba(0,0,0,.6);border-radius:0}
 .locker-hero-card{contain:paint;isolation:isolate;transform:translateZ(0);clip-path:inset(0 round 24px);outline:1px solid rgba(255,255,255,.12);outline-offset:-1px}
 .locker-hero-media{position:absolute;inset:3px;overflow:hidden;border-radius:21px;clip-path:inset(0 round 21px)}
+.locker-hero-photo-backdrop,.locker-hero-photo{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.locker-hero-photo-backdrop{object-fit:cover;filter:blur(28px) brightness(.65);transform:scale(1.12)}
+.locker-hero-photo{object-fit:contain;object-position:center}
 .locker-hero-video-backdrop,.locker-hero-video{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 .locker-hero-video-backdrop{z-index:0;object-fit:cover;transform:scale(1.1);filter:blur(24px) saturate(.82) brightness(.62)}
 .locker-hero-video{z-index:1;object-fit:contain;object-position:center;background:transparent}
@@ -2139,7 +2138,6 @@ const styleSheet = `
 .locker-photo-tile{position:relative;min-width:0;grid-column:span var(--photo-mobile-span,2);overflow:hidden;border:1px solid #1E2640;border-radius:14px;background:${GRAD_FIELD}}
 .locker-photo-tile img{transition:transform .35s ease}
 .locker-photo-tile:hover img{transform:scale(1.025)}
-.locker-photo-more{position:absolute;right:10px;bottom:9px;padding:5px 7px;border-radius:999px;background:rgba(5,7,15,.76);color:#fff;font-size:9px;font-weight:700;letter-spacing:.12em;text-shadow:0 1px 6px rgba(0,0,0,.8)}
 .locker-photo-empty{position:relative;min-height:228px;grid-column:1/-1;overflow:hidden;border:1px solid #1E2640;border-radius:14px}
 .locker-hero-stroke{border-radius:24px}
 .bio-headshot-card{height:250px;overflow:hidden;border:1px solid #1E2640;border-radius:14px;background:#131829;display:flex;flex-direction:column}
@@ -2194,7 +2192,7 @@ const styleSheet = `
 .locker-photo-tile:hover img{transform:scale(1.025)}
 .locker-photo-shade{position:absolute;inset:0;background:linear-gradient(to top,rgba(5,7,15,.62),transparent 58%);pointer-events:none}
 .locker-photo-label{position:absolute;left:9px;bottom:9px;max-width:calc(100% - 18px);overflow:hidden;color:rgba(255,255,255,.76);font-size:7.5px;letter-spacing:.12em;text-overflow:ellipsis;text-transform:uppercase;white-space:nowrap}
-.locker-photo-more{position:absolute;right:9px;top:9px;padding:5px 7px;border-radius:999px;background:rgba(5,7,15,.82);color:#fff;font-size:9px;font-weight:700;letter-spacing:.12em}
+.locker-photo-more{position:absolute;right:9px;bottom:9px;top:auto;display:inline-flex;width:max-content;height:max-content;white-space:nowrap;line-height:1;padding:5px 7px;border-radius:999px;background:rgba(5,7,15,.82);color:#fff;font-size:9px;font-weight:700;letter-spacing:.12em;text-shadow:0 1px 6px rgba(0,0,0,.8)}
 .locker-photo-empty{position:relative;min-height:228px;grid-column:1/-1;overflow:hidden;border:1px solid #1E2640;border-radius:14px}
 @media (min-width:640px){.bltz-frame{border-radius:28px}}
 @media (min-width:641px){.bio-headshot-card{height:216px}.bio-headshot-image{height:178px;flex-basis:178px}.bio-headshot-photo{object-fit:contain;object-position:center bottom}.bio-headshot-year{height:38px;flex-basis:38px}.basic-info-grid>div{grid-column:auto}.basic-info-grid>.basic-info-high-school{grid-column:1/-1}}
@@ -2275,7 +2273,6 @@ const styleSheet = `
 .game-log-scroll::-webkit-scrollbar-button{display:none;width:0;height:0;background:transparent}
 .game-log-scroll::-webkit-scrollbar-corner{background:transparent}
 @keyframes heroFade{0%,28%{opacity:0}5%,23%{opacity:1}31%,100%{opacity:0}}
-@keyframes drift{0%{transform:perspective(800px) rotateX(28deg) scale(2.4) translateY(0)}100%{transform:perspective(800px) rotateX(33deg) scale(2.4) translateY(-30px)}}
 @keyframes glowA{0%,100%{transform:scale(1);opacity:.55}50%{transform:scale(1.25);opacity:.85}}
 @keyframes glowB{0%,100%{transform:scale(1.1);opacity:.75}50%{transform:scale(1);opacity:.45}}
 @keyframes tabIn{0%{opacity:0;transform:translateY(18px)}100%{opacity:1;transform:translateY(0)}}

@@ -11,7 +11,7 @@ afterEach(()=>vi.unstubAllEnvs());
 it("denies anonymous requests and bounds origin and size",async()=>{
   mocks.auth.mockResolvedValue({data:{user:null},error:null});expect((await POST(req())).status).toBe(401);
   expect((await POST(req(body,{origin:"https://attacker.test"}))).status).toBe(403);
-  expect((await POST(req({junk:"x".repeat(5000)}))).status).toBe(413);
+  expect((await POST(req({junk:"x".repeat(17000)}))).status).toBe(413);
 });
 it("excludes admin, prefetch and known crawler traffic before ingestion",async()=>{
   mocks.rpc.mockResolvedValue({data:true,error:null});expect(await (await POST(req())).json()).toEqual({excluded:true});
@@ -29,4 +29,10 @@ it("preserves request IDs, relies on DB viewer authorization and returns honest 
 it("denies manual admin event forgery and stays disabled until rollout",async()=>{
   expect((await POST(req({...body,action:"booking_confirmed"}))).status).toBe(400);
   vi.stubEnv("PREVIEW_CONVERSION_ENABLED","false");expect((await POST(req())).status).toBe(404);
+});
+it("does not silently discard claim details when the migration is missing",async()=>{
+  mocks.rpc.mockImplementation(async(name:string)=>name==="is_internal_admin"?{data:false,error:null}:{data:null,error:{code:"PGRST202"}});
+  const response=await POST(req({...body,action:"claim_submit",data:{email:"athlete@example.test",consent:true,feature_requests:"My championship season"}}));
+  expect(response.status).toBe(503);
+  expect(mocks.rpc.mock.calls.some(call=>call[0]==="preview_conversion")).toBe(false);
 });

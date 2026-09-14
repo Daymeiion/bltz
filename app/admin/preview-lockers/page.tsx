@@ -16,6 +16,7 @@ export default async function PreviewList({ searchParams }: { searchParams: Prom
   const actionClass = "inline-flex h-11 min-w-11 items-center justify-center rounded-md border border-white/15 text-slate-300 transition-colors hover:border-[#ffbb00]/60 hover:text-[#ffbb00] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#ffbb00]";
   return <section className="mx-auto max-w-6xl space-y-6 p-6 sm:p-10">
     <div className="flex flex-wrap items-center justify-between gap-4"><h1 className="text-3xl font-semibold">Preview Lockers</h1><Link className="inline-flex min-h-11 items-center rounded-md border px-4 font-semibold" href="/admin/preview-lockers/new">Create private preview</Link></div>
+    <Link href="/admin/preview-lockers/requests" className="inline-flex min-h-11 items-center underline">Locker requests & referrals</Link>
     <p className="text-sm text-slate-400">Private previews and saved drafts. Resume a draft with Edit.</p>
     <form action="/admin/preview-lockers" method="get" className="flex flex-wrap items-end gap-3" role="search" aria-label="Search preview lockers">
       <label className="grid min-w-0 flex-1 gap-2 text-sm">Search by name<input key={name} type="search" name="q" defaultValue={name} maxLength={120} placeholder="Find an athlete…" className="h-11 w-full rounded-md border bg-background px-3 focus-visible:outline focus-visible:outline-[#ffbb00]" /></label>

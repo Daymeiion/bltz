@@ -24,13 +24,15 @@ export const previewIdentity = z.object({
   cohort_year: z.number().int().min(1950).max(2100).nullable().default(null),
 }).strict();
 const team = z.object({ label: text(80).min(1), color: z.string().regex(/^#[0-9a-fA-F]{6}$/), logo: asset }).strict();
-const award = z.object({ year: text(20), label: text(200).min(1) }).strict();
+const award = z.object({ year: text(20), label: text(200).min(1), description: text(160).nullable().optional(), sourceUrl: previewUrl.nullable().optional() }).strict();
 const storagePath = z.string().min(1).max(240).regex(/^[0-9a-f-]{36}\/(photos|videos)\/[0-9a-f-]{36}\.(jpg|png|webp|mp4|webm|mov)$/);
 export const previewMediaMimeTypes = ["image/jpeg", "image/png", "image/webp", "video/mp4", "video/webm", "video/quicktime"] as const;
 export type PreviewMediaMime = (typeof previewMediaMimeTypes)[number];
 const storedAsset = z.object({ storagePath, mimeType: z.enum(previewMediaMimeTypes) });
-const externalVideo = z.object({ id, title: text(160).min(1), url: previewUrl, thumb: asset }).strict();
-const storedVideo = z.object({ id, title: text(160).min(1), thumb: asset, ...storedAsset.shape }).strict()
+const heroDevice = z.enum(["mobile", "desktop"]).optional();
+const externalVideo = z.object({ id, title: text(160).min(1), url: previewUrl, thumb: asset, heroDevice }).strict()
+  .refine(video => !video.heroDevice || /\.(mp4|webm|mov|m4v|ogg)(?:[?#]|$)/i.test(video.url), "Hero videos must be direct video files, not provider pages.");
+const storedVideo = z.object({ id, title: text(160).min(1), thumb: asset, heroDevice, ...storedAsset.shape }).strict()
   .refine(value => value.storagePath.includes("/videos/") && value.mimeType.startsWith("video/"), "Video storage metadata does not match.");
 export const previewVideo = z.union([externalVideo, storedVideo]);
 const externalPhoto = z.object({
@@ -64,7 +66,7 @@ export const previewContent = z.object({
   schools: z.array(team).max(12).default([]), pro_teams: z.array(team).max(12).default([]),
   awards: z.array(award).max(40).default([]),
   career_stats: z.array(careerStat).max(previewStatKeys.length).refine(items => new Set(items.map(item => item.key)).size === items.length, "Statistic keys must be unique.").default([]),
-  videos: z.array(previewVideo).max(24).refine(uniqueIds, "Video IDs must be unique.").default([]),
+  videos: z.array(previewVideo).max(24).refine(uniqueIds, "Video IDs must be unique.").refine(items => ["mobile", "desktop"].every(device => items.filter(item => item.heroDevice === device).length <= 1), "Choose only one hero video for each device.").default([]),
   photos: z.array(previewPhoto).max(40).refine(uniqueIds, "Photo IDs must be unique.").default([]),
 }).strict();
 export const createPreview = z.object({ id: z.uuid(), content: previewContent }).strict();

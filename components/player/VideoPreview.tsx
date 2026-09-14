@@ -23,7 +23,7 @@ export function VideoPreview({ title, thumbnailUrl, playbackUrl, embedUrl }: Pro
       setHovering(false);
       if (video.current) {
         video.current.pause();
-        if (video.current.readyState >= 1) video.current.currentTime = 0;
+        if (video.current.readyState >= 1) video.current.currentTime = 0.001;
       }
     };
     const start = (event: PointerEvent) => {
@@ -48,7 +48,7 @@ export function VideoPreview({ title, thumbnailUrl, playbackUrl, embedUrl }: Pro
 
   const mediaStyle = { position: "absolute" as const, inset: 0, width: "100%", height: "100%", objectFit: "cover" as const };
   return <span ref={host} aria-hidden="true" style={{ ...mediaStyle, display: "block", pointerEvents: "none" }}>
-    {playbackUrl ? <video ref={video} src={playbackUrl} muted playsInline loop preload={poster ? "metadata" : "auto"} style={mediaStyle} /> : null}
+    {playbackUrl ? <video key={playbackUrl} ref={video} src={playbackUrl} muted playsInline loop preload={poster ? "metadata" : "auto"} onLoadedMetadata={event => { if (!hovering) event.currentTarget.currentTime = 0.001; }} style={mediaStyle} /> : null}
     {image && !(hovering && (playbackUrl || embedUrl)) ? <img src={image} alt="" onError={() => setImageFailed(true)} style={mediaStyle} /> : null}
     {hovering && youtubeId ? <iframe src={`${embedUrl}?autoplay=1&mute=1&controls=0&playsinline=1&loop=1&playlist=${youtubeId}`} title={`${title} preview`} tabIndex={-1} allow="autoplay; encrypted-media" style={{ ...mediaStyle, border: 0 }} /> : null}
   </span>;

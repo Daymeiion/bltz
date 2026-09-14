@@ -11,7 +11,7 @@ export function previewVideoSource(value: string | null) {
     if (id && /^[\w-]{11}$/.test(id)) {
       return { playbackUrl: null, embedUrl: `https://www.youtube-nocookie.com/embed/${id}` };
     }
-    return { playbackUrl: /\.(mp4|webm|ogg|m4v)$/i.test(url.pathname) ? url.href : null, embedUrl: null };
+    return { playbackUrl: /\.(mp4|webm|ogg|m4v|mov)$/i.test(url.pathname) ? url.href : null, embedUrl: null };
   } catch {
     return { playbackUrl: null, embedUrl: null };
   }

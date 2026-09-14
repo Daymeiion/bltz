@@ -49,10 +49,10 @@ export default function PreviewViewerAccess({ previewId, initialAssigned }: { pr
   }
 
   return <section className="space-y-4 rounded-lg border p-4" aria-labelledby="preview-viewer-heading">
-    <div className="space-y-1"><h2 id="preview-viewer-heading" className="font-semibold">Private player viewer</h2><p className="text-sm">Assign exactly one existing BLTZ account by exact email. The address is used only for the account lookup and is not displayed or stored with this preview. Access is read-only for this Locker, Photos, and Film Room.</p></div>
+    <div className="space-y-1"><h2 id="preview-viewer-heading" className="font-semibold">Private player viewer</h2><p className="text-sm">Assign exactly one existing BLTZ account by exact email. The address is used only for the account lookup and is not displayed or stored with this preview. Access is read-only for this Locker, Photos, and Film Room and expires 48 hours after assignment. Assign the same account again after expiry to renew access.</p></div>
     <p role="status" className="text-sm font-medium">{message}</p>
     {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
     <label className="grid gap-2 text-sm">Player BLTZ account email<Input aria-label="Player BLTZ account email" type="email" autoComplete="off" value={email} onChange={event => setEmail(event.target.value)} disabled={busy} /></label>
-    <div className="flex flex-wrap gap-3"><Button type="button" onClick={assign} disabled={busy || !email.trim()}>{assigned ? "Reassign player access" : "Assign player access"}</Button>{assigned && <Button type="button" variant="outline" onClick={revoke} disabled={busy}>Revoke player access</Button>}</div>
+    <div className="flex flex-wrap gap-3"><Button type="button" onClick={assign} disabled={busy || !email.trim()}>{assigned ? "Reassign / renew player access" : "Assign player access"}</Button>{assigned && <Button type="button" variant="outline" onClick={revoke} disabled={busy}>Revoke player access</Button>}</div>
   </section>;
 }

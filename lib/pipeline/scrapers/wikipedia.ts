@@ -1,3 +1,4 @@
+import { findAwardDescription } from "@/lib/preview-lockers/award-descriptions";
 import { fetchHtml, stripHtml } from "../fetch";
 import type { PlayerIdentityInput, ScraperResult, ScrapedAward } from "../types";
 import { NFL_FULL_NAMES } from "../teams";
@@ -190,7 +191,7 @@ function extractAwards(text: string, sourceUrl: string): ScrapedAward[] {
   ];
   for (const { name, re } of patterns) {
     if (re.test(text)) {
-      awards.push({ name, source_url: sourceUrl });
+      awards.push({ name, source_url: sourceUrl, description: findAwardDescription(name, text) });
     }
   }
   return awards;

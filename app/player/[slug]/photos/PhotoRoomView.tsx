@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import PreviewRoomNav from "@/components/preview-lockers/PreviewRoomNav";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Play, Search, X } from "lucide-react";
@@ -19,6 +20,7 @@ export type PhotoRoomImage = {
   licenseLabel: string;
   width: number | null;
   height: number | null;
+  mimeType?: string | null;
 };
 
 export type PhotoRoomData = {
@@ -51,6 +53,11 @@ function searchHref(result: SearchResult) {
 export default function PhotoRoomView({ data }: { data: PhotoRoomData }) {
   const isPrivatePreview = data.lockerHref?.startsWith("/preview-lockers/") === true;
   const [images, setImages] = useState(data.images);
+  const [photoRatios, setPhotoRatios] = useState<Record<string, number>>({});
+  function photoLayout(image: PhotoRoomImage) {
+    const ratio = photoRatios[image.url] ?? (image.width && image.height ? image.width / image.height : 1);
+    return ratio > 1.15 ? styles.previewLandscape : ratio < 0.85 ? styles.previewPortrait : "";
+  }
   const [loadingMore, setLoadingMore] = useState(false);
   const [loadMoreError, setLoadMoreError] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -234,9 +241,9 @@ export default function PhotoRoomView({ data }: { data: PhotoRoomData }) {
   }
 
   return (
-    <main className={styles.page} style={{ "--photo-accent": data.accentColor } as React.CSSProperties}>
+    <main className={`${styles.page} ${isPrivatePreview ? styles.previewPage : ""}`} style={{ "--photo-accent": data.accentColor } as React.CSSProperties}>
       <div className={styles.shell}>
-        <header className={styles.header}>
+        {isPrivatePreview ? <PreviewRoomNav athleteName={data.athleteName} headshotUrl={data.athleteHeadshotUrl} lockerHref={data.lockerHref!} onSearch={() => setSearchOpen(true)} /> : <header className={styles.header}>
           <Link href={data.lockerHref ?? `/player/${data.slug}`} className={styles.brand} aria-label="BLTZ Player Locker">
             <Image src="/images/bltz-mark.svg" alt="BLTZ" width={38} height={39} priority />
           </Link>
@@ -248,10 +255,16 @@ export default function PhotoRoomView({ data }: { data: PhotoRoomData }) {
               <Image src={data.athleteHeadshotUrl} alt="" fill sizes="42px" unoptimized={isPrivatePreview} />
             </Link>
           </div>
-        </header>
+        </header>}
 
         <section ref={heroRef} className={styles.featured} aria-label="Featured photo slideshow">
           <div className={`${styles.featuredMedia} ${!hasAnyImages ? styles.featuredMediaEmpty : ""}`}>
+            {isPrivatePreview && slideshowImages[activeIndex] && <img
+              src={slideshowImages[activeIndex].url}
+              alt=""
+              aria-hidden="true"
+              className={styles.heroBackdrop}
+            />}
             {slideshowImages.length ? (
               slideshowImages.map((image, index) => (
                 <img
@@ -259,6 +272,13 @@ export default function PhotoRoomView({ data }: { data: PhotoRoomData }) {
                   src={image.url}
                   alt={image.title || `${data.athleteName} photo`}
                   className={`${styles.heroImage} ${index === activeIndex ? styles.heroImageActive : ""}`}
+                  onLoad={event => {
+                    if (!isPrivatePreview) return;
+                    const { naturalWidth, naturalHeight } = event.currentTarget;
+                    if (!naturalWidth || !naturalHeight) return;
+                    const ratio = naturalWidth / naturalHeight;
+                    setPhotoRatios(previous => previous[image.url] === ratio ? previous : { ...previous, [image.url]: ratio });
+                  }}
                 />
               ))
             ) : (
@@ -318,23 +338,31 @@ export default function PhotoRoomView({ data }: { data: PhotoRoomData }) {
             {filteredImages.length ? (
               <div
                 className={`${styles.bentoViewport} ${galleryLocked ? styles.bentoViewportUnlocked : ""}`}
-                aria-label="Scrollable photo grid"
+                aria-label={isPrivatePreview ? "Photo grid" : "Scrollable photo grid"}
               >
                 <div className={styles.bentoGrid}>
                   {filteredImages.map((image, index) => (
                     <button
                       key={image.id}
                       type="button"
-                      className={`${styles.photoTile} ${index % 7 === 0 ? styles.photoTileLarge : ""} ${index % 7 === 3 ? styles.photoTileWide : ""}`}
+                      className={`${styles.photoTile} ${isPrivatePreview ? photoLayout(image) : `${index % 7 === 0 ? styles.photoTileLarge : ""} ${index % 7 === 3 ? styles.photoTileWide : ""}`}`}
                       onClick={() => selectImage(image.id)}
                       aria-label={`View ${image.title}`}
                     >
-                      <img src={image.url} alt={image.title || `${data.athleteName} photo`} />
+                      <img src={image.url} alt={image.title || `${data.athleteName} photo`} onLoad={event => {
+                        if (!isPrivatePreview) return;
+                        const { naturalWidth, naturalHeight } = event.currentTarget;
+                        if (!naturalWidth || !naturalHeight) return;
+                        const ratio = naturalWidth / naturalHeight;
+                        setPhotoRatios(previous => previous[image.url] === ratio ? previous : { ...previous, [image.url]: ratio });
+                      }} />
+                      {!(isPrivatePreview && (image.mimeType === "image/png" || /\.png(?:[?#]|$)/i.test(image.url))) && <>
                       <span className={styles.tileShade} />
                       <span className={styles.tileMeta}>
                         <strong>{image.title}</strong>
                         <small>{image.licenseLabel}{image.season ? ` · ${image.season}` : ""}</small>
                       </span>
+                      </>}
                     </button>
                   ))}
                   {Array.from({ length: sparseSlotCount }).map((_, index) => (

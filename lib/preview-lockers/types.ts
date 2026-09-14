@@ -4,7 +4,7 @@
 
 export type PreviewLevel = "hs" | "college" | "pro" | "former";
 
-export type PreviewAward = { year: string; label: string };
+export type PreviewAward = { year: string; label: string; sourceUrl?: string | null; description?: string | null };
 export type PreviewCareerStat = { key: string; label: string; value: string | number };
 export type PreviewCareerSeason = {
   year: string;

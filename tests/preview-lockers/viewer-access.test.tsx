@@ -29,7 +29,7 @@ it("assigns, reassigns and revokes without displaying or retaining email", async
 
   await fillEmail("replacement@example.com");
   fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ assigned: true, status: "reassigned" })));
-  await click("Reassign player access");
+  await click("Reassign / renew player access");
   expect(host.textContent).toContain("reassigned and audited");
 
   fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ assigned: false, status: "revoked" })));

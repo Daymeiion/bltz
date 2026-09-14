@@ -6,6 +6,11 @@ export const previewEnrollment = z.object({
   channel: z.enum(["email", "linkedin", "sms", "in_person", "referral", "other"]),
   relationship: z.enum(["warm", "cold"]), is_test: z.boolean().default(false),
 }).strict();
+export const referralCandidate = z.object({
+      full_name: z.string().trim().min(2).max(120),
+      email: z.email().max(254),
+      phone: z.string().trim().regex(/^[+\d\s().-]{7,30}$/).optional(),
+    }).strict();
 export const conversionInput = z.object({
   preview_id: z.uuid().nullable(),
   action: z.enum(["state", "view", "photos_view", "film_view", "claim_click", "declined", "claim_submit", "booking_click", "referral_created", "referral_copied", "referral_intake"]),
@@ -13,6 +18,8 @@ export const conversionInput = z.object({
   data: z.object({
     email: z.email().max(254).optional(), consent: z.boolean().optional(),
     dashboard_interest: z.boolean().optional(), reason: z.string().max(500).optional(),
+    feature_requests: z.string().trim().max(2000).optional(),
+    referrals: z.array(referralCandidate).max(10).optional(),
     full_name: z.string().trim().min(2).max(120).optional(), token: z.uuid().optional(),
     utm: z.object({ utm_source: attributionCode.optional(), utm_medium: attributionCode.optional(), utm_campaign: attributionCode.optional() }).strict().optional(),
   }).strict(),

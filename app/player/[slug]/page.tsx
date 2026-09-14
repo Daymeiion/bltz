@@ -1,3 +1,4 @@
+import { previewVideoSource } from "@/lib/preview-lockers/video";
 import { notFound } from "next/navigation";
 import { readStructuredStats } from "@/lib/player/structured-stats";
 import { createClient } from "@/lib/supabase/server";
@@ -269,6 +270,14 @@ export default async function PlayerLocker({ params }: { params: Promise<{ slug:
     .eq("player_id", player.id)
     .maybeSingle();
 
+  // Separate query keeps the existing Locker readable during migration rollout.
+  const { data: heroSettings } = await supabase.from("player_lockers")
+    .select("hero_video_mobile_id,hero_video_desktop_id,hero_videos_configured").eq("player_id", player.id).maybeSingle();
+  const heroIds = [heroSettings?.hero_video_mobile_id, heroSettings?.hero_video_desktop_id].filter((id): id is string => typeof id === "string");
+  const { data: heroRows } = heroIds.length ? await supabase.from("videos").select("id,playback_url")
+    .eq("player_id", player.id).eq("visibility", "public").in("id", heroIds) : { data: [] };
+  const heroUrl = (id: string | null | undefined) => previewVideoSource(heroRows?.find(row => row.id === id)?.playback_url ?? null).playbackUrl;
+
   // PostgREST returns one-to-one joins as a single object, but TS infers an array.
   const nflPlayer = (Array.isArray((player as any).nfl_player)
     ? (player as any).nfl_player[0]
@@ -374,6 +383,7 @@ export default async function PlayerLocker({ params }: { params: Promise<{ slug:
     headshotUrl,
     headshotYear: null,
     heroVideoUrl: (player as any).video_url ?? null,
+    ...(heroSettings?.hero_videos_configured ? { heroVideos: { mobile: heroUrl(heroSettings?.hero_video_mobile_id), desktop: heroUrl(heroSettings?.hero_video_desktop_id) } } : {}),
     logoSrc: "/bltz-white-logo.svg",
     bio: bioCopy,
     athleteQuote: locker?.quote_text ?? null,
