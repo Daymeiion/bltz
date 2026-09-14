@@ -230,7 +230,7 @@ export default function PhotoRoomView({ data }: { data: PhotoRoomData }) {
                 <img
                   key={image.id}
                   src={image.url}
-                  alt=""
+                  alt={image.title || `${data.athleteName} photo`}
                   className={`${styles.heroImage} ${index === activeIndex ? styles.heroImageActive : ""}`}
                 />
               ))
@@ -310,7 +310,7 @@ export default function PhotoRoomView({ data }: { data: PhotoRoomData }) {
                       onClick={() => selectImage(image.id)}
                       aria-label={`View ${image.title}`}
                     >
-                      <img src={image.url} alt="" />
+                      <img src={image.url} alt={image.title || `${data.athleteName} photo`} />
                       <span className={styles.tileShade} />
                       <span className={styles.tileMeta}>
                         <strong>{image.title}</strong>

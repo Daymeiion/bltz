@@ -191,6 +191,7 @@ export default function LockerView({
   const [careerGamesInView, setCareerGamesInView] = useState(false);
   const [careerGamesNeedsScroll, setCareerGamesNeedsScroll] = useState(false);
   const [showAllCareerStats, setShowAllCareerStats] = useState(false);
+  const [photoAspectRatios, setPhotoAspectRatios] = useState<Record<string, number>>({});
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
@@ -806,6 +807,57 @@ export default function LockerView({
   const displayHighSchool = hasKnownText(data.highSchool) ? data.highSchool : unknownText;
   const displayCollege = data.levelLabel === "hs" ? unknownText : data.school?.name || collegeTeams[0]?.label || unknownText;
 
+  const photoAssetKey = (value: string) => {
+    try {
+      const url = new URL(value, "https://bltz.local");
+      if (url.protocol !== "https:" && url.protocol !== "http:") return null;
+      return `${url.origin}${decodeURIComponent(url.pathname)}`.toLowerCase();
+    } catch {
+      return null;
+    }
+  };
+  const headshotAssetKey = photoAssetKey(data.headshotUrl);
+  const seenPhotoAssets = new Set<string>();
+  const eligiblePhotos = data.photos.filter((photo) => {
+    const assetKey = photoAssetKey(photo.url);
+    if (!assetKey || assetKey === headshotAssetKey || /headshot/i.test(photo.title)) return false;
+    if (seenPhotoAssets.has(assetKey)) return false;
+    seenPhotoAssets.add(assetKey);
+    return true;
+  });
+  const photoRatio = (photoId: string) => photoAspectRatios[photoId] ?? 1;
+  const landscapePhotos = eligiblePhotos.filter((photo) => photoRatio(photo.id) >= 1);
+  const portraitPhotos = eligiblePhotos.filter((photo) => photoRatio(photo.id) < 1);
+  const usedPhotoIds = new Set<string>();
+  const takePhoto = (preferred: typeof eligiblePhotos) => {
+    const photo = preferred.find((candidate) => !usedPhotoIds.has(candidate.id))
+      ?? eligiblePhotos.find((candidate) => !usedPhotoIds.has(candidate.id));
+    if (photo) usedPhotoIds.add(photo.id);
+    return photo;
+  };
+  const previewPhotos = [
+    takePhoto(landscapePhotos), takePhoto(portraitPhotos), takePhoto(landscapePhotos),
+    takePhoto(portraitPhotos), takePhoto(landscapePhotos), takePhoto(portraitPhotos),
+  ].filter((photo): photo is (typeof eligiblePhotos)[number] => Boolean(photo));
+  const desktopPhotoSpans = [6, 2, 4, 2, 6, 4];
+  const mobilePhotoSpans = [7, 5, 5, 7, 8, 4];
+  const recordPhotoAspectRatio = (photoId: string, image: HTMLImageElement) => {
+    if (!image.naturalWidth || !image.naturalHeight) return;
+    const ratio = image.naturalWidth / image.naturalHeight;
+    setPhotoAspectRatios((current) => current[photoId] === ratio ? current : { ...current, [photoId]: ratio });
+  };
+
+  useEffect(() => {
+    const loaders = data.photos.slice(0, 10).flatMap((photo) => {
+      if (!photoAssetKey(photo.url)) return [];
+      const loader = new window.Image();
+      loader.onload = () => recordPhotoAspectRatio(photo.id, loader);
+      loader.src = photo.url;
+      return [loader];
+    });
+    return () => loaders.forEach((loader) => { loader.onload = null; });
+  }, [data.photos]);
+
   const tabIdx = { bio: 0, media: 1, stats: 2 }[tab];
   const earnedFmt = "$" + (stats.earned || 0).toLocaleString("en-US");
   const viewsFmt = Math.round((stats.views || 0) / 1000) + "K";
@@ -1029,7 +1081,23 @@ export default function LockerView({
               </a>
             </div>
             <div className="hs" style={{ display: "flex", gap: 12, overflowX: "auto", padding: "4px 0 8px", scrollSnapType: "x mandatory" }}>
-              {data.privateDemo ? (data.videos.length ? data.videos.map(v => <a key={v.id} href={`${lockerPath}/videos#${v.id}`} className="min-w-64 rounded-xl border border-white/20 p-4 text-white"><strong>{v.title}</strong><p>Open video · Private demo</p></a>) : <p className="text-white/70">No videos saved in this preview.</p>) : videos.map((v, i) => (
+              {data.privateDemo ? (data.videos.length ? data.videos.map(v => (
+                <a
+                  key={v.id}
+                  href={`${lockerPath}/videos#${v.id}`}
+                  aria-label={`${v.title} · Open video · Private demo`}
+                  className="group relative h-[150px] w-[262px] flex-none snap-start overflow-hidden rounded-[14px] border border-[#1E2640] bg-[#131829] text-white"
+                >
+                  {v.thumb ? <img src={v.thumb} alt="" className="h-full w-full object-cover opacity-90 transition-transform duration-300 group-hover:scale-[1.025]" /> : null}
+                  <span className="absolute inset-0 bg-gradient-to-t from-[#05070F] via-[#05070F]/20 to-transparent" aria-hidden="true" />
+                  <span className="absolute left-3 top-3 rounded-full border border-[#ffbb00]/40 bg-[#0b0e1a]/75 px-2 py-1 font-mono text-[9px] tracking-[.14em] text-[#ffbb00]">PRIVATE DEMO</span>
+                  <span className="absolute left-1/2 top-1/2 grid h-9 w-9 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-[#ffbb00] text-black shadow-lg" aria-hidden="true">▶</span>
+                  <span className="absolute inset-x-3 bottom-3">
+                    <strong className="block font-display text-base uppercase leading-none">{v.title}</strong>
+                    <small className="mt-2 block font-mono text-[9px] tracking-[.12em] text-white/60">RIGHTS UNVERIFIED</small>
+                  </span>
+                </a>
+              )) : <p className="text-white/70">No videos saved in this preview.</p>) : videos.map((v, i) => (
                 <div key={v.id + i} style={{ flex: "none", width: 262, scrollSnapAlign: "start", cursor: v.isPlaceholder ? "default" : "pointer" }}>
                   <div style={{ position: "relative", height: 150, borderRadius: 14, overflow: "hidden", border: "1px solid #1E2640", background: GRAD_FIELD }}>
                     {v.img ? <img src={v.img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", opacity: .92 }} /> : null}
@@ -1066,38 +1134,36 @@ export default function LockerView({
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFB940" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
               </a>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gridAutoRows: 104, gap: 8 }}>
-              <div style={{ gridColumn: "1/3", gridRow: "1/3", borderRadius: 14, overflow: "hidden", position: "relative", border: "1px solid #1E2640", background: GRAD_FIELD }}>
-                {data.photos[0] ? (
-                  <>
-                    <img src={data.photos[0].url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                  <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top,rgba(5,7,15,.7),transparent 50%)" }} />
-                  <div style={{ position: "absolute", top: 10, left: 10, padding: "4px 8px", borderRadius: 9999, background: "rgba(11,14,26,.72)", border: "1px solid rgba(255,255,255,.14)", backdropFilter: "blur(6px)", fontFamily: mono, fontSize: 8.5, letterSpacing: ".14em", color: "#FFB940" }}>{data.photos[0].licenseLabel}</div>
-                  <div style={{ position: "absolute", left: 12, right: 12, bottom: 11 }}>
-                    {data.photos[0].title ? <div style={{ fontFamily: disp, fontWeight: 700, fontSize: 16, textTransform: "uppercase", color: "#fff", letterSpacing: ".02em", textShadow: "0 2px 8px rgba(0,0,0,.6)", lineHeight: ".95" }}>{data.photos[0].title}</div> : null}
-                    {data.photos[0].credits ? <div style={{ fontFamily: mono, fontSize: 8.5, letterSpacing: ".1em", color: "rgba(255,255,255,.62)", marginTop: 6, textTransform: "uppercase" }}>{data.photos[0].credits}</div> : null}
-                  </div>
-                  </>
-                ) : (
+            <div className="locker-photo-contact-sheet">
+              {previewPhotos.length ? previewPhotos.map((photo, index) => (
+                <div
+                  key={photo.id}
+                  className="locker-photo-tile"
+                  style={{
+                    "--photo-desktop-span": desktopPhotoSpans[index] ?? 4,
+                    "--photo-mobile-span": mobilePhotoSpans[index] ?? 6,
+                  } as React.CSSProperties}
+                >
+                  <img
+                    src={photo.url}
+                    alt={photo.title}
+                    ref={(image) => { if (image?.complete) recordPhotoAspectRatio(photo.id, image); }}
+                    onLoad={(event) => recordPhotoAspectRatio(photo.id, event.currentTarget)}
+                  />
+                  <span className="locker-photo-shade" aria-hidden="true" />
+                  <span className="locker-photo-label" style={{ fontFamily: mono }}>{photo.licenseLabel}</span>
+                  {index === previewPhotos.length - 1 && eligiblePhotos.length > previewPhotos.length ? (
+                    <span className="locker-photo-more" style={{ fontFamily: mono }}>+{eligiblePhotos.length - previewPhotos.length} MORE</span>
+                  ) : null}
+                </div>
+              )) : (
+                <div className="locker-photo-empty" style={{ background: GRAD_FIELD }}>
                   <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: 14, background: "linear-gradient(145deg,rgba(19,24,41,.95),rgba(10,26,110,.62))" }}>
                     <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: ".16em", color: "#FFB940", marginBottom: 8 }}>LICENSE CHECK</div>
                     <div style={{ fontFamily: disp, fontWeight: 800, fontSize: 21, lineHeight: ".92", textTransform: "uppercase", color: "#fff" }}>Awaiting Approved Photos</div>
                   </div>
-                )}
-              </div>
-              {[1, 2, 3].map((idx, k) => (
-                <div key={idx} style={{ gridColumn: k === 2 ? "1/2" : "3/4", gridRow: k === 0 ? "1/2" : k === 1 ? "2/3" : "3/4", borderRadius: 14, overflow: "hidden", border: "1px solid #1E2640", position: "relative", background: "#131829" }}>
-                  {data.photos[idx] ? <img src={data.photos[idx].url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : null}
-                  <div style={{ position: "absolute", inset: 0, background: data.photos[idx] ? "linear-gradient(to top,rgba(5,7,15,.55),transparent 60%)" : "linear-gradient(135deg,rgba(255,255,255,.04),rgba(10,26,110,.28))" }} />
-                  <div style={{ position: "absolute", left: 8, right: 8, bottom: 8, fontFamily: mono, fontSize: 7.5, letterSpacing: ".12em", color: "rgba(255,255,255,.72)", textTransform: "uppercase", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{data.photos[idx]?.licenseLabel ?? "READY SLOT"}</div>
                 </div>
-              ))}
-              <div style={{ gridColumn: "2/4", gridRow: "3/4", borderRadius: 14, overflow: "hidden", position: "relative", border: "1px solid #1E2640", background: GRAD_FIELD }}>
-                {data.photos[4] ? <img src={data.photos[4].url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", opacity: .9 }} /> : null}
-                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(120deg,rgba(10,26,110,.5),transparent)" }} />
-                <div style={{ position: "absolute", left: 12, bottom: 11, fontFamily: mono, fontSize: 8.5, letterSpacing: ".12em", color: "rgba(255,255,255,.72)", textTransform: "uppercase" }}>{data.photos[4]?.licenseLabel ?? "SCRAPED / UPLOADED MEDIA"}</div>
-                {data.photos.length > 5 ? <div style={{ position: "absolute", right: 12, bottom: 11, fontFamily: mono, fontSize: 10, letterSpacing: ".14em", color: "#fff" }}>+{data.photos.length - 5} MORE</div> : null}
-              </div>
+              )}
             </div>
           </section>
 
@@ -2082,8 +2148,16 @@ const styleSheet = `
 .locker-social-modal-media--portrait{aspect-ratio:9/16}
 .basic-info-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .basic-info-grid>div{grid-column:1/-1}
+.locker-photo-contact-sheet{height:390px;display:grid;grid-template-columns:repeat(12,minmax(0,1fr));grid-template-rows:repeat(3,minmax(0,1fr));gap:8px;overflow:hidden}
+.locker-photo-tile{position:relative;min-width:0;grid-column:span var(--photo-mobile-span,6);overflow:hidden;border:1px solid #1E2640;border-radius:14px;background:${GRAD_FIELD}}
+.locker-photo-tile img{display:block;width:100%;height:100%;object-fit:cover;transition:transform .35s ease}
+.locker-photo-tile:hover img{transform:scale(1.025)}
+.locker-photo-shade{position:absolute;inset:0;background:linear-gradient(to top,rgba(5,7,15,.62),transparent 58%);pointer-events:none}
+.locker-photo-label{position:absolute;left:9px;bottom:9px;max-width:calc(100% - 18px);overflow:hidden;color:rgba(255,255,255,.76);font-size:7.5px;letter-spacing:.12em;text-overflow:ellipsis;text-transform:uppercase;white-space:nowrap}
+.locker-photo-more{position:absolute;right:9px;top:9px;padding:5px 7px;border-radius:999px;background:rgba(5,7,15,.82);color:#fff;font-size:9px;font-weight:700;letter-spacing:.12em}
+.locker-photo-empty{position:relative;min-height:228px;grid-column:1/-1;overflow:hidden;border:1px solid #1E2640;border-radius:14px}
 @media (min-width:640px){.bltz-frame{border-radius:28px}}
-@media (min-width:641px){.bio-headshot-card{height:216px}.bio-headshot-image{height:178px;flex-basis:178px}.bio-headshot-photo{object-fit:contain;object-position:center bottom}.bio-headshot-year{height:38px;flex-basis:38px}.basic-info-grid>div{grid-column:auto}.basic-info-grid>.basic-info-high-school{grid-column:1/-1}}
+@media (min-width:641px){.bio-headshot-card{height:216px}.bio-headshot-image{height:178px;flex-basis:178px}.bio-headshot-photo{object-fit:contain;object-position:center bottom}.bio-headshot-year{height:38px;flex-basis:38px}.basic-info-grid>div{grid-column:auto}.basic-info-grid>.basic-info-high-school{grid-column:1/-1}.locker-photo-contact-sheet{height:420px;grid-template-rows:repeat(2,minmax(0,1fr));gap:10px}.locker-photo-tile{grid-column:span var(--photo-desktop-span,4)}}
 @media (max-width:640px){
   .bltz-frame{width:100vw;height:100dvh;box-shadow:none}
   .locker-filter-row{gap:6px!important;padding-right:12px!important;padding-left:12px!important}
