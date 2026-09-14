@@ -1,5 +1,13 @@
 # Preview Locker claim and card refresh — 2026-09-14
 
+## Production database activation — 2026-09-14
+
+- User explicitly approved the production Supabase dashboard and GitHub destination. The dashboard verified BLTZ / main / PRODUCTION (`drxtzxnwdtgxwueiqygf`). Physical backup available: 2026-09-14 08:03:47 UTC.
+- Read-only preflight: 56 migration versions, latest `20260911223514`, ordered-history fingerprint `36e83bcd55c22cb0c2e930d4b95b10ac`; candidate table and new configuration columns absent.
+- Corrected pending SQL dollar-quoting and a PL/pgSQL alias ambiguity before activation. Full migration packet passed a transaction ending in ROLLBACK, including award/video JSON validators, duplicate-device rejection, candidate RLS/grants, and zero anonymous media TTL.
+- Applied the identical guarded packet atomically with migration statements recorded in the ledger. Read-back confirmed all four versions: `20260914184728`, `20260914213500`, `20260915003000`, `20260915010000`. No reset or history-only repair. These migrations are now immutable.
+- Existing CLI transport failure still prevents full schema type regeneration. Live authenticated role/persistence walkthrough beyond migration assertions remains to be verified; no production test identities or fabricated claims were created.
+
 ## Release preparation — 2026-09-14
 
 - Production Git base verified: `origin/main` = `b610291ed19393e754982383ffc84b0d5a39ab28`; Vercel project `bltz`, production alias `bltz.vercel.app`.
