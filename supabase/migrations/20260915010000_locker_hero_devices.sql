@@ -40,7 +40,7 @@ begin
     if kind = 'video' and item ? 'heroDevice' and not stored and coalesce(item->>'url','') !~* '\.(mp4|webm|mov|m4v|ogg)([?#].*)?$' then return false; end if;
     if kind = 'photo' and coalesce(item->>'level','') not in ('hs','cfb','pro','off-field') then return false; end if;
   end loop;
-  if kind = 'video' and exists (select 1 from jsonb_array_elements(items) v where v ? 'heroDevice' group by v->>'heroDevice' having count(*) > 1) then return false; end if;
+  if kind = 'video' and exists (select 1 from jsonb_array_elements(items) as hero_entry(value) where hero_entry.value ? 'heroDevice' group by hero_entry.value->>'heroDevice' having count(*) > 1) then return false; end if;
   return true;
 end;
 $$;
