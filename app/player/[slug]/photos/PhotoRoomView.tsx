@@ -329,7 +329,12 @@ export default function PhotoRoomView({ data }: { data: PhotoRoomData }) {
                       onClick={() => selectImage(image.id)}
                       aria-label={`View ${image.title}`}
                     >
-                      <img src={image.url} alt="" />
+                      <img src={image.url} alt={image.title || `${data.athleteName} photo`} />
+                      <span className={styles.tileShade} />
+                      <span className={styles.tileMeta}>
+                        <strong>{image.title}</strong>
+                        <small>{image.licenseLabel}{image.season ? ` · ${image.season}` : ""}</small>
+                      </span>
                     </button>
                   ))}
                   {Array.from({ length: sparseSlotCount }).map((_, index) => (
