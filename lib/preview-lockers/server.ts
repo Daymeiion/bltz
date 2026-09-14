@@ -1,6 +1,7 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { previewRecord, previewSlug, type PreviewContent, type PreviewRecord, type ResolvedPreviewRecord } from "./validation";
+import { enrichPreviewSchoolBranding } from "./school-branding";
 
 export const PRIVATE_HEADERS = { "Cache-Control": "private, no-store", "Referrer-Policy": "no-referrer", "X-Robots-Tag": "noindex, nofollow, noarchive, noimageindex" };
 export const PREVIEW_MEDIA_BUCKETS = { photo: "preview-locker-photos", video: "preview-locker-videos" } as const;
@@ -99,5 +100,7 @@ export async function readPrivatePreview(slug: string): Promise<ResolvedPreviewR
   if (!previewSlug.safeParse(slug).success) return null;
   const { data, error } = await client.from("preview_lockers").select(PREVIEW_COLUMNS).eq("slug", slug).maybeSingle();
   if (error) throw new PreviewError("preview_unavailable", 503);
-  return data ? resolvePrivateMedia(client, previewRecord.parse(data)) : null;
+  if (!data) return null;
+  const resolved = await resolvePrivateMedia(client, previewRecord.parse(data));
+  return enrichPreviewSchoolBranding(client, resolved);
 }

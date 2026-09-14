@@ -229,9 +229,10 @@ export default function LockerView({
   const [heroMuted, setHeroMuted] = useState(true);
   const showAthleteNav = viewerMode === "athlete";
   const isEmbedded = presentation === "embedded";
+  const isPrivatePreview = data.lockerHref?.startsWith("/preview-lockers/") === true;
 
   useEffect(() => {
-    if (isEmbedded) return;
+    if (isEmbedded || isPrivatePreview) return;
     const source = document.referrer
       ? (() => {
           try { return new URL(document.referrer).hostname; } catch { return undefined; }
@@ -245,7 +246,7 @@ export default function LockerView({
       properties: { source, viewer_mode: viewerMode },
       dedupeKey: `locker_viewed:${data.slug}:${viewerMode}:${window.location.pathname}`,
     });
-  }, [data.athleteId, data.slug, isEmbedded, viewerMode]);
+  }, [data.athleteId, data.slug, isEmbedded, isPrivatePreview, viewerMode]);
 
   useEffect(() => {
     const node = teamHistoryRef.current;
@@ -422,7 +423,7 @@ export default function LockerView({
   // when nothing is playing or Spotify isn't connected.
   const [nowPlaying, setNowPlaying] = useState<NowPlayingTrack | null>(null);
   useEffect(() => {
-    if (isEmbedded || !data.slug) return;
+    if (isEmbedded || isPrivatePreview || !data.slug) return;
     let alive = true;
     const load = async () => {
       try {
@@ -441,7 +442,7 @@ export default function LockerView({
     load();
     const id = setInterval(load, 30_000); // refresh every 30s
     return () => { alive = false; clearInterval(id); };
-  }, [data.slug, isEmbedded]);
+  }, [data.slug, isEmbedded, isPrivatePreview]);
 
   // SAMPLE — no stats pipeline yet; these are the counter targets.
   const targets = { tackles: 58, int: 6, pbu: 14, ff: 2, dtd: 2, solo: 41, earned: 14208, views: 842000 };

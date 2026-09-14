@@ -49,6 +49,7 @@ function searchHref(result: SearchResult) {
 }
 
 export default function PhotoRoomView({ data }: { data: PhotoRoomData }) {
+  const isPrivatePreview = data.lockerHref?.startsWith("/preview-lockers/") === true;
   const [images, setImages] = useState(data.images);
   const [loadingMore, setLoadingMore] = useState(false);
   const [loadMoreError, setLoadMoreError] = useState(false);
@@ -67,6 +68,7 @@ export default function PhotoRoomView({ data }: { data: PhotoRoomData }) {
   const resumeTriggeredRef = useRef(false);
 
   useEffect(() => {
+    if (isPrivatePreview) return;
     void trackProductEvent({
       eventName: "photo_gallery_opened",
       source: "public_locker",
@@ -75,7 +77,7 @@ export default function PhotoRoomView({ data }: { data: PhotoRoomData }) {
       properties: { photo_count: data.totalImages ?? data.images.length },
       dedupeKey: `photo_gallery_opened:${data.slug}:${window.location.pathname}`,
     });
-  }, [data.athleteId, data.images.length, data.slug, data.totalImages]);
+  }, [data.athleteId, data.images.length, data.slug, data.totalImages, isPrivatePreview]);
 
   const slideshowImages = images;
   const hasAnyImages = images.length > 0;
@@ -186,14 +188,16 @@ export default function PhotoRoomView({ data }: { data: PhotoRoomData }) {
   }, [searchOpen]);
 
   function selectImage(id: string) {
-    void trackProductEvent({
-      eventName: "media_viewed",
-      source: "public_locker",
-      athleteId: data.athleteId,
-      athleteSlug: data.slug,
-      properties: { media_id: id, media_type: "photo", section: activeFilter },
-      dedupeKey: `media_viewed:photo:${id}`,
-    });
+    if (!isPrivatePreview) {
+      void trackProductEvent({
+        eventName: "media_viewed",
+        source: "public_locker",
+        athleteId: data.athleteId,
+        athleteSlug: data.slug,
+        properties: { media_id: id, media_type: "photo", section: activeFilter },
+        dedupeKey: `media_viewed:photo:${id}`,
+      });
+    }
     const nextIndex = images.findIndex((image) => image.id === id);
     if (nextIndex >= 0) setActiveIndex(nextIndex);
     resumeTriggeredRef.current = false;
@@ -241,7 +245,7 @@ export default function PhotoRoomView({ data }: { data: PhotoRoomData }) {
               <Search aria-hidden="true" />
             </button>
             <Link href={data.lockerHref ?? `/player/${data.slug}`} className={styles.avatar} aria-label={`View ${data.athleteName}'s locker`}>
-              <Image src={data.athleteHeadshotUrl} alt="" fill sizes="42px" />
+              <Image src={data.athleteHeadshotUrl} alt="" fill sizes="42px" unoptimized={isPrivatePreview} />
             </Link>
           </div>
         </header>

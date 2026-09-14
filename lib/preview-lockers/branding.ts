@@ -1,5 +1,12 @@
 import { nflTeamCode, nflTeamColor, nflLogo } from "@/lib/player/locker-format";
-import type { PreviewLockerRow, PreviewTeamPill, PreviewSchoolInfo } from "./types";
+import type { PreviewTeamPill, PreviewSchoolInfo } from "./types";
+
+export type PreviewBrandingSource = {
+  school?: string | null;
+  school_info?: PreviewSchoolInfo;
+  schools?: PreviewTeamPill[];
+  pro_teams?: PreviewTeamPill[];
+};
 
 export function brandColor(value: string | null | undefined): string {
   const hex = value?.trim().replace(/^#/, "");
@@ -12,7 +19,7 @@ export function shortTeamLabel(value: string): string {
   return clean.split(/\s+/).filter(word => !/^(of|the|at|university)$/i.test(word)).map(word => word[0]).join("").slice(0, 5).toUpperCase() || clean.slice(0, 3).toUpperCase();
 }
 
-export function previewTeamBranding(row: PreviewLockerRow) {
+export function previewTeamBranding(row: PreviewBrandingSource) {
   const info = row.school_info;
   const schools = (row.schools?.length ? row.schools : info?.name ? [{ label: info.abbr || info.name, color: info.primaryColor, logo: info.logoUrl }] : row.school ? [{ label: row.school, color: "#1A3DCC", logo: null }] : []).map(team => {
     const isPrimary = info?.name && [info.name, info.abbr, row.school].some(name => name?.trim().toLowerCase() === team.label.trim().toLowerCase());

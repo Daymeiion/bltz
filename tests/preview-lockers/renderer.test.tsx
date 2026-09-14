@@ -20,7 +20,7 @@ it("keeps full private Locker tabs without telemetry, Spotify, samples or canoni
   await act(async () => root.render(<LockerView data={previewLockerData(record)} />));
   const tab = [...host.querySelectorAll('button')].find(b => b.textContent?.trim() === "CAREER")!;
   await act(async () => tab.dispatchEvent(new MouseEvent("mousedown", { button: 0, bubbles: true })));
-  expect(host.textContent).toContain("Fixture College");
+  expect(host.textContent).toContain("FC");
   const awards = [...host.querySelectorAll('button')].find(b => b.textContent?.trim() === "AWARDS")!; await act(async () => awards.click()); expect(host.textContent).toContain("Synthetic honor");
   expect(host.textContent).not.toMatch(/POOL EARNINGS|TEAMMATES SPLIT|25%|14,208|842K/);
   expect(host.querySelector('a[href^="/player/"]')).toBeNull();
