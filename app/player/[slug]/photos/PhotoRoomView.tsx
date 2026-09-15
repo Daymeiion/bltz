@@ -3,7 +3,7 @@
 import Image from "next/image";
 import PreviewRoomNav from "@/components/preview-lockers/PreviewRoomNav";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { Play, Search, X } from "lucide-react";
 import type { SearchResult } from "@/components/ui/search-modal";
 import { trackProductEvent } from "@/lib/analytics/client";
@@ -54,10 +54,7 @@ export default function PhotoRoomView({ data }: { data: PhotoRoomData }) {
   const isPrivatePreview = data.lockerHref?.startsWith("/preview-lockers/") === true;
   const [images, setImages] = useState(data.images);
   const [photoRatios, setPhotoRatios] = useState<Record<string, number>>({});
-  function photoLayout(image: PhotoRoomImage) {
-    const ratio = photoRatios[image.url] ?? (image.width && image.height ? image.width / image.height : 1);
-    return ratio > 1.15 ? styles.previewLandscape : ratio < 0.85 ? styles.previewPortrait : "";
-  }
+  const photoRatio = (image: PhotoRoomImage) => photoRatios[image.url] ?? (image.width && image.height ? image.width / image.height : 1);
   const [loadingMore, setLoadingMore] = useState(false);
   const [loadMoreError, setLoadMoreError] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -345,7 +342,8 @@ export default function PhotoRoomView({ data }: { data: PhotoRoomData }) {
                     <button
                       key={image.id}
                       type="button"
-                      className={`${styles.photoTile} ${isPrivatePreview ? photoLayout(image) : `${index % 7 === 0 ? styles.photoTileLarge : ""} ${index % 7 === 3 ? styles.photoTileWide : ""}`}`}
+                      className={`${styles.photoTile} ${isPrivatePreview ? "" : `${index % 7 === 0 ? styles.photoTileLarge : ""} ${index % 7 === 3 ? styles.photoTileWide : ""}`}`}
+                      style={isPrivatePreview ? { "--photo-ratio": photoRatio(image) } as CSSProperties : undefined}
                       onClick={() => selectImage(image.id)}
                       aria-label={`View ${image.title}`}
                     >

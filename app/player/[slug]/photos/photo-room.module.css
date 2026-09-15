@@ -420,15 +420,36 @@
 }
 .previewPage .bentoGrid {
   width: 100%;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
   gap: 12px;
-  grid-auto-rows: clamp(140px, 42vw, 260px);
 }
-.previewPage .photoTile { border-radius: 20px; min-height: 0; }
-.previewPage .photoTile img { position: absolute; inset: 0; object-fit: cover; }
-.previewPage .previewPortrait { grid-row: span 2; }
-.previewPage .previewLandscape { grid-column: span 2; }
+.previewPage .photoTile {
+  border-radius: 20px;
+  min-height: 0;
+  min-width: min(120px, 100%);
+  max-width: 100%;
+  flex: var(--photo-ratio, 1) 1 calc(var(--photo-ratio, 1) * 180px);
+  aspect-ratio: var(--photo-ratio, 1);
+}
+.previewPage .photoTile img { position: absolute; inset: 0; object-fit: contain; }
+.previewPage .photoTile:hover img { transform: none; }
 .previewPage .gridStack { transform: none; }
-@media (min-width: 900px) {
-  .previewPage .bentoGrid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+@media (max-width: 640px) {
+  .previewPage .bentoGrid {
+    display: block;
+    columns: 2;
+    column-gap: 12px;
+  }
+  .previewPage .photoTile,
+  .previewPage .photoTilePlaceholder {
+    display: inline-block;
+    width: 100%;
+    min-width: 0;
+    margin: 0 0 12px;
+    vertical-align: top;
+    break-inside: avoid;
+  }
 }

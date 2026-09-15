@@ -1,5 +1,77 @@
 # Preview Locker claim and card refresh — 2026-09-14
 
+## UI release validation
+
+- User approved production deployment of the accumulated photo grid, mobile Photo Room columns, affiliation contrast, See all links, complete inline articles, metadata placement, award spacing, and Basic Info heading removal.
+- Release contains four UI source files and this report. No database migrations, environment changes, or permission changes.
+- Production base verified at 691740a. Final production build passed, scoped lint passed with 29 warnings/zero errors, preview renderer tests passed 2/2. Prior local browser measurements documented below.
+- Supersedes the local-only status of the UI entries below; production deployment status will be reported after Vercel completes.
+
+## Remove Basic Info heading
+
+- Removed the selected BASIC INFO heading in `app/player/[slug]/LockerView.tsx`; bio fields retained. Shared main Locker Bio route presentation only; this report updated.
+- No database, migration, environment, permission, or graph changes. No workflow duplication or scope expansion.
+- Validation: whitespace check passed; no new tests for a text removal. Local only, not deployed; no additional deferred work.
+
+## Award card bottom spacing
+
+- Summary/files: `components/player/EditorialCard.tsx` removes the fixed 400px award height and flexible body growth, leaving 12px total bottom padding below the action or unknown-source fallback. Width remains 260px. This report updated.
+- Routes: private Locker Career/Awards. Database, migrations, environment, permissions: none.
+- Validation: whitespace check passed. Browser measured both sample cards at approximately 334px high and 12px below the footer, replacing the previous unused bottom space. Samples have unknown-source fallbacks. No new tests for this style-only edit.
+- Limitations/deferred: cards now vary in height with their content, as requested. Local only, not deployed. No graph changes, duplicated workflow, or scope expansion; persistent career presentation improved.
+
+## Award action spacing
+
+- Files/summary: `components/player/EditorialCard.tsx` replaces the award action's auto margin with 12px spacing below the description. Link padding, gap, rounded background, typography, and arrow treatment match the article button. Unknown-source fallback also uses 12px spacing. This report updated.
+- Routes: private Locker Career/Awards. Fixed 260x400 card dimensions retained. Database/migrations/environment/permissions: none.
+- Validation: whitespace check passed; browser measured both sample award cards at 260x400 with 12px description-to-footer gaps. These samples lack source links, so actual anchor appearance was checked by comparing its classes with the article button; no external link was opened. No new tests for this styling edit.
+- Limitations/deferred: local only, not deployed. No graph changes or workflow duplication; career presentation remains useful across affiliations. No scope expansion.
+
+## Photo link and complete inline article list
+
+- Files/summary: `app/player/[slug]/LockerView.tsx` now labels the Photos link See all. Private preview articles render the complete list and omit View all articles. Individual article buttons use the existing safe external-article flow directly. This report updated.
+- Routes: main Locker Photos link and private preview Media/Articles. Public article archive behavior preserved.
+- Database, migrations, environment variables, permissions: none. No graph relationships changed or third-party workflow duplicated; persistent career presentation improved without scope expansion.
+- Validation: TypeScript passed; browser confirmed See all, four inline article cards (previously three), and no View all articles button. Existing responsive card and natural container height rules retained. No new tests for this presentation change.
+- Limitations/deferred: local only, not yet deployed. Articles without a valid destination omit the read action.
+
+## Film Room link and article metadata
+
+- Summary/files: `app/player/[slug]/LockerView.tsx` replaces the Film Room arrow with See all, retaining its video destination. `components/player/EditorialCard.tsx` reduces article metadata to 9px and normal capitalization, preserving recognized outlet acronyms. Article metadata is now below the Read article button; browser geometry verified all three sample cards place metadata below the button. Awards unchanged. This report updated.
+- Routes: shared main Locker and private preview. Database, migrations, environment, permissions: none.
+- Validation: scoped lint passed with warnings before capitalization helper; whitespace check passed. Browser verified See all and The Athletic / ESPN / Team Site metadata at 9px with normal capitalization. No full build repeated for these small presentation edits.
+- Limitations/deferred: local only, not deployed; acronym handling covers common sports/news outlets. No graph relationships changed, no workflow duplicated, and no media-management scope added; presentation remains useful across career affiliations.
+
+## Team logo pill contrast
+
+- Summary/files: `app/player/[slug]/LockerView.tsx` adds a subtle 1px light edge and soft dark drop shadow to NFL/NCAA rotating pill logos; logo and pill dimensions unchanged. Affiliation label text also uses a subtle 0 1px 2px dark text shadow. This report updated.
+- Routes: main private preview and shared Player Locker rotating affiliation pills.
+- Database/migrations/environment/permissions: none. No Career/Moment/Value Graph changes, duplicated workflow, or scope expansion; career presentation remains useful across affiliations.
+- Validation: local browser confirmed the new filter on all three rendered affiliation logos at their existing 22px size; whitespace check passed. No new tests or repeated full build for this inline style-only adjustment.
+- Limitations/deferred: local only, not deployed. Shadow cannot repair missing logo assets.
+
+## Mobile Photo Room portrait columns
+
+- Summary/files: `app/player/[slug]/photos/photo-room.module.css` now uses two flowing columns below 641px for private Photo Room tiles. Portraits cannot stretch across a whole row; all photos preserve their natural aspect ratio and 12px spacing. This report also updated.
+- Route: `/preview-lockers/[slug]/photos` only. Main Locker, tablet/desktop layout, and claim modal unchanged.
+- Database, migrations, environment, permission changes: none.
+- Manual verification: mobile 390px, 17 photos including seven portraits; all tiles measured 153px wide across two columns, natural aspect ratios preserved within 0.001, no horizontal overflow. Screenshot reviewed; tablet 768px retains flex layout. Viewport reset.
+- Tests: whitespace check passed; production build passed. No new unit tests for CSS-only layout.
+- Limitations/deferred: columns flow top-to-bottom; an odd image count may leave unequal column ends, without duplicating photos. Local only, not deployed.
+- Product impact: presentation improvement remains useful throughout an athlete's career. No graph relationship changes, duplicated third-party workflow, or media-management scope expansion.
+
+## Photo grid fit correction
+
+- Summary: private main Locker desktop/tablet tiles now use each photo's natural aspect ratio to divide two rows. Row heights grow with the images instead of forcing a 420px crop. The existing mobile six-photo/three-row layout remains intact. Photo Room uses wrapping, aspect-ratio-sized tiles on all devices; full images fit their tiles without hover zoom cropping.
+- Files: `app/player/[slug]/LockerView.tsx`, `app/player/[slug]/photos/PhotoRoomView.tsx`, `app/player/[slug]/photos/photo-room.module.css`, and this report.
+- Routes: `/preview-lockers/[slug]` and `/preview-lockers/[slug]/photos`. Public styling preserved. Claim modal unchanged.
+- Database, migrations, environment variables, permissions: none.
+- Validation: TypeScript passed; scoped ESLint passed with 27 warnings and zero errors; preview renderer tests 2/2 passed; production build passed; git diff whitespace check passed.
+- Manual verification: desktop 1440px and tablet 768px main tiles use contain and proportional widths; mobile 390px main remains six images in three rows with no horizontal overflow. Photo Room's 17-photo category at desktop and mobile matches natural photo ratios within 0.001, with no mobile page overflow; desktop screenshot reviewed. Temporary viewport reset.
+- Known limitations: initial tiles use a square fallback until image dimensions load. Fixed desktop container height is intentionally replaced by natural row heights to avoid cropping and letterboxing. Existing source image quality and upstream crops cannot be restored by layout changes.
+- Status/deferred: local only; this correction has not been committed or deployed to Vercel. No schema work is needed.
+- Product direction: improves existing athlete media presentation and remains useful after organizational changes. No Career, Moment, or Value Graph relationships were changed, no third-party workflow duplicated, and no media-management scope added.
+
 ## Desktop/tablet hero headshot alignment
 
 - Fixed private hero portrait cropping in `app/player/[slug]/LockerView.tsx`. At widths above 640px, the full portrait uses `object-fit: contain` in a 282px stage anchored directly above the name block. Removes dependence on the clipped, viewport-wide image and fixed offset on these devices. Existing mobile positioning and public Locker rendering retained.

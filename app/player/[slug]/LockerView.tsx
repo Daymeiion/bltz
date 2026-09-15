@@ -1153,9 +1153,9 @@ export default function LockerView({
               <a
                 href={`${data.lockerHref ?? `/player/${data.slug}`}/videos`}
                 aria-label="View all videos"
-                style={{ width: 34, height: 34, borderRadius: 9999, border: "1px solid #1E2640", background: "rgba(255,255,255,.05)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none", textDecoration: "none" }}
+                style={{ minHeight: 34, padding: "0 12px", borderRadius: 9999, border: "1px solid #1E2640", background: "rgba(255,255,255,.05)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none", textDecoration: "none", fontSize: 12, color: "#ffbb00" }}
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFB940" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+                See all
               </a>
             </div>
             <div className="hs" style={{ display: "flex", gap: 12, overflowX: "auto", padding: "4px 0 8px", scrollSnapType: "x mandatory" }}>
@@ -1191,18 +1191,22 @@ export default function LockerView({
               <a
                 href={`${data.lockerHref ?? `/player/${data.slug}`}/photos`}
                 aria-label="View all photos"
-                style={{ width: 34, height: 34, borderRadius: 9999, border: "1px solid #1E2640", background: "rgba(255,255,255,.05)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none", textDecoration: "none" }}
+                style={{ minHeight: 34, padding: "0 12px", borderRadius: 9999, border: "1px solid #1E2640", background: "rgba(255,255,255,.05)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none", textDecoration: "none", fontSize: 12, color: "#ffbb00" }}
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFB940" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+                See all
               </a>
             </div>
-            <div className="locker-photo-contact-sheet">
+            <div className={`locker-photo-contact-sheet${isPrivatePreview ? " locker-photo-contact-sheet--preview" : ""}`}>
               {previewPhotos.length ? (
-                previewPhotos.map((photo, index) => (
-                  <div
+                [previewPhotos.slice(0, 3), previewPhotos.slice(3)].filter(row => row.length).map((row, rowIndex) => (
+                  <div className="locker-photo-row" key={rowIndex}>
+                  {row.map((photo, columnIndex) => {
+                    const index = rowIndex * 3 + columnIndex;
+                    return <div
                     key={photo.id}
                     className="locker-photo-tile"
                     style={{
+                      "--photo-ratio": photoRatio(photo.id),
                       "--photo-desktop-span": desktopSpans[index] ?? 2,
                       "--photo-mobile-span": mobileSpans[index] ?? 2,
                     } as React.CSSProperties}
@@ -1219,6 +1223,8 @@ export default function LockerView({
                     {index === previewPhotos.length - 1 && eligiblePhotoCount > previewPhotos.length ? (
                       <div className="locker-photo-more" style={{ fontFamily: mono }}>+{eligiblePhotoCount - previewPhotos.length} MORE</div>
                     ) : null}
+                  </div>;
+                  })}
                   </div>
                 ))
               ) : (
@@ -1297,7 +1303,6 @@ export default function LockerView({
                       </div>
                     </div>
                     <div style={{ minHeight: 216, borderRadius: 14, border: "1px solid #1E2640", background: "#131829", padding: 16, display: "flex", flexDirection: "column", justifyContent: "flex-start" }}>
-                      <div style={{ fontFamily: disp, fontWeight: 800, fontSize: 18, lineHeight: 1, letterSpacing: ".02em", textTransform: "uppercase", color: lockerAccent, marginBottom: 14 }}>BASIC INFO</div>
                       <div className="basic-info-grid">
                         <IdRow className="basic-info-hometown" label="HOMETOWN" value={displayHometown} />
                         <IdRow className="basic-info-birthdate" label="BIRTHDATE" value={displayDob} />
@@ -1387,12 +1392,12 @@ export default function LockerView({
                 {mediaSort === "articles" ? (
                   <div className={isPrivatePreview ? "preview-article-list" : undefined} style={{ padding: "14px 18px 10px" }}>
                     <div className={isPrivatePreview ? "preview-articles-grid grid grid-cols-[repeat(auto-fit,260px)] justify-center gap-3" : "grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"}>
-                      {mediaArticles.slice(0, 3).map((article) => (
-                        <EditorialCard compactMobile={isPrivatePreview} key={article.title} title={article.title} image={article.img} description={article.dek} meta={[article.source, article.meta].filter(Boolean).join(' · ')} onClick={() => setArticleModalOpen(true)} />
+                      {(isPrivatePreview ? mediaArticles : mediaArticles.slice(0, 3)).map((article) => (
+                        <EditorialCard compactMobile={isPrivatePreview} key={article.title} title={article.title} image={article.img} description={article.dek} meta={[article.source, article.meta].filter(Boolean).join(' · ')} onClick={isPrivatePreview ? (safeExternalUrl(article.originalUrl) ? () => { const url = safeExternalUrl(article.originalUrl); if (url) setPendingArticleRedirect({ source: article.source, title: article.title, url }); } : undefined) : () => setArticleModalOpen(true)} />
                       ))}
-                      <button type="button" className={isPrivatePreview ? "col-span-full justify-self-center" : undefined} onClick={() => setArticleModalOpen(true)} style={{ alignSelf: "center", marginTop: 2, border: "1px solid rgba(255,185,64,.45)", borderRadius: 9999, background: "rgba(255,185,64,.08)", color: lockerAccent, padding: "9px 13px", fontFamily: mono, fontWeight: 700, fontSize: 9, letterSpacing: ".12em", textTransform: "uppercase", cursor: "pointer" }}>
+                      {!isPrivatePreview && <button type="button" className={isPrivatePreview ? "col-span-full justify-self-center" : undefined} onClick={() => setArticleModalOpen(true)} style={{ alignSelf: "center", marginTop: 2, border: "1px solid rgba(255,185,64,.45)", borderRadius: 9999, background: "rgba(255,185,64,.08)", color: lockerAccent, padding: "9px 13px", fontFamily: mono, fontWeight: 700, fontSize: 9, letterSpacing: ".12em", textTransform: "uppercase", cursor: "pointer" }}>
                         View all articles
-                      </button>
+                      </button>}
                     </div>
                   </div>
                 ) : mediaSort === "shorts" ? (
@@ -2034,9 +2039,9 @@ function PillContent({ item }: { item: PillItem }) {
   return (
     <div style={{ height: PILL_H, display: "flex", alignItems: "center", justifyContent: "center", gap: hasLogo ? 8 : 0, padding: "0 14px", background: item.color }}>
       {hasLogo ? (
-        <img src={item.logo!} alt="" style={{ height: 22, width: 22, objectFit: "contain", flex: "none", filter: "drop-shadow(0 1px 3px rgba(0,0,0,.35))" }} />
+        <img src={item.logo!} alt="" style={{ height: 22, width: 22, objectFit: "contain", flex: "none", filter: "drop-shadow(0 0 1px rgba(255,255,255,.8)) drop-shadow(0 2px 3px rgba(0,0,0,.65))" }} />
       ) : null}
-      <span style={{ maxWidth: "100%", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", fontFamily: disp, fontWeight: 700, fontSize: 19, letterSpacing: ".05em", textTransform: "uppercase", color: fg }}>
+      <span style={{ maxWidth: "100%", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", fontFamily: disp, fontWeight: 700, fontSize: 19, letterSpacing: ".05em", textTransform: "uppercase", color: fg, textShadow: "0 1px 2px rgba(0,0,0,.45)" }}>
         {item.label}
       </span>
     </div>
@@ -2206,6 +2211,13 @@ const styleSheet = `
 @media (min-width:640px){.bltz-frame{border-radius:28px}}
 @media (min-width:641px){.bio-headshot-card{height:216px}.bio-headshot-image{height:178px;flex-basis:178px}.bio-headshot-photo{object-fit:contain;object-position:center bottom}.bio-headshot-year{height:38px;flex-basis:38px}.basic-info-grid>div{grid-column:auto}.basic-info-grid>.basic-info-high-school{grid-column:1/-1}}
 @media (min-width:641px){.locker-photo-contact-sheet{height:420px;grid-template-columns:repeat(12,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr));gap:10px}.locker-photo-tile{grid-column:span var(--photo-desktop-span,4)}}
+.locker-photo-row{display:contents}
+@media (min-width:641px){
+  .locker-photo-contact-sheet--preview{display:flex;flex-direction:column;height:auto}
+  .locker-photo-contact-sheet--preview .locker-photo-row{display:flex;align-items:flex-start;min-height:0;gap:10px}
+  .locker-photo-contact-sheet--preview .locker-photo-tile{flex:var(--photo-ratio,1) 1 0%;min-width:0;min-height:0;aspect-ratio:var(--photo-ratio,1)}
+  .locker-photo-contact-sheet--preview .locker-photo-tile img{position:absolute;inset:0;object-fit:contain!important;transform:none}
+}
 @media (max-width:640px){
   .bltz-frame{width:100vw;height:100dvh;box-shadow:none}
   .locker-hero-video{object-fit:cover;object-position:center center}
