@@ -1,5 +1,14 @@
 # Preview Locker claim and card refresh — 2026-09-14
 
+## Main mobile photo fit correction
+
+- Cause: proportional main-grid sizing applied only above 640px; mobile retained fixed spans, fixed height, and object-fit cover.
+- Files: `app/player/[slug]/LockerView.tsx` now computes each mobile pair's proportional width and natural tile height, with contain fitting and no hover zoom. This report updated.
+- Route: private main Locker below 641px. Three rows/two photos each retained; the middle mobile pair is visually reversed so the wider tile alternates left/right/left. Desktop/tablet and Photo Room unchanged.
+- Database/migrations/environment/permissions: none. No graph changes, duplicated workflows, or scope expansion; persistent athlete presentation improved.
+- Validation: TypeScript passed. Browser at 371px measured three rows, six natural-ratio tiles, and contain fitting throughout. Whitespace check passed. Browser also confirmed middle-row reversal with all six images still using contain. No new tests for this CSS/layout correction.
+- Release: user approved production deployment. Production build passed, scoped lint passed with 24 warnings/zero errors, renderer tests passed 2/2. Base ba1f5e0 verified before push. No migrations needed. Natural row heights replace fixed mobile height to avoid cropping; source-image crops cannot be recovered.
+
 ## UI release validation
 
 - User approved production deployment of the accumulated photo grid, mobile Photo Room columns, affiliation contrast, See all links, complete inline articles, metadata placement, award spacing, and Basic Info heading removal.

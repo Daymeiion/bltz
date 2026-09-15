@@ -1207,6 +1207,8 @@ export default function LockerView({
                     className="locker-photo-tile"
                     style={{
                       "--photo-ratio": photoRatio(photo.id),
+                      "--photo-mobile-order": index === 2 ? 3 : index === 3 ? 2 : index,
+                      "--photo-mobile-share": photoRatio(photo.id) / previewPhotos.slice(Math.floor(index / 2) * 2, Math.floor(index / 2) * 2 + 2).reduce((sum, item) => sum + photoRatio(item.id), 0),
                       "--photo-desktop-span": desktopSpans[index] ?? 2,
                       "--photo-mobile-span": mobileSpans[index] ?? 2,
                     } as React.CSSProperties}
@@ -2212,6 +2214,12 @@ const styleSheet = `
 @media (min-width:641px){.bio-headshot-card{height:216px}.bio-headshot-image{height:178px;flex-basis:178px}.bio-headshot-photo{object-fit:contain;object-position:center bottom}.bio-headshot-year{height:38px;flex-basis:38px}.basic-info-grid>div{grid-column:auto}.basic-info-grid>.basic-info-high-school{grid-column:1/-1}}
 @media (min-width:641px){.locker-photo-contact-sheet{height:420px;grid-template-columns:repeat(12,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr));gap:10px}.locker-photo-tile{grid-column:span var(--photo-desktop-span,4)}}
 .locker-photo-row{display:contents}
+@media (max-width:640px){
+  .locker-photo-contact-sheet--preview{display:flex;flex-wrap:wrap;height:auto;align-items:flex-start}
+  .locker-photo-contact-sheet--preview .locker-photo-tile{order:var(--photo-mobile-order,0);flex:0 0 calc((100% - 8px) * var(--photo-mobile-share,.5));min-height:0;aspect-ratio:var(--photo-ratio,1)}
+  .locker-photo-contact-sheet--preview .locker-photo-tile img{position:absolute;inset:0;object-fit:contain!important;transform:none}
+}
+
 @media (min-width:641px){
   .locker-photo-contact-sheet--preview{display:flex;flex-direction:column;height:auto}
   .locker-photo-contact-sheet--preview .locker-photo-row{display:flex;align-items:flex-start;min-height:0;gap:10px}
