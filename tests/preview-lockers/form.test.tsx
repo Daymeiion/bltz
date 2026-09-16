@@ -172,3 +172,50 @@ it("retains draft edits when saving fails and still validates media", async () =
   window.dispatchEvent(unload);
   expect(unload.defaultPrevented).toBe(true);
 });
+
+it("opens stats-only tools above career totals without scraping or replacing the draft", async () => {
+  const record = { ...previewContent.parse({ slug: "synthetic-preview", full_name: "Synthetic Preview", bio: "Keep biography", career_stats: [{ key: "tackles", value: 42 }], awards: [{ year: "2007", label: "Keep award" }] }), id: "00000000-0000-4000-8000-000000000001", revision: 3, created_at: "", updated_at: "" };
+  await act(async () => root.render(<PreviewLockerForm record={record} />));
+  await fill("Biography", "Keep unsaved biography");
+  await click("Pull Sportradar stats only");
+  expect(fetcher).not.toHaveBeenCalled();
+  expect(host.textContent!.indexOf("Sportradar statistics")).toBeLessThan(host.textContent!.indexOf("Career statistics"));
+  fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ players: [] })));
+  await click("Search BLTZ");
+  expect(fetcher.mock.calls[0][0]).toContain("/api/admin/sportradar?q=");
+  expect(host.querySelector<HTMLTextAreaElement>('[aria-label="Biography"]')!.value).toBe("Keep unsaved biography");
+  expect(host.querySelector<HTMLInputElement>('[aria-label="TACKLES"]')!.value).toBe("42");
+  expect(host.querySelector<HTMLInputElement>('[aria-label="Award 1 label"]')!.value).toBe("Keep award");
+  expect(host.textContent).toContain("Save any unsaved builder changes before importing");
+});
+it("requires a saved preview before offering stats import", async () => {
+  await act(async () => root.render(<PreviewLockerForm />));
+  expect([...host.querySelectorAll("button")].find(b => b.textContent === "Pull Sportradar stats only")!.disabled).toBe(true);
+  expect(fetcher).not.toHaveBeenCalled();
+});
+
+it("imports only reviewed Sportradar statistics and requires reload without saving stale content", async () => {
+  const id = "00000000-0000-4000-8000-000000000001";
+  const record = { ...previewContent.parse({ slug: "synthetic-preview", full_name: "Synthetic Preview", bio: "Keep biography" }), id, revision: 3, created_at: "", updated_at: "" };
+  await act(async () => root.render(<PreviewLockerForm record={record} />));
+  await click("Pull Sportradar stats only");
+  fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ players: [{ id, full_name: "Synthetic Preview", school: "USC" }] })));
+  await click("Search BLTZ");
+  fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ mappings: [{ league: "nfl", provider_player_id: id }], ingestions: [] })));
+  await act(async () => { await vi.waitFor(() => expect(host.querySelector("ul button")).not.toBeNull()); });
+  await act(async () => host.querySelector<HTMLButtonElement>("ul button")!.click());
+  fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ id, status: "MANUAL_REVIEW", normalized: {}, player: { id, full_name: "Synthetic Preview" }, fetched_at: "2026-09-16" })));
+  fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ successful: 1 })));
+  await click("Fetch / use cached profile");
+  const approval = [...host.querySelectorAll("label")].find(l => l.textContent?.includes("I verified this profile"))!.querySelector<HTMLInputElement>("input")!;
+  await act(async () => approval.click());
+  fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ status: "IMPORTED" })));
+  fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ successful: 1 })));
+  await click("Approve mapping and import statistics");
+  const writes = fetcher.mock.calls.filter(call => call[1]?.method === "POST");
+  expect(writes.map(call => JSON.parse(call[1].body).action)).toEqual(["preview", "import"]);
+  expect(writes.every(call => call[0] === "/api/admin/sportradar")).toBe(true);
+  expect(host.querySelector<HTMLTextAreaElement>('[aria-label="Biography"]')!.value).toBe("Keep biography");
+  expect(host.textContent).toContain("Reload the saved version before editing");
+  expect(host.querySelector("fieldset")!.disabled).toBe(true);
+});

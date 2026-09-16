@@ -9,7 +9,7 @@ const inputClass = "w-full rounded border border-slate-600 bg-transparent p-2";
 const buttonClass = "rounded border border-slate-500 px-3 py-2 text-sm disabled:opacity-40";
 const STATUS: Record<string, string> = { MANUAL_REVIEW: "Review Required", IMPORTED: "Imported", NO_DATA: "No Data" };
 
-export function SportradarPanel({ previewId, athleteName }: { previewId: string; athleteName: string }) {
+export function SportradarPanel({ previewId, athleteName, importDisabled = false, onBusyChange, onImported }: { previewId: string; athleteName: string; importDisabled?: boolean; onBusyChange?: (busy: boolean) => void; onImported?: () => void }) {
   const [query, setQuery] = useState(athleteName);
   const [players, setPlayers] = useState<Player[]>([]);
   const [player, setPlayer] = useState<Player | null>(null);
@@ -29,9 +29,9 @@ export function SportradarPanel({ previewId, athleteName }: { previewId: string;
     return result;
   }
   async function run(action: () => Promise<void>) {
-    setBusy(true); setError("");
+    setBusy(true); onBusyChange?.(true); setError("");
     try { await action(); } catch (e) { setError(e instanceof Error ? e.message : "Request failed"); setStatus("Failed"); }
-    finally { setBusy(false); }
+    finally { setBusy(false); onBusyChange?.(false); }
   }
   function resetReview() { setReview(null); setApproved(false); setStatus("Not Requested"); }
   return <section className="space-y-4 rounded border border-slate-600 p-4" aria-label="Sportradar stats import">
@@ -60,13 +60,15 @@ export function SportradarPanel({ previewId, athleteName }: { previewId: string;
     </>}
     <p role="status">Stats Source: Sportradar · Stats Status: {status}{review ? ` · Last sync: ${review.fetched_at} · ${review.cacheHit ? "Cache hit" : "API response stored"}` : ""}</p>
     {error && <p role="alert" className="text-red-500">{error}</p>}
+    {importDisabled && <p className="text-sm">Save any unsaved builder changes before importing statistics. After an import, reload the saved version before further edits.</p>}
     {review && <>
       <details><summary>Review raw profile (admin only)</summary><pre className="max-h-80 overflow-auto text-xs">{JSON.stringify(review.raw_profile, null, 2)}</pre></details>
       <details open><summary>Review normalized statistics</summary><pre className="max-h-80 overflow-auto text-xs">{JSON.stringify(review.normalized, null, 2)}</pre></details>
       <label className="flex items-start gap-2"><input type="checkbox" checked={approved} disabled={busy} onChange={e => setApproved(e.target.checked)} />I verified this profile belongs to {player?.full_name} and this Preview Locker. Approve the mapping and publish these statistics.</label>
-      <button type="button" className={buttonClass} disabled={busy || !approved || review.status === "NO_DATA"} onClick={() => run(async () => {
+      <button type="button" className={buttonClass} disabled={busy || importDisabled || !approved || review.status === "NO_DATA"} onClick={() => run(async () => {
+        if (importDisabled) return;
         await api("", { action: "import", ingestionId: review.id, previewId, approved: true });
-        setStatus("Imported"); setUsage(await api());
+        setStatus("Imported"); onImported?.(); setUsage(await api());
       })}>Approve mapping and import statistics</button>
     </>}
     {history !== null && <details><summary>Saved mappings and ingestion history</summary><pre className="max-h-60 overflow-auto text-xs">{JSON.stringify(history, null, 2)}</pre></details>}
