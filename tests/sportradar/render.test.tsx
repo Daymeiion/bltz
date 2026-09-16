@@ -17,7 +17,7 @@ describe("stored statistics rendering", () => {
   it("retains the college empty state when only NFL statistics are available", () => {
     const html = renderToStaticMarkup(<StructuredStats records={[{ league: "nfl", source: "Sportradar", syncedAt: "2026-09-10", seasons: [] }]} />);
     expect(html).toContain("College football season statistics have not been added yet.");
-    expect(html).toContain("NFL statistics");
+    expect(html).toContain("NFL season statistics");
   });
   it("renders one shared NFL/NCAA view with provenance and separate phases", () => {
     const seasons = [{ year: 2023, seasonType: "REG" as const, team: "Test Team", providerTeamId: "team", position: "DE", gamesPlayed: 17, gamesStarted: 16, statistics: { sacks: 7.5 } }];

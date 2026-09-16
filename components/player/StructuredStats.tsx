@@ -2,32 +2,36 @@ import type { StoredStats } from "@/lib/player/structured-stats-types";
 import { careerTotals, DISPLAY_STAT_FIELDS as STAT_FIELDS } from "@/lib/sportradar/types";
 
 export function StructuredStats({ records }: { records: StoredStats[] }) {
-  const college = records.find(record => record.league === "ncaafb");
-  const seasonCount = new Set(college?.seasons.map(season => season.year) ?? []).size;
   return <section aria-label="Career season statistics" className="space-y-3 px-[18px] pb-1 pt-[14px] text-white">
-    <details className="group/cfb overflow-hidden rounded-[14px] border border-[#1E2640] bg-[#131829]">
+    <LeagueStats title="NFL" label="NFL" record={records.find(record => record.league === "nfl")} />
+    <LeagueStats title="College Football" label="CFB" record={records.find(record => record.league === "ncaafb")} />
+  </section>;
+}
+
+function LeagueStats({ title, label, record }: { title: string; label: string; record?: StoredStats }) {
+  const seasonCount = new Set(record?.seasons.map(season => season.year) ?? []).size;
+  const description = label === "CFB" ? "College football" : "NFL";
+  return <details className="group/league overflow-hidden rounded-[14px] border border-[#1E2640] bg-[#131829]">
       <summary className="flex min-h-16 cursor-pointer list-none items-center justify-between gap-3 px-3.5 py-3.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#ffbb00] [&::-webkit-details-marker]:hidden">
         <span>
-          <span className="block text-[23px] font-black uppercase leading-none" style={{ fontFamily: "'Barlow','Oswald',Impact,sans-serif" }}>College Football</span>
-          <span className="mt-2.5 block font-mono text-[10px] uppercase tracking-wider text-white/60">CFB season statistics · {seasonCount ? `${seasonCount} season${seasonCount === 1 ? "" : "s"} available` : "Season data pending"}</span>
+          <span className="block text-[23px] font-black uppercase leading-none" style={{ fontFamily: "'Barlow','Oswald',Impact,sans-serif" }}>{title}</span>
+          <span className="mt-2.5 block font-mono text-[10px] uppercase tracking-wider text-white/60">{label} season statistics · {seasonCount ? `${seasonCount} season${seasonCount === 1 ? "" : "s"} available` : "Season data pending"}</span>
         </span>
-        <span aria-hidden="true" className="text-[22px] leading-none text-[#ffbb00] transition-transform group-open/cfb:rotate-180">⌄</span>
+        <span aria-hidden="true" className="text-[22px] leading-none text-[#ffbb00] transition-transform group-open/league:rotate-180">⌄</span>
       </summary>
       <div className="space-y-3 border-t border-[#1E2640] p-3">
-        {college?.seasons.length ? <StatsRecord record={college} /> : <>
-          <div role="region" aria-label="CFB season statistics" tabIndex={0} className="overflow-x-auto rounded border border-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#ffbb00]">
+        {record?.seasons.length ? <StatsRecord record={record} /> : <>
+          <div role="region" aria-label={`${label} season statistics`} tabIndex={0} className="overflow-x-auto rounded border border-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#ffbb00]">
             <table className="w-full text-left text-sm">
-              <caption className="sr-only">College football statistics by season and team</caption>
+              <caption className="sr-only">{description} statistics by season and team</caption>
               <thead><tr>{["Season", "Team", "GP", "GS"].map(label => <th key={label} scope="col" className="p-3">{label}</th>)}</tr></thead>
-              <tbody><tr className="border-t border-slate-700"><td colSpan={4} className="p-4 text-slate-300">College football season statistics have not been added yet.</td></tr></tbody>
+              <tbody><tr className="border-t border-slate-700"><td colSpan={4} className="p-4 text-slate-300">{description} season statistics have not been added yet.</td></tr></tbody>
             </table>
           </div>
           <p className="text-xs leading-relaxed text-slate-300">Saved season statistics will appear here. Career totals and game logs are shown separately.</p>
         </>}
       </div>
-    </details>
-    {records.filter(record => record.league !== "ncaafb").map(record => <StatsRecord key={record.league} record={record} />)}
-  </section>;
+    </details>;
 }
 
 function StatsRecord({ record }: { record: StoredStats }) {
