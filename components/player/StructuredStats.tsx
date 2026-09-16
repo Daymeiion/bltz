@@ -1,14 +1,15 @@
+import type { ReactNode } from "react";
 import type { StoredStats } from "@/lib/player/structured-stats-types";
 import { careerTotals, DISPLAY_STAT_FIELDS as STAT_FIELDS } from "@/lib/sportradar/types";
 
-export function StructuredStats({ records }: { records: StoredStats[] }) {
+export function StructuredStats({ records, nflFallback }: { records: StoredStats[]; nflFallback?: ReactNode }) {
   return <section aria-label="Career season statistics" className="space-y-3 px-[18px] pb-1 pt-[14px] text-white">
-    <LeagueStats title="NFL" label="NFL" record={records.find(record => record.league === "nfl")} />
+    <LeagueStats title="NFL" label="NFL" record={records.find(record => record.league === "nfl")} fallback={nflFallback} />
     <LeagueStats title="College Football" label="CFB" record={records.find(record => record.league === "ncaafb")} />
   </section>;
 }
 
-function LeagueStats({ title, label, record }: { title: string; label: string; record?: StoredStats }) {
+function LeagueStats({ title, label, record, fallback }: { title: string; label: string; record?: StoredStats; fallback?: ReactNode }) {
   const seasonCount = new Set(record?.seasons.map(season => season.year) ?? []).size;
   const description = label === "CFB" ? "College football" : "NFL";
   return <details className="group/league overflow-hidden rounded-[14px] border border-[#1E2640] bg-[#131829]">
@@ -20,7 +21,7 @@ function LeagueStats({ title, label, record }: { title: string; label: string; r
         <span aria-hidden="true" className="text-[22px] leading-none text-[#ffbb00] transition-transform group-open/league:rotate-180">⌄</span>
       </summary>
       <div className="space-y-3 border-t border-[#1E2640] p-3">
-        {record?.seasons.length ? <StatsRecord record={record} /> : <>
+        {record?.seasons.length ? <StatsRecord record={record} /> : fallback ?? <>
           <div role="region" aria-label={`${label} season statistics`} tabIndex={0} className="overflow-x-auto rounded border border-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#ffbb00]">
             <table className="w-full text-left text-sm">
               <caption className="sr-only">{description} statistics by season and team</caption>

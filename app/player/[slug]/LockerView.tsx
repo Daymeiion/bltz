@@ -1782,9 +1782,8 @@ export default function LockerView({
                     </div>
                   </div>
                 )}
-                {statsSort === "career" && <StructuredStats records={data.structuredStats ?? []} />}
-                {statsSort === "career" && !data.structuredStats?.length && (
-                  <div style={{ animation: "tabIn .35s ease", padding: "14px 18px 4px" }}>
+                {statsSort === "career" && <StructuredStats records={data.structuredStats ?? []} nflFallback={
+                  <div style={{ animation: "tabIn .35s ease" }}>
                     <div style={{ marginBottom: 12, padding: "11px 12px", borderRadius: 12, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.04)", fontFamily: mono, fontSize: 8, letterSpacing: ".11em", color: "rgba(255,255,255,.52)", textTransform: "uppercase", lineHeight: 1.35, textAlign: "center" }}>
                       Career metrics adapt by sport and position from onboarding scrape, athlete upload, or organization data.
                     </div>
@@ -1829,7 +1828,7 @@ export default function LockerView({
                       )}
                     </div>
                   </div>
-                )}
+                } />}
 
                 {statsSort === "awards" && (
                   <div style={{ animation: "tabIn .35s ease", padding: isPrivatePreview ? "14px 6px 10px" : "14px 18px 10px" }}>
