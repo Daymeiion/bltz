@@ -1,4 +1,4 @@
-// Generated from the disposable database by Supabase CLI 2.114.0.
+// Preview table regenerated from isolated PostgreSQL information_schema by scripts/verify-preview-cfb-csv.mjs; remaining declarations retain their Supabase CLI provenance.
 // Scoped additive extract; released database.generated.ts remains unchanged.
 import type { Json } from "./database.generated";
 export type PreviewDatabase = { public: { Tables: { preview_lockers: {
@@ -8,6 +8,7 @@ export type PreviewDatabase = { public: { Tables: { preview_lockers: {
           awards: Json
           bio: string
           career_stats: Json
+          cfb_stats: Json
           created_at: string
           created_by: string
           full_name: string
@@ -36,6 +37,7 @@ export type PreviewDatabase = { public: { Tables: { preview_lockers: {
           awards?: Json
           bio?: string
           career_stats?: Json
+          cfb_stats?: Json
           created_at?: string
           created_by?: string
           full_name: string
@@ -64,6 +66,7 @@ export type PreviewDatabase = { public: { Tables: { preview_lockers: {
           awards?: Json
           bio?: string
           career_stats?: Json
+          cfb_stats?: Json
           created_at?: string
           created_by?: string
           full_name?: string

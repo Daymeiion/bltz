@@ -7,6 +7,7 @@ import { readPreviewStructuredStats } from "@/lib/player/structured-stats";
 export default async function PreviewLocker({ params }: { params: Promise<{ slug: string }> }) {
   const row = await readPrivatePreview((await params).slug); if (!row) notFound();
   const data = previewLockerData(row);
-  data.structuredStats = await readPreviewStructuredStats(row.id);
+  const storedStats = await readPreviewStructuredStats(row.id);
+  data.structuredStats = [...(data.structuredStats ?? []), ...storedStats.filter(record => record.league !== "ncaafb" || !row.cfb_stats.length)];
   return <LockerView data={data} footer={<ConversionSurface previewId={row.id}/>} />;
 }

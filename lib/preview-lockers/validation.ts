@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { cfbImports, combineCfbImports } from "./cfb-csv";
 
 // Display references only; the preview server never downloads these URLs.
 export function isPreviewUrl(value: string): boolean {
@@ -65,6 +66,7 @@ export const previewContent = z.object({
   bio: text(4000).default(""), athlete_quote: nullableText(600), athlete_quote_author: nullableText(160),
   schools: z.array(team).max(12).default([]), pro_teams: z.array(team).max(12).default([]),
   awards: z.array(award).max(40).default([]),
+  cfb_stats: cfbImports.refine(items => { try { combineCfbImports(items); return true; } catch { return false; } }, "College tables contain conflicting season values.").default([]),
   career_stats: z.array(careerStat).max(previewStatKeys.length).refine(items => new Set(items.map(item => item.key)).size === items.length, "Statistic keys must be unique.").default([]),
   videos: z.array(previewVideo).max(24).refine(uniqueIds, "Video IDs must be unique.").refine(items => ["mobile", "desktop"].every(device => items.filter(item => item.heroDevice === device).length <= 1), "Choose only one hero video for each device.").default([]),
   photos: z.array(previewPhoto).max(40).refine(uniqueIds, "Photo IDs must be unique.").default([]),

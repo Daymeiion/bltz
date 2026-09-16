@@ -10,6 +10,40 @@ beforeEach(() => { host = document.createElement("div"); document.body.append(ho
 afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.unstubAllGlobals(); });
 async function fill(label: string, value: string) { const input = host.querySelector<HTMLInputElement | HTMLTextAreaElement>(`[aria-label="${label}"]`)!; await act(async () => { Object.getOwnPropertyDescriptor(input.tagName === "TEXTAREA" ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype, "value")!.set!.call(input, value); input.dispatchEvent(new Event("input", { bubbles: true })); }); }
 async function click(text: string) { const button = [...host.querySelectorAll("button")].find(b => b.textContent === text)!; expect(button).toBeTruthy(); await act(async () => button.click()); }
+it("reviews a college CSV, saves only to the private preview, and reloads the import", async () => {
+  const record = { ...previewContent.parse({ slug: "synthetic-preview", full_name: "Synthetic Preview" }), id: "00000000-0000-4000-8000-000000000001", revision: 3, created_at: "", updated_at: "" };
+  await act(async () => root.render(<PreviewLockerForm record={record} />));
+  await fill("Player source URL", "https://www.sports-reference.com/cfb/players/fixture-player-1.html");
+  await fill("College statistics CSV", "Year,School,G,Solo,Ast,Tot,Sk\n2007,Fixture University,12,20,10,30,2.5");
+  await click("Read CSV columns"); await click("Review college statistics");
+  const add = [...host.querySelectorAll("button")].find(button => button.textContent === "Add reviewed statistics to draft")!;
+  expect(add.disabled).toBe(true);
+  const section = host.querySelector('section[aria-label="Import college statistics CSV"]')!;
+  await act(async () => section.querySelector<HTMLInputElement>('input[type="checkbox"]')!.click());
+  await click("Add reviewed statistics to draft");
+  expect(fetcher).not.toHaveBeenCalled();
+  fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ id: record.id, slug: record.slug, revision: 4 })));
+  await click("Save draft");
+  expect(fetcher.mock.calls[0][0]).toBe(`/api/preview-lockers/${record.id}`);
+  const body = JSON.parse(fetcher.mock.calls[0][1].body);
+  expect(body.revision).toBe(3);
+  expect(body.content.cfb_stats[0].seasons[0].statistics.sacks).toBe(2.5);
+  expect(body.content).not.toHaveProperty("player_id");
+  await act(async () => root.render(<PreviewLockerForm key="reload" record={{ ...record, ...body.content, revision: 4 }} />));
+  expect(host.textContent).toContain("defense · 1 season/team rows");
+});
+it("loads a local CSV file without uploading it to an external service", async () => {
+  await act(async () => root.render(<PreviewLockerForm />));
+  const input = host.querySelector<HTMLInputElement>('[aria-label="Upload college CSV"]')!;
+  const text = "Season,Team,G,Sk\n2007,Fixture,12,2.5";
+  const file = new File([text], "college.csv", { type: "text/csv" });
+  Object.defineProperty(input, "files", { configurable: true, value: [file] });
+  await act(async () => { input.dispatchEvent(new Event("change", { bubbles: true })); });
+  expect(host.querySelector<HTMLTextAreaElement>('[aria-label="College statistics CSV"]')!.value).toBe(text);
+  expect(fetcher).not.toHaveBeenCalled();
+  await click("Read CSV columns");
+  expect(host.querySelector('[aria-label="Map column 4: Sk"]')).not.toBeNull();
+});
 it("retains manually entered biography and photo when discovery returns manual fallback", async () => {
   await act(async () => root.render(<PreviewLockerForm />));
   await fill("Full name", "Synthetic Preview"); await fill("Biography", "Manual biography"); await click("Add photo"); await fill("Photo 1 title", "Manual photo"); await fill("Photo 1 url", "https://example.com/manual.jpg");

@@ -6,6 +6,7 @@ import { LEVEL_LABEL, calcAge, formatDob, heightDisplay } from "@/lib/player/loc
 import type { PreviewLockerRow } from "./types";
 import { previewVideoSource } from "./video";
 import { previewTeamBranding } from "./branding";
+import { combineCfbImports } from "./cfb-csv";
 import { previewStatLabels, type PreviewRecord, type ResolvedPreviewRecord } from "./validation";
 
 function previewHeroVideo(row: PreviewRecord | ResolvedPreviewRecord, device: "mobile" | "desktop") {
@@ -24,6 +25,7 @@ export function previewLockerData(row: PreviewRecord | ResolvedPreviewRecord): L
   } : null;
   return {
     athleteId: null, slug: row.slug, lockerHref: `/preview-lockers/${encodeURIComponent(row.slug)}`, fullName: row.full_name,
+    structuredStats: combineCfbImports(row.cfb_stats ?? []),
     hometown: row.hometown || "", position: row.position || "", jersey: row.jersey || "",
     levelLabel: row.level || "Athlete", headshotUrl: row.headshot_url || "/images/black-headshot-fallback.svg",
     // Only direct playback sources enter the hero; provider pages stay in the Film Room.

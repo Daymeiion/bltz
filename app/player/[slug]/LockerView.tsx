@@ -1782,7 +1782,7 @@ export default function LockerView({
                     </div>
                   </div>
                 )}
-                {statsSort === "career" && !!data.structuredStats?.length && <StructuredStats records={data.structuredStats} />}
+                {statsSort === "career" && <StructuredStats records={data.structuredStats ?? []} />}
                 {statsSort === "career" && !data.structuredStats?.length && (
                   <div style={{ animation: "tabIn .35s ease", padding: "14px 18px 4px" }}>
                     <div style={{ marginBottom: 12, padding: "11px 12px", borderRadius: 12, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.04)", fontFamily: mono, fontSize: 8, letterSpacing: ".11em", color: "rgba(255,255,255,.52)", textTransform: "uppercase", lineHeight: 1.35, textAlign: "center" }}>

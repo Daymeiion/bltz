@@ -6,6 +6,7 @@ export const SeasonStats = z.object({
   year: z.number().int(), seasonType: z.enum(["REG", "PST", "PRE"]),
   team: z.string(), providerTeamId: z.string(), position: z.string().nullable(),
   gamesPlayed: z.number().nullable(), gamesStarted: z.number().nullable(),
+  sourceNote: z.string().optional(),
   statistics: z.record(z.string(), z.number().finite()),
 });
 export type SeasonStats = z.infer<typeof SeasonStats>;
@@ -46,11 +47,23 @@ export const STAT_FIELDS: Record<string, { path: string; label: string; sum: boo
   puntReturnTouchdowns: { path: "punt_returns.touchdowns", label: "Punt return TD", sum: true },
 };
 
+// Manual CSV display fields do not change provider normalization or API requests.
+export const DISPLAY_STAT_FIELDS: Record<string, { label: string; sum: boolean }> = {
+  ...STAT_FIELDS,
+  tacklesForLoss: { label: "Tackles for loss", sum: true },
+  fieldGoalsMade: { label: "Field goals made", sum: true },
+  fieldGoalsAttempted: { label: "Field goal attempts", sum: true },
+  extraPointsMade: { label: "Extra points made", sum: true },
+  extraPointsAttempted: { label: "Extra point attempts", sum: true },
+  punts: { label: "Punts", sum: true },
+  puntYards: { label: "Punt yards", sum: true },
+};
+
 // Only sum an additive metric when every included stint reports it. Rates are
 // displayed per stint; neither NFL nor NCAA ratings are summed or averaged.
 export function careerTotals(seasons: SeasonStats[]) {
   const totals: Record<string, number> = {};
-  for (const [key, field] of Object.entries(STAT_FIELDS)) {
+  for (const [key, field] of Object.entries(DISPLAY_STAT_FIELDS)) {
     if (field.sum && seasons.length && seasons.every(s => s.statistics[key] !== undefined)) {
       totals[key] = seasons.reduce((n, s) => n + s.statistics[key], 0);
     }
