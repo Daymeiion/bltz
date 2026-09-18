@@ -110,7 +110,7 @@ export default function PreviewLockerForm({
     finally { pending.current = false; setBusy(null); abort.current = null; }
   }
   async function save(asDraft = false) {
-    if (statsNeedReload) { setError("Statistics imported. Reload the saved version before making further edits."); return; }
+    if (statsNeedReload) { setError("Preview identity or statistics updated. Reload the saved version before making further edits."); return; }
     if (pending.current || (!asDraft && !reviewed)) return;
     const parsed = previewContent.safeParse(draft);
     if (!parsed.success) { setError(parsed.error.issues.map(issue => `${issue.path.join(".")}: ${issue.message}`).slice(0, 5).join("; ")); return; }
@@ -204,7 +204,7 @@ export default function PreviewLockerForm({
         <Button type="button" variant="outline" disabled={!saved || statsNeedReload} aria-expanded={showStats} aria-controls="preview-sportradar-panel" onClick={() => setShowStats(value => !value)}>Pull Sportradar stats only</Button>
         <p className="text-sm">Fetch and review NFL statistics without running the web scraper. Photos, videos, biography, awards, and manual career totals are preserved. Imported season statistics appear separately in the Locker.</p>
         {!saved && <p className="text-sm">Save this preview as a draft first to enable stats import.</p>}
-        {statsNeedReload && <p role="status" className="text-sm">Statistics imported. <a className="underline" href={`/admin/preview-lockers/${saved!.id}/edit`} data-draft-discard="true">Reload the saved version before editing</a>.</p>}
+        {statsNeedReload && <p role="status" className="text-sm">Preview identity or statistics updated. <a className="underline" href={`/admin/preview-lockers/${saved!.id}/edit`} data-draft-discard="true">Reload the saved version before editing</a>.</p>}
         {saved && showStats && <div id="preview-sportradar-panel"><SportradarPanel previewId={saved.id} athleteName={draft.full_name} importDisabled={dirty || statsNeedReload} onBusyChange={value => { pending.current = value; setBusy(value ? "stats" : null); }} onImported={() => { setStatsNeedReload(true); setCompleted(false); }} /></div>}
       </section>
       <section className="space-y-3"><div><h2 className="font-semibold">Career statistics</h2><p className="text-sm">Enter only sourced career totals. Blank statistics stay pending and are never replaced with sample values.</p></div><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{previewStatKeys.map(key => { const stat = draft.career_stats.find(item => item.key === key); return <label className="grid gap-2 text-sm" key={key}>{previewStatLabels[key]}<Input aria-label={previewStatLabels[key]} type="number" min="0" max="1000000" step={key === "sacks" ? "0.5" : "1"} value={stat?.value ?? ""} onChange={event => { const value = event.target.value; change({ career_stats: value === "" ? draft.career_stats.filter(item => item.key !== key) : [...draft.career_stats.filter(item => item.key !== key), { key, value: Number(value) }] }); }} /></label>; })}</div></section>

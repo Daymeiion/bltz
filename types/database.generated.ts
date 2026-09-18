@@ -4840,6 +4840,11 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      review_preview_athlete_identity: {
+        Args: { p_preview_id: string; p_gsis_id: string; p_existing_player_id?: string | null }
+        Returns: string
+      }
+
       append_pipeline_event: {
         Args: { p_event: Json; p_run_id: string }
         Returns: undefined

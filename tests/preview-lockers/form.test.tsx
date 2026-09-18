@@ -211,12 +211,13 @@ it("opens stats-only tools above career totals without scraping or replacing the
   const record = { ...previewContent.parse({ slug: "synthetic-preview", full_name: "Synthetic Preview", bio: "Keep biography", career_stats: [{ key: "tackles", value: 42 }], awards: [{ year: "2007", label: "Keep award" }] }), id: "00000000-0000-4000-8000-000000000001", revision: 3, created_at: "", updated_at: "" };
   await act(async () => root.render(<PreviewLockerForm record={record} />));
   await fill("Biography", "Keep unsaved biography");
+  fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ player: null, linked: false })));
   await click("Pull Sportradar stats only");
-  expect(fetcher).not.toHaveBeenCalled();
+  expect(fetcher.mock.calls[0][0]).toContain("?previewId=");
   expect(host.textContent!.indexOf("Sportradar statistics")).toBeLessThan(host.textContent!.indexOf("Career statistics"));
   fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ players: [] })));
   await click("Search BLTZ");
-  expect(fetcher.mock.calls[0][0]).toContain("/api/admin/sportradar?q=");
+  expect(fetcher.mock.calls[1][0]).toContain("/api/admin/sportradar?q=");
   expect(host.querySelector<HTMLTextAreaElement>('[aria-label="Biography"]')!.value).toBe("Keep unsaved biography");
   expect(host.querySelector<HTMLInputElement>('[aria-label="TACKLES"]')!.value).toBe("42");
   expect(host.querySelector<HTMLInputElement>('[aria-label="Award 1 label"]')!.value).toBe("Keep award");
@@ -232,6 +233,7 @@ it("imports only reviewed Sportradar statistics and requires reload without savi
   const id = "00000000-0000-4000-8000-000000000001";
   const record = { ...previewContent.parse({ slug: "synthetic-preview", full_name: "Synthetic Preview", bio: "Keep biography" }), id, revision: 3, created_at: "", updated_at: "" };
   await act(async () => root.render(<PreviewLockerForm record={record} />));
+  fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ player: null, linked: false })));
   await click("Pull Sportradar stats only");
   fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ players: [{ id, full_name: "Synthetic Preview", school: "USC" }] })));
   await click("Search BLTZ");
@@ -254,6 +256,7 @@ it("imports only reviewed Sportradar statistics and requires reload without savi
   expect(host.querySelector("fieldset")!.disabled).toBe(true);
 });
 
+
 it("preserves media link edits across collapse and saves removal from the draft", async () => {
   const record = { ...previewContent.parse({ slug: "media-fixture", full_name: "Media Fixture", photos: [{ id: "photo-1", title: "Career photo", url: "https://example.com/old.jpg", level: "pro" }], videos: [{ id: "video-1", title: "Highlight", url: "https://example.com/film.mp4" }] }), id: "00000000-0000-4000-8000-000000000001", revision: 3, created_at: "", updated_at: "" };
   await act(async () => root.render(<PreviewLockerForm record={record} />));
@@ -272,4 +275,46 @@ it("preserves media link edits across collapse and saves removal from the draft"
   const content = JSON.parse(fetcher.mock.calls[0][1].body).content;
   expect(content.photos[0].url).toBe("https://example.com/new.jpg");
   expect(content.videos).toEqual([]);
+});
+
+it("loads the saved athlete and provider mapping without a second search", async () => {
+  const id = "00000000-0000-4000-8000-000000000001";
+  const record = { ...previewContent.parse({ slug: "linked-preview", full_name: "Linked Athlete" }), id, revision: 1, created_at: "", updated_at: "" };
+  fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ linked: true, player: { id, full_name: "Linked Athlete" }, mappings: [{ league: "nfl", provider_player_id: id }] })));
+  await act(async () => root.render(<PreviewLockerForm record={record} />));
+  await click("Pull Sportradar stats only");
+  expect(fetcher.mock.calls[0][0]).toBe("/api/admin/sportradar?previewId=" + id);
+  expect(host.textContent).not.toContain("Search BLTZ");
+  expect([...host.querySelectorAll("button")].find(b => b.textContent === "Fetch / use cached profile")!.disabled).toBe(false);
+});
+it("shows an actionable failure and retries the saved athlete lookup", async () => {
+  const id = "00000000-0000-4000-8000-000000000001";
+  const record = { ...previewContent.parse({ slug: "linked-preview", full_name: "Linked Athlete" }), id, revision: 1, created_at: "", updated_at: "" };
+  fetcher.mockRejectedValueOnce(new DOMException("timeout", "TimeoutError"));
+  await act(async () => root.render(<PreviewLockerForm record={record} />));
+  await click("Pull Sportradar stats only");
+  expect(host.textContent).toContain("request timed out");
+  expect(host.textContent).not.toContain("Search BLTZ");
+  fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ linked: true, player: { id, full_name: "Linked Athlete" }, mappings: [] })));
+  await click("Retry athlete lookup");
+  expect(host.textContent).toContain("No saved Sportradar mapping");
+  expect([...host.querySelectorAll("button")].find(b => b.textContent === "Fetch / use cached profile")!.disabled).toBe(true);
+});
+
+it("requires review before creating the linked master identity and then unlocks provider controls", async () => {
+  const id = "00000000-0000-4000-8000-000000000001";
+  const record = { ...previewContent.parse({ slug: "master-preview", full_name: "Master Athlete" }), id, revision: 1, created_at: "", updated_at: "" };
+  fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ linked: true, player: null, master: { gsis_id: "GSIS", display_name: "Master Athlete" }, candidates: [] })));
+  await act(async () => root.render(<PreviewLockerForm record={record} />));
+  await click("Pull Sportradar stats only");
+  expect([...host.querySelectorAll("button")].find(b => b.textContent === "Confirm athlete identity")!.disabled).toBe(true);
+  const approval = [...host.querySelectorAll("label")].find(l => l.textContent?.includes("I reviewed this athlete"))!.querySelector<HTMLInputElement>("input")!;
+  await act(async () => approval.click());
+  fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ playerId: id })));
+  fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ linked: true, player: { id, full_name: "Master Athlete" }, mappings: [] })));
+  await click("Confirm athlete identity");
+  const write=fetcher.mock.calls.find(call => call[1]?.method === "POST")!;
+  expect(JSON.parse(write[1].body)).toEqual({ action: "link_identity", previewId: id, gsisId: "GSIS", existingPlayerId: null, approved: true });
+  expect(host.textContent).toContain("Fetch / use cached profile");
+  expect(host.textContent).not.toContain("Search BLTZ");
 });

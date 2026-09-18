@@ -7,6 +7,15 @@ import { GET, POST } from "@/app/api/admin/sportradar/route";
 beforeEach(() => { vi.clearAllMocks(); mocks.user = { id: "admin-id" }; mocks.admin = true; });
 const post = (body: unknown) => POST(new Request("http://localhost/api/admin/sportradar", { method: "POST", body: JSON.stringify(body) }));
 describe("admin stats authorization", () => {
+  it("protects preview identity reads and validates the preview ID", async () => {
+    const request = () => new Request("http://localhost/api/admin/sportradar?previewId=bad");
+    mocks.user = null;
+    expect((await GET(request())).status).toBe(401);
+    mocks.user = { id: "admin-id" }; mocks.admin = false;
+    expect((await GET(request())).status).toBe(403);
+    mocks.admin = true;
+    expect((await GET(request())).status).toBe(400);
+  });
   it("rejects anonymous reads and writes before provider work", async () => {
     mocks.user = null;
     expect((await GET(new Request("http://localhost/api/admin/sportradar"))).status).toBe(401);
