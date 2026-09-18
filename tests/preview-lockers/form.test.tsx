@@ -318,3 +318,22 @@ it("requires review before creating the linked master identity and then unlocks 
   expect(host.textContent).toContain("Fetch / use cached profile");
   expect(host.textContent).not.toContain("Search BLTZ");
 });
+
+it("finds and fetches a provider candidate without typing a GUID", async () => {
+  const id = "00000000-0000-4000-8000-000000000001";
+  const provider = "00000000-0000-4000-8000-000000000002";
+  const record = { ...previewContent.parse({ slug: "search-preview", full_name: "Keith Rivers" }), id, revision: 1, created_at: "", updated_at: "" };
+  fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ linked: true, player: { id, full_name: "Keith Rivers" }, mappings: [] })));
+  await act(async () => root.render(<PreviewLockerForm record={record} />));
+  await click("Pull Sportradar stats only");
+  fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ candidates: [{ id: provider, name: "Keith Rivers", position: "OLB", team: "Buffalo Bills", season: 2014 }], team: "BUF", season: 2014, message: "Select a match" })));
+  await click("Find player on Sportradar");
+  expect(JSON.parse(fetcher.mock.calls[1][1].body)).toEqual({ action: "search_provider", playerId: id, name: "Keith Rivers" });
+  fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ id, status: "MANUAL_REVIEW", normalized: {}, player: { id, full_name: "Keith Rivers" }, fetched_at: "2026-09-18" })));
+  fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ successful: 1 })));
+  await click("Review Keith Rivers · OLB · Buffalo Bills · 2014");
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 1300)); });
+  expect(JSON.parse(fetcher.mock.calls[2][1].body)).toMatchObject({ action: "preview", providerId: provider });
+  expect(host.textContent).toContain("Review normalized statistics");
+  expect([...host.querySelectorAll("button")].find(b => b.textContent === "Approve mapping and import statistics")!.disabled).toBe(true);
+});

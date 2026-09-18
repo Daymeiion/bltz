@@ -1,8 +1,15 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fetchProfile, profileEndpoint, responseError } from "@/lib/sportradar/client";
+import { fetchProfile, fetchLookup, lookupEndpoint, profileEndpoint, responseError } from "@/lib/sportradar/client";
 const id = "3069db07-aa43-4503-ab11-2ae5c0002721";
 afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); });
 describe("server provider boundary", () => {
+  it("allows only the documented team catalogue and seasonal lookup feeds", async () => {
+    expect(lookupEndpoint("teams")).toBe("/nfl/official/trial/v7/en/league/teams.json");
+    expect(lookupEndpoint("season", 2014, id)).toContain(`/seasons/2014/REG/teams/${id}/statistics.json`);
+    expect(() => lookupEndpoint("season", 1990, id)).toThrow();
+    await expect(fetchLookup("https://example.com/steal-key")).rejects.toThrow("invalid_endpoint");
+    await expect(fetchLookup("/nfl/official/trial/v7/en/players/search.json")).rejects.toThrow("invalid_endpoint");
+  });
   it("blocks NCAA calls before authentication or network access", async () => {
     const fetch = vi.fn(); vi.stubGlobal("fetch", fetch);
     await expect(fetchProfile(profileEndpoint("ncaafb", id))).rejects.toThrow("ncaa_calls_disabled_for_cohort");

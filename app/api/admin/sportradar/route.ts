@@ -6,6 +6,7 @@ import { previewProfile, importProfile, getTrialUsage } from "@/lib/sportradar/s
 import { StatsError } from "@/lib/sportradar/errors";
 import { League } from "@/lib/sportradar/types";
 import { resolvePreviewAthlete } from "@/lib/sportradar/preview-identity";
+import { searchProviderPlayers } from "@/lib/sportradar/search";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -52,6 +53,7 @@ export async function GET(request: Request) {
   } catch (error) { return failure(error); }
 }
 const Body = z.discriminatedUnion("action", [
+  z.object({ action: z.literal("search_provider"), playerId: z.string().uuid(), name: z.string().trim().min(2).max(120), team: z.string().trim().max(100).optional(), season: z.number().int().min(2000).max(new Date().getUTCFullYear()).optional() }),
   z.object({ action: z.literal("link_identity"), previewId: z.string().uuid(), gsisId: z.string().min(1).max(120), existingPlayerId: z.string().uuid().nullable(), approved: z.literal(true) }),
   z.object({ action: z.literal("preview"), playerId: z.string().uuid(), providerId: z.string().uuid(), league: League, refresh: z.boolean().default(false) }),
   z.object({ action: z.literal("import"), ingestionId: z.string().uuid(), previewId: z.string().uuid(), approved: z.literal(true) }),
@@ -62,6 +64,7 @@ export async function POST(request: Request) {
     if (request.headers.get("origin") && request.headers.get("origin") !== new URL(request.url).origin) return json({ error: "invalid_origin" }, 403);
     let body: z.infer<typeof Body>;
     try { body = Body.parse(await request.json()); } catch { return json({ error: "invalid_input" }, 400); }
+    if (body.action === "search_provider") return json(await searchProviderPlayers(body.playerId, body.name, body.team, body.season));
     if (body.action === "link_identity") {
       const result = await db.rpc("review_preview_athlete_identity", { p_preview_id: body.previewId, p_gsis_id: body.gsisId, p_existing_player_id: body.existingPlayerId });
       if (result.error) {

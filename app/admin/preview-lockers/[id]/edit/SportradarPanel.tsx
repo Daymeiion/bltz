@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { League, PlayerStats } from "@/lib/sportradar/types";
+import type { ProviderCandidate } from "@/lib/sportradar/search";
 
 type Player = { id: string; full_name: string; slug: string; position: string | null; school: string | null; team: string | null; dob: string | null };
 type Master = { gsis_id: string; display_name: string; position: string | null; college_name: string | null; latest_team: string | null; birth_date: string | null };
@@ -9,12 +10,21 @@ type Review = { id: string; status: string; raw_profile: unknown; normalized: Pl
 const inputClass = "w-full rounded border border-slate-600 bg-transparent p-2";
 const buttonClass = "rounded border border-slate-500 px-3 py-2 text-sm disabled:opacity-40";
 const STATUS: Record<string, string> = { MANUAL_REVIEW: "Review Required", IMPORTED: "Imported", NO_DATA: "No Data" };
+const ERRORS: Record<string, string> = {
+  lookup_team_required: "Open Adjust team or season and enter an NFL team, such as BUF, then retry.",
+  provider_access_denied: "The Sportradar key does not have access to this feed. Check the NFL subscription or trial access.",
+  provider_quota_limited: "Sportradar has reached its request limit. Try again after the quota resets.",
+  trial_budget_exhausted: "The configured Sportradar request budget is exhausted. An administrator must review the budget before more requests.",
+  request_throttled: "Another provider request just ran. Wait a few seconds and retry.",
+  request_in_progress: "This provider lookup is already running. Wait a moment and retry.",
+  lookup_storage_unavailable: "Player lookup is temporarily unavailable. Please retry.",
+};
 
 async function api(path = "", body?: unknown, signal?: AbortSignal) {
   try {
-    const r = await fetch(`/api/admin/sportradar${path}`, { cache: "no-store", signal: signal ?? AbortSignal.timeout(20000), ...(body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {}) });
+    const r = await fetch(`/api/admin/sportradar${path}`, { cache: "no-store", signal: signal ?? AbortSignal.timeout(45000), ...(body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {}) });
     const result = await r.json();
-    if (!r.ok) throw new Error(result.error || "Request failed");
+    if (!r.ok) throw new Error(ERRORS[result.error] || result.error || "Request failed");
     return result;
   } catch (error) {
     if (error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError")) throw new Error("The athlete request timed out. Please retry.");
@@ -42,6 +52,11 @@ export function SportradarPanel({ previewId, athleteName, importDisabled = false
   const [candidates, setCandidates] = useState<Player[]>([]);
   const [existingPlayerId, setExistingPlayerId] = useState("");
   const [identityApproved, setIdentityApproved] = useState(false);
+  const [searchName, setSearchName] = useState(athleteName);
+  const [searchTeam, setSearchTeam] = useState("");
+  const [searchSeason, setSearchSeason] = useState("");
+  const [providerCandidates, setProviderCandidates] = useState<ProviderCandidate[]>([]);
+  const [lookupMessage, setLookupMessage] = useState("");
   useEffect(() => {
     const controller = new AbortController();
     let active = true;
@@ -50,6 +65,7 @@ export function SportradarPanel({ previewId, athleteName, importDisabled = false
       .then(result => {
         if (!active) return;
         setPlayer(result.player); setIdentityState(result.linked ? "linked" : "unlinked");
+        if (result.player) setSearchName(result.player.full_name);
         setIdentityMessage(result.message || "");
         setMaster(result.master ?? null); setCandidates(result.candidates ?? []); setIdentityApproved(false);
         setProviderId(result.mappings?.find((m: { league: string }) => m.league === "nfl")?.provider_player_id || "");
@@ -94,6 +110,7 @@ export function SportradarPanel({ previewId, athleteName, importDisabled = false
     })}>Search BLTZ</button>
     <ul className="space-y-2">{players.map(p => <li key={p.id}><button type="button" className={buttonClass} disabled={busy} onClick={() => run(async () => {
       setPlayer(p); setProviderId(""); resetReview();
+      setSearchName(p.full_name); setProviderCandidates([]); setLookupMessage(""); setSearchTeam(""); setSearchSeason("");
       const result = await api(`?playerId=${p.id}`); setHistory(result);
       const mapping = result.mappings.find((m: { league: string }) => m.league === league);
       if (mapping) { setProviderId(mapping.provider_player_id); setStatus("Matched"); }
@@ -103,8 +120,27 @@ export function SportradarPanel({ previewId, athleteName, importDisabled = false
     {player && <>
       <p>Selected: <strong>{player.full_name}</strong> · {player.id}<br />Position: {player.position || "Unknown"} · School: {player.school || "Unknown"} · DOB: {player.dob || "Unknown"}</p>
       <label className="block">League<select className={inputClass} disabled={busy} value={league} onChange={e => { setLeague(e.target.value as League); setProviderId(""); resetReview(); }}><option value="nfl">NFL</option><option value="ncaafb" disabled>NCAA Football — disabled for cohort</option></select></label>
-      <label className="block">Sportradar Player ID<input className={inputClass} disabled={busy} value={providerId} onChange={e => { setProviderId(e.target.value.trim()); resetReview(); }} placeholder="Player GUID from Sportradar" /></label>
-      {!providerId && <p className="text-sm">No saved Sportradar mapping exists for this athlete. Enter their Sportradar Player ID to enable fetching.</p>}
+      <label className="block">Player name<input aria-label="Sportradar player name" className={inputClass} disabled={busy} value={searchName} onChange={e => { setSearchName(e.target.value); setProviderCandidates([]); setLookupMessage(""); }} /></label>
+      <p className="text-sm">Find the player in Sportradar using their name and saved career team/season. No player ID is needed. Uncached searches use API quota.</p>
+      <details><summary>Adjust team or season</summary><div className="grid gap-3 sm:grid-cols-2">
+        <label>NFL team<input aria-label="Sportradar search team" className={inputClass} disabled={busy} value={searchTeam} placeholder="Use saved team (e.g. BUF)" onChange={e => { setSearchTeam(e.target.value); setProviderCandidates([]); }} /></label>
+        <label>Season<input aria-label="Sportradar search season" className={inputClass} type="number" min="2000" max={new Date().getUTCFullYear()} disabled={busy} value={searchSeason} placeholder="Use saved last season" onChange={e => { setSearchSeason(e.target.value); setProviderCandidates([]); }} /></label>
+      </div></details>
+      <button type="button" className={buttonClass} disabled={busy || searchName.trim().length < 2} onClick={() => run(async () => {
+        setProviderCandidates([]); setLookupMessage(""); setStatus("Searching Sportradar…");
+        const result = await api("", { action: "search_provider", playerId: player.id, name: searchName, ...(searchTeam.trim() ? { team: searchTeam.trim() } : {}), ...(searchSeason ? { season: Number(searchSeason) } : {}) });
+        setProviderCandidates(result.candidates); setLookupMessage(result.message); setSearchTeam(result.team); setSearchSeason(String(result.season));
+        setStatus(result.candidates.length ? "Select provider match" : "No provider match");
+      })}>Find player on Sportradar</button>
+      {lookupMessage && <p role="status">{lookupMessage}</p>}
+      <ul className="space-y-2">{providerCandidates.map(candidate => <li key={candidate.id}><button type="button" className={buttonClass} disabled={busy} onClick={() => run(async () => {
+        resetReview(); setProviderId(candidate.id); setStatus("Fetching");
+        await new Promise(resolve => setTimeout(resolve, 1200));
+        const result = await api("", { action: "preview", playerId: player.id, providerId: candidate.id, league, refresh: false });
+        setReview(result); setStatus(STATUS[result.status] || result.status); setUsage(await api());
+      })}>Review {candidate.name} · {candidate.position || "Position unknown"} · {candidate.team} · {candidate.season}</button></li>)}</ul>
+      <details><summary>Advanced: provider player ID</summary><label className="block">Sportradar Player ID<input className={inputClass} disabled={busy} value={providerId} onChange={e => { setProviderId(e.target.value.trim()); resetReview(); }} placeholder="Optional manual override" /></label></details>
+      {!providerId && <p className="text-sm">No saved Sportradar mapping exists. Use Find player on Sportradar to find a match.</p>}
       <div className="flex flex-wrap gap-2">{[false, true].map(refresh => <button type="button" className={buttonClass} disabled={busy || !providerId} key={String(refresh)} onClick={() => run(async () => {
         resetReview(); setStatus("Fetching");
         const result = await api("", { action: "preview", playerId: player.id, providerId, league, refresh });

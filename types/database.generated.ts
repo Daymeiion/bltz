@@ -14,6 +14,28 @@ export type Database = {
   }
   public: {
     Tables: {
+      sportradar_lookup_cache: {
+        Row: {
+          endpoint: string
+          payload: Json
+          fetched_at: string
+          expires_at: string
+        }
+        Insert: {
+          endpoint: string
+          payload: Json
+          fetched_at?: string
+          expires_at: string
+        }
+        Update: {
+          endpoint?: string
+          payload?: Json
+          fetched_at?: string
+          expires_at?: string
+        }
+        Relationships: []
+      }
+
       achievement_progress: {
         Row: {
           achievement_id: string
@@ -3665,7 +3687,7 @@ export type Database = {
           id: string
           player_id: string
           provider: string
-          provider_player_id: string
+          provider_player_id: string | null
           requested_at: string
           response_status: number | null
         }
@@ -3679,7 +3701,7 @@ export type Database = {
           id?: string
           player_id: string
           provider?: string
-          provider_player_id: string
+          provider_player_id?: string | null
           requested_at?: string
           response_status?: number | null
         }
@@ -3693,7 +3715,7 @@ export type Database = {
           id?: string
           player_id?: string
           provider?: string
-          provider_player_id?: string
+          provider_player_id?: string | null
           requested_at?: string
           response_status?: number | null
         }
@@ -5472,7 +5494,7 @@ export type Database = {
           p_budget?: number
           p_endpoint: string
           p_player_id: string
-          p_provider_id: string
+          p_provider_id: string | null
         }
         Returns: string
       }

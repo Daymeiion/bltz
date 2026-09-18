@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-const mocks = vi.hoisted(() => ({ user: { id: "admin-id" } as {id:string} | null, admin: true, preview: vi.fn(), ingest: vi.fn(), usage: vi.fn() }));
+const mocks = vi.hoisted(() => ({ user: { id: "admin-id" } as {id:string} | null, admin: true, preview: vi.fn(), ingest: vi.fn(), usage: vi.fn(), search: vi.fn() }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: async () => ({ auth: { getUser: async () => ({ data: { user: mocks.user } }) } }) }));
 vi.mock("@/lib/rbac", () => ({ isInternalAdmin: async () => mocks.admin }));
 vi.mock("@/lib/sportradar/service", () => ({ previewProfile: mocks.preview, importProfile: mocks.ingest, getTrialUsage: mocks.usage }));
+vi.mock("@/lib/sportradar/search", () => ({ searchProviderPlayers: mocks.search }));
 import { GET, POST } from "@/app/api/admin/sportradar/route";
 beforeEach(() => { vi.clearAllMocks(); mocks.user = { id: "admin-id" }; mocks.admin = true; });
 const post = (body: unknown) => POST(new Request("http://localhost/api/admin/sportradar", { method: "POST", body: JSON.stringify(body) }));
@@ -33,4 +34,14 @@ describe("admin stats authorization", () => {
     expect(result.status).toBe(200); expect(mocks.ingest).toHaveBeenCalledWith(expect.any(Object),id,id,"admin-id");
     expect(result.headers.get("cache-control")).toContain("no-store");
   });
+});
+
+it("protects provider name search and passes validated search context", async () => {
+ const body = { action: "search_provider", playerId: "3069db07-aa43-4503-ab11-2ae5c0002721", name: "Keith Rivers" };
+ mocks.admin = false;
+ expect((await post(body)).status).toBe(403); expect(mocks.search).not.toHaveBeenCalled();
+ mocks.admin = true; mocks.search.mockResolvedValue({ candidates: [] });
+ expect((await post({ ...body, season: 1900 })).status).toBe(400);
+ expect((await post(body)).status).toBe(200);
+ expect(mocks.search).toHaveBeenCalledWith(body.playerId, body.name, undefined, undefined);
 });
