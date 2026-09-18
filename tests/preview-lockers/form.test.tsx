@@ -18,7 +18,7 @@ it("reviews a college CSV, saves only to the private preview, and reloads the im
   await click("Read CSV columns"); await click("Review college statistics");
   const add = [...host.querySelectorAll("button")].find(button => button.textContent === "Add reviewed statistics to draft")!;
   expect(add.disabled).toBe(true);
-  const section = host.querySelector('section[aria-label="Import college statistics CSV"]')!;
+  const section = [...host.querySelectorAll('details')].find(item => item.querySelector('summary')?.textContent?.startsWith('Import college statistics'))!;
   await act(async () => section.querySelector<HTMLInputElement>('input[type="checkbox"]')!.click());
   await click("Add reviewed statistics to draft");
   expect(fetcher).not.toHaveBeenCalled();
@@ -242,7 +242,7 @@ it("imports only reviewed Sportradar statistics and requires reload without savi
   await act(async () => host.querySelector<HTMLButtonElement>("ul button")!.click());
   fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ id, status: "MANUAL_REVIEW", normalized: {}, player: { id, full_name: "Synthetic Preview" }, fetched_at: "2026-09-16" })));
   fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ successful: 1 })));
-  await click("Fetch / use cached profile");
+  await click("Fetch / use cached profile API quota if uncached");
   const approval = [...host.querySelectorAll("label")].find(l => l.textContent?.includes("I verified this profile"))!.querySelector<HTMLInputElement>("input")!;
   await act(async () => approval.click());
   fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ status: "IMPORTED" })));
@@ -285,7 +285,7 @@ it("loads the saved athlete and provider mapping without a second search", async
   await click("Pull Sportradar stats only");
   expect(fetcher.mock.calls[0][0]).toBe("/api/admin/sportradar?previewId=" + id);
   expect(host.textContent).not.toContain("Search BLTZ");
-  expect([...host.querySelectorAll("button")].find(b => b.textContent === "Fetch / use cached profile")!.disabled).toBe(false);
+  expect([...host.querySelectorAll("button")].find(b => b.textContent === "Fetch / use cached profile API quota if uncached")!.disabled).toBe(false);
 });
 it("shows an actionable failure and retries the saved athlete lookup", async () => {
   const id = "00000000-0000-4000-8000-000000000001";
@@ -298,7 +298,7 @@ it("shows an actionable failure and retries the saved athlete lookup", async () 
   fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ linked: true, player: { id, full_name: "Linked Athlete" }, mappings: [] })));
   await click("Retry athlete lookup");
   expect(host.textContent).toContain("No saved Sportradar mapping");
-  expect([...host.querySelectorAll("button")].find(b => b.textContent === "Fetch / use cached profile")!.disabled).toBe(true);
+  expect([...host.querySelectorAll("button")].find(b => b.textContent === "Fetch / use cached profile API quota if uncached")!.disabled).toBe(true);
 });
 
 it("requires review before creating the linked master identity and then unlocks provider controls", async () => {
@@ -315,7 +315,7 @@ it("requires review before creating the linked master identity and then unlocks 
   await click("Confirm athlete identity");
   const write=fetcher.mock.calls.find(call => call[1]?.method === "POST")!;
   expect(JSON.parse(write[1].body)).toEqual({ action: "link_identity", previewId: id, gsisId: "GSIS", existingPlayerId: null, approved: true });
-  expect(host.textContent).toContain("Fetch / use cached profile");
+  expect(host.textContent).toContain("Fetch / use cached profile API quota if uncached");
   expect(host.textContent).not.toContain("Search BLTZ");
 });
 
@@ -327,11 +327,11 @@ it("finds and fetches a provider candidate without typing a GUID", async () => {
   await act(async () => root.render(<PreviewLockerForm record={record} />));
   await click("Pull Sportradar stats only");
   fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ candidates: [{ id: provider, name: "Keith Rivers", position: "OLB", team: "Buffalo Bills", season: 2014 }], team: "BUF", season: 2014, message: "Select a match" })));
-  await click("Find player on Sportradar");
+  await click("Find player on Sportradar API quota if uncached");
   expect(JSON.parse(fetcher.mock.calls[1][1].body)).toEqual({ action: "search_provider", playerId: id, name: "Keith Rivers" });
   fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ id, status: "MANUAL_REVIEW", normalized: {}, player: { id, full_name: "Keith Rivers" }, fetched_at: "2026-09-18" })));
   fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ successful: 1 })));
-  await click("Review Keith Rivers · OLB · Buffalo Bills · 2014");
+  await click("Review Keith Rivers · OLB · Buffalo Bills · 2014 API quota if uncached");
   await act(async () => { await new Promise(resolve => setTimeout(resolve, 1300)); });
   expect(JSON.parse(fetcher.mock.calls[2][1].body)).toMatchObject({ action: "preview", providerId: provider });
   expect(host.textContent).toContain("Review normalized statistics");

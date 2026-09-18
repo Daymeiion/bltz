@@ -131,21 +131,21 @@ export function SportradarPanel({ previewId, athleteName, importDisabled = false
         const result = await api("", { action: "search_provider", playerId: player.id, name: searchName, ...(searchTeam.trim() ? { team: searchTeam.trim() } : {}), ...(searchSeason ? { season: Number(searchSeason) } : {}) });
         setProviderCandidates(result.candidates); setLookupMessage(result.message); setSearchTeam(result.team); setSearchSeason(String(result.season));
         setStatus(result.candidates.length ? "Select provider match" : "No provider match");
-      })}>Find player on Sportradar</button>
+      })}>Find player on Sportradar <QuotaIndicator /></button>
       {lookupMessage && <p role="status">{lookupMessage}</p>}
       <ul className="space-y-2">{providerCandidates.map(candidate => <li key={candidate.id}><button type="button" className={buttonClass} disabled={busy} onClick={() => run(async () => {
         resetReview(); setProviderId(candidate.id); setStatus("Fetching");
         await new Promise(resolve => setTimeout(resolve, 1200));
         const result = await api("", { action: "preview", playerId: player.id, providerId: candidate.id, league, refresh: false });
         setReview(result); setStatus(STATUS[result.status] || result.status); setUsage(await api());
-      })}>Review {candidate.name} · {candidate.position || "Position unknown"} · {candidate.team} · {candidate.season}</button></li>)}</ul>
+      })}>Review {candidate.name} · {candidate.position || "Position unknown"} · {candidate.team} · {candidate.season} <QuotaIndicator /></button></li>)}</ul>
       <details><summary>Advanced: provider player ID</summary><label className="block">Sportradar Player ID<input className={inputClass} disabled={busy} value={providerId} onChange={e => { setProviderId(e.target.value.trim()); resetReview(); }} placeholder="Optional manual override" /></label></details>
       {!providerId && <p className="text-sm">No saved Sportradar mapping exists. Use Find player on Sportradar to find a match.</p>}
       <div className="flex flex-wrap gap-2">{[false, true].map(refresh => <button type="button" className={buttonClass} disabled={busy || !providerId} key={String(refresh)} onClick={() => run(async () => {
         resetReview(); setStatus("Fetching");
         const result = await api("", { action: "preview", playerId: player.id, providerId, league, refresh });
         setReview(result); setStatus(STATUS[result.status] || result.status); setUsage(await api());
-      })}>{refresh ? "Refresh from provider (uses quota)" : "Fetch / use cached profile"}</button>)}</div>
+      })}>{refresh ? "Refresh from provider" : "Fetch / use cached profile"} <QuotaIndicator refresh={refresh} /></button>)}</div>
     </>}
     <p role="status">Stats Source: Sportradar · Stats Status: {status}{review ? ` · Last sync: ${review.fetched_at} · ${review.cacheHit ? "Cache hit" : "API response stored"}` : ""}</p>
     {error && <p role="alert" className="text-red-500">{error}</p>}
@@ -164,4 +164,8 @@ export function SportradarPanel({ previewId, athleteName, importDisabled = false
     <button type="button" className={buttonClass} disabled={busy} onClick={() => run(async () => setUsage(await api()))}>Load trial usage (no provider call)</button>
     {usage && <p className="text-sm">Sportradar Trial Usage: {usage.successful} successful API responses · {usage.failed} failed requests · {usage.reserved} quota reservations · {usage.playersImported} players imported · Last request: {usage.lastRequest?.requested_at || "None"} ({usage.lastRequest?.response_status ?? "—"})</p>}
   </section>;
+}
+
+function QuotaIndicator({ refresh = false }: { refresh?: boolean }) {
+  return <span className="ml-2 inline-block border-l border-current/30 pl-2 text-xs font-semibold text-amber-300">{refresh ? "Uses API quota" : "API quota if uncached"}</span>;
 }

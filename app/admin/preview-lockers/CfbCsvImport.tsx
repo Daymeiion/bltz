@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { BuilderSection } from "./BuilderSection";
 import { ZodError } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,8 +22,8 @@ export default function CfbCsvImport({ athleteName, value, onChange }: { athlete
   const [reading, setReading] = useState(false);
   function reset() { setTable(null); setReview(null); setApproved(false); setError(""); setMessage(""); }
   function fail(cause: unknown) { setError(cause instanceof ZodError ? cause.issues.map(issue => issue.message).slice(0, 3).join(" ") : cause instanceof Error ? cause.message : "Unable to read CSV."); }
-  return <section aria-label="Import college statistics CSV" className="space-y-4 rounded-lg border p-4">
-    <div><h2 className="text-xl font-semibold">Import college statistics</h2><p className="text-sm text-muted-foreground">Paste a Sports Reference season table or upload its CSV export for {athleteName || "this player"}. Imports stay in this private preview. Save the draft after adding a reviewed table.</p></div>
+  return <BuilderSection title="Import college statistics" count={value.length} description="Expand to import a college CSV table. No API quota used.">
+    <div><p className="text-sm text-muted-foreground">Paste a Sports Reference season table or upload its CSV export for {athleteName || "this player"}. Imports stay in this private preview. Save the draft after adding a reviewed table.</p></div>
     <label className="grid gap-2 text-sm font-medium">Player source URL<Input aria-label="Player source URL" type="url" value={source} onChange={e => { setSource(e.target.value); setReview(null); setApproved(false); }} placeholder="https://www.sports-reference.com/cfb/players/player-name-1.html" /></label>
     <label className="grid gap-2 text-sm font-medium">Table category<select aria-label="Table category" className="rounded border bg-background p-2" value={category} onChange={e => { setCategory(e.target.value as CfbCategory); reset(); }}>{cfbCategories.map(item => <option key={item} value={item}>{item}</option>)}</select></label>
     <label className="grid gap-2 text-sm font-medium">Upload CSV<Input aria-label="Upload college CSV" type="file" accept=".csv,text/csv" disabled={reading} onChange={async e => {
@@ -47,5 +48,5 @@ export default function CfbCsvImport({ athleteName, value, onChange }: { athlete
     </div>}
     {error && <p role="alert" className="text-sm text-red-500">{error}</p>}{message && <p role="status" className="text-sm">{message}</p>}
     {value.length > 0 && <div className="space-y-3"><h3 className="font-semibold">College tables in this draft</h3>{value.map(item => <div key={item.category} className="flex flex-wrap items-center justify-between gap-3 rounded border p-3"><div className="text-sm"><p>{item.category} · {item.seasons.length} season/team rows</p><a href={item.sourceUrl} target="_blank" rel="noopener noreferrer" className="break-all underline">Source player page</a></div><Button type="button" variant="outline" onClick={() => { onChange(value.filter(batch => batch.category !== item.category)); setReview(null); setApproved(false); }}>Remove {item.category} from draft</Button></div>)}</div>}
-  </section>;
+  </BuilderSection>;
 }
