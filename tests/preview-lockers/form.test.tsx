@@ -253,3 +253,23 @@ it("imports only reviewed Sportradar statistics and requires reload without savi
   expect(host.textContent).toContain("Reload the saved version before editing");
   expect(host.querySelector("fieldset")!.disabled).toBe(true);
 });
+
+it("preserves media link edits across collapse and saves removal from the draft", async () => {
+  const record = { ...previewContent.parse({ slug: "media-fixture", full_name: "Media Fixture", photos: [{ id: "photo-1", title: "Career photo", url: "https://example.com/old.jpg", level: "pro" }], videos: [{ id: "video-1", title: "Highlight", url: "https://example.com/film.mp4" }] }), id: "00000000-0000-4000-8000-000000000001", revision: 3, created_at: "", updated_at: "" };
+  await act(async () => root.render(<PreviewLockerForm record={record} />));
+  const input = host.querySelector<HTMLInputElement>('[aria-label="Photo 1 url"]')!;
+  const row = input.closest("details")!;
+  const section = row.parentElement!.closest("details")!;
+  await act(async () => { section.open = true; section.dispatchEvent(new Event("toggle")); row.open = true; row.dispatchEvent(new Event("toggle")); });
+  await fill("Photo 1 url", "https://example.com/new.jpg");
+  await act(async () => { row.open = false; row.dispatchEvent(new Event("toggle")); });
+  await act(async () => { row.open = true; row.dispatchEvent(new Event("toggle")); });
+  expect(input.value).toBe("https://example.com/new.jpg");
+  expect(row.querySelector('img[alt="Career photo"]')?.getAttribute("src")).toBe("https://example.com/new.jpg");
+  await click("Remove video from draft");
+  fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ id: record.id, slug: record.slug, revision: 4 })));
+  await click("Save draft");
+  const content = JSON.parse(fetcher.mock.calls[0][1].body).content;
+  expect(content.photos[0].url).toBe("https://example.com/new.jpg");
+  expect(content.videos).toEqual([]);
+});
