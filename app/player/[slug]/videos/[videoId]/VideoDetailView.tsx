@@ -1,5 +1,6 @@
 "use client";
 
+import { YouTubePlayer } from "@/components/player/YouTubePlayer";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -381,8 +382,8 @@ export default function VideoDetailView({ data }: { data: VideoDetailData }) {
               onMouseMove={handlePlayerInteraction}
               onPointerDown={handlePlayerInteraction}
             >
-              {data.video.embedUrl ? (
-                <iframe src={data.video.embedUrl} title={data.video.title} allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0, zIndex: 4 }} />
+              {data.video.provider === "youtube" || data.video.embedUrl ? (
+                <YouTubePlayer key={data.video.id} url={data.video.originalUrl ?? data.video.embedUrl!} title={data.video.title} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0, zIndex: 4 }} />
               ) : data.video.playbackUrl ? (
                 <video
                   ref={videoRef}

@@ -8,6 +8,11 @@ export async function proxy(request: NextRequest) {
     response.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive, noimageindex");
     response.headers.set("Referrer-Policy", "no-referrer");
   }
+  // Send only the origin to YouTube; keep private APIs and other preview pages unchanged.
+  if (/^\/(?:player|preview-lockers)\/[^/]+\/videos(?:\/|$)/.test(request.nextUrl.pathname)) {
+    response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+    response.headers.set("Content-Security-Policy", "frame-src https://www.youtube.com https://www.youtube-nocookie.com");
+  }
   return response;
 }
 

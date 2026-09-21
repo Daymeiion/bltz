@@ -1,5 +1,6 @@
 "use client";
 
+import { YouTubePlayer } from "@/components/player/YouTubePlayer";
 import Image from "next/image";
 import PreviewRoomNav from "@/components/preview-lockers/PreviewRoomNav";
 import Link from "next/link";
@@ -201,6 +202,7 @@ export default function FilmRoomView({ data }: { data: FilmRoomData }) {
   const [scrollOverlayOpacity, setScrollOverlayOpacity] = useState(0);
 
   const selected = data.videos.find((video) => video.id === selectedId) ?? data.videos[0] ?? null;
+  const isYouTube = selected?.provider === "youtube" || Boolean(selected?.embedUrl);
   const hsVideos = useMemo(() => data.videos.filter((video) => video.level === "hs"), [data.videos]);
   const cfbVideos = useMemo(() => data.videos.filter((video) => video.level === "cfb"), [data.videos]);
   const proVideos = useMemo(() => data.videos.filter((video) => video.level === "pro"), [data.videos]);
@@ -384,8 +386,8 @@ export default function FilmRoomView({ data }: { data: FilmRoomData }) {
                 onFocusCapture={() => setControlsVisible(true)}
               >
                 <div className={styles.featuredViewport}>
-                {selected.embedUrl ? (
-                  <iframe src={selected.embedUrl} title={selected.title} allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen style={{ position: "absolute", inset: 0, width: "100%", height: "calc(100% - 90px)", border: 0, zIndex: 4 }} />
+                {isYouTube ? (
+                  <YouTubePlayer key={selected.id} url={selected.originalUrl ?? selected.embedUrl!} title={selected.title} style={{ position: "absolute", inset: 0, width: "100%", height: "calc(100% - 90px)", border: 0, zIndex: 4 }} />
                 ) : selected.playbackUrl ? (
                   <video
                     ref={videoRef}
@@ -433,8 +435,8 @@ export default function FilmRoomView({ data }: { data: FilmRoomData }) {
                 ) : null}
                 <div className={styles.sourceBadge}>{selected.sourceLabel}</div>
                 <div className={`${styles.mediaShade} ${controlsVisible ? styles.mediaShadeVisible : styles.mediaShadeHidden}`} />
-                <div className={`${styles.controls} ${controlsVisible || selected.embedUrl ? styles.controlsVisible : styles.controlsHidden}`}>
-                  <div className={styles.controlRow} style={selected.embedUrl ? { display: "none" } : undefined}>
+                <div className={`${styles.controls} ${controlsVisible || isYouTube ? styles.controlsVisible : styles.controlsHidden}`}>
+                  <div className={styles.controlRow} style={isYouTube ? { display: "none" } : undefined}>
                     <button type="button" onClick={togglePlayback} disabled={!selected.playbackUrl} aria-label={playing ? "Pause film" : "Play film"}>
                       {playing ? <Pause aria-hidden="true" fill="currentColor" /> : <Play aria-hidden="true" fill="currentColor" />}
                     </button>

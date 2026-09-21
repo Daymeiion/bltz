@@ -1,3 +1,4 @@
+import { normalizeYouTubeUrl } from "@/lib/player/youtube";
 import { z } from "zod";
 import { cfbImports, combineCfbImports } from "./cfb-csv";
 
@@ -96,9 +97,5 @@ export function slugify(value: string) {
 }
 export function youtubeEmbed(value: string): string | null {
   if (!isPreviewUrl(value)) return null;
-  const url = new URL(value);
-  const videoId = url.hostname === "youtu.be" ? url.pathname.slice(1)
-    : ["youtube.com", "www.youtube.com", "m.youtube.com"].includes(url.hostname)
-      ? (url.pathname === "/watch" ? url.searchParams.get("v") : /^\/(?:embed|shorts)\/([\w-]+)$/.exec(url.pathname)?.[1]) : null;
-  return videoId && /^[\w-]{11}$/.test(videoId) ? `https://www.youtube-nocookie.com/embed/${videoId}` : null;
+  return normalizeYouTubeUrl(value)?.embedUrl ?? null;
 }

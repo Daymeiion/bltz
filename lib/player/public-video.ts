@@ -1,3 +1,5 @@
+import { normalizeYouTubeUrl } from "./youtube";
+
 export type PublicVideoLevel = "hs" | "cfb" | "pro" | "off-field";
 
 export type PublicVideo = {
@@ -7,6 +9,9 @@ export type PublicVideo = {
   thumbnailUrl: string | null;
   playbackUrl: string | null;
   embedUrl?: string | null;
+  provider?: "youtube";
+  providerVideoId?: string | null;
+  originalUrl?: string;
   durationSeconds: number | null;
   level: PublicVideoLevel;
   season: string | null;
@@ -68,6 +73,7 @@ export function toPublicVideo(row: PublicVideoRow, athleteName: string): PublicV
     description: row.description,
     thumbnailUrl: row.thumbnail_url,
     playbackUrl: row.playback_url,
+    ...normalizeYouTubeUrl(row.playback_url),
     durationSeconds: row.duration_seconds,
     level: publicVideoLevel(row.tags, row.meta),
     season: metaString(meta, ["season", "year"]) ?? parsedCreatedYear,

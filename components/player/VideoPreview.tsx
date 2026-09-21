@@ -1,5 +1,6 @@
 "use client";
 
+import { normalizeYouTubeUrl } from "@/lib/player/youtube";
 import { useEffect, useRef, useState } from "react";
 
 type Props = { title: string; thumbnailUrl?: string | null; playbackUrl?: string | null; embedUrl?: string | null };
@@ -11,7 +12,7 @@ export function VideoPreview({ title, thumbnailUrl, playbackUrl, embedUrl }: Pro
   const [hovering, setHovering] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);
   const poster = imageFailed ? null : thumbnailUrl;
-  const youtubeId = embedUrl?.match(/^https:\/\/www\.youtube-nocookie\.com\/embed\/([\w-]{11})$/)?.[1];
+  const youtubeId = normalizeYouTubeUrl(embedUrl)?.providerVideoId;
   const image = poster || (youtubeId ? `https://i.ytimg.com/vi/${youtubeId}/hqdefault.jpg` : null);
 
   useEffect(() => {
@@ -50,6 +51,6 @@ export function VideoPreview({ title, thumbnailUrl, playbackUrl, embedUrl }: Pro
   return <span ref={host} aria-hidden="true" style={{ ...mediaStyle, display: "block", pointerEvents: "none" }}>
     {playbackUrl ? <video key={playbackUrl} ref={video} src={playbackUrl} muted playsInline loop preload={poster ? "metadata" : "auto"} onLoadedMetadata={event => { if (!hovering) event.currentTarget.currentTime = 0.001; }} style={mediaStyle} /> : null}
     {image && !(hovering && (playbackUrl || embedUrl)) ? <img src={image} alt="" onError={() => setImageFailed(true)} style={mediaStyle} /> : null}
-    {hovering && youtubeId ? <iframe src={`${embedUrl}?autoplay=1&mute=1&controls=0&playsinline=1&loop=1&playlist=${youtubeId}`} title={`${title} preview`} tabIndex={-1} allow="autoplay; encrypted-media" style={{ ...mediaStyle, border: 0 }} /> : null}
+    {hovering && youtubeId ? <iframe src={`${embedUrl}?autoplay=1&mute=1&controls=1&playsinline=1&loop=1&playlist=${youtubeId}`} title={`${title} preview`} tabIndex={-1} referrerPolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen style={{ ...mediaStyle, border: 0 }} /> : null}
   </span>;
 }

@@ -54,7 +54,7 @@ describe("preview Locker parity", () => {
       expect(html).not.toContain('href="/player/preview-athlete');
     }
     expect(filmHtml).toContain('href="/preview-lockers/preview-athlete/videos/film"');
-    expect(filmHtml).toContain('src="https://www.youtube-nocookie.com/embed/abcdefghijk"');
+    expect(filmHtml).toContain('Watch on YouTube');
   });
 
   it("preserves the public route default", () => {

@@ -37,7 +37,7 @@ describe("private preview validation", () => {
     }
   });
   it("only embeds exact supported YouTube hosts", () => {
-    expect(youtubeEmbed("https://youtu.be/abcdefghijk")).toBe("https://www.youtube-nocookie.com/embed/abcdefghijk");
+    expect(youtubeEmbed("https://youtu.be/abcdefghijk")).toBe("https://www.youtube.com/embed/abcdefghijk");
     expect(youtubeEmbed("https://youtube.com.evil.com/watch?v=abcdefghijk")).toBeNull();
   });
   it("enforces origin, content type and actual streamed byte limits", async () => {
