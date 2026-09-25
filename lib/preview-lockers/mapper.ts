@@ -1,13 +1,23 @@
 import type { LockerData } from "@/app/player/[slug]/LockerView";
 import type { PhotoRoomData } from "@/app/player/[slug]/photos/PhotoRoomView";
 import type { FilmRoomData } from "@/app/player/[slug]/videos/FilmRoomView";
-import { publicVideoLevel } from "@/lib/player/public-video";
 import { LEVEL_LABEL, calcAge, formatDob, heightDisplay } from "@/lib/player/locker-format";
 import type { PreviewLockerRow } from "./types";
-import { previewVideoSource } from "./video";
+import { previewVideoSource, previewVideoLevel } from "./video";
 import { previewTeamBranding } from "./branding";
 import { combineCfbImports } from "./cfb-csv";
 import { previewStatLabels, type PreviewRecord, type ResolvedPreviewRecord } from "./validation";
+
+export function previewHeadshot(row: { headshot_url: string | null; photos?: Array<{ isHeadshot?: boolean; url?: string | null }> }) {
+  return row.photos?.find(photo => photo.isHeadshot && photo.url)?.url || row.headshot_url || "/images/black-headshot-fallback.svg";
+}
+
+function previewAwards(row: { awards: import("./types").PreviewAward[]; photos: Array<{ id: string; url?: string | null }> }) {
+  return row.awards.map(award => ({ ...award, imageUrl: row.photos.find(photo => photo.id === award.photoId)?.url || award.imageUrl || null }));
+}
+function previewSocialItems(row: { social?: import("./social").PreviewSocial[]; photos: Array<{ id: string; url?: string | null }>; videos: Array<{ id: string; url?: string | null }> }) {
+  return (row.social ?? []).map(item => ({ ...item, imageUrl: row.photos.find(photo => photo.id === item.photoId)?.url || null, videoUrl: previewVideoSource(row.videos.find(video => video.id === item.videoId)?.url ?? null).playbackUrl }));
+}
 
 function previewHeroVideo(row: PreviewRecord | ResolvedPreviewRecord, device: "mobile" | "desktop") {
   const video = row.videos.find(item => item.heroDevice === device);
@@ -27,7 +37,7 @@ export function previewLockerData(row: PreviewRecord | ResolvedPreviewRecord): L
     athleteId: null, slug: row.slug, lockerHref: `/preview-lockers/${encodeURIComponent(row.slug)}`, fullName: row.full_name,
     structuredStats: combineCfbImports(row.cfb_stats ?? []),
     hometown: row.hometown || "", position: row.position || "", jersey: row.jersey || "",
-    levelLabel: row.level || "Athlete", headshotUrl: row.headshot_url || "/images/black-headshot-fallback.svg",
+    levelLabel: row.level || "Athlete", headshotUrl: previewHeadshot(row),
     // Only direct playback sources enter the hero; provider pages stay in the Film Room.
     heroVideoUrl: null,
     heroVideos: {
@@ -40,13 +50,13 @@ export function previewLockerData(row: PreviewRecord | ResolvedPreviewRecord): L
     highSchool: row.level === "hs" ? row.school || "" : "", classOf: "",
     school,
     careerStats: [...row.career_stats].sort((a, b) => Object.keys(previewStatLabels).indexOf(a.key) - Object.keys(previewStatLabels).indexOf(b.key)).map(stat => ({ key: stat.key, label: previewStatLabels[stat.key], value: Number.isInteger(stat.value) ? stat.value : stat.value.toLocaleString("en-US", { maximumFractionDigits: 2 }) })),
-    nfl: null, schools: branding.schools, proTeams: branding.proTeams, awards: row.awards, videos: row.videos.filter((video): video is typeof video & { url: string } => "url" in video).map(video => ({ ...video, ...previewVideoSource("url" in video ? video.url : null) })),
+    nfl: null, schools: branding.schools, proTeams: branding.proTeams, awards: previewAwards(row), social: previewSocialItems(row), videos: row.videos.filter((video): video is typeof video & { url: string } => "url" in video).map(video => ({ ...video, ...previewVideoSource("url" in video ? video.url : null) })),
     photos: row.photos.flatMap(photo => "url" in photo ? [{ ...photo, provenance: "Private demo suggestion", licenseLabel: "PRIVATE DEMO · RIGHTS UNVERIFIED" }] : []),
   };
 }
 export function previewPhotoData(row: PreviewRecord | ResolvedPreviewRecord): PhotoRoomData {
   return { athleteId: null, slug: row.slug, lockerHref: `/preview-lockers/${encodeURIComponent(row.slug)}`, athleteName: row.full_name,
-    athleteHeadshotUrl: row.headshot_url || "/images/black-headshot-fallback.svg", accentColor: "#FFB940",
+    athleteHeadshotUrl: previewHeadshot(row), accentColor: "#FFB940",
     images: row.photos.flatMap(photo => "url" in photo ? [{ ...photo, licenseLabel: "PRIVATE DEMO · RIGHTS UNVERIFIED", width: null, height: null }] : []),
   };
 }
@@ -63,7 +73,7 @@ export function toLockerData(row: PreviewLockerRow): LockerData {
     jersey: row.jersey || "",
     jerseyNumbers: row.jersey ? [row.jersey] : [],
     levelLabel: row.level ? (LEVEL_LABEL[row.level] ?? "—") : "—",
-    headshotUrl: row.headshot_url || "/images/black-headshot-fallback.svg",
+    headshotUrl: previewHeadshot(row),
     headshotYear: null,
     heroVideoUrl: row.hero_video_url,
     logoSrc: "/bltz-white-logo.svg",
@@ -83,10 +93,13 @@ export function toLockerData(row: PreviewLockerRow): LockerData {
     school: row.school_info?.name && row.school_info?.abbr ? row.school_info : null,
     nfl: row.nfl_info,
     ...previewTeamBranding(row),
-    awards: row.awards ?? [],
+    awards: previewAwards(row),
+    social: previewSocialItems(row),
     videos: (row.videos ?? []).map((video) => ({ id: video.id, title: video.title, thumb: video.thumb, ...previewVideoSource(video.url) })),
     photos: (row.photos ?? []).map((photo) => ({
       id: photo.id,
+      isHeadshot: photo.isHeadshot,
+      inHeroSlideshow: photo.inHeroSlideshow,
       url: photo.url || "",
       title: (photo.title || "").toUpperCase(),
       credits: photo.credits,
@@ -104,10 +117,12 @@ export function toPhotoRoomData(row: PreviewLockerRow): PhotoRoomData {
     slug: row.slug,
     lockerHref: `/preview-lockers/${encodeURIComponent(row.slug)}`,
     athleteName: row.full_name,
-    athleteHeadshotUrl: row.headshot_url || "/images/black-headshot-fallback.svg",
+    athleteHeadshotUrl: previewHeadshot(row),
     accentColor: "#ffbb00",
     images: (row.photos ?? []).map((photo) => ({
       id: photo.id,
+      isHeadshot: photo.isHeadshot,
+      inHeroSlideshow: photo.inHeroSlideshow,
       url: photo.url || "",
       title: photo.title || "Photo",
       credits: photo.credits,
@@ -123,22 +138,26 @@ export function toPhotoRoomData(row: PreviewLockerRow): PhotoRoomData {
   };
 }
 
-export function toFilmRoomData<T extends Pick<PreviewLockerRow, "slug" | "full_name" | "headshot_url" | "videos">>(row: T): FilmRoomData {
+export function toFilmRoomData<T extends Pick<PreviewLockerRow, "slug" | "full_name" | "headshot_url" | "videos">>(row: T & { hero_video_url?: string | null; photos?: PreviewLockerRow["photos"] }): FilmRoomData {
+  const videos = [...(row.videos ?? [])];
+  if (row.hero_video_url && !videos.some(video => video.url === row.hero_video_url || video.id === "hero-video")) {
+    videos.push({ id: "hero-video", title: "Hero video source", url: row.hero_video_url, thumb: null });
+  }
   return {
     athleteId: null,
     slug: row.slug,
     lockerHref: `/preview-lockers/${encodeURIComponent(row.slug)}`,
     athleteName: row.full_name,
-    athleteHeadshotUrl: row.headshot_url || "/images/black-headshot-fallback.svg",
+    athleteHeadshotUrl: previewHeadshot(row),
     accentColor: "#ffbb00",
-    videos: (row.videos ?? []).map((video) => ({
+    videos: videos.map((video) => ({
       id: video.id,
       title: video.title,
       thumbnailUrl: video.thumb,
       ...previewVideoSource(video.url),
       description: "Preview only — not cleared for publication.",
       durationSeconds: null,
-      level: publicVideoLevel([video.title], null),
+      level: previewVideoLevel(video),
       season: null,
       attribution: "Attribution pending review",
       sourceLabel: "PREVIEW ONLY",

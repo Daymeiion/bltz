@@ -49,3 +49,12 @@ describe("private preview validation", () => {
     await expect(readBody(request("{}", { origin: "http://127.0.0.1:3127", host: "127.0.0.1:3127" }))).resolves.toEqual({});
   });
 });
+
+
+it.each(["pro", "cfb", "hs", "off-field"])("round-trips %s for linked and uploaded videos", level => {
+  for (const source of [{ url: "https://example.com/film.mp4" }, { storagePath: "00000000-0000-4000-8000-000000000001/videos/00000000-0000-4000-8000-000000000002.mp4", mimeType: "video/mp4" }]) {
+    const draft = previewContent.parse({ slug: "film-categories", full_name: "Film Categories", videos: [{ id: "one", title: "Film", thumb: null, level, ...source }] });
+    expect(draft.videos[0].level).toBe(level);
+    expect(previewContent.safeParse({ ...draft, videos: [{ ...draft.videos[0], level: "unknown" }] }).success).toBe(false);
+  }
+});

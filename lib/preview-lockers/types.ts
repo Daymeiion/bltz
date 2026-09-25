@@ -4,7 +4,7 @@
 
 export type PreviewLevel = "hs" | "college" | "pro" | "former";
 
-export type PreviewAward = { year: string; label: string; sourceUrl?: string | null; description?: string | null };
+export type PreviewAward = { imageUrl?: string | null; photoId?: string | null; year: string; label: string; sourceUrl?: string | null; description?: string | null };
 export type PreviewCareerStat = { key: string; label: string; value: string | number };
 export type PreviewCareerSeason = {
   year: string;
@@ -12,8 +12,10 @@ export type PreviewCareerSeason = {
   level: "cfb" | "pro" | string;
   team: string | null;
 };
-export type PreviewVideo = { id: string; title: string; thumb: string | null; url: string | null };
+export type PreviewVideo = { level?: "pro" | "cfb" | "hs" | "off-field"; id: string; title: string; thumb: string | null; url: string | null };
 export type PreviewPhoto = {
+  isHeadshot?: boolean;
+  inHeroSlideshow?: boolean;
   id: string;
   url?: string | null;
   storagePath?: string | null;
@@ -63,6 +65,7 @@ export interface PreviewLockerRow {
   schools: PreviewTeamPill[];
   pro_teams: PreviewTeamPill[];
   awards: PreviewAward[];
+  social?: import("./social").PreviewSocial[];
   career_stats: PreviewCareerStat[];
   career_seasons: PreviewCareerSeason[];
   videos: PreviewVideo[];

@@ -22,6 +22,4 @@ No live provider request, production mutation, or browser-admin import was perfo
 
 ## Product direction and limitations
 Reuses the existing athlete-to-provider identity and season-stat relationship, improving career accuracy and persistent Locker usefulness after team changes. No new Moment/Value Graph relationships, duplicated provider workflow, or media-management scope expansion. Doctrine file is absent from this checkout; supplied AGENTS product guidance followed.
-Production release approved. Isolated from unrelated in-progress college CSV work; no schema changes in this release. A saved preview and existing canonical athlete/provider ID are required; creating missing canonical athletes or enabling NCAA is outside this change.
-
-Release validation: isolated production checkout passed 25 targeted tests, scoped lint, and clean webpack production build with system certificates. Local Turbopack could not follow the shared node_modules junction; Vercel retains the normal build command. Unrelated CFB CSV edits and migration excluded.
+Local implementation only; deployment deferred. A saved preview and existing canonical athlete/provider ID are required; creating missing canonical athletes or enabling NCAA is outside this change.

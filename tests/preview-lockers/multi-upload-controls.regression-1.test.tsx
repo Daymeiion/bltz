@@ -35,3 +35,22 @@ it("retains every completed file when a multi-photo upload partially fails", asy
   expect(host.textContent).toContain("Photo 1"); expect(host.textContent).toContain("one");
   expect(host.textContent).toContain("1 completed upload was retained in this draft");
 });
+
+it("uploads a PNG as the selected headshot and saves private storage metadata", async () => {
+  const record = { ...previewContent.parse({ slug: "fixture-player", full_name: "Fixture Player" }), id: "00000000-0000-4000-8000-000000000001", revision: 1, created_at: "", updated_at: "" };
+  mocks.fetch.mockResolvedValueOnce(new Response(JSON.stringify({ bucket: "preview-locker-photos", path: `${record.id}/photos/00000000-0000-4000-8000-000000000002.png`, token: "test" })));
+  await act(async () => root.render(<PreviewLockerForm record={record} />));
+  const input = host.querySelector<HTMLInputElement>('[aria-label="Upload headshot image"]')!;
+  expect(input.multiple).toBe(false);
+  Object.defineProperty(input, "files", { configurable: true, value: [new File(["png"], "custom-headshot.png", { type: "image/png" })] });
+  await act(async () => { input.dispatchEvent(new Event("change", { bubbles: true })); await new Promise(resolve => setTimeout(resolve, 0)); });
+  const selected = host.querySelector<HTMLSelectElement>('[aria-label="Headshot image"]')!;
+  expect(selected.selectedOptions[0].textContent).toBe("custom-headshot");
+  mocks.fetch.mockResolvedValueOnce(new Response(JSON.stringify({ error: "synthetic save failure" }), { status: 500 }));
+  const save = [...host.querySelectorAll('button')].find(button => button.textContent === "Save draft")!;
+  await act(async () => save.click());
+  const body = JSON.parse(mocks.fetch.mock.calls.at(-1)![1].body);
+  expect(body.content.photos[0]).toMatchObject({ isHeadshot: true, inHeroSlideshow: false, mimeType: "image/png" });
+  expect(body.content.photos[0].url).toBeUndefined();
+  expect(body.content.headshot_url).toBeNull();
+});

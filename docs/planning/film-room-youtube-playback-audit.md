@@ -1,8 +1,8 @@
 # Film Room YouTube playback audit — 2026-09-21
 
-## Initial audit outcome and root cause
+## Outcome and root cause
 
-At the initial audit, the scoped playback fix was implemented locally. No redesign, new product workflow, database writes, or deployment was performed during that audit. The user subsequently authorized a production release; release preparation is recorded below.
+Scoped playback fix implemented locally. No redesign, new product workflow, database writes, or deployment performed.
 
 The reported production page, `/preview-lockers/keith-rivers-3a92b4f331f083552d05/videos`, visibly reproduced **YouTube Error 153** for `AXYE-hXNN-c` in Chrome. Its rendered document has `meta[name=referrer]` set to `no-referrer`, and its iframe has no explicit referrer policy. The production response also sends `Referrer-Policy: no-referrer`.
 
@@ -90,6 +90,6 @@ The temporary localhost fixture used for URL/error checks was removed before the
 - No mature third-party workflow duplicated and no scope drift toward media management. No future-phase schema introduced. The referenced Product Doctrine file was absent in this checkout; the supplied product guardrails were followed.
 - Deferred: deploy the scoped patch through the normal release process, verify the fixed production page, obtain access to a Vercel preview containing the fix, test a controlled embedding-disabled/private upload, and complete a real mobile viewport check. The workspace contains unrelated pre-existing changes and was not published wholesale.
 
-## Authorized production release preparation
+## Production release result
 
-The release is based on production/main commit `c040905a0751b581b96016f5271d231adda72f75` in the isolated `codex/film-room-youtube-playback` checkout. Only the 18 files listed above are included; unrelated edits in the original checkout remain untouched. The isolated checkout passed all 60 focused tests and lint with zero errors. Its full suite reports 757 passing, 9 failing, and 24 skipped tests, with the same failures listed above. The build is validated against the production baseline; Vercel will run its configured production build again on deployment. No migrations or environment-variable changes are part of this release.
+User-authorized release completed: commit `b24559b1a959d6d803818a21cbbb0947de17c18f` is on `main`. Vercel preview `dpl_1FrKgHT4tV9qNiiF8AYmKw89MPhM` and production `dpl_mksGR1RKngPGxSzpTZXc9JscJuJQ` are Ready. The existing `bltz.vercel.app` alias serves the fix. Chrome playback of the reported Keith Rivers video reached 25/50 seconds without Error 153, then was paused. Production returns the corrected referrer/CSP headers while preserving private cache headers and anonymous 404 behavior. The isolated checkout passed 60 focused tests and its production build. Preview browser playback was not tested: automatic approval review rejected the temporary deployment-authentication access link; production was verified through the existing authorized session. No database, environment-variable, or application-permission changes were needed.

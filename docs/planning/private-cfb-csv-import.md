@@ -37,3 +37,10 @@ Scoped table types were regenerated from the isolated PostgreSQL `information_sc
 
 ## Product completion
 This enables private recovery/display of athlete-to-season-to-school sporting history without creating or claiming a canonical identity. It remains useful after organizational departure. No Moment or Value relationships changed, no commodity media workflow duplicated, and no media-management scope drift.
+
+## Production release verification — 2026-09-16
+- Commit fd1f7b3ab2d3797cfe96421f62419ac8f4fe3d59 pushed to main from the isolated release checkout; Vercel deployment dpl_8DMYBhcv4rDsrmt3BxVVYdYTPvqo reached READY and owns bltz.vercel.app.
+- Production migration 20260916193000 is recorded; RLS enabled and anonymous column reads denied. No new environment variables or broader access permissions.
+- Signed-in live builder loaded the Import college statistics section with source URL, category, upload, paste and disabled-until-input review action. No real athlete statistics were written during verification.
+- Anonymous smoke checks: homepage 200; admin builder 307 to admin login; private Locker 404; POST /api/preview-lockers 401.
+- Live verification covered release availability and access boundaries. Save/reload and audit behavior were verified in automated application and isolated database tests, not by modifying production athlete records.

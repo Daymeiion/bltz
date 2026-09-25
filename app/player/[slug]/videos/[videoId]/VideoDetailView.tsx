@@ -1,6 +1,7 @@
 "use client";
 
 import { YouTubePlayer } from "@/components/player/YouTubePlayer";
+import PreviewClaimButton from "@/components/preview-lockers/PreviewClaimButton";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -118,7 +119,8 @@ function VideoListItem({ video, lockerHref, current }: { video: PublicVideo; loc
   );
 }
 
-export default function VideoDetailView({ data }: { data: VideoDetailData }) {
+export default function VideoDetailView({ data, footer }: { data: VideoDetailData; footer?: React.ReactNode }) {
+  const isPrivatePreview = data.lockerHref?.startsWith("/preview-lockers/") === true;
   const router = useRouter();
   const [copied, setCopied] = useState(false);
   const [titleScrollDistance, setTitleScrollDistance] = useState(0);
@@ -358,9 +360,11 @@ export default function VideoDetailView({ data }: { data: VideoDetailData }) {
           <Link href={`${data.lockerHref ?? `/player/${data.slug}`}/videos`} className={styles.searchAction} aria-label="Browse Film Room">
             <Search aria-hidden="true" />
           </Link>
+          {isPrivatePreview ? <PreviewClaimButton /> : (
           <Link href={data.lockerHref ?? `/player/${data.slug}`} className={styles.avatar} aria-label={`View ${data.athleteName}'s Locker`}>
             <Image src={data.athleteHeadshotUrl} alt="" fill sizes="40px" />
           </Link>
+          )}
         </div>
       </header>
 
@@ -622,6 +626,7 @@ export default function VideoDetailView({ data }: { data: VideoDetailData }) {
           </aside>
         </div>
       </div>
+      {footer}
     </main>
   );
 }

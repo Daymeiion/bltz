@@ -1,4 +1,5 @@
 "use client";
+import { socialEmbedUrl, type LockerSocial } from "@/lib/preview-lockers/social";
 import { awardDescription } from "@/lib/preview-lockers/award-descriptions";
 import { EditorialCard } from "@/components/player/EditorialCard";
 
@@ -9,6 +10,7 @@ import type { SearchResult } from "@/components/ui/search-modal";
 import { trackProductEvent } from "@/lib/analytics/client";
 import { VideoPreview } from "@/components/player/VideoPreview";
 import { StructuredStats } from "@/components/player/StructuredStats";
+import { SpotifyPreviewBadge } from "@/components/player/SpotifyPreviewBadge";
 
 // ---------------------------------------------------------------------------
 // LockerView — fan-facing athlete locker, ported from the standalone design.
@@ -97,7 +99,8 @@ export type LockerData = {
   // made the NFL), the right pill falls back to level/status.
   schools: { label: string; color: string; logo: string | null }[];
   proTeams: { label: string; color: string; logo: string | null }[];
-  awards: { year: string; label: string; description?: string | null; sourceUrl?: string | null }[];
+  social?: LockerSocial[];
+  awards: { imageUrl?: string | null; year: string; label: string; description?: string | null; sourceUrl?: string | null }[];
   timeline?: { year: string; tag: string; title: string; note: string }[];
   videos: { id: string; title: string; thumb: string | null; playbackUrl?: string | null; embedUrl?: string | null }[];
   podcastAppearances?: {
@@ -109,6 +112,8 @@ export type LockerData = {
     sourceUrl?: string | null;
   }[];
   photos: {
+    isHeadshot?: boolean;
+    inHeroSlideshow?: boolean;
     id: string;
     url: string;
     title: string;
@@ -603,6 +608,17 @@ export default function LockerView({
   ];
   const poolAt = (i: number) => imgPool.length ? imgPool[i % imgPool.length] : null;
 
+  const slideshowPhotos = data.photos.filter(photo => photo.inHeroSlideshow !== false && !photo.isHeadshot && safeExternalUrl(photo.url));
+  const slideshowKey = slideshowPhotos.map(photo => photo.id).join("|");
+  const [slideshowIndex, setSlideshowIndex] = useState(0);
+  useEffect(() => {
+    setSlideshowIndex(0);
+    if (!isPrivatePreview || heroVideoUrl || slideshowPhotos.length < 2) return;
+    const timer = window.setInterval(() => setSlideshowIndex(index => (index + 1) % slideshowPhotos.length), 6000);
+    return () => window.clearInterval(timer);
+  }, [isPrivatePreview, heroVideoUrl, slideshowKey, slideshowPhotos.length]);
+  const slideshowPhoto = slideshowPhotos[slideshowIndex % slideshowPhotos.length];
+
   const schoolAbbr = data.school?.abbr || "SCHOOL";
 
   // Hero name shrinks to fit long full names on one line instead of wrapping.
@@ -691,7 +707,7 @@ export default function LockerView({
     ? data.awards
     : [];
   const awards = awardSrc.map((a, index) => ({
-    cat: "awards", isAward: true, year: a.year, label: a.label, sourceUrl: a.sourceUrl, description: awardDescription(a.label, a.description), img: poolAt(index),
+    cat: "awards", isAward: true, year: a.year, label: a.label, sourceUrl: a.sourceUrl, description: awardDescription(a.label, a.description), img: safeExternalUrl(a.imageUrl ?? "") ?? (isPrivatePreview ? null : poolAt(index)),
     style: { flex: "none", width: 164, scrollSnapAlign: "start", borderRadius: 16, border: "1px solid #1E2640", background: "linear-gradient(160deg,#1a2035,#131829)" } as React.CSSProperties,
   }));
 
@@ -707,13 +723,13 @@ export default function LockerView({
     { source: "TEAM SITE", title: "LOCKER ROOM STANDARD SETTER", meta: "3 MIN READ", img: poolAt(1), dek: "How preparation and practice habits have become part of the weekly team story.", originalUrl: "https://calbears.com/" },
     { source: "LOCAL PRESS", title: "FROM FRIDAY NIGHTS TO FEATURE FILM", meta: "5 MIN READ", img: poolAt(2), dek: "The hometown arc behind the athlete's growing media archive.", originalUrl: "https://www.latimes.com/sports/" },
   ];
-  const mediaShorts = [
+  const mediaShorts: Array<{ source: string; title: string; meta: string; img: string | null; videoUrl: string | null; originalUrl?: string; embedUrl?: string | null }> = isPrivatePreview ? (data.social ?? []).filter(item => item.kind === "short").map(item => ({ source: item.handle || item.platform, title: item.title, meta: item.platform, img: item.imageUrl, videoUrl: item.videoUrl, originalUrl: item.sourceUrl, embedUrl: socialEmbedUrl(item.platform, item.sourceUrl, item.kind) })) : [
     { source: "@ATHLETE", title: "PREGAME WALK", meta: "218K VIEWS", img: poolAt(1), videoUrl: null },
     { source: "@ATHLETE", title: "FILM STUDY · 6AM", meta: "96K VIEWS", img: poolAt(2), videoUrl: null },
     { source: "TEAM CAM", title: "TUNNEL READY", meta: "74K VIEWS", img: poolAt(3), videoUrl: null },
     { source: "BLTZ CUT", title: "SIDELINE ENERGY", meta: "52K VIEWS", img: poolAt(4), videoUrl: null },
   ];
-  const modalShortHasVideo = shortModalIndex !== null && Boolean(mediaShorts[shortModalIndex]?.videoUrl);
+  const modalShortHasVideo = shortModalIndex !== null && Boolean(mediaShorts[shortModalIndex]?.videoUrl || mediaShorts[shortModalIndex]?.embedUrl || mediaShorts[shortModalIndex]?.originalUrl);
   const modalShortCount = mediaShorts.length;
 
   useEffect(() => {
@@ -764,7 +780,7 @@ export default function LockerView({
     return () => window.clearTimeout(timeout);
   }, [modalShortCount, modalShortHasVideo, shortModalIndex]);
   const mediaPodcast = data.podcastAppearances ?? [];
-  const mediaSocial = [
+  const mediaSocial: Array<{ platform: string; handle: string; meta: string; img: string | null; format: string; published: string; caption: string; originalUrl?: string; videoUrl?: string | null; embedUrl?: string | null }> = isPrivatePreview ? (data.social ?? []).filter(item => item.kind === "post").map(item => ({ platform: item.platform === "X" ? "X / Twitter" : item.platform, handle: item.handle || item.title, meta: item.title, img: item.imageUrl, format: item.format, published: "", caption: item.caption, originalUrl: item.sourceUrl, videoUrl: item.videoUrl, embedUrl: socialEmbedUrl(item.platform, item.sourceUrl, item.kind) })) : [
     { platform: "Instagram", handle: "@athlete", meta: "12.4K LIKES", img: poolAt(4), format: "square", published: "OCT 18, 2025", caption: "Game day with the people who make every rep count." },
     { platform: "X", handle: "@athlete", meta: "4.8K REPOSTS", img: poolAt(0), format: "portrait", published: "SEP 29, 2025", caption: "The work travels. Another week, another opportunity to raise the standard." },
     { platform: "Facebook", handle: "Athlete Page", meta: "8.1K REACTIONS", img: poolAt(1), format: "square", published: "AUG 12, 2025", caption: "A hometown moment worth keeping in the career archive." },
@@ -913,6 +929,7 @@ export default function LockerView({
       aria-label={`Open ${post.platform} post from ${post.handle}`}
       style={{ position: "relative", overflow: "hidden", border: "none", padding: 0, background: GRAD_FIELD, textAlign: "left", cursor: "pointer" }}
     >
+      {!post.img && <p style={{ position: "absolute", inset: "42px 14px 55px", margin: 0, color: "white", fontSize: 15, lineHeight: 1.5, overflow: "hidden", whiteSpace: "pre-wrap" }}>{post.caption || post.meta}</p>}
       {post.img ? <img src={post.img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : null}
       <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top,rgba(5,7,15,.88),rgba(5,7,15,.04) 58%)" }} />
       <div style={{ position: "absolute", top: 8, left: 8, padding: "4px 7px", borderRadius: 9999, background: "rgba(11,14,26,.7)", border: "1px solid rgba(255,255,255,.14)", fontFamily: mono, fontSize: 7.5, letterSpacing: ".1em", color: "#fff", textTransform: "uppercase" }}>{post.platform}</div>
@@ -1018,7 +1035,10 @@ export default function LockerView({
                     </video>
                   </>
                 ) : (
-                  [0, 6, 12].map((delay, i) => {
+                  isPrivatePreview ? (slideshowPhoto ? <div style={{ position: "absolute", inset: 0 }}>
+                    <img src={slideshowPhoto.url} alt="" aria-hidden="true" className="locker-hero-photo-backdrop" />
+                    <img src={slideshowPhoto.url} alt="" className="locker-hero-photo" />
+                  </div> : null) : [0, 6, 12].map((delay, i) => {
                     const img = poolAt(i);
                     return img ? isPrivatePreview ? (
                       <div key={i} style={{ ...reelBase, animationDelay: `${delay}s` }}>
@@ -1037,6 +1057,7 @@ export default function LockerView({
 
               {/* Spotify "now playing" — live. Collapses entirely when the athlete
                   hasn't linked Spotify or nothing is currently playing. */}
+              {isPrivatePreview && <SpotifyPreviewBadge />}
               {nowPlaying && (
                 <a
                   href={nowPlaying.url ?? undefined}
@@ -1411,6 +1432,7 @@ export default function LockerView({
                         onScroll={handleShortsScroll}
                         style={{ height: isPrivatePreview ? "auto" : 408, overflowY: isPrivatePreview ? "visible" : "auto", overscrollBehavior: "auto", paddingRight: 6, display: "grid", gap: 10 }}
                       >
+                      {!mediaShorts.length && <p style={{ color: "rgba(255,255,255,.6)" }}>No shorts added yet.</p>}
                       {mediaShorts.map((short, index) => (
                         <button
                           type="button"
@@ -1492,6 +1514,7 @@ export default function LockerView({
                         onScroll={handleSocialScroll}
                         style={{ height: isPrivatePreview ? "auto" : 408, overflowY: isPrivatePreview ? "visible" : "auto", overscrollBehavior: "auto" }}
                       >
+                        {!mediaSocial.length && <p style={{ color: "rgba(255,255,255,.6)" }}>No social posts added yet.</p>}
                         <div className="locker-social-layout locker-social-layout--mobile">
                           {[0, 1].map((column) => (
                             <div className="locker-social-column" key={column}>
@@ -1606,7 +1629,8 @@ export default function LockerView({
                           if (nextIndex !== shortModalIndex) setShortModalIndex(nextIndex);
                         }}
                       >
-                        {mediaShorts.map((short, index) => (
+                        {!mediaShorts.length && <p style={{ color: "rgba(255,255,255,.6)" }}>No shorts added yet.</p>}
+                      {mediaShorts.map((short, index) => (
                           <div
                             key={`modal-${short.title}`}
                             className="locker-short-modal-slide"
@@ -1619,6 +1643,7 @@ export default function LockerView({
                                 muted
                                 playsInline
                                 preload="metadata"
+                                controls
                                 onEnded={() => {
                                   if (index >= modalShortCount - 1) return;
                                   const nextIndex = index + 1;
@@ -1628,6 +1653,8 @@ export default function LockerView({
                                 }}
                                 style={{ width: "100%", height: "100%", objectFit: "cover" }}
                               />
+                            ) : short.embedUrl && index === shortModalIndex ? (
+                              <iframe src={short.embedUrl} title={short.title} allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen referrerPolicy="no-referrer" style={{ width: "100%", height: "calc(100% - 125px)", border: 0, background: "#fff" }} />
                             ) : short.img ? (
                               <img src={short.img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                             ) : (
@@ -1638,6 +1665,7 @@ export default function LockerView({
                               <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: ".12em", color: lockerAccent, textTransform: "uppercase", marginBottom: 7 }}>{short.source}</div>
                               <div style={{ fontFamily: disp, fontWeight: 900, fontSize: 27, lineHeight: .92, color: "#fff", textTransform: "uppercase" }}>{short.title}</div>
                               <div style={{ marginTop: 9, fontFamily: mono, fontSize: 9, letterSpacing: ".1em", color: "rgba(255,255,255,.62)", textTransform: "uppercase" }}>{short.meta}</div>
+                              {short.originalUrl && <a href={safeExternalUrl(short.originalUrl) ?? undefined} target="_blank" rel="noopener noreferrer" style={{ display: "inline-block", marginTop: 12, color: "#fff", textDecoration: "underline" }}>Open original ↗</a>}
                             </div>
                           </div>
                         ))}
@@ -1701,10 +1729,10 @@ export default function LockerView({
                       </div>
                       <div className="locker-social-modal-layout">
                         <div className={`locker-social-modal-media locker-social-modal-media--${selectedSocialPost.format}`} style={{ overflow: "hidden", background: GRAD_FIELD }}>
-                          {selectedSocialPost.img ? <img src={selectedSocialPost.img} alt={`${selectedSocialPost.platform} post by ${selectedSocialPost.handle}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : null}
+                          {selectedSocialPost.videoUrl ? <video src={selectedSocialPost.videoUrl} controls playsInline style={{ width: "100%", height: "100%", objectFit: "contain" }} /> : selectedSocialPost.embedUrl ? <iframe src={selectedSocialPost.embedUrl} title={`${selectedSocialPost.platform} post`} allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen referrerPolicy="no-referrer" style={{ width: "100%", height: "100%", border: 0, background: "#fff" }} /> : selectedSocialPost.img ? <img src={selectedSocialPost.img} alt={`${selectedSocialPost.platform} post by ${selectedSocialPost.handle}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : null}
                         </div>
                         <div style={{ display: "flex", flexDirection: "column", minWidth: 0, padding: "20px 18px 22px" }}>
-                          <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 10, marginBottom: 18 }}>
+                          {!isPrivatePreview && <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 10, marginBottom: 18 }}>
                             <div style={{ padding: "11px 12px", border: "1px solid #1E2640", borderRadius: 10, background: "#131829", textAlign: "center" }}>
                               <div style={{ fontFamily: mono, fontSize: 7.5, letterSpacing: ".13em", color: "rgba(255,255,255,.42)", textTransform: "uppercase", marginBottom: 5 }}>Published</div>
                               <div style={{ fontFamily: mono, fontSize: 9.5, letterSpacing: ".06em", color: "#fff" }}>{selectedSocialPost.published}</div>
@@ -1714,10 +1742,11 @@ export default function LockerView({
                               <div style={{ fontFamily: mono, fontSize: 9.5, letterSpacing: ".06em", color: lockerAccent }}>{selectedSocialPost.meta}</div>
                             </div>
                           </div>
+                          }
                           <div style={{ fontFamily: mono, fontSize: 8, letterSpacing: ".14em", color: "rgba(255,255,255,.42)", textTransform: "uppercase", marginBottom: 8 }}>Post caption</div>
                           <p style={{ margin: 0, fontFamily: body, fontSize: 16, lineHeight: 1.55, color: "rgba(255,255,255,.82)" }}>{selectedSocialPost.caption}</p>
                           <div style={{ marginTop: "auto", paddingTop: 24, fontFamily: mono, fontSize: 8, lineHeight: 1.45, letterSpacing: ".1em", color: "rgba(255,255,255,.4)", textTransform: "uppercase" }}>
-                            Connected account content · Athlete dashboard source
+                            {selectedSocialPost.originalUrl ? <a href={safeExternalUrl(selectedSocialPost.originalUrl) ?? undefined} target="_blank" rel="noopener noreferrer" style={{ color: "#fff", textDecoration: "underline" }}>Open original on {selectedSocialPost.platform} ↗</a> : "Connected account content · Athlete dashboard source"}
                           </div>
                         </div>
                       </div>

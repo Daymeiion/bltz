@@ -12,10 +12,6 @@ export function PreviewVideoSource({ video }: { video: { id: string; title: stri
 }
 export default async function PreviewVideos({ params }: { params: Promise<{ slug: string }> }) {
   const row = await readPrivatePreview((await params).slug); if (!row) notFound();
-  const sources = [
-    ...(row.hero_video_url ? [{ id: "hero-video", title: "Hero video source", url: row.hero_video_url }] : []),
-    ...row.videos,
-  ];
-  const data = toFilmRoomData({ ...row, videos: sources.map(video => ({ ...video, thumb: "thumb" in video ? video.thumb : null })) });
+  const data = toFilmRoomData(row);
   return <><FilmRoomView data={data} /><div className="p-6 text-center"><Link className="text-sm text-white/60 underline" href={`/preview-lockers/${row.slug}`}>Back to Locker</Link></div><ConversionSurface previewId={row.id} room="film_view"/></>;
 }

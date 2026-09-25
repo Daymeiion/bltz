@@ -53,3 +53,10 @@ it("unmounts video playback when its row closes", async () => {
   await toggle(1, false);
   expect(host.querySelector("video")).toBeNull();
 });
+
+
+it("shows a video's assigned category while its editor is collapsed", async () => {
+  const video = { id: "film", title: "Interview", url: "https://example.com/film.mp4", thumb: null, level: "pro" as const };
+  await act(async () => root.render(<MediaSection title="Videos" count={1} limit={24}><MediaItem media={video} kind="video" index={0}>Editor</MediaItem></MediaSection>));
+  expect(host.querySelectorAll("summary")[1].textContent).toContain("PRO");
+});

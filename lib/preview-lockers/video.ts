@@ -1,3 +1,4 @@
+import { publicVideoLevel, type PublicVideoLevel } from "@/lib/player/public-video";
 import { normalizeYouTubeUrl } from "@/lib/player/youtube";
 
 // Preview imports commonly contain YouTube page URLs rather than video files.
@@ -11,4 +12,15 @@ export function previewVideoSource(value: string | null) {
   } catch {
     return { playbackUrl: null, embedUrl: null };
   }
+}
+
+export const previewVideoCategories = [
+  { value: "pro", label: "PRO" },
+  { value: "cfb", label: "CFB" },
+  { value: "hs", label: "HS" },
+  { value: "off-field", label: "Off the Field" },
+] as const;
+
+export function previewVideoLevel(video: { title: string; level?: PublicVideoLevel }): PublicVideoLevel {
+  return video.level ?? publicVideoLevel([video.title], null);
 }

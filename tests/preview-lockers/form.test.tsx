@@ -337,3 +337,64 @@ it("finds and fetches a provider candidate without typing a GUID", async () => {
   expect(host.textContent).toContain("Review normalized statistics");
   expect([...host.querySelectorAll("button")].find(b => b.textContent === "Approve mapping and import statistics")!.disabled).toBe(true);
 });
+
+
+it("saves and reloads the selected Film Room hero independently of Locker placement", async () => {
+  const record = { ...previewContent.parse({ slug: "hero-preview", full_name: "Hero Preview", videos: [
+    { id: "locker", title: "Locker hero", url: "https://example.com/locker.mp4", thumb: null, heroDevice: "desktop" },
+    { id: "film", title: "Featured film", url: "https://youtu.be/M7lc1UVf-VE", thumb: null },
+  ] }), id: "00000000-0000-4000-8000-000000000001", revision: 1, created_at: "", updated_at: "" };
+  await act(async () => root.render(<PreviewLockerForm record={record} />));
+  const select = host.querySelector<HTMLSelectElement>('[aria-label="Film Room hero video"]')!;
+  await act(async () => { select.value = "film"; select.dispatchEvent(new Event("change", { bubbles: true })); });
+  fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ id: record.id, slug: record.slug, revision: 2 })));
+  await click("Save draft");
+  const body = JSON.parse(fetcher.mock.calls[0][1].body);
+  expect(body.content.videos.map((video: { id: string }) => video.id)).toEqual(["film", "locker"]);
+  expect(body.content.videos[1].heroDevice).toBe("desktop");
+  await act(async () => root.render(<PreviewLockerForm key="reloaded-hero" record={{ ...record, ...body.content, revision: 2 }} />));
+  expect(host.querySelector<HTMLSelectElement>('[aria-label="Film Room hero video"]')!.value).toBe("film");
+});
+
+
+it("saves video categories, reloads them, and preserves them when selecting the hero", async () => {
+  const record = { ...previewContent.parse({ slug: "category-preview", full_name: "Category Preview", videos: [
+    { id: "one", title: "Interview", url: "https://example.com/one.mp4", thumb: null },
+    { id: "two", title: "NFL film", url: "https://example.com/two.mp4", thumb: null },
+  ] }), id: "00000000-0000-4000-8000-000000000001", revision: 1, created_at: "", updated_at: "" };
+  await act(async () => root.render(<PreviewLockerForm record={record} />));
+  const category = host.querySelector<HTMLSelectElement>('[aria-label="Video 1 category"]')!;
+  expect([...category.options].map(option => option.text)).toEqual(["PRO", "CFB", "HS", "Off the Field"]);
+  expect(category.value).toBe("off-field");
+  await act(async () => { category.value = "hs"; category.dispatchEvent(new Event("change", { bubbles: true })); });
+  const hero = host.querySelector<HTMLSelectElement>('[aria-label="Film Room hero video"]')!;
+  await act(async () => { hero.value = "two"; hero.dispatchEvent(new Event("change", { bubbles: true })); });
+  fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ id: record.id, slug: record.slug, revision: 2 })));
+  await click("Save draft");
+  const body = JSON.parse(fetcher.mock.calls[0][1].body);
+  expect(body.content.videos[1]).toMatchObject({ id: "one", level: "hs" });
+  await act(async () => root.render(<PreviewLockerForm key="category-reload" record={{ ...record, ...body.content, revision: 2 }} />));
+  expect(host.querySelector<HTMLSelectElement>('[aria-label="Video 2 category"]')!.value).toBe("hs");
+});
+
+it("saves and reloads award art and Social fields without altering existing media", async () => {
+ const record={...previewContent.parse({slug:"social-fixture",full_name:"Social Fixture",awards:[{year:"2020",label:"Honor"}],photos:[{id:"p1",title:"Trophy",url:"https://example.com/trophy.png",level:"off-field"}]}),id:"00000000-0000-4000-8000-000000000001",revision:1,created_at:"",updated_at:""};
+ await act(async()=>root.render(<PreviewLockerForm record={record} />));
+ const select=async(label:string,value:string)=>{const el=host.querySelector<HTMLSelectElement>(`[aria-label="${label}"]`)!; await act(async()=>{el.value=value;el.dispatchEvent(new Event('change',{bubbles:true}));});};
+ await select('Award 1 image','p1');
+ await click('Add short or social post');
+ await fill('Social 1 title','Career update'); await fill('Social 1 link','https://x.com/athlete/status/123');
+ await select('Social 1 platform','X'); await select('Social 1 placement','post'); await select('Social 1 image','p1');
+ await fill('Social 1 caption','A new chapter');
+ fetcher.mockResolvedValueOnce(new Response(JSON.stringify({id:record.id,slug:record.slug,revision:2})));
+ const save=[...host.querySelectorAll('button')].find(b=>b.textContent==='Save draft')!;
+ await act(async()=>save.click());
+ const payload=JSON.parse(fetcher.mock.calls[0][1].body);
+ expect(payload.content.awards[0].photoId).toBe('p1');
+ expect(payload.content.social[0]).toMatchObject({kind:'post',platform:'X',format:'square',caption:'A new chapter',photoId:'p1'});
+ expect(payload.content.photos).toEqual(record.photos);
+ await act(async()=>root.unmount()); root=createRoot(host);
+ await act(async()=>root.render(<PreviewLockerForm record={{...record,...payload.content,revision:2}} />));
+ expect(host.querySelector<HTMLSelectElement>('[aria-label="Social 1 platform"]')?.value).toBe('X');
+ expect(host.querySelector<HTMLSelectElement>('[aria-label="Award 1 image"]')?.value).toBe('p1');
+});

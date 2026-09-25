@@ -15,6 +15,6 @@ export function BuilderSection({ title, description, count, children }: {
       </span>
       <ChevronDown aria-hidden="true" className="size-5 shrink-0 group-open/builder:rotate-180" />
     </summary>
-    <div className="space-y-4 border-t p-4 sm:p-5">{children}</div>
+    <div className="min-w-0 space-y-5 border-t p-4 sm:p-5">{children}</div>
   </details>;
 }

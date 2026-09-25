@@ -27,6 +27,7 @@ export type PreviewDatabase = { public: { Tables: { preview_lockers: {
           school: string | null
           schools: Json
           slug: string
+          social: Json
           updated_at: string
           videos: Json
           weight_lbs: number | null
@@ -56,6 +57,7 @@ export type PreviewDatabase = { public: { Tables: { preview_lockers: {
           school?: string | null
           schools?: Json
           slug: string
+          social?: Json
           updated_at?: string
           videos?: Json
           weight_lbs?: number | null
@@ -85,6 +87,7 @@ export type PreviewDatabase = { public: { Tables: { preview_lockers: {
           school?: string | null
           schools?: Json
           slug?: string
+          social?: Json
           updated_at?: string
           videos?: Json
           weight_lbs?: number | null

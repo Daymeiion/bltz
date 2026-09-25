@@ -34,7 +34,7 @@ describe("YouTube playback and failure handling", () => {
   const container = document.createElement("div");
   let root: ReturnType<typeof createRoot>;
   afterEach(() => { act(() => root?.unmount()); vi.unstubAllGlobals(); });
-  async function mount(url: string) {
+  async function mount(url: string, autoPlay = false) {
     const destroy = vi.fn();
     let onError: (event: { data: number }) => void = () => {};
     vi.stubGlobal("YT", { Player: class {
@@ -42,7 +42,7 @@ describe("YouTube playback and failure handling", () => {
       destroy = destroy;
     } });
     root = createRoot(container);
-    await act(async () => root.render(<YouTubePlayer url={url} title="Film" />));
+    await act(async () => root.render(<YouTubePlayer url={url} title="Film" autoPlay={autoPlay} muted={autoPlay} />));
     return { fail: (data: number) => act(() => onError({ data })), destroy };
   }
   it("uses the official embed with origin-only referrer, native controls and required permissions", async () => {
@@ -55,12 +55,19 @@ describe("YouTube playback and failure handling", () => {
     expect(iframe.allow).toBe("accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share");
     expect(iframe.allowFullscreen).toBe(true);
     expect(container.querySelector("video")).toBeNull();
+    expect(container.querySelector("a")).toBeNull();
   });
-  it.each([2, 5, 100, 101, 150, 153])("handles YouTube error %s with the original link", async code => {
+  it("requests muted autoplay for the Film Room hero", async () => {
+    await mount(urls[0], true);
+    const params = new URL(container.querySelector("iframe")!.src).searchParams;
+    expect(params.get("autoplay")).toBe("1");
+    expect(params.get("mute")).toBe("1");
+  });
+  it.each([2, 5, 100, 101, 150, 153])("handles YouTube error %s without a duplicate external button", async code => {
     const { fail } = await mount(urls[1]);
     fail(code);
     expect(container.textContent).toContain("This video can't be played inside BLTZ.");
-    expect(container.querySelector("a")?.href).toBe(urls[1]);
+    expect(container.querySelector("a")).toBeNull();
     expect(container.querySelector("iframe")).toBeNull();
   });
   it("handles malformed IDs without loading an iframe", async () => {

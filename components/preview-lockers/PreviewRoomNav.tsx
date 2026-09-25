@@ -1,5 +1,6 @@
 "use client";
 
+import PreviewClaimButton from "./PreviewClaimButton";
 import Link from "next/link";
 import { Search } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -16,7 +17,7 @@ export default function PreviewRoomNav({ lockerHref, onSearch, athleteName, head
       <button type="button" aria-label="Search BLTZ" onClick={onSearch} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", display: "flex", alignItems: "center" }}>
         <Search size={22} color="#FFB940" strokeWidth={2.4} aria-hidden="true" />
       </button>
-      <button type="button" aria-haspopup="dialog" onClick={() => document.getElementById("preview-locker-claim-trigger")?.click()} style={{ padding: "8px 15px", borderRadius: 9999, border: "none", background: "linear-gradient(135deg,#FFB940,#F5A623,#C77D00)", color: "#0A0800", fontFamily: '"JetBrains Mono", monospace', fontWeight: 700, fontSize: 10, letterSpacing: ".1em", cursor: "pointer" }}>CLAIM</button>
+      <PreviewClaimButton />
     </div>;
   return <><header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 0 12px", position: "relative", zIndex: 6 }}>
     <Link href={lockerHref} aria-label="BLTZ Player Locker">

@@ -1,0 +1,30 @@
+/* Keep intrinsic select/file-input widths inside the preview builder's grids. */
+.form,
+.form :where(fieldset, section, details, label),
+.form :global(.grid) > * {
+  min-width: 0;
+}
+
+.form :where(input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.form select {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.form :where(label, p, summary) {
+  overflow-wrap: anywhere;
+}
+
+.form button {
+  max-width: 100%;
+  height: auto;
+  min-height: 2.5rem;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}

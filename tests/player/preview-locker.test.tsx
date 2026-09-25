@@ -15,7 +15,7 @@ vi.mock("@/lib/supabase/client", () => ({ createClient: vi.fn() }));
 
 const row = {
   slug: "preview-athlete", full_name: "Preview Athlete", school_info: null,
-  photos: [], videos: [{ id: "film", title: "Career film", thumb: null, url: "https://youtu.be/abcdefghijk" }],
+  awards: [], photos: [], videos: [{ id: "film", title: "Career film", thumb: null, url: "https://youtu.be/abcdefghijk" }],
 } as unknown as PreviewLockerRow;
 
 describe("preview Locker parity", () => {
@@ -50,17 +50,21 @@ describe("preview Locker parity", () => {
     const photoHtml = renderToStaticMarkup(<PhotoRoomView data={toPhotoRoomData(row)} />);
     const filmHtml = renderToStaticMarkup(<FilmRoomView data={toFilmRoomData(row)} />);
     for (const html of [photoHtml, filmHtml]) {
+      expect(html).toContain('aria-haspopup="dialog"');
+      expect(html).toContain('>CLAIM</button>');
       expect(html).toContain('href="/preview-lockers/preview-athlete"');
       expect(html).not.toContain('href="/player/preview-athlete');
     }
     expect(filmHtml).toContain('href="/preview-lockers/preview-athlete/videos/film"');
-    expect(filmHtml).toContain('Watch on YouTube');
+    expect(filmHtml).not.toContain('Watch on YouTube');
   });
 
   it("preserves the public route default", () => {
     const data = toLockerData(row);
     delete data.lockerHref;
-    expect(renderToStaticMarkup(<LockerView data={data} />)).toContain('href="/player/preview-athlete/videos"');
+    const html = renderToStaticMarkup(<LockerView data={data} />);
+    expect(html).toContain('href="/player/preview-athlete/videos"');
+    expect(html).not.toContain('spotify-preview-track');
   });
 
   it("keeps video detail navigation in the preview and avoids public-clearance claims", () => {
@@ -70,6 +74,7 @@ describe("preview Locker parity", () => {
     expect(html).not.toContain('href="/player/preview-athlete');
     expect(html).toContain("not cleared for publication");
     expect(html).not.toContain("verified public BLTZ archive");
+    expect(html).toContain('>CLAIM</button>');
   });
 
   it("maps missing media without adding demo content or canonical identity", () => {
@@ -85,4 +90,28 @@ describe("preview Locker parity", () => {
       expect(previewVideoSource(url)).toEqual({ playbackUrl: null, embedUrl: null });
     }
   });
+});
+
+
+it("orders shelves by career level and navigates cards to individual videos", () => {
+  const data = toFilmRoomData(row);
+  data.videos = ["hs", "cfb", "pro", "off-field"].map(level => ({ ...data.videos[0], id: level, level: level as typeof data.videos[number]["level"], title: level, embedUrl: null, provider: undefined, playbackUrl: `https://example.com/${level}.mp4` }));
+  const host = document.createElement("div");
+  host.innerHTML = renderToStaticMarkup(<FilmRoomView data={data} />);
+  expect([...host.querySelectorAll("h1")].map(node => node.textContent)).toEqual(["PRO", "CFB", "HS", "OFF THE FIELD"]);
+  for (const video of data.videos) expect(host.querySelector(`[data-gallery-id="${video.id}"]`)?.getAttribute("href")).toBe(`/preview-lockers/preview-athlete/videos/${video.id}`);
+  expect(host.querySelector('video[autoplay][muted]')).not.toBeNull();
+  data.videos = data.videos.filter(video => video.level !== "hs");
+  host.innerHTML = renderToStaticMarkup(<FilmRoomView data={data} />);
+  expect(host.querySelector("#hs-heading")).toBeNull();
+});
+it("keeps the chosen film ahead of the legacy Locker hero", () => {
+  const data = toFilmRoomData({ ...row, hero_video_url: "https://example.com/legacy.mp4" });
+  expect(data.videos.map(video => video.id)).toEqual(["film", "hero-video"]);
+});
+
+
+it.each(["pro", "cfb", "hs", "off-field"] as const)("honors the explicit %s category over title guesses", level => {
+  const film = toFilmRoomData({ ...row, videos: [{ ...row.videos[0], title: "NFL high school interview", level }] });
+  expect(film.videos[0].level).toBe(level);
 });

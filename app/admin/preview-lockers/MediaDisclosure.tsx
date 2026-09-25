@@ -4,7 +4,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import { ChevronDown, ImageIcon, Play } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { isPreviewUrl, type PreviewContent } from "@/lib/preview-lockers/validation";
-import { previewVideoSource } from "@/lib/preview-lockers/video";
+import { previewVideoSource, previewVideoCategories, previewVideoLevel } from "@/lib/preview-lockers/video";
 
 const SectionOpen = createContext(false);
 type Media = PreviewContent["photos"][number] | PreviewContent["videos"][number];
@@ -18,7 +18,7 @@ export function MediaSection({ title, count, limit, children }: { title: string;
       <span className="min-w-0 flex-1"><span className="block text-lg font-semibold">{title} <span className="ml-2 font-mono text-sm font-normal text-muted-foreground">{count}/{limit}</span></span><span className="text-sm text-muted-foreground">Expand to preview and edit</span></span>
       <ChevronDown aria-hidden="true" className="size-5 shrink-0 group-open/section:rotate-180" />
     </summary>
-    <SectionOpen.Provider value={open}><div className="space-y-3 border-t p-4 sm:p-5">{count === 0 && <p className="text-sm text-muted-foreground">No {title.toLowerCase()} yet. Add a link or upload a file below.</p>}{children}</div></SectionOpen.Provider>
+    <SectionOpen.Provider value={open}><div className="min-w-0 space-y-5 border-t p-4 sm:p-5">{count === 0 && <p className="text-sm text-muted-foreground">No {title.toLowerCase()} yet. Add a link or upload a file below.</p>}{children}</div></SectionOpen.Provider>
   </details>;
 }
 
@@ -69,7 +69,7 @@ export function MediaItem({ media, kind, index, children }: { media: Media; kind
   return <details open={open} onToggle={event => setOpen(event.currentTarget.open)} className="group/item overflow-hidden rounded-lg border open:border-[#ffbb00]/40">
     <summary className="flex min-h-20 cursor-pointer list-none items-center gap-3 p-3 hover:bg-muted/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#ffbb00] [&::-webkit-details-marker]:hidden">
       <span className="flex h-12 w-16 shrink-0 items-center justify-center overflow-hidden rounded bg-muted">{thumbnail && sectionOpen ? <MediaImage key={thumbnail} src={thumbnail} title="" className="h-full w-full object-cover" /> : <Icon aria-hidden="true" className="size-5 text-muted-foreground" />}</span>
-      <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium">{media.title || `Untitled ${kind}`}</span><span className="block truncate text-xs text-muted-foreground">{label} · {info}{"heroDevice" in media && media.heroDevice ? ` · ${media.heroDevice} hero` : ""}</span></span>
+      <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium">{media.title || `Untitled ${kind}`}</span><span className="block truncate text-xs text-muted-foreground">{label} · {info}{kind === "video" ? ` · ${previewVideoCategories.find(category => category.value === previewVideoLevel(media))?.label}` : ""}{"heroDevice" in media && media.heroDevice ? ` · ${media.heroDevice} hero` : ""}</span></span>
       <span className="hidden text-xs text-muted-foreground sm:block">{open ? "Close" : "Preview & edit"}</span><ChevronDown aria-hidden="true" className="size-4 shrink-0 group-open/item:rotate-180" />
     </summary>
     <div className="grid gap-4 border-t p-3 sm:p-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">

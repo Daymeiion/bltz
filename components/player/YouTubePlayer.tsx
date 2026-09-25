@@ -32,7 +32,7 @@ function loadAPI(): Promise<YouTubeAPI> {
   return apiPromise;
 }
 
-export function YouTubePlayer({ url, title, style, className }: { url: string; title: string; style?: CSSProperties; className?: string }) {
+export function YouTubePlayer({ url, title, style, className, autoPlay = false, muted = false }: { url: string; title: string; autoPlay?: boolean; muted?: boolean; style?: CSSProperties; className?: string }) {
   const source = normalizeYouTubeUrl(url);
   const host = useRef<HTMLDivElement>(null);
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
@@ -54,7 +54,7 @@ export function YouTubePlayer({ url, title, style, className }: { url: string; t
       setFailedUrl(url);
     };
     const iframe = document.createElement("iframe");
-    iframe.src = `${embedUrl}?enablejsapi=1&playsinline=1&origin=${encodeURIComponent(window.location.origin)}`;
+    iframe.src = `${embedUrl}?enablejsapi=1&playsinline=1&autoplay=${autoPlay ? 1 : 0}&mute=${muted ? 1 : 0}&origin=${encodeURIComponent(window.location.origin)}`;
     iframe.title = title;
     iframe.referrerPolicy = "strict-origin-when-cross-origin";
     iframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";
@@ -66,11 +66,10 @@ export function YouTubePlayer({ url, title, style, className }: { url: string; t
       if (!cancelled && !stopped) player = new api.Player(iframe, { events: { onError: fail } });
     }).catch(fail);
     return () => { cancelled = true; player?.destroy(); container.replaceChildren(); };
-  }, [embedUrl, title, url]);
+  }, [embedUrl, title, url, autoPlay, muted]);
 
   return <div className={className} style={{ background: "#000", color: "#fff", display: "flex", flexDirection: "column", ...style }}>
     <div ref={host} style={{ flex: 1, minHeight: 0, display: failed ? "none" : "block" }} />
     {failed ? <p role="status" style={{ margin: "auto", padding: 16 }}>This video can&apos;t be played inside BLTZ.</p> : null}
-    {source ? <a href={source.originalUrl} target="_blank" rel="noopener noreferrer" style={{ textAlign: "center", textDecoration: "underline", padding: 6, fontSize: 13 }}>Watch on YouTube</a> : null}
   </div>;
 }

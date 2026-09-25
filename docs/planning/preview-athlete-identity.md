@@ -50,3 +50,14 @@ Browser/mobile manual verification was not performed. The initial raw name looku
 
 ## Product direction and deferred work
 Strengthens Player Master -> Athlete Career ID -> Preview relationships and permits persistent athlete stats to use the canonical ID. This remains useful after organizational departure. Moment and Value graphs are unchanged. No DAM/provider workflow was duplicated and no generalized media-management scope was added. Deployment, live reviewed connection/import and browser verification remain pending. Provider-ID discovery from a name is outside this change.
+
+## Deployment completed — September 18, 2026
+User authorized production deployment. Built isolated release from current production commit 973e066; copied only the 11 scoped identity-fix files. Production main was fast-forwarded to f417c98ed7b073843e9f2431a365102142e5b75a. Existing unrelated local changes were preserved.
+
+Applied migration 20260918193313 to production drxtzxnwdtgxwueiqygf in a single transaction with guarded ledger baseline (61 migrations, previous maximum 20260916193000). Inserted the exact migration body in the migration ledger. Verified anon execute=false and authenticated execute=true; function enforces internal-admin authorization.
+
+Vercel deployment dpl_BY6xaXveNDD9JafiM724TsuCm6Cq reached Ready and is aliased to https://bltz.vercel.app. Deployment URL: https://bltz-fi6jglzy2-daymeiions-projects.vercel.app.
+
+Release-worktree verification: 59 targeted tests and TypeScript passed. Hosted homepage returned 200; anonymous identity API request returned 401; anonymous identity RPC returned 401/42501. Authenticated browser verification of the existing Keith Rivers preview loaded the saved master name, position, school, team, DOB and GSIS without search. Review approval was unchecked and confirmation disabled, as expected. No athlete creation, stats import, or provider quota consumption was performed. A separate verification tab was retained; the user's original editor was not reloaded or modified.
+
+No environment variable changes. New admin-only RPC is the only database addition. Remaining user step: approve the correct athlete identity, reload as prompted, then supply a Sportradar UUID if no saved mapping exists and use the existing stats review/import workflow. Mobile layout and live create/import mutations were not exercised during deployment verification.
