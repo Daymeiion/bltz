@@ -168,6 +168,13 @@ function safeExternalUrl(value: string) {
   }
 }
 
+function keepHeroVideoSilent(video: HTMLVideoElement | null) {
+  if (!video) return;
+  video.defaultMuted = true;
+  if (!video.muted) video.muted = true;
+  if (video.volume !== 0) video.volume = 0;
+}
+
 type LockerViewerMode = "public" | "athlete";
 type LockerPresentation = "page" | "embedded";
 
@@ -216,8 +223,6 @@ export default function LockerView({
   });
   const statsAnimated = useRef(false);
   const screenRef = useRef<HTMLDivElement | null>(null);
-  const heroBackdropVideoRef = useRef<HTMLVideoElement | null>(null);
-  const heroVideoRef = useRef<HTMLVideoElement | null>(null);
   const shortsScrollRef = useRef<HTMLDivElement | null>(null);
   const shortsScrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const shortModalScrollRef = useRef<HTMLDivElement | null>(null);
@@ -235,8 +240,6 @@ export default function LockerView({
   const careerGamesPrimaryRef = useRef<HTMLDivElement | null>(null);
   const shortRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const shortVideoRefs = useRef<(HTMLVideoElement | null)[]>([]);
-  const [heroPlaying, setHeroPlaying] = useState(true);
-  const [heroMuted, setHeroMuted] = useState(true);
   const showAthleteNav = viewerMode === "athlete";
   const isEmbedded = presentation === "embedded";
   const isPrivatePreview = data.lockerHref?.startsWith("/preview-lockers/") === true;
@@ -557,28 +560,6 @@ export default function LockerView({
       }
     });
   }, [activeShortIndex, mediaSort, tab]);
-
-  const toggleHeroVideo = () => {
-    const v = heroVideoRef.current;
-    if (!v) return;
-    const backdrop = heroBackdropVideoRef.current;
-    if (v.paused) {
-      void Promise.allSettled([v.play(), backdrop?.play()]);
-      setHeroPlaying(true);
-    } else {
-      v.pause();
-      backdrop?.pause();
-      setHeroPlaying(false);
-    }
-  };
-
-  const toggleHeroMute = () => {
-    const video = heroVideoRef.current;
-    if (!video) return;
-    const nextMuted = !video.muted;
-    video.muted = nextMuted;
-    setHeroMuted(nextMuted);
-  };
 
   const animateStats = () => {
     if (statsAnimated.current) return;
@@ -1008,27 +989,27 @@ export default function LockerView({
                 {heroVideoUrl ? (
                   <>
                     <video
-                      ref={heroBackdropVideoRef}
+                      ref={keepHeroVideoSilent}
                       className="locker-hero-video-backdrop"
                       src={heroVideoUrl}
                       autoPlay
                       loop
                       muted
                       playsInline
+                      onVolumeChange={(event) => keepHeroVideoSilent(event.currentTarget)}
                       aria-hidden="true"
                     />
                     <video
-                      ref={heroVideoRef}
+                      ref={keepHeroVideoSilent}
                       key={heroVideoUrl}
                       className="locker-hero-video"
                       src={heroVideoUrl}
                       autoPlay
                       loop
-                      muted={heroMuted}
+                      muted
                       playsInline
+                      onVolumeChange={(event) => keepHeroVideoSilent(event.currentTarget)}
                       onError={() => setFailedHeroVideo(heroVideoUrl)}
-                      onPlay={() => setHeroPlaying(true)}
-                      onPause={() => setHeroPlaying(false)}
                       aria-label={`${data.fullName} hero video`}
                     >
                       Your browser does not support video playback.
@@ -1093,39 +1074,6 @@ export default function LockerView({
                     <span style={{ fontFamily: mono, fontSize: 9, color: "rgba(255,255,255,.6)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginTop: 1 }}>{nowPlaying.artists}</span>
                   </span>
                 </a>
-              )}
-
-              {/* Hero playback controls */}
-              {heroVideoUrl && (
-                <div style={{ position: "absolute", top: 16, right: 16, zIndex: 6, display: "flex", flexDirection: "column", gap: 8 }}>
-                  <button
-                    type="button"
-                    onClick={toggleHeroVideo}
-                    aria-label={heroPlaying ? "Pause hero video" : "Play hero video"}
-                    style={{ width: 44, height: 44, borderRadius: 9999, border: "1px solid rgba(209,213,219,.72)", background: "rgba(11,14,26,.56)", color: "#D1D5DB", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 8px 22px rgba(0,0,0,.24)" }}
-                  >
-                    {heroPlaying ? (
-                      <span style={{ display: "flex", gap: 4, alignItems: "center", width: 14, height: 16 }}>
-                        <span style={{ width: 4, height: 16, background: "currentColor", borderRadius: 1 }} />
-                        <span style={{ width: 4, height: 16, background: "currentColor", borderRadius: 1 }} />
-                      </span>
-                    ) : (
-                      <span style={{ display: "block", width: 0, height: 0, borderLeft: "14px solid currentColor", borderTop: "9px solid transparent", borderBottom: "9px solid transparent", marginLeft: 3 }} />
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={toggleHeroMute}
-                    aria-label={heroMuted ? "Unmute hero video" : "Mute hero video"}
-                    style={{ width: 44, height: 44, borderRadius: 9999, border: "1px solid rgba(209,213,219,.72)", background: "rgba(11,14,26,.56)", color: "#D1D5DB", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 8px 22px rgba(0,0,0,.24)" }}
-                  >
-                    {heroMuted ? (
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4V5Z" /><path d="m22 9-6 6" /><path d="m16 9 6 6" /></svg>
-                    ) : (
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4V5Z" /><path d="M15.5 8.5a5 5 0 0 1 0 7" /><path d="M18.5 5.5a9 9 0 0 1 0 13" /></svg>
-                    )}
-                  </button>
-                </div>
               )}
 
               {/* Fully opaque headshot */}
@@ -1343,7 +1291,7 @@ export default function LockerView({
                   <div style={{ padding: "14px 18px 10px" }}>
                     <div style={{ borderRadius: 14, border: "1px solid #1E2640", background: "#131829", overflow: "hidden" }}>
                       <div style={{ padding: "18px 18px 16px", background: "#131829", borderBottom: "1px solid #1E2640" }}>
-                        <div style={{ fontFamily: disp, fontWeight: 800, fontSize: 18, lineHeight: 1, letterSpacing: ".02em", textTransform: "uppercase", color: lockerAccent, marginBottom: 14 }}>MEASURABLES</div>
+                        <h2 style={{ fontFamily: disp, fontWeight: 800, fontSize: 18, lineHeight: 1, letterSpacing: ".02em", textTransform: "uppercase", color: lockerAccent, textAlign: "center", margin: "0 0 14px" }}>MEASURABLES</h2>
                         <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 10 }}>
                           <div style={{ borderRadius: 12, padding: "14px 13px", background: "rgba(255,255,255,.05)", border: "1px solid rgba(255,255,255,.08)", textAlign: "center" }}>
                             <div style={{ fontFamily: disp, fontWeight: 900, fontSize: 38, lineHeight: ".85", color: "#fff" }}>{data.heightDisplay || pendingMetric}</div>
@@ -1377,7 +1325,7 @@ export default function LockerView({
                 ) : bioSort === "story" ? (
                   <div style={{ padding: "14px 18px 10px" }}>
                     <div style={{ borderRadius: 14, border: "1px solid #1E2640", background: "#131829", padding: "22px 20px 24px" }}>
-                      <div style={{ fontFamily: disp, fontWeight: 800, fontSize: 18, lineHeight: 1, letterSpacing: ".02em", textTransform: "uppercase", color: lockerAccent, marginBottom: 16 }}>THE STORY</div>
+                      <h2 style={{ fontFamily: disp, fontWeight: 800, fontSize: 18, lineHeight: 1, letterSpacing: ".02em", textTransform: "uppercase", color: lockerAccent, textAlign: "center", margin: "0 0 16px" }}>THE STORY</h2>
                       <p style={{ fontFamily: body, fontSize: 16, lineHeight: 1.72, color: "rgba(255,255,255,.82)", margin: 0, whiteSpace: "pre-line" }}>{displayStory}</p>
                     </div>
                   </div>
@@ -1425,6 +1373,7 @@ export default function LockerView({
                   </div>
                 ) : mediaSort === "shorts" ? (
                   <div style={{ padding: "14px 18px 10px" }}>
+                    <h2 style={{ fontFamily: disp, fontWeight: 800, fontSize: 18, lineHeight: 1, letterSpacing: ".02em", textTransform: "uppercase", color: lockerAccent, textAlign: "center", margin: "0 0 14px" }}>SHORTS</h2>
                     <div style={{ position: "relative" }}>
                       <div
                         className="media-inner-scroll locker-shorts-grid"
@@ -1507,6 +1456,7 @@ export default function LockerView({
                   </div>
                 ) : mediaSort === "social" ? (
                   <div style={{ padding: "14px 18px 10px" }}>
+                    <h2 style={{ fontFamily: disp, fontWeight: 800, fontSize: 18, lineHeight: 1, letterSpacing: ".02em", textTransform: "uppercase", color: lockerAccent, textAlign: "center", margin: "0 0 14px" }}>SOCIAL</h2>
                     <div style={{ position: "relative" }}>
                       <div
                         className="media-inner-scroll locker-social-scroll"

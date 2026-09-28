@@ -35,6 +35,41 @@ it("keeps private Photos navigation and bypasses public image optimization", asy
   expect(host.querySelector('img[src="https://custom.example.com/career.jpg"]')).not.toBeNull(); expect(analytics).not.toHaveBeenCalled(); expect(fetcher).not.toHaveBeenCalled();
 });
 
+it("keeps the hero video muted without playback controls and centers section headings", async () => {
+  const data = previewLockerData(record);
+  data.heroVideos = undefined;
+  data.heroVideoUrl = "https://custom.example.com/hero.mp4";
+  await act(async () => root.render(<LockerView data={data} />));
+  expect(host.querySelector('.locker-hero-video')).not.toBeNull();
+  const hero = host.querySelector<HTMLVideoElement>('.locker-hero-video')!;
+  const backdrop = host.querySelector<HTMLVideoElement>('.locker-hero-video-backdrop')!;
+  expect(hero.muted).toBe(true);
+  expect(backdrop.muted).toBe(true);
+  expect(hero.volume).toBe(0);
+  expect(backdrop.volume).toBe(0);
+  await act(async () => {
+    hero.muted = false;
+    hero.volume = 1;
+    hero.dispatchEvent(new Event("volumechange", { bubbles: true }));
+  });
+  expect(hero.muted).toBe(true);
+  expect(hero.volume).toBe(0);
+  expect(host.querySelector('button[aria-label="Pause hero video"], button[aria-label="Play hero video"], button[aria-label="Unmute hero video"], button[aria-label="Mute hero video"]')).toBeNull();
+
+  const selectFilter = async (label: string) => {
+    const button = [...host.querySelectorAll<HTMLButtonElement>('.locker-filter-pill')].find(node => node.textContent === label)!;
+    await act(async () => button.click());
+    const heading = [...host.querySelectorAll('h2')].find(node => node.textContent === (label === "STORY" ? "THE STORY" : label));
+    expect(heading?.style.textAlign).toBe("center");
+  };
+  await selectFilter("MEASURABLES");
+  await selectFilter("STORY");
+  const mediaTab = [...host.querySelectorAll<HTMLButtonElement>('button')].find(node => node.textContent?.trim() === "MEDIA")!;
+  await act(async () => mediaTab.dispatchEvent(new MouseEvent("mousedown", { button: 0, bubbles: true })));
+  await selectFilter("SHORTS");
+  await selectFilter("SOCIAL");
+});
+
 it("rotates every selected hero photo and never falls back to excluded images", async () => {
   vi.useFakeTimers();
   try {
