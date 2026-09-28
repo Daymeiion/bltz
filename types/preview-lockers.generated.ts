@@ -1,5 +1,6 @@
 // Preview table regenerated from isolated PostgreSQL information_schema by scripts/verify-preview-cfb-csv.mjs; remaining declarations retain their Supabase CLI provenance.
 // Scoped additive extract; released database.generated.ts remains unchanged.
+// The preview_locker_short_links declaration is derived from its migration pending live schema regeneration.
 import type { Json } from "./database.generated";
 export type PreviewDatabase = { public: { Tables: { preview_lockers: {
         Row: {
@@ -93,6 +94,36 @@ export type PreviewDatabase = { public: { Tables: { preview_lockers: {
           weight_lbs?: number | null
         }
         Relationships: []
+      }
+      preview_locker_short_links: {
+        Row: {
+          alias: string
+          created_at: string
+          created_by: string
+          preview_id: string
+          updated_at: string
+        }
+        Insert: {
+          alias: string
+          created_at?: string
+          created_by?: string
+          preview_id: string
+          updated_at?: string
+        }
+        Update: {
+          alias?: string
+          created_at?: string
+          created_by?: string
+          preview_id?: string
+          updated_at?: string
+        }
+        Relationships: [{
+          foreignKeyName: "preview_locker_short_links_preview_id_fkey"
+          columns: ["preview_id"]
+          isOneToOne: true
+          referencedRelation: "preview_lockers"
+          referencedColumns: ["id"]
+        }]
       }
       preview_locker_viewer_grants: {
         Row: {
