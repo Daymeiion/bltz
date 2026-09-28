@@ -1,6 +1,6 @@
 // Preview table regenerated from isolated PostgreSQL information_schema by scripts/verify-preview-cfb-csv.mjs; remaining declarations retain their Supabase CLI provenance.
 // Scoped additive extract; released database.generated.ts remains unchanged.
-// The preview_locker_short_links declaration is derived from its migration pending live schema regeneration.
+// Short-link and inquiry declarations are derived from migrations pending live schema regeneration.
 import type { Json } from "./database.generated";
 export type PreviewDatabase = { public: { Tables: { preview_lockers: {
         Row: {
@@ -101,6 +101,7 @@ export type PreviewDatabase = { public: { Tables: { preview_lockers: {
           created_at: string
           created_by: string
           preview_id: string
+          public_access_enabled: boolean
           updated_at: string
         }
         Insert: {
@@ -108,6 +109,7 @@ export type PreviewDatabase = { public: { Tables: { preview_lockers: {
           created_at?: string
           created_by?: string
           preview_id: string
+          public_access_enabled?: boolean
           updated_at?: string
         }
         Update: {
@@ -115,12 +117,46 @@ export type PreviewDatabase = { public: { Tables: { preview_lockers: {
           created_at?: string
           created_by?: string
           preview_id?: string
+          public_access_enabled?: boolean
           updated_at?: string
         }
         Relationships: [{
           foreignKeyName: "preview_locker_short_links_preview_id_fkey"
           columns: ["preview_id"]
           isOneToOne: true
+          referencedRelation: "preview_lockers"
+          referencedColumns: ["id"]
+        }]
+      }
+      preview_link_inquiries: {
+        Row: {
+          consent_at: string
+          created_at: string
+          email: string
+          feature_requests: string | null
+          id: string
+          preview_id: string
+        }
+        Insert: {
+          consent_at?: string
+          created_at?: string
+          email: string
+          feature_requests?: string | null
+          id?: string
+          preview_id: string
+        }
+        Update: {
+          consent_at?: string
+          created_at?: string
+          email?: string
+          feature_requests?: string | null
+          id?: string
+          preview_id?: string
+        }
+        Relationships: [{
+          foreignKeyName: "preview_link_inquiries_preview_id_fkey"
+          columns: ["preview_id"]
+          isOneToOne: false
           referencedRelation: "preview_lockers"
           referencedColumns: ["id"]
         }]
