@@ -24,7 +24,7 @@ export default async function PreviewLinkPage({ params, searchParams }: {
   if (previewError || linkError || inquiriesError) throw new PreviewError("preview_unavailable", 503);
   if (!preview) notFound();
 
-  async function saveLink(formData: FormData) {
+  async function publishLink(formData: FormData) {
     "use server";
     const { id: actionId } = await params;
     if (!z.uuid().safeParse(actionId).success) notFound();
@@ -32,6 +32,8 @@ export default async function PreviewLinkPage({ params, searchParams }: {
     if (typeof alias !== "string" || !validShortLinkAlias(alias)) {
       redirect(`/admin/preview-lockers/${actionId}/link?error=invalid`);
     }
+    if (formData.get("rightsConfirmed") !== "on")
+      redirect(`/admin/preview-lockers/${actionId}/link?error=rights`);
     const { client: authorizedClient } = await previewAdmin();
     const authorizedDb = authorizedClient as unknown as SupabaseClient;
     const { data: exists, error: existsError } = await authorizedClient.from("preview_lockers")
@@ -44,65 +46,75 @@ export default async function PreviewLinkPage({ params, searchParams }: {
       if (error.code === "23505") redirect(`/admin/preview-lockers/${actionId}/link?error=taken`);
       throw new PreviewError("short_link_unavailable", 503);
     }
-    redirect(`/admin/preview-lockers/${actionId}/link?saved=1`);
+    // The existing trigger records the high-risk publication change.
+    const { data, error: publishError } = await authorizedDb.from("preview_locker_short_links")
+      .update({ public_access_enabled: true }).eq("preview_id", actionId)
+      .select("preview_id").maybeSingle();
+    if (publishError || !data) throw new PreviewError("short_link_unavailable", 503);
+    redirect(`/admin/preview-lockers/${actionId}/link?access=enabled`);
   }
 
-  async function setLinkAccess(formData: FormData) {
+  async function renameLink(formData: FormData) {
     "use server";
     const { id: actionId } = await params;
     if (!z.uuid().safeParse(actionId).success) notFound();
-    const enabled = formData.get("enabled") === "true";
-    if (enabled && formData.get("rightsConfirmed") !== "on")
-      redirect(`/admin/preview-lockers/${actionId}/link?error=rights`);
+    const alias = formData.get("alias");
+    if (typeof alias !== "string" || !validShortLinkAlias(alias))
+      redirect(`/admin/preview-lockers/${actionId}/link?error=invalid`);
     const { client: authorizedClient } = await previewAdmin();
     const authorizedDb = authorizedClient as unknown as SupabaseClient;
     const { data, error } = await authorizedDb.from("preview_locker_short_links")
-      .update({ public_access_enabled: enabled }).eq("preview_id", actionId)
+      .update({ alias }).eq("preview_id", actionId).eq("public_access_enabled", true)
+      .select("preview_id").maybeSingle();
+    if (error?.code === "23505") redirect(`/admin/preview-lockers/${actionId}/link?error=taken`);
+    if (error) throw new PreviewError("short_link_unavailable", 503);
+    if (!data) notFound();
+    redirect(`/admin/preview-lockers/${actionId}/link?saved=1`);
+  }
+
+  async function unpublishLink() {
+    "use server";
+    const { id: actionId } = await params;
+    if (!z.uuid().safeParse(actionId).success) notFound();
+    const { client: authorizedClient } = await previewAdmin();
+    const authorizedDb = authorizedClient as unknown as SupabaseClient;
+    const { data, error } = await authorizedDb.from("preview_locker_short_links")
+      .update({ public_access_enabled: false }).eq("preview_id", actionId)
       .select("preview_id").maybeSingle();
     if (error) throw new PreviewError("short_link_unavailable", 503);
     if (!data) notFound();
-    redirect(`/admin/preview-lockers/${actionId}/link?access=${enabled ? "enabled" : "disabled"}`);
+    redirect(`/admin/preview-lockers/${actionId}/link?access=disabled`);
   }
 
   const status = await searchParams;
   const suggested = slugify(preview.full_name);
   const current = typeof link?.alias === "string" ? link.alias : null;
+  const published = link?.public_access_enabled === true;
   return <section className="mx-auto max-w-2xl space-y-6 p-6 sm:p-10">
     <Link href="/admin/preview-lockers" className="text-sm underline">Back to previews</Link>
     <h1 className="text-3xl font-semibold">Player invite link</h1>
-    <p className="text-slate-300">Set a short link for {preview.full_name}. You can permit link-only viewing after confirming publication rights for its current media.</p>
-    {current && <div className="rounded-lg border border-white/20 p-4">
+    <p className="text-slate-300">Publish {preview.full_name}&apos;s reviewed Preview Locker to share it without requiring a player sign-in. The Admin controls stay protected.</p>
+    {published && current ? <div className="rounded-lg border border-[#ffbb00]/50 p-4">
       <p className="text-sm text-slate-400">Share this link</p>
       <a className="break-all font-semibold text-[#ffbb00] underline" href={previewShortLink(current)}>{previewShortLink(current)}</a>
-    </div>}
+    </div> : <p role="status" className="rounded-lg border border-white/20 p-4">Unpublished draft. Its invite link cannot be opened by a visitor yet.</p>}
     {status.error === "invalid" && <p role="alert">Use 3–70 lowercase letters, numbers, or single hyphens, and avoid application routes.</p>}
     {status.error === "taken" && <p role="alert">That short link is already in use. Choose another name.</p>}
-    {status.error === "rights" && <p role="alert">Confirm publication rights before enabling link access.</p>}
-    {status.saved === "1" && <p role="status">Invite link saved.</p>}
-    {status.access === "enabled" && <p role="status">Link access enabled. Anyone with this URL can view the Locker.</p>}
-    {status.access === "disabled" && <p role="status">Link access disabled.</p>}
-    <form action={saveLink} className="space-y-4">
+    {status.error === "rights" && <p role="alert">Confirm publication rights before publishing.</p>}
+    {status.saved === "1" && <p role="status">Invite link updated.</p>}
+    {status.access === "enabled" && <p role="status">Published. Anyone with this URL can view the Locker without signing in.</p>}
+    {status.access === "disabled" && <p role="status">Unpublished. Visitor access has stopped.</p>}
+    <form action={published ? renameLink : publishLink} className="space-y-4">
       <label className="block space-y-2 text-sm font-semibold" htmlFor="alias"><span>Personalized link name</span>
         <span className="flex items-center gap-2"><span>bltz.me/</span><input id="alias" name="alias" required minLength={3} maxLength={70} pattern="[a-z0-9]+(-[a-z0-9]+)*" defaultValue={current ?? suggested} className="h-11 min-w-0 flex-1 rounded-md border border-white/20 bg-background px-3" /></span>
       </label>
-      <p className="text-sm text-slate-400">Changing a saved name will stop the old link from working. Send the new link to the player after saving.</p>
-      <button className="min-h-11 rounded-md bg-[#ffbb00] px-5 font-semibold text-black" type="submit">Save link</button>
+      {published ? <p className="text-sm text-slate-400">Changing the name stops the old invite URL from working. Send the updated link afterward.</p> : <label className="flex items-start gap-3 text-sm"><input type="checkbox" name="rightsConfirmed" required className="mt-1" /><span>I confirm BLTZ may publish this Preview Locker and its current photos and videos to anyone with the link.</span></label>}
+      <button className="min-h-11 rounded-md bg-[#ffbb00] px-5 font-semibold text-black" type="submit">{published ? "Update link name" : "Publish and create share link"}</button>
     </form>
-    {current && <form action={setLinkAccess} className="space-y-4 rounded-lg border border-white/20 p-4">
-      <h2 className="text-xl font-semibold">Link access</h2>
-      <p className="text-sm text-slate-300">{link?.public_access_enabled
-        ? "Anyone with this link can view the full Preview Locker and its media."
-        : "Only an assigned viewer or BLTZ admin can open this Locker."}</p>
-      {link?.public_access_enabled ? <>
-        <input type="hidden" name="enabled" value="false" />
-        <button type="submit" className="min-h-11 rounded-md border border-white/30 px-5">Disable link access</button>
-      </> : <>
-        <input type="hidden" name="enabled" value="true" />
-        <label className="flex items-start gap-3 text-sm"><input type="checkbox" name="rightsConfirmed" required className="mt-1" />
-          <span>I confirm BLTZ may publish this Preview Locker and its current photos and videos to anyone with the link.</span>
-        </label>
-        <button type="submit" className="min-h-11 rounded-md bg-[#ffbb00] px-5 font-semibold text-black">Enable link access</button>
-      </>}
+    {published && <form action={unpublishLink} className="space-y-4 rounded-lg border border-white/20 p-4">
+      <h2 className="text-xl font-semibold">Published access</h2>
+      <p className="text-sm text-slate-300">Anyone with the link can view this Preview Locker and its media. Unpublishing stops visitor access immediately.</p>
+      <button type="submit" className="min-h-11 rounded-md border border-white/30 px-5">Unpublish Locker</button>
     </form>}
     <section className="space-y-3" aria-label="Locker inquiries">
       <h2 className="text-xl font-semibold">Player inquiries</h2>
