@@ -30,6 +30,18 @@ function MediaImage({ src, title, className }: { src: string; title: string; cla
     : <img src={src} alt={title} loading="lazy" referrerPolicy="no-referrer" className={className} onError={() => setFailed(true)} />;
 }
 
+function StoredPhotoThumbnail({ path }: { path: string }) {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let active = true;
+    void createClient().storage.from("preview-locker-photos").createSignedUrl(path, 3600).then(({ data }) => {
+      if (active) setUrl(data?.signedUrl ?? null);
+    }).catch(() => { if (active) setUrl(null); });
+    return () => { active = false; };
+  }, [path]);
+  return url ? <MediaImage src={url} title="" className="h-full w-full object-cover" /> : <ImageIcon aria-hidden="true" className="size-5 text-muted-foreground" />;
+}
+
 function ExpandedPreview({ media, kind }: { media: Media; kind: Kind }) {
   const path = "storagePath" in media ? media.storagePath : null;
   const [signed, setSigned] = useState<string | null>(null);
@@ -58,17 +70,18 @@ function ExpandedPreview({ media, kind }: { media: Media; kind: Kind }) {
   </div>;
 }
 
-export function MediaItem({ media, kind, index, children }: { media: Media; kind: Kind; index: number; children: ReactNode }) {
+export function MediaItem({ media, kind, index, selected = false, onSelect, children }: { media: Media; kind: Kind; index: number; selected?: boolean; onSelect?: (selected: boolean) => void; children: ReactNode }) {
   const sectionOpen = useContext(SectionOpen);
   const [open, setOpen] = useState(!media.title && "url" in media && !media.url);
   const label = `${kind === "photo" ? "Photo" : "Video"} ${index + 1}`;
   const external = "url" in media ? safeUrl(media.url) : null;
   const thumbnail = kind === "photo" ? external : safeUrl("thumb" in media ? media.thumb : null);
+  const storedPhoto = kind === "photo" && "storagePath" in media ? media.storagePath : null;
   const Icon = kind === "photo" ? ImageIcon : Play;
   const info = "storagePath" in media ? "Private upload" : external ? new URL(external).hostname : "Add a media link";
-  return <details open={open} onToggle={event => setOpen(event.currentTarget.open)} className="group/item overflow-hidden rounded-lg border open:border-[#ffbb00]/40">
+  return <div className="flex items-start gap-2"><label className="flex min-h-20 shrink-0 items-center gap-2 text-sm"><input type="checkbox" aria-label={`Select ${label.toLowerCase()} ${media.title || "untitled"} for removal`} checked={selected} onChange={event => onSelect?.(event.target.checked)} className="h-5 w-5" /><span className="sr-only">Select {label.toLowerCase()} for removal</span></label><details open={open} onToggle={event => setOpen(event.currentTarget.open)} className="group/item min-w-0 flex-1 overflow-hidden rounded-lg border open:border-[#ffbb00]/40">
     <summary className="flex min-h-20 cursor-pointer list-none items-center gap-3 p-3 hover:bg-muted/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#ffbb00] [&::-webkit-details-marker]:hidden">
-      <span className="flex h-12 w-16 shrink-0 items-center justify-center overflow-hidden rounded bg-muted">{thumbnail && sectionOpen ? <MediaImage key={thumbnail} src={thumbnail} title="" className="h-full w-full object-cover" /> : <Icon aria-hidden="true" className="size-5 text-muted-foreground" />}</span>
+      <span className="flex h-12 w-16 shrink-0 items-center justify-center overflow-hidden rounded bg-muted">{sectionOpen && storedPhoto ? <StoredPhotoThumbnail path={storedPhoto} /> : thumbnail && sectionOpen ? <MediaImage key={thumbnail} src={thumbnail} title="" className="h-full w-full object-cover" /> : <Icon aria-hidden="true" className="size-5 text-muted-foreground" />}</span>
       <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium">{media.title || `Untitled ${kind}`}</span><span className="block truncate text-xs text-muted-foreground">{label} · {info}{kind === "video" ? ` · ${previewVideoCategories.find(category => category.value === previewVideoLevel(media))?.label}` : ""}{"heroDevice" in media && media.heroDevice ? ` · ${media.heroDevice} hero` : ""}</span></span>
       <span className="hidden text-xs text-muted-foreground sm:block">{open ? "Close" : "Preview & edit"}</span><ChevronDown aria-hidden="true" className="size-4 shrink-0 group-open/item:rotate-180" />
     </summary>
@@ -76,5 +89,5 @@ export function MediaItem({ media, kind, index, children }: { media: Media; kind
       {open && sectionOpen && <ExpandedPreview key={external ?? ("storagePath" in media ? media.storagePath : media.id)} media={media} kind={kind} />}
       <fieldset className="min-w-0 space-y-3"><legend className="sr-only">{label} details</legend>{children}</fieldset>
     </div>
-  </details>;
+  </details></div>;
 }

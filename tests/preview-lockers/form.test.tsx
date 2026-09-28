@@ -277,6 +277,58 @@ it("preserves media link edits across collapse and saves removal from the draft"
   expect(content.videos).toEqual([]);
 });
 
+it("skips a same-name JPEG when a draft photo already uses that title", async () => {
+  const record = { ...previewContent.parse({ slug: "duplicate-preview", full_name: "Duplicate Preview", photos: [
+    { id: "old", title: "Career Image", url: "https://example.com/career-image.html", level: "pro" },
+  ] }), id: "00000000-0000-4000-8000-000000000001", revision: 1, created_at: "", updated_at: "" };
+  await act(async () => root.render(<PreviewLockerForm record={record} />));
+  const input = host.querySelector<HTMLInputElement>('[aria-label="Upload multiple private photos"]')!;
+  Object.defineProperty(input, "files", { configurable: true, value: [new File(["jpg"], "career image.JPEG", { type: "image/jpeg" })] });
+  await act(async () => input.dispatchEvent(new Event("change", { bubbles: true })));
+  expect(host.querySelector('[role="alert"]')?.textContent).toContain("Skipped 1 same-name photo");
+  expect(fetcher).not.toHaveBeenCalled();
+});
+
+it("selects collapsed photos and videos for bulk removal and clears attached media IDs", async () => {
+  const record = { ...previewContent.parse({
+    slug: "bulk-preview", full_name: "Bulk Preview",
+    photos: [
+      { id: "p1", title: "Old HTML image", url: "https://example.com/old.html", level: "pro" },
+      { id: "p2", title: "Keep photo", url: "https://example.com/keep.jpg", level: "pro" },
+    ],
+    videos: [
+      { id: "v1", title: "Old film", url: "https://example.com/old.mp4" },
+      { id: "v2", title: "Keep film", url: "https://example.com/keep.mp4" },
+    ],
+    awards: [{ year: "2010", label: "Award", photoId: "p1" }],
+    social: [{ id: "s1", title: "Post", platform: "X", kind: "post", format: "square", sourceUrl: "https://x.com/athlete/status/123", photoId: "p1", videoId: "v1" }],
+  }), id: "00000000-0000-4000-8000-000000000001", revision: 1, created_at: "", updated_at: "" };
+  await act(async () => root.render(<PreviewLockerForm record={record} />));
+  const select = async (label: string) => {
+    const checkbox = host.querySelector<HTMLInputElement>(`[aria-label="${label}"]`)!;
+    expect(checkbox.closest("details")?.querySelector("summary")?.textContent).toMatch(/Photos|Videos/);
+    expect(checkbox.parentElement?.nextElementSibling?.nodeName).toBe("DETAILS");
+    await act(async () => checkbox.click());
+  };
+  await select("Select photo 1 Old HTML image for removal");
+  await click("Remove selected photos");
+  let dialog = document.querySelector('[role="alertdialog"]')!;
+  expect(dialog.textContent).toContain("Uploaded files are not deleted from storage");
+  await act(async () => [...dialog.querySelectorAll("button")].find(button => button.textContent === "Remove from draft")!.click());
+  await select("Select video 1 Old film for removal");
+  await click("Remove selected videos");
+  dialog = document.querySelector('[role="alertdialog"]')!;
+  await act(async () => [...dialog.querySelectorAll("button")].find(button => button.textContent === "Remove from draft")!.click());
+  fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ id: record.id, slug: record.slug, revision: 2 })));
+  await click("Save draft");
+  const content = JSON.parse(fetcher.mock.calls[0][1].body).content;
+  expect(content.photos.map((photo: { id: string }) => photo.id)).toEqual(["p2"]);
+  expect(content.videos.map((video: { id: string }) => video.id)).toEqual(["v2"]);
+  expect(content.awards[0].photoId).toBeNull();
+  expect(content.social[0].photoId).toBeNull();
+  expect(content.social[0].videoId).toBeNull();
+});
+
 it("loads the saved athlete and provider mapping without a second search", async () => {
   const id = "00000000-0000-4000-8000-000000000001";
   const record = { ...previewContent.parse({ slug: "linked-preview", full_name: "Linked Athlete" }), id, revision: 1, created_at: "", updated_at: "" };
