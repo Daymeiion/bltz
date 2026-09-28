@@ -10,12 +10,10 @@ const context = (shortLink: string) => ({ params: Promise.resolve({ shortLink })
 
 beforeEach(() => query.from.mockReset());
 
-it("redirects an assigned name to the private Vercel Locker without caching", async () => {
-  query.from.mockImplementation((table: string) => ({
-    select: () => ({ eq: () => ({ maybeSingle: async () => table === "preview_locker_short_links"
-      ? { data: { preview_id: "preview-id" }, error: null }
-      : { data: { slug: "keith-rivers-3a92b4f331f083552d05" }, error: null } }) }),
-  }));
+it("redirects a published name to the Vercel Locker without caching or sign-in", async () => {
+  query.from.mockImplementation((table: string) => table === "preview_locker_short_links"
+    ? { select: () => ({ eq: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { preview_id: "preview-id" }, error: null }) }) }) }) }
+    : { select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { slug: "keith-rivers-3a92b4f331f083552d05" }, error: null }) }) }) });
   const response = await GET(new Request("https://bltz.me/keith-rivers"), context("keith-rivers"));
   expect(response.status).toBe(307);
   expect(response.headers.get("Location")).toBe("https://bltz.vercel.app/preview-lockers/keith-rivers-3a92b4f331f083552d05");
@@ -24,8 +22,16 @@ it("redirects an assigned name to the private Vercel Locker without caching", as
 });
 
 it("does not disclose or redirect unknown names", async () => {
-  query.from.mockReturnValue({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null, error: null }) }) }) });
+  query.from.mockReturnValue({ select: () => ({ eq: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null, error: null }) }) }) }) });
   const response = await GET(new Request("https://bltz.me/unknown-player"), context("unknown-player"));
+  expect(response.status).toBe(404);
+  expect(response.headers.get("Location")).toBeNull();
+  expect(query.from).toHaveBeenCalledTimes(1);
+});
+
+it("does not redirect an unpublished alias to a sign-in page", async () => {
+  query.from.mockReturnValue({ select: () => ({ eq: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null, error: null }) }) }) }) });
+  const response = await GET(new Request("https://bltz.me/draft-player"), context("draft-player"));
   expect(response.status).toBe(404);
   expect(response.headers.get("Location")).toBeNull();
   expect(query.from).toHaveBeenCalledTimes(1);

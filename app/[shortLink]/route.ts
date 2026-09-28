@@ -13,13 +13,13 @@ export async function GET(_request: Request, context: { params: Promise<{ shortL
   if (!validShortLinkAlias(shortLink)) return new Response(null, { status: 404, headers });
   const db = createServiceClient();
   const { data: link, error: linkError } = await db.from("preview_locker_short_links")
-    .select("preview_id").eq("alias", shortLink).maybeSingle();
+    .select("preview_id").eq("alias", shortLink).eq("public_access_enabled", true).maybeSingle();
   if (linkError) return new Response(null, { status: 503, headers });
   if (!link) return new Response(null, { status: 404, headers });
   const { data: preview, error: previewError } = await db.from("preview_lockers")
     .select("slug").eq("id", link.preview_id).maybeSingle();
   if (previewError) return new Response(null, { status: 503, headers });
   if (!preview) return new Response(null, { status: 404, headers });
-  // The destination's normal viewer authorization still controls all content.
+  // Only published aliases redirect. The destination checks publication again.
   return new Response(null, { status: 307, headers: { ...headers, Location: `https://bltz.vercel.app/preview-lockers/${encodeURIComponent(preview.slug)}` } });
 }
