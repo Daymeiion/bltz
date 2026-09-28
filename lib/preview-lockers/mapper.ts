@@ -24,7 +24,7 @@ function previewHeroVideo(row: PreviewRecord | ResolvedPreviewRecord, device: "m
   return video && "url" in video ? previewVideoSource(video.url).playbackUrl : null;
 }
 
-export function previewLockerData(row: PreviewRecord | ResolvedPreviewRecord): LockerData {
+export function previewLockerData(row: PreviewRecord | ResolvedPreviewRecord, publicLink = false): LockerData {
   const branding = previewTeamBranding(row);
   const primarySchool = branding.schools[0] ?? null;
   const school = row.school ? {
@@ -51,13 +51,13 @@ export function previewLockerData(row: PreviewRecord | ResolvedPreviewRecord): L
     school,
     careerStats: [...row.career_stats].sort((a, b) => Object.keys(previewStatLabels).indexOf(a.key) - Object.keys(previewStatLabels).indexOf(b.key)).map(stat => ({ key: stat.key, label: previewStatLabels[stat.key], value: Number.isInteger(stat.value) ? stat.value : stat.value.toLocaleString("en-US", { maximumFractionDigits: 2 }) })),
     nfl: null, schools: branding.schools, proTeams: branding.proTeams, awards: previewAwards(row), social: previewSocialItems(row), videos: row.videos.filter((video): video is typeof video & { url: string } => "url" in video).map(video => ({ ...video, ...previewVideoSource("url" in video ? video.url : null) })),
-    photos: row.photos.flatMap(photo => "url" in photo ? [{ ...photo, provenance: "Private demo suggestion", licenseLabel: "PRIVATE DEMO · RIGHTS UNVERIFIED" }] : []),
+    photos: row.photos.flatMap(photo => "url" in photo ? [{ ...photo, provenance: publicLink ? "BLTZ preview" : "Private demo suggestion", licenseLabel: publicLink ? "PREVIEW LOCKER" : "PRIVATE DEMO · RIGHTS UNVERIFIED" }] : []),
   };
 }
-export function previewPhotoData(row: PreviewRecord | ResolvedPreviewRecord): PhotoRoomData {
+export function previewPhotoData(row: PreviewRecord | ResolvedPreviewRecord, publicLink = false): PhotoRoomData {
   return { athleteId: null, slug: row.slug, lockerHref: `/preview-lockers/${encodeURIComponent(row.slug)}`, athleteName: row.full_name,
     athleteHeadshotUrl: previewHeadshot(row), accentColor: "#FFB940",
-    images: row.photos.flatMap(photo => "url" in photo ? [{ ...photo, licenseLabel: "PRIVATE DEMO · RIGHTS UNVERIFIED", width: null, height: null }] : []),
+    images: row.photos.flatMap(photo => "url" in photo ? [{ ...photo, licenseLabel: publicLink ? "PREVIEW LOCKER" : "PRIVATE DEMO · RIGHTS UNVERIFIED", width: null, height: null }] : []),
   };
 }
 
