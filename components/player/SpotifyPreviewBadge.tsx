@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { VolumeX } from "lucide-react";
 import Image from "next/image";
 import styles from "./spotify-preview-badge.module.css";
 
@@ -30,7 +29,6 @@ export function SpotifyPreviewBadge() {
         </span>
         <span className={styles.bars} aria-hidden="true"><i /><i /><i /></span>
         <span className={styles.details} id="spotify-preview-track" aria-hidden={!expanded}>
-          <span className={styles.kicker}>SPOTIFY · PREVIEW</span>
           <span className={styles.track}>Game Day (sample)</span>
           <span className={styles.artist}>BLTZ Preview Artist</span>
         </span>
@@ -42,7 +40,10 @@ export function SpotifyPreviewBadge() {
         aria-label="Spotify preview is muted; audio is unavailable"
         title="Audio available when Spotify launches"
       >
-        <VolumeX size={16} strokeWidth={1.8} aria-hidden="true" />
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M3 9v6h4l5 4V5L7 9H3Z" />
+          <path d="m17.2 9.1 1.5 1.5 1.5-1.5 1.1 1.1-1.5 1.5 1.5 1.5-1.1 1.1-1.5-1.5-1.5 1.5-1.1-1.1 1.5-1.5-1.5-1.5 1.1-1.1Z" />
+        </svg>
       </button>
     </div>
   );
