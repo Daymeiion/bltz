@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { hasEnvVars } from "../utils";
 import { TEST_AUTH_COOKIE, isTestAuthEnabled } from "@/lib/onboarding/test-auth";
+import { validShortLinkAlias } from "@/lib/preview-lockers/short-link";
 
 /**
  * Auth + role-aware redirect middleware.
@@ -29,6 +30,7 @@ const CLAIM_INTENT_COOKIE = "bltz_claim_intent";
 
 export function isPublicPath(pathname: string): boolean {
   if (pathname === "/" || pathname === "/favicon.ico") return true;
+  if (pathname.startsWith("/") && validShortLinkAlias(pathname.slice(1))) return true;
   if (
     process.env.NODE_ENV === "development" &&
     (pathname === "/organization/preview" || pathname.startsWith("/organization/preview/"))
