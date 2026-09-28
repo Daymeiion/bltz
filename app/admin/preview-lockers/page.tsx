@@ -28,6 +28,7 @@ export default async function PreviewList({ searchParams }: { searchParams: Prom
       <div className="min-w-0 flex-1 basis-48"><h2 className="break-words font-semibold">{row.full_name}</h2><p className="text-sm text-slate-400">{row.school || "School not recorded"}</p></div>
       <div className="flex shrink-0 items-center gap-2" aria-label={`Actions for ${row.full_name}`}>
         <Link className={`${actionClass} gap-2 px-3`} aria-label={`Edit ${row.full_name}`} href={`/admin/preview-lockers/${row.id}/edit`}><Pencil size={16} aria-hidden="true" />Edit</Link>
+        <Link className={`${actionClass} gap-2 px-3`} href={`/admin/preview-lockers/${row.id}/link`} aria-label={`Invite link for ${row.full_name}`}>Invite link</Link>
         <Link className={actionClass} href={`/preview-lockers/${row.slug}`} aria-label={`Open Locker for ${row.full_name}`} title="Open Locker"><UserRound size={19} aria-hidden="true" /></Link>
         <Link className={actionClass} href={`/preview-lockers/${row.slug}/photos`} aria-label={`Photos for ${row.full_name}`} title="Photos"><ImageIcon size={19} aria-hidden="true" /></Link>
         <Link className={actionClass} href={`/preview-lockers/${row.slug}/videos`} aria-label={`Film Room for ${row.full_name}`} title="Film Room"><Film size={19} aria-hidden="true" /></Link>
