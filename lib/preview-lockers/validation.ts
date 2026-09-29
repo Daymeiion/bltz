@@ -72,6 +72,7 @@ export const previewContent = z.object({
   games_played: z.number().int().min(0).max(1000).nullable().default(null),
   headshot_url: asset, hero_video_url: asset,
   photo_room_banner_url: asset, photo_room_banner_link: asset,
+  photo_room_banner_storage_path: storagePath.nullable().default(null),
   bio: text(4000).default(""), athlete_quote: nullableText(600), athlete_quote_author: nullableText(160),
   schools: z.array(team).max(12).default([]), pro_teams: z.array(team).max(12).default([]),
   awards: z.array(award).max(40).default([]),
@@ -88,11 +89,13 @@ export const previewRecord = previewContent.extend({ id: z.uuid(), revision: z.n
 export type PreviewContent = z.infer<typeof previewContent>;
 export type PreviewRecord = z.infer<typeof previewRecord>;
 export type ResolvedPreviewRecord = Omit<PreviewRecord, "videos" | "photos"> & {
+  photo_room_banner_resolved_url?: string | null;
   videos: Array<z.infer<typeof previewVideo> & { url: string }>;
   photos: Array<z.infer<typeof previewPhoto> & { url: string }>;
 };
 export function previewMediaBelongsTo(recordId: string, content: PreviewContent): boolean {
-  return [...content.photos, ...content.videos].every(item => !("storagePath" in item) || item.storagePath.startsWith(`${recordId}/`));
+  return (!content.photo_room_banner_storage_path || content.photo_room_banner_storage_path.startsWith(`${recordId}/photos/`))
+    && [...content.photos, ...content.videos].every(item => !("storagePath" in item) || item.storagePath.startsWith(`${recordId}/`));
 }
 export function equivalentPreview(a: unknown, b: unknown): boolean {
   if (a === b) return true;

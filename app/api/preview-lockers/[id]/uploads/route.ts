@@ -12,7 +12,7 @@ const MIME = {
 } as const;
 type Mime = keyof typeof MIME;
 const mimeValues = Object.keys(MIME) as [Mime, ...Mime[]];
-const requestSchema = z.object({ kind: z.enum(["photo", "video"]), mimeType: z.enum(mimeValues), size: z.number().int().positive() }).strict();
+const requestSchema = z.object({ kind: z.enum(["photo", "video", "banner"]), mimeType: z.enum(mimeValues), size: z.number().int().positive() }).strict();
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -22,16 +22,16 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const parsed = requestSchema.safeParse(await readBody(req, 2048));
     if (!parsed.success) throw new PreviewError("invalid_input", 400);
     const rule = MIME[parsed.data.mimeType];
-    if (rule.kind !== parsed.data.kind || parsed.data.size > rule.max) throw new PreviewError("invalid_upload", 400);
+    if ((parsed.data.kind === "banner" ? rule.kind !== "photo" : rule.kind !== parsed.data.kind) || parsed.data.size > rule.max) throw new PreviewError("invalid_upload", 400);
     const { data: preview, error: previewError } = await client.from("preview_lockers").select("photos,videos").eq("id", id).maybeSingle();
     if (previewError) throw new PreviewError("preview_unavailable", 503);
     if (!preview) throw new PreviewError("preview_not_found", 404);
-    const media = parsed.data.kind === "photo" ? preview.photos : preview.videos;
+    const media = parsed.data.kind === "video" ? preview.videos : preview.photos;
     const currentCount = Array.isArray(media) ? media.length : 0;
-    const limit = parsed.data.kind === "photo" ? 40 : 24;
-    if (currentCount >= limit) throw new PreviewError("media_limit_reached", 409);
-    const path = `${id}/${parsed.data.kind}s/${crypto.randomUUID()}.${rule.ext}`;
-    const bucket = PREVIEW_MEDIA_BUCKETS[parsed.data.kind];
+    const limit = parsed.data.kind === "video" ? 24 : 40;
+    if (parsed.data.kind !== "banner" && currentCount >= limit) throw new PreviewError("media_limit_reached", 409);
+    const path = `${id}/${parsed.data.kind === "video" ? "videos" : "photos"}/${crypto.randomUUID()}.${rule.ext}`;
+    const bucket = PREVIEW_MEDIA_BUCKETS[parsed.data.kind === "video" ? "video" : "photo"];
     const { data, error } = await client.storage.from(bucket).createSignedUploadUrl(path);
     if (error || !data?.token) throw new PreviewError("upload_unavailable", 503);
     return json({ path, token: data.token, bucket });

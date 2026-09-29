@@ -55,9 +55,10 @@ export function previewLockerData(row: PreviewRecord | ResolvedPreviewRecord, pu
   };
 }
 export function previewPhotoData(row: PreviewRecord | ResolvedPreviewRecord, publicLink = false): PhotoRoomData {
+  const bannerImage = ("photo_room_banner_resolved_url" in row ? row.photo_room_banner_resolved_url : null) || row.photo_room_banner_url;
   return { athleteId: null, slug: row.slug, lockerHref: `/preview-lockers/${encodeURIComponent(row.slug)}`, athleteName: row.full_name,
     athleteHeadshotUrl: previewHeadshot(row), accentColor: "#FFB940",
-    adBanner: row.photo_room_banner_url && row.photo_room_banner_link ? { imageUrl: row.photo_room_banner_url, linkUrl: row.photo_room_banner_link } : null,
+    adBanner: bannerImage && row.photo_room_banner_link ? { imageUrl: bannerImage, linkUrl: row.photo_room_banner_link } : null,
     images: row.photos.flatMap(photo => "url" in photo ? [{ ...photo, licenseLabel: publicLink ? "PREVIEW LOCKER" : "PRIVATE DEMO · RIGHTS UNVERIFIED", width: null, height: null }] : []),
   };
 }

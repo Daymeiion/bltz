@@ -6,7 +6,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 
 export const PRIVATE_HEADERS = { "Cache-Control": "private, no-store", "Referrer-Policy": "no-referrer", "X-Robots-Tag": "noindex, nofollow, noarchive, noimageindex" };
 export const PREVIEW_MEDIA_BUCKETS = { photo: "preview-locker-photos", video: "preview-locker-videos" } as const;
-export const PREVIEW_COLUMNS = "id,slug,full_name,position,level,school,hometown,jersey,height_in,weight_lbs,games_played,headshot_url,hero_video_url,photo_room_banner_url,photo_room_banner_link,bio,athlete_quote,athlete_quote_author,schools,pro_teams,awards,social,career_stats,cfb_stats,videos,photos,revision,created_at,updated_at";
+export const PREVIEW_COLUMNS = "id,slug,full_name,position,level,school,hometown,jersey,height_in,weight_lbs,games_played,headshot_url,hero_video_url,photo_room_banner_url,photo_room_banner_link,photo_room_banner_storage_path,bio,athlete_quote,athlete_quote_author,schools,pro_teams,awards,social,career_stats,cfb_stats,videos,photos,revision,created_at,updated_at";
 export class PreviewError extends Error {
   constructor(public code: string, public status: number) { super(code); }
 }
@@ -59,7 +59,7 @@ export async function readBody(req: Request, limit = 128 * 1024): Promise<unknow
 }
 async function resolvePrivateMedia(client: Awaited<ReturnType<typeof createClient>>, row: PreviewRecord, publicLink = false): Promise<ResolvedPreviewRecord> {
   const groups = [
-    { bucket: PREVIEW_MEDIA_BUCKETS.photo, items: row.photos.filter((item): item is typeof item & { storagePath: string } => "storagePath" in item) },
+    { bucket: PREVIEW_MEDIA_BUCKETS.photo, items: [...row.photos.filter((item): item is typeof item & { storagePath: string } => "storagePath" in item), ...(row.photo_room_banner_storage_path ? [{ storagePath: row.photo_room_banner_storage_path }] : [])] },
     { bucket: PREVIEW_MEDIA_BUCKETS.video, items: row.videos.filter((item): item is typeof item & { storagePath: string } => "storagePath" in item) },
   ];
   const urls = new Map<string, string>();
@@ -81,12 +81,13 @@ async function resolvePrivateMedia(client: Awaited<ReturnType<typeof createClien
   }
   return {
     ...row,
+    photo_room_banner_resolved_url: row.photo_room_banner_storage_path ? urls.get(row.photo_room_banner_storage_path) : null,
     photos: row.photos.map(item => "storagePath" in item ? { ...item, url: urls.get(item.storagePath)! } : item),
     videos: row.videos.map(item => "storagePath" in item ? { ...item, url: urls.get(item.storagePath)! } : item),
   } as ResolvedPreviewRecord;
 }
 export async function assertPreviewMediaExists(client: Awaited<ReturnType<typeof createClient>>, content: PreviewContent) {
-  for (const [kind, items] of [["photo", content.photos], ["video", content.videos]] as const) {
+  for (const [kind, items] of [["photo", [...content.photos, ...(content.photo_room_banner_storage_path ? [{ storagePath: content.photo_room_banner_storage_path }] : [])]], ["video", content.videos]] as const) {
     const stored = items.filter((item): item is typeof item & { storagePath: string } => "storagePath" in item);
     if (!stored.length) continue;
     const folder = stored[0].storagePath.split("/").slice(0, -1).join("/");
