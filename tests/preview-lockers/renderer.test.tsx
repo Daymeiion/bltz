@@ -35,6 +35,19 @@ it("keeps private Photos navigation and bypasses public image optimization", asy
   expect(host.querySelector('img[src="https://custom.example.com/career.jpg"]')).not.toBeNull(); expect(analytics).not.toHaveBeenCalled(); expect(fetcher).not.toHaveBeenCalled();
 });
 
+it("opens Photo Room on All and renders an optional linked banner only when complete", async () => {
+  const data = previewPhotoData({ ...record, photos: [record.photos[0], { ...record.photos[0], id: "second", title: "School photo", level: "hs" }], photo_room_banner_url: "https://ads.example.com/banner.jpg", photo_room_banner_link: "https://brand.example.com/campaign" });
+  await act(async () => root.render(<PhotoRoomView data={data} />));
+  const filters = [...host.querySelectorAll<HTMLButtonElement>('button[aria-pressed]')];
+  expect(filters[0].textContent).toBe("ALL");
+  expect(filters[0].getAttribute("aria-pressed")).toBe("true");
+  expect(host.querySelectorAll('[aria-label="Photo grid"] button[aria-label^="View "]')).toHaveLength(2);
+  expect(host.querySelector('aside[aria-label="Advertisement"] a')?.getAttribute("href")).toBe("https://brand.example.com/campaign");
+  expect(host.querySelector('aside[aria-label="Advertisement"] img')?.getAttribute("src")).toBe("https://ads.example.com/banner.jpg");
+  await act(async () => root.render(<PhotoRoomView data={{ ...data, adBanner: null }} />));
+  expect(host.querySelector('aside[aria-label="Advertisement"]')).toBeNull();
+});
+
 it("keeps the hero video muted without playback controls and centers section headings", async () => {
   const data = previewLockerData(record);
   data.heroVideos = undefined;

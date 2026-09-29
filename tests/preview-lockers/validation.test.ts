@@ -18,6 +18,12 @@ describe("private preview validation", () => {
     expect(previewContent.safeParse({ ...draft, videos: [{ ...video, verified: true }] }).success).toBe(false);
     expect(previewContent.safeParse({ ...draft, videos: Array.from({ length: 25 }, (_, i) => ({ ...video, id: `v${i}` })) }).success).toBe(false);
   });
+  it("accepts only safe HTTPS banner and destination URLs", () => {
+    const draft = { slug: "synthetic-preview", full_name: "Synthetic Preview" };
+    expect(previewContent.safeParse({ ...draft, photo_room_banner_url: "https://ads.example.com/banner.jpg", photo_room_banner_link: "https://brand.example.com/campaign" }).success).toBe(true);
+    expect(previewContent.safeParse({ ...draft, photo_room_banner_url: "javascript:alert(1)" }).success).toBe(false);
+    expect(previewContent.safeParse({ ...draft, photo_room_banner_link: "http://brand.example.com" }).success).toBe(false);
+  });
   it("compares JSONB objects independent of key order, retaining array order", () => {
     expect(equivalentPreview([{ id: "x", title: "y" }], [{ title: "y", id: "x" }])).toBe(true);
     expect(equivalentPreview([1, 2], [2, 1])).toBe(false);

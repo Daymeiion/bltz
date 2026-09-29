@@ -173,6 +173,27 @@
   will-change: transform;
 }
 
+.adBanner {
+  width: min(100%, 70vw);
+  margin: 0 auto 16px;
+}
+
+.adBanner a {
+  display: block;
+  line-height: 0;
+}
+
+.adBanner a:focus-visible {
+  outline: 2px solid var(--photo-accent);
+  outline-offset: 4px;
+}
+
+.adBanner img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
 .library {
   position: relative;
   transform: translateZ(0);
