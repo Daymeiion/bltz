@@ -20,6 +20,7 @@ import { BuilderSection } from "./BuilderSection";
 import { previewVideoCategories, previewVideoLevel } from "@/lib/preview-lockers/video";
 import { MediaSection, MediaItem } from "./MediaDisclosure";
 import { createClient } from "@/lib/supabase/client";
+import { parseYouTubeBatch } from "@/lib/preview-lockers/youtube-bulk";
 
 const initial = () => previewContent.parse({ slug: "private-preview", full_name: "".padEnd(2, "_") });
 type Scalar = Exclude<keyof PreviewContent, "schools" | "pro_teams" | "awards" | "social" | "career_stats" | "cfb_stats" | "videos" | "photos">;
@@ -58,6 +59,7 @@ export default function PreviewLockerForm({
   const [leaveHref, setLeaveHref] = useState<string | null>(null);
   const [selectedPhotos, setSelectedPhotos] = useState<string[]>([]);
   const [selectedVideos, setSelectedVideos] = useState<string[]>([]);
+  const [youtubeBatch, setYoutubeBatch] = useState("");
   const [removalKind, setRemovalKind] = useState<"photo" | "video" | null>(null);
   const [saved, setSaved] = useState<{ id: string; slug: string; revision: number } | null>(record ?? null);
   const savedDraft = useRef(JSON.stringify(draft));
@@ -215,6 +217,27 @@ export default function PreviewLockerForm({
       setError(`${cause instanceof Error ? cause.message : "Private upload failed."}${uploaded.length ? ` ${uploaded.length} completed upload${uploaded.length === 1 ? " was" : "s were"} retained in this draft.` : ""}`);
     } finally { pending.current = false; setBusy(null); }
   }
+  async function uploadBanner(file: File | undefined) {
+    if (!file || !saved || pending.current) return;
+    pending.current = true; setBusy("upload"); setError("");
+    try {
+      const response = await fetch(`/api/preview-lockers/${saved.id}/uploads`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind: "banner", mimeType: file.type, size: file.size }) });
+      if (!response.ok) throw new Error("Banner must be a JPG, PNG, or WebP image under 10 MB.");
+      const ticket = await response.json() as { path: string; token: string; bucket: string };
+      const uploaded = await createClient().storage.from(ticket.bucket).uploadToSignedUrl(ticket.path, ticket.token, file, { contentType: file.type });
+      if (uploaded.error) throw new Error("Banner upload failed. Try again.");
+      change({ photo_room_banner_storage_path: ticket.path, photo_room_banner_url: null });
+      setMessage("Banner image uploaded privately. Add the external destination and save this draft.");
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Banner upload failed."); }
+    finally { pending.current = false; setBusy(null); }
+  }
+  function addYouTubeBatch() {
+    const result = parseYouTubeBatch(youtubeBatch, draft.videos);
+    const available = Math.max(0, 24 - draft.videos.length);
+    if (result.videos.length) change({ videos: [...draft.videos, ...result.videos.slice(0, available)] });
+    setYoutubeBatch("");
+    setMessage(`Added ${Math.min(result.videos.length, available)} YouTube link(s). ${result.invalid} invalid, ${result.duplicate} duplicate, ${result.overflow} over the 24-video limit. Edit titles and thumbnails below, then save.`);
+  }
   return <div className={`${styles.form} space-y-6`}>
     <div className="flex flex-wrap justify-end gap-3"><Button type="button" variant="outline" disabled={!!busy} onClick={()=>void save(true)}>Save draft</Button><Link href="/admin/preview-lockers" className="inline-flex min-h-11 items-center rounded-lg border px-4 text-sm font-semibold focus-visible:outline focus-visible:outline-[#ffbb00]">Close preview</Link></div>
     <AlertDialog open={leaveHref !== null} onOpenChange={open=>{if(!open)setLeaveHref(null);}}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Leave this preview?</AlertDialogTitle><AlertDialogDescription>Your unsaved changes will be discarded. The last saved preview, if any, will remain unchanged.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Stay and edit</AlertDialogCancel><AlertDialogAction onClick={()=>{if(leaveHref){allowDraftDiscard.current=true;window.location.assign(leaveHref);}}}>Discard and leave</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
@@ -257,7 +280,7 @@ export default function PreviewLockerForm({
         {saved && showStats && <div id="preview-sportradar-panel"><SportradarPanel previewId={saved.id} athleteName={draft.full_name} importDisabled={dirty || statsNeedReload} onBusyChange={value => { pending.current = value; setBusy(value ? "stats" : null); }} onImported={() => { setStatsNeedReload(true); setCompleted(false); }} /></div>}
       </section>
       <BuilderSection title="Career statistics — manual fallback" count={draft.career_stats.length} description="Use when Sportradar data is unavailable. Expand to enter sourced career totals."><p className="text-sm text-muted-foreground">Try Sportradar first. Enter these totals manually only when provider data cannot be located. Blank statistics stay pending. Manual entry does not use API quota.</p><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{previewStatKeys.map(key => { const stat = draft.career_stats.find(item => item.key === key); return <label className="grid gap-2 text-sm" key={key}>{previewStatLabels[key]}<Input aria-label={previewStatLabels[key]} type="number" min="0" max="1000000" step={key === "sacks" ? "0.5" : "1"} value={stat?.value ?? ""} onChange={event => { const value = event.target.value; change({ career_stats: value === "" ? draft.career_stats.filter(item => item.key !== key) : [...draft.career_stats.filter(item => item.key !== key), { key, value: Number(value) }] }); }} /></label>; })}</div></BuilderSection>
-      <MediaSection title="Videos" count={draft.videos.length} limit={24}><label className="grid gap-2 text-sm font-medium">Film Room hero video
+      <MediaSection title="Videos" count={draft.videos.length} limit={24}><label className="grid gap-2 text-sm font-medium">Add multiple YouTube links<Textarea aria-label="YouTube links, one per line" value={youtubeBatch} onChange={event => setYoutubeBatch(event.target.value)} placeholder="Paste one YouTube URL per line" rows={4} /></label><Button type="button" variant="outline" disabled={!youtubeBatch.trim() || draft.videos.length >= 24} onClick={addYouTubeBatch}>Add YouTube links</Button><label className="grid gap-2 text-sm font-medium">Film Room hero video
         <select aria-label="Film Room hero video" className="rounded-md border bg-background p-2" disabled={!draft.videos.length} value={draft.videos[0]?.id ?? ""} onChange={event => {
           const selected = draft.videos.find(video => video.id === event.target.value);
           if (selected) change({ videos: [selected, ...draft.videos.filter(video => video.id !== selected.id)] });
@@ -279,8 +302,10 @@ export default function PreviewLockerForm({
           <h2 id="photo-room-banner-heading" className="text-lg font-semibold">Photo Room ad banner</h2>
           <p className="text-sm text-muted-foreground">Add an image and destination link for the banner below the Photo Room hero.</p>
         </div>
-        <div className="grid gap-4 sm:grid-cols-2">{field("photo_room_banner_url", "Banner image HTTPS URL", 2048)}{field("photo_room_banner_link", "Banner destination HTTPS URL", 2048)}</div>
-        <p className="text-xs text-muted-foreground">Enter both HTTPS URLs to show the banner. It is at most 70% of the viewport width. Empty fields leave no banner space.</p>
+        <div className="grid gap-4 sm:grid-cols-2"><label className="grid gap-2 text-sm">Banner image HTTPS URL<Input aria-label="Banner image HTTPS URL" maxLength={2048} value={draft.photo_room_banner_url ?? ""} onChange={event => change({ photo_room_banner_url: event.target.value || null, ...(event.target.value ? { photo_room_banner_storage_path: null } : {}) })} /></label>{field("photo_room_banner_link", "Banner destination HTTPS URL", 2048)}</div>
+        {saved ? <label className="grid gap-2 text-sm">Or upload a local banner image<Input aria-label="Upload local banner image" type="file" accept="image/jpeg,image/png,image/webp" onChange={event => { void uploadBanner(event.target.files?.[0]); event.target.value = ""; }} /></label> : <p className="text-sm">Save this preview once before uploading a banner image.</p>}
+        {draft.photo_room_banner_storage_path && <div className="flex items-center gap-3 text-sm"><span>Private banner image selected</span><Button type="button" variant="outline" onClick={() => change({ photo_room_banner_storage_path: null })}>Remove uploaded banner</Button></div>}
+        <p className="text-xs text-muted-foreground">An image URL or local upload plus an external HTTPS destination shows the banner. It is at most 70% of the viewport width. No image leaves no banner space.</p>
       </section>
       <label className="flex items-start gap-3"><input type="checkbox" checked={reviewed} onChange={e => setReviewed(e.target.checked)} className="mt-1 h-5 w-5" />I reviewed this draft for private demo use. This is not public publication or rights verification.</label>
       <div className="flex flex-wrap gap-3"><Button type="button" variant="outline" onClick={()=>void save(true)}>Save draft</Button><Button type="button" disabled={!reviewed} onClick={()=>void save()}>{saved ? "Save changes privately" : (!saved && enroll ? "Create and enroll preview" : "Save private preview")}</Button></div><p className="text-sm text-muted-foreground">Save draft keeps your progress without enrollment or completion review. Enter a name and valid URL slug; other sections can wait. Existing assigned viewers can still see saved changes.</p>

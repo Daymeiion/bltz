@@ -50,3 +50,13 @@ it("issues one immutable private-path token after admin and record checks", asyn
   expect(body.path).toMatch(new RegExp(`^${id}/videos/[0-9a-f-]{36}\\.mp4$`));
   expect(mocks.signed).toHaveBeenCalledWith(body.path);
 });
+
+it("issues a private photo-bucket ticket for an ad image without using a gallery slot", async () => {
+  mocks.maybeSingle.mockResolvedValueOnce({ data: { photos: Array(40).fill({}), videos: [] }, error: null });
+  const response = await POST(request({ kind: "banner", mimeType: "image/png", size: 1024 }, "http://localhost"), { params: Promise.resolve({ id }) });
+  expect(response.status).toBe(200);
+  const body = await response.json();
+  expect(body).toMatchObject({ bucket: "preview-locker-photos", token: "signed-token" });
+  expect(body.path).toMatch(new RegExp(`^${id}/photos/[0-9a-f-]{36}\\.png$`));
+  expect((await POST(request({ kind: "banner", mimeType: "video/mp4", size: 1024 }, "http://localhost"), { params: Promise.resolve({ id }) })).status).toBe(400);
+});
