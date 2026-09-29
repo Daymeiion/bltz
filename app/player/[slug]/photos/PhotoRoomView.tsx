@@ -31,13 +31,15 @@ export type PhotoRoomData = {
   athleteHeadshotUrl: string;
   accentColor: string;
   images: PhotoRoomImage[];
+  adBanner?: { imageUrl: string; linkUrl: string } | null;
   totalImages?: number;
   loadMoreUrl?: string;
 };
 
-type FilterKey = "hs" | "cfb" | "pro" | "off-field";
+type FilterKey = "all" | "hs" | "cfb" | "pro" | "off-field";
 
 const FILTERS: { key: FilterKey; label: string }[] = [
+  { key: "all", label: "ALL" },
   { key: "hs", label: "HS" },
   { key: "cfb", label: "CFB" },
   { key: "pro", label: "PRO" },
@@ -58,7 +60,7 @@ export default function PhotoRoomView({ data }: { data: PhotoRoomData }) {
   const [loadingMore, setLoadingMore] = useState(false);
   const [loadMoreError, setLoadMoreError] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
-  const [activeFilter, setActiveFilter] = useState<FilterKey>("cfb");
+  const [activeFilter, setActiveFilter] = useState<FilterKey>("all");
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
@@ -86,17 +88,17 @@ export default function PhotoRoomView({ data }: { data: PhotoRoomData }) {
   const slideshowImages = images;
   const hasAnyImages = images.length > 0;
   const filteredImages = useMemo(
-    () => images.filter((image) => image.level === activeFilter),
+    () => activeFilter === "all" ? images : images.filter((image) => image.level === activeFilter),
     [activeFilter, images],
   );
   const filterCounts = useMemo(
     () =>
       FILTERS.reduce<Record<FilterKey, number>>(
         (counts, filter) => {
-          counts[filter.key] = images.filter((image) => image.level === filter.key).length;
+          counts[filter.key] = filter.key === "all" ? images.length : images.filter((image) => image.level === filter.key).length;
           return counts;
         },
-        { hs: 0, cfb: 0, pro: 0, "off-field": 0 },
+        { all: 0, hs: 0, cfb: 0, pro: 0, "off-field": 0 },
       ),
     [images],
   );
@@ -305,6 +307,13 @@ export default function PhotoRoomView({ data }: { data: PhotoRoomData }) {
           className={styles.gridStack}
           style={{ "--gallery-progress": galleryProgress } as React.CSSProperties}
         >
+          {data.adBanner?.imageUrl && data.adBanner.linkUrl ? (
+            <aside className={styles.adBanner} aria-label="Advertisement">
+              <a href={data.adBanner.linkUrl} target="_blank" rel="noopener noreferrer" aria-label="Open advertisement in a new tab">
+                <img src={data.adBanner.imageUrl} alt="Advertisement" />
+              </a>
+            </aside>
+          ) : null}
           <section className={styles.library} aria-labelledby="photos-heading">
             <div className={styles.sectionHeading}>
               <h1 id="photos-heading">PHOTOS</h1>

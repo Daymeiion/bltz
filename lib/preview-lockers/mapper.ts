@@ -57,6 +57,7 @@ export function previewLockerData(row: PreviewRecord | ResolvedPreviewRecord, pu
 export function previewPhotoData(row: PreviewRecord | ResolvedPreviewRecord, publicLink = false): PhotoRoomData {
   return { athleteId: null, slug: row.slug, lockerHref: `/preview-lockers/${encodeURIComponent(row.slug)}`, athleteName: row.full_name,
     athleteHeadshotUrl: previewHeadshot(row), accentColor: "#FFB940",
+    adBanner: row.photo_room_banner_url && row.photo_room_banner_link ? { imageUrl: row.photo_room_banner_url, linkUrl: row.photo_room_banner_link } : null,
     images: row.photos.flatMap(photo => "url" in photo ? [{ ...photo, licenseLabel: publicLink ? "PREVIEW LOCKER" : "PRIVATE DEMO · RIGHTS UNVERIFIED", width: null, height: null }] : []),
   };
 }

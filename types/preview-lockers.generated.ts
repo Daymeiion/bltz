@@ -17,6 +17,8 @@ export type PreviewDatabase = { public: { Tables: { preview_lockers: {
           headshot_url: string | null
           height_in: number | null
           hero_video_url: string | null
+          photo_room_banner_url: string | null
+          photo_room_banner_link: string | null
           hometown: string | null
           id: string
           jersey: string | null
@@ -47,6 +49,8 @@ export type PreviewDatabase = { public: { Tables: { preview_lockers: {
           headshot_url?: string | null
           height_in?: number | null
           hero_video_url?: string | null
+          photo_room_banner_url?: string | null
+          photo_room_banner_link?: string | null
           hometown?: string | null
           id?: string
           jersey?: string | null
@@ -77,6 +81,8 @@ export type PreviewDatabase = { public: { Tables: { preview_lockers: {
           headshot_url?: string | null
           height_in?: number | null
           hero_video_url?: string | null
+          photo_room_banner_url?: string | null
+          photo_room_banner_link?: string | null
           hometown?: string | null
           id?: string
           jersey?: string | null
