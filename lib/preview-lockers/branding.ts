@@ -1,4 +1,5 @@
 import { nflTeamCode, nflTeamColor, nflLogo } from "@/lib/player/locker-format";
+import { schoolHistoryName } from "@/lib/player/team-history-name";
 import type { PreviewTeamPill, PreviewSchoolInfo } from "./types";
 
 export type PreviewBrandingSource = {
@@ -23,7 +24,7 @@ export function previewTeamBranding(row: PreviewBrandingSource) {
   const info = row.school_info;
   const schools = (row.schools?.length ? row.schools : info?.name ? [{ label: info.abbr || info.name, color: info.primaryColor, logo: info.logoUrl }] : row.school ? [{ label: row.school, color: "#1A3DCC", logo: null }] : []).map(team => {
     const isPrimary = info?.name && [info.name, info.abbr, row.school].some(name => name?.trim().toLowerCase() === team.label.trim().toLowerCase());
-    return { label: shortTeamLabel(isPrimary ? info.abbr || team.label : team.label), color: brandColor(isPrimary ? info.primaryColor : team.color), logo: isPrimary ? info.logoUrl || team.logo : team.logo };
+    return { label: shortTeamLabel(isPrimary ? info.abbr || team.label : team.label), name: schoolHistoryName(team.name || (isPrimary ? info.name : team.label)), color: brandColor(isPrimary ? info.primaryColor : team.color), logo: isPrimary ? info.logoUrl || team.logo : team.logo };
   });
   const proTeams = (row.pro_teams ?? []).map(team => {
     const code = nflTeamCode(team.label);
@@ -33,7 +34,7 @@ export function previewTeamBranding(row: PreviewBrandingSource) {
   return { schools: unique(schools), proTeams: unique(proTeams) };
 }
 
-export type SchoolBrandRow = { display_name: string | null; abbreviation: string | null; primary_color: string | null; logo_url: string | null; logo_dark_url: string | null };
+export type SchoolBrandRow = { display_name: string | null; abbreviation: string | null; mascot?: string | null; primary_color: string | null; logo_url: string | null; logo_dark_url: string | null };
 const schoolKey = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, "");
 
 export function matchSchoolBrand(name: string, directory: SchoolBrandRow[]): PreviewSchoolInfo {

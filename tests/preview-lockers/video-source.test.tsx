@@ -3,10 +3,10 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { expect, it } from "vitest";
 import { PreviewVideoSource } from "@/app/preview-lockers/[slug]/videos/page";
 
-it("renders only hardened YouTube privacy embeds", () => {
+it("preserves the original YouTube URL for client playback and fallback", () => {
   const html = renderToStaticMarkup(<PreviewVideoSource video={{ id: "youtube", title: "YouTube source", url: "https://www.youtube.com/watch?v=abcdefghijk" }} />);
-  expect(html).toContain("https://www.youtube-nocookie.com/embed/abcdefghijk");
-  expect(html).toContain('sandbox="allow-scripts allow-same-origin allow-presentation"');
+  expect(html).toContain("https://www.youtube.com/watch?v=abcdefghijk");
+  expect(html).toContain("Watch on YouTube");
   expect(html).not.toContain("<video");
 });
 

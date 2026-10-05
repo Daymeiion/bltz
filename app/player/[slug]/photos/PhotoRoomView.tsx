@@ -1,5 +1,6 @@
 "use client";
 
+import { RelatedMediaStrip } from "@/components/player/RelatedMediaStrip";
 import Image from "next/image";
 import PreviewRoomNav from "@/components/preview-lockers/PreviewRoomNav";
 import Link from "next/link";
@@ -31,13 +32,15 @@ export type PhotoRoomData = {
   athleteHeadshotUrl: string;
   accentColor: string;
   images: PhotoRoomImage[];
+  adBanner?: { imageUrl: string; linkUrl: string } | null;
   totalImages?: number;
   loadMoreUrl?: string;
 };
 
-type FilterKey = "hs" | "cfb" | "pro" | "off-field";
+type FilterKey = "all" | "hs" | "cfb" | "pro" | "off-field";
 
 const FILTERS: { key: FilterKey; label: string }[] = [
+  { key: "all", label: "ALL" },
   { key: "hs", label: "HS" },
   { key: "cfb", label: "CFB" },
   { key: "pro", label: "PRO" },
@@ -58,7 +61,7 @@ export default function PhotoRoomView({ data }: { data: PhotoRoomData }) {
   const [loadingMore, setLoadingMore] = useState(false);
   const [loadMoreError, setLoadMoreError] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
-  const [activeFilter, setActiveFilter] = useState<FilterKey>("cfb");
+  const [activeFilter, setActiveFilter] = useState<FilterKey>("all");
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
@@ -70,6 +73,21 @@ export default function PhotoRoomView({ data }: { data: PhotoRoomData }) {
   const heroRef = useRef<HTMLElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
   const resumeTriggeredRef = useRef(false);
+
+  // Cached images can finish before hydration attaches onLoad. Recover their
+  // dimensions after mounting so the existing gallery never stays square.
+  useEffect(() => {
+    if (!isPrivatePreview) return;
+    const measured: Record<string, number> = {};
+    gridRef.current?.querySelectorAll<HTMLImageElement>('button[aria-label^="View "] img').forEach(image => {
+      const url = image.getAttribute("src");
+      if (url && image.complete && image.naturalWidth && image.naturalHeight) {
+        measured[url] = image.naturalWidth / image.naturalHeight;
+      }
+    });
+    setPhotoRatios(previous => Object.entries(measured).some(([url, ratio]) => previous[url] !== ratio)
+      ? { ...previous, ...measured } : previous);
+  }, [isPrivatePreview, images]);
 
   useEffect(() => {
     if (isPrivatePreview) return;
@@ -86,17 +104,17 @@ export default function PhotoRoomView({ data }: { data: PhotoRoomData }) {
   const slideshowImages = images;
   const hasAnyImages = images.length > 0;
   const filteredImages = useMemo(
-    () => images.filter((image) => image.level === activeFilter),
+    () => activeFilter === "all" ? images : images.filter((image) => image.level === activeFilter),
     [activeFilter, images],
   );
   const filterCounts = useMemo(
     () =>
       FILTERS.reduce<Record<FilterKey, number>>(
         (counts, filter) => {
-          counts[filter.key] = images.filter((image) => image.level === filter.key).length;
+          counts[filter.key] = filter.key === "all" ? images.length : images.filter((image) => image.level === filter.key).length;
           return counts;
         },
-        { hs: 0, cfb: 0, pro: 0, "off-field": 0 },
+        { all: 0, hs: 0, cfb: 0, pro: 0, "off-field": 0 },
       ),
     [images],
   );
@@ -255,7 +273,7 @@ export default function PhotoRoomView({ data }: { data: PhotoRoomData }) {
         </header>}
 
         <section ref={heroRef} className={styles.featured} aria-label="Featured photo slideshow">
-          <div className={`${styles.featuredMedia} ${!hasAnyImages ? styles.featuredMediaEmpty : ""}`}>
+          <div className={`${styles.featuredMedia} ${isPrivatePreview && hasAnyImages ? styles.featuredRelated : ""} ${!hasAnyImages ? styles.featuredMediaEmpty : ""}`}>
             {isPrivatePreview && slideshowImages[activeIndex] && <img
               src={slideshowImages[activeIndex].url}
               alt=""
@@ -297,6 +315,7 @@ export default function PhotoRoomView({ data }: { data: PhotoRoomData }) {
                 <Play aria-hidden="true" fill="currentColor" />
               </button>
             ) : null}
+            {isPrivatePreview && hasAnyImages && <RelatedMediaStrip images={images} athleteName={data.athleteName} athleteSlug={data.slug} activeImageId={slideshowImages[activeIndex]?.id} onSelect={photo => selectImage(photo.id)} onResume={!autoplayEnabled ? resumeSlideshow : undefined} />}
           </div>
         </section>
 
@@ -305,6 +324,13 @@ export default function PhotoRoomView({ data }: { data: PhotoRoomData }) {
           className={styles.gridStack}
           style={{ "--gallery-progress": galleryProgress } as React.CSSProperties}
         >
+          {data.adBanner?.imageUrl && data.adBanner.linkUrl ? (
+            <aside className={styles.adBanner} aria-label="Advertisement">
+              <a href={data.adBanner.linkUrl} target="_blank" rel="noopener noreferrer" aria-label="Open advertisement in a new tab">
+                <img src={data.adBanner.imageUrl} alt="Advertisement" />
+              </a>
+            </aside>
+          ) : null}
           <section className={styles.library} aria-labelledby="photos-heading">
             <div className={styles.sectionHeading}>
               <h1 id="photos-heading">PHOTOS</h1>
@@ -385,6 +411,9 @@ export default function PhotoRoomView({ data }: { data: PhotoRoomData }) {
                 {loadMoreError ? <span role="alert">Photos could not load. Try again.</span> : null}
               </div>
             ) : null}
+            <div className={styles.returnRow}>
+              <Link className={styles.returnButton} href={data.lockerHref ?? `/player/${data.slug}`}>Return to Locker</Link>
+            </div>
           </section>
         </div>
 

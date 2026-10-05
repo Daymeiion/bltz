@@ -43,6 +43,20 @@ describe("platform assignment authorization", () => {
       }
 
       expect(route).not.toContain("getCurrentUserProfile");
+      if (file.endsWith(join("intelligence", "route.ts"))) {
+        // Intelligence delegates to its existing server-only assignment gate.
+        // Check the whole boundary rather than only the route's helper name.
+        expect(route).toContain("await loadIntelligenceWorkspace(params)");
+        const workspace = source("lib/intelligence/workspace-server.ts");
+        const loader = workspace.slice(workspace.indexOf("export async function loadIntelligenceWorkspace"));
+        expect(loader.indexOf("await authorizeIntelligenceLab()")).toBeGreaterThanOrEqual(0);
+        expect(loader.indexOf("await authorizeIntelligenceLab()")).toBeLessThan(loader.indexOf("createServiceClient()"));
+        const gate = source("lib/intelligence/lab-server.ts");
+        expect(gate).toContain('session.auth.getUser()');
+        expect(gate).toContain('session.rpc("is_internal_admin")');
+        expect(gate).toContain('permission.data !== true');
+        continue;
+      }
       expect(route).toMatch(/getCurrentAuthorizationProfile|isInternalAdmin/);
     }
   });

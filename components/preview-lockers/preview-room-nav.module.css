@@ -1,0 +1,6 @@
+.withNavigation { display: grid !important; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; }
+.withNavigation > :last-child { justify-self: end; }
+@media (max-width: 680px) {
+  .withNavigation { grid-template-columns: minmax(0, 1fr) auto; gap: 8px 12px; }
+  .withNavigation > nav { grid-column: 1 / -1; grid-row: 2; }
+}

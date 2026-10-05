@@ -1,5 +1,10 @@
 import ConversionJourney from "./ConversionJourney";
-export default function ConversionSurface({previewId,room}:{previewId:string;room?:"view"|"photos_view"|"film_view"}) {
+import PublicPreviewClaim from "./PublicPreviewClaim";
+import { createServiceClient } from "@/lib/supabase/service";
+import { isPublicPreview } from "@/lib/preview-lockers/server";
+
+export default async function ConversionSurface({previewId,room}:{previewId:string;room?:"view"|"photos_view"|"film_view"}) {
+  if (await isPublicPreview(createServiceClient(), previewId)) return <PublicPreviewClaim previewId={previewId}/>;
   if(process.env.PREVIEW_CONVERSION_ENABLED !== "true") return null;
   let bookingUrl: string | null = null;
   try {const url = new URL(process.env.PREVIEW_BOOKING_URL || "");if(url.protocol === "https:" && !url.username && !url.password)bookingUrl=url.href;}catch{/* optional */}

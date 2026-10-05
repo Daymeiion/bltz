@@ -35,7 +35,7 @@ describe("preview team branding", () => {
       { label: "IND", color: "#1A3DCC", logo: null },
     ] } as unknown as PreviewLockerRow;
     const result = previewTeamBranding(row);
-    expect(result.schools).toEqual([{ label: "CAL", color: "#003262", logo: "/cal.png" }]);
+    expect(result.schools).toEqual([{ label: "CAL", name: "California", color: "#003262", logo: "/cal.png" }]);
     expect(result.proTeams).toEqual([{ label: "IND", color: "#002C5F", logo: nflLogo("IND") }]);
   });
 
@@ -50,7 +50,7 @@ describe("preview team branding", () => {
     const row = { school: "USC", schools: [], pro_teams: ["Cincinnati Bengals", "New York Giants", "Buffalo Bills", "Dallas Cowboys"].map(label => ({ label, color: "#152238", logo: null })) } as unknown as PreviewLockerRow;
     const client = { from: () => ({ select: () => ({ limit: async () => ({ data: [usc], error: null }) }) }) } as unknown as SupabaseClient;
     const result = previewTeamBranding(await enrichPreviewSchoolBranding(client, row));
-    expect(result.schools[0]).toEqual({ label: "USC", color: "#9d2235", logo: usc.logo_url });
+    expect(result.schools[0]).toEqual({ label: "USC", name: "USC", color: "#9d2235", logo: usc.logo_url });
     expect(result.proTeams.map(team => team.label)).toEqual(["CIN", "NYG", "BUF", "DAL"]);
     expect(result.proTeams.every(team => team.logo && team.color !== "#152238")).toBe(true);
     expect(row.schools).toEqual([]);

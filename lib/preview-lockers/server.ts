@@ -2,10 +2,11 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { previewRecord, previewSlug, type PreviewContent, type PreviewRecord, type ResolvedPreviewRecord } from "./validation";
 import { enrichPreviewSchoolBranding } from "./school-branding";
+import { createServiceClient } from "@/lib/supabase/service";
 
 export const PRIVATE_HEADERS = { "Cache-Control": "private, no-store", "Referrer-Policy": "no-referrer", "X-Robots-Tag": "noindex, nofollow, noarchive, noimageindex" };
 export const PREVIEW_MEDIA_BUCKETS = { photo: "preview-locker-photos", video: "preview-locker-videos" } as const;
-export const PREVIEW_COLUMNS = "id,slug,full_name,position,level,school,hometown,jersey,height_in,weight_lbs,games_played,headshot_url,hero_video_url,bio,athlete_quote,athlete_quote_author,schools,pro_teams,awards,career_stats,videos,photos,revision,created_at,updated_at";
+export const PREVIEW_COLUMNS = "id,slug,full_name,position,level,school,hometown,jersey,height_in,weight_lbs,games_played,headshot_url,hero_video_url,photo_room_banner_url,photo_room_banner_link,photo_room_banner_storage_path,bio,athlete_quote,athlete_quote_author,schools,pro_teams,awards,social,career_stats,cfb_stats,videos,photos,revision,created_at,updated_at";
 export class PreviewError extends Error {
   constructor(public code: string, public status: number) { super(code); }
 }
@@ -56,20 +57,20 @@ export async function readBody(req: Request, limit = 128 * 1024): Promise<unknow
   } catch (error) { if (error instanceof PreviewError) throw error; throw new PreviewError("invalid_input", 400); }
   finally { reader.releaseLock(); }
 }
-async function resolvePrivateMedia(client: Awaited<ReturnType<typeof createClient>>, row: PreviewRecord): Promise<ResolvedPreviewRecord> {
+async function resolvePrivateMedia(client: Awaited<ReturnType<typeof createClient>>, row: PreviewRecord, publicLink = false): Promise<ResolvedPreviewRecord> {
   const groups = [
-    { bucket: PREVIEW_MEDIA_BUCKETS.photo, items: row.photos.filter((item): item is typeof item & { storagePath: string } => "storagePath" in item) },
+    { bucket: PREVIEW_MEDIA_BUCKETS.photo, items: [...row.photos.filter((item): item is typeof item & { storagePath: string } => "storagePath" in item), ...(row.photo_room_banner_storage_path ? [{ storagePath: row.photo_room_banner_storage_path }] : [])] },
     { bucket: PREVIEW_MEDIA_BUCKETS.video, items: row.videos.filter((item): item is typeof item & { storagePath: string } => "storagePath" in item) },
   ];
   const urls = new Map<string, string>();
   let ttl = 900;
   if (groups.some(group => group.items.length)) {
-    const result = await client.rpc("preview_media_ttl", { p_preview: row.id });
-    if (result.error) {
+    const result = publicLink ? null : await client.rpc("preview_media_ttl", { p_preview: row.id });
+    if (result?.error) {
       // Staff can inspect drafts while the migration rolls out; viewer access must fail closed.
       const role = result.error.code === "PGRST202" ? await client.rpc("is_internal_admin") : null;
       if (role?.error || role?.data !== true) throw new PreviewError("preview_media_unavailable", 503);
-    } else ttl = Number(result.data);
+    } else if (result) ttl = Number(result.data);
     if (!Number.isFinite(ttl) || ttl < 1) throw new PreviewError("preview_expired", 403);
   }
   for (const group of groups) {
@@ -80,12 +81,13 @@ async function resolvePrivateMedia(client: Awaited<ReturnType<typeof createClien
   }
   return {
     ...row,
+    photo_room_banner_resolved_url: row.photo_room_banner_storage_path ? urls.get(row.photo_room_banner_storage_path) : null,
     photos: row.photos.map(item => "storagePath" in item ? { ...item, url: urls.get(item.storagePath)! } : item),
     videos: row.videos.map(item => "storagePath" in item ? { ...item, url: urls.get(item.storagePath)! } : item),
   } as ResolvedPreviewRecord;
 }
 export async function assertPreviewMediaExists(client: Awaited<ReturnType<typeof createClient>>, content: PreviewContent) {
-  for (const [kind, items] of [["photo", content.photos], ["video", content.videos]] as const) {
+  for (const [kind, items] of [["photo", [...content.photos, ...(content.photo_room_banner_storage_path ? [{ storagePath: content.photo_room_banner_storage_path }] : [])]], ["video", content.videos]] as const) {
     const stored = items.filter((item): item is typeof item & { storagePath: string } => "storagePath" in item);
     if (!stored.length) continue;
     const folder = stored[0].storagePath.split("/").slice(0, -1).join("/");
@@ -100,17 +102,34 @@ export async function assertPreviewMediaExists(client: Awaited<ReturnType<typeof
     if (missing.size) throw new PreviewError("invalid_media_path", 400);
   }
 }
-export async function readPrivatePreview(slug: string): Promise<ResolvedPreviewRecord | null> {
+export async function readPrivatePreview(slug: string): Promise<(ResolvedPreviewRecord & { publicLink: boolean }) | null> {
+  if (!previewSlug.safeParse(slug).success) return null;
   const authorization = await previewUser().catch(error => {
     if (error instanceof PreviewError && error.status === 401) return null;
     throw error;
   });
-  if (!authorization) return null;
-  const { client } = authorization;
-  if (!previewSlug.safeParse(slug).success) return null;
-  const { data, error } = await client.from("preview_lockers").select(PREVIEW_COLUMNS).eq("slug", slug).maybeSingle();
+  if (authorization) {
+    const { client } = authorization;
+    const { data, error } = await client.from("preview_lockers").select(PREVIEW_COLUMNS).eq("slug", slug).maybeSingle();
+    if (error) throw new PreviewError("preview_unavailable", 503);
+    if (data) {
+      const resolved = await resolvePrivateMedia(client, previewRecord.parse(data));
+      return { ...await enrichPreviewSchoolBranding(client, resolved), publicLink: false };
+    }
+  }
+  const service = createServiceClient();
+  const { data: preview, error: previewError } = await service.from("preview_lockers")
+    .select(PREVIEW_COLUMNS).eq("slug", slug).maybeSingle();
+  if (previewError) throw new PreviewError("preview_unavailable", 503);
+  if (!preview) return null;
+  if (!await isPublicPreview(service, preview.id)) return null;
+  const resolved = await resolvePrivateMedia(service, previewRecord.parse(preview), true);
+  return { ...await enrichPreviewSchoolBranding(service, resolved), publicLink: true };
+}
+
+export async function isPublicPreview(client: ReturnType<typeof createServiceClient>, previewId: string): Promise<boolean> {
+  const { data, error } = await client.from("preview_locker_short_links")
+    .select("public_access_enabled").eq("preview_id", previewId).maybeSingle();
   if (error) throw new PreviewError("preview_unavailable", 503);
-  if (!data) return null;
-  const resolved = await resolvePrivateMedia(client, previewRecord.parse(data));
-  return enrichPreviewSchoolBranding(client, resolved);
+  return data?.public_access_enabled === true;
 }

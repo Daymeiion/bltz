@@ -1,5 +1,9 @@
 "use client";
 
+import { YouTubePlayer } from "@/components/player/YouTubePlayer";
+import PreviewRoomNav from "@/components/preview-lockers/PreviewRoomNav";
+import type { SearchResult } from "@/components/ui/search-modal";
+import roomStyles from "../film-room.module.css";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -20,6 +24,7 @@ import {
   ThumbsUp,
   Volume2,
   VolumeX,
+  X,
 } from "lucide-react";
 import type { PublicVideo, PublicVideoLevel } from "@/lib/player/public-video";
 import { createClient } from "@/lib/supabase/client";
@@ -117,8 +122,53 @@ function VideoListItem({ video, lockerHref, current }: { video: PublicVideo; loc
   );
 }
 
-export default function VideoDetailView({ data }: { data: VideoDetailData }) {
+export default function VideoDetailView({ data, footer }: { data: VideoDetailData; footer?: React.ReactNode }) {
+  const isPrivatePreview = data.lockerHref?.startsWith("/preview-lockers/") === true;
   const router = useRouter();
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  useEffect(() => {
+    const query = searchQuery.trim();
+    if (!searchOpen || query.length < 2) {
+      setSearchResults([]);
+      setSearchLoading(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setSearchLoading(true);
+      try {
+        const response = await fetch(`/api/search?q=${encodeURIComponent(query)}&limit=8`, {
+          signal: controller.signal,
+        });
+        const payload = response.ok ? await response.json() : { results: [] };
+        setSearchResults(Array.isArray(payload.results) ? payload.results : []);
+      } catch (error) {
+        if ((error as Error).name !== "AbortError") setSearchResults([]);
+      } finally {
+        if (!controller.signal.aborted) setSearchLoading(false);
+      }
+    }, 250);
+
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [searchOpen, searchQuery]);
+
+  useEffect(() => {
+    if (!searchOpen) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setSearchOpen(false);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [searchOpen]);
+
+
   const [copied, setCopied] = useState(false);
   const [titleScrollDistance, setTitleScrollDistance] = useState(0);
   const [publicationScrollDistance, setPublicationScrollDistance] = useState(0);
@@ -343,25 +393,32 @@ export default function VideoDetailView({ data }: { data: VideoDetailData }) {
     handlePlayerInteraction();
   }
 
+  const navigation = (
+    <nav className={styles.headerNav} aria-label="Film navigation">
+      <Link href={data.lockerHref ?? `/player/${data.slug}`}>Back to Locker</Link>
+      <Link href={`${data.lockerHref ?? `/player/${data.slug}`}/videos`}>Film Room</Link>
+    </nav>
+  );
+
   return (
     <main className={styles.page} style={{ "--video-accent": data.accentColor } as React.CSSProperties}>
-      <header className={styles.header}>
-        <Link href={data.lockerHref ?? `/player/${data.slug}`} className={styles.brand} aria-label={`${data.athleteName} Player Locker`}>
-          <Image src="/images/bltz-mark.svg" alt="BLTZ" width={44} height={46} priority />
-        </Link>
-        <nav className={styles.headerNav} aria-label="Film navigation">
-          <Link href={data.lockerHref ?? `/player/${data.slug}`}>Locker</Link>
-          <Link href={`${data.lockerHref ?? `/player/${data.slug}`}/videos`}>Film Room</Link>
-        </nav>
-        <div className={styles.headerActions}>
-          <Link href={`${data.lockerHref ?? `/player/${data.slug}`}/videos`} className={styles.searchAction} aria-label="Browse Film Room">
-            <Search aria-hidden="true" />
-          </Link>
-          <Link href={data.lockerHref ?? `/player/${data.slug}`} className={styles.avatar} aria-label={`View ${data.athleteName}'s Locker`}>
-            <Image src={data.athleteHeadshotUrl} alt="" fill sizes="40px" />
-          </Link>
-        </div>
-      </header>
+      <div className={styles.roomHeader}>
+        {isPrivatePreview ? (
+          <PreviewRoomNav athleteName={data.athleteName} headshotUrl={data.athleteHeadshotUrl} lockerHref={data.lockerHref!} onSearch={() => setSearchOpen(true)} navigation={navigation} />
+        ) : (
+          <header className={styles.header}>
+            <Link href={`/player/${data.slug}`} className={styles.brand} aria-label="BLTZ Player Locker">
+              <Image src="/images/bltz-mark.svg" alt="BLTZ" width={38} height={39} priority />
+            </Link>
+            {navigation}
+            <div className={styles.headerActions}>
+              <button type="button" className={styles.searchAction} onClick={() => setSearchOpen(true)} aria-label="Search BLTZ"><Search aria-hidden="true" /></button>
+              <Link href={`/player/${data.slug}`} className={styles.avatar} aria-label={`View ${data.athleteName}'s locker`}><Image src={data.athleteHeadshotUrl} alt="" fill sizes="42px" /></Link>
+            </div>
+          </header>
+        )}
+
+      </div>
 
       <div className={styles.shell}>
         <nav className={styles.breadcrumbs} aria-label="Breadcrumb">
@@ -381,8 +438,8 @@ export default function VideoDetailView({ data }: { data: VideoDetailData }) {
               onMouseMove={handlePlayerInteraction}
               onPointerDown={handlePlayerInteraction}
             >
-              {data.video.embedUrl ? (
-                <iframe src={data.video.embedUrl} title={data.video.title} allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0, zIndex: 4 }} />
+              {data.video.provider === "youtube" || data.video.embedUrl ? (
+                <YouTubePlayer key={data.video.id} url={data.video.originalUrl ?? data.video.embedUrl!} title={data.video.title} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0, zIndex: 4 }} />
               ) : data.video.playbackUrl ? (
                 <video
                   ref={videoRef}
@@ -621,6 +678,50 @@ export default function VideoDetailView({ data }: { data: VideoDetailData }) {
           </aside>
         </div>
       </div>
+        {searchOpen && (
+          <div className={roomStyles.searchOverlay} role="dialog" aria-modal="true" aria-label="Search BLTZ">
+            <button
+              type="button"
+              className={roomStyles.searchBackdrop}
+              onClick={() => setSearchOpen(false)}
+              aria-hidden="true"
+              tabIndex={-1}
+            />
+            <div className={roomStyles.searchPanel}>
+              <div className={roomStyles.searchTitle}>
+                <strong>SEARCH BLTZ</strong>
+                <button type="button" onClick={() => setSearchOpen(false)} aria-label="Close search"><X aria-hidden="true" /></button>
+              </div>
+              <div className={roomStyles.searchForm}>
+                <Search aria-hidden="true" />
+                <input
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  autoFocus
+                  placeholder="Players, schools, teams"
+                  aria-label="Search players, schools, and teams"
+                />
+              </div>
+              <div className={roomStyles.searchResults} aria-live="polite">
+                {searchLoading ? <span className={roomStyles.searchMessage}>SEARCHING...</span> : null}
+                {!searchLoading && searchQuery.trim().length >= 2 && searchResults.length === 0 ? (
+                  <span className={roomStyles.searchMessage}>NO RESULTS FOUND</span>
+                ) : null}
+                {searchResults.map((result) => (
+                  <Link key={`${result.type}-${result.id}`} href={result.type === "team" ? `/team/${result.slug}` : result.type === "school" ? `/school/${result.slug}` : `/player/${result.slug}`} onClick={() => setSearchOpen(false)}>
+                    <span className={roomStyles.resultAvatar}>
+                      {result.image_url || result.logo_url ? (
+                        <Image src={result.image_url || result.logo_url || ""} alt="" fill sizes="34px" />
+                      ) : result.name.slice(0, 1).toUpperCase()}
+                    </span>
+                    <span><strong>{result.name}</strong><small>{result.type}</small></span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      {footer}
     </main>
   );
 }

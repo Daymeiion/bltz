@@ -18,6 +18,12 @@ describe("private preview validation", () => {
     expect(previewContent.safeParse({ ...draft, videos: [{ ...video, verified: true }] }).success).toBe(false);
     expect(previewContent.safeParse({ ...draft, videos: Array.from({ length: 25 }, (_, i) => ({ ...video, id: `v${i}` })) }).success).toBe(false);
   });
+  it("accepts only safe HTTPS banner and destination URLs", () => {
+    const draft = { slug: "synthetic-preview", full_name: "Synthetic Preview" };
+    expect(previewContent.safeParse({ ...draft, photo_room_banner_url: "https://ads.example.com/banner.jpg", photo_room_banner_link: "https://brand.example.com/campaign" }).success).toBe(true);
+    expect(previewContent.safeParse({ ...draft, photo_room_banner_url: "javascript:alert(1)" }).success).toBe(false);
+    expect(previewContent.safeParse({ ...draft, photo_room_banner_link: "http://brand.example.com" }).success).toBe(false);
+  });
   it("compares JSONB objects independent of key order, retaining array order", () => {
     expect(equivalentPreview([{ id: "x", title: "y" }], [{ title: "y", id: "x" }])).toBe(true);
     expect(equivalentPreview([1, 2], [2, 1])).toBe(false);
@@ -37,7 +43,7 @@ describe("private preview validation", () => {
     }
   });
   it("only embeds exact supported YouTube hosts", () => {
-    expect(youtubeEmbed("https://youtu.be/abcdefghijk")).toBe("https://www.youtube-nocookie.com/embed/abcdefghijk");
+    expect(youtubeEmbed("https://youtu.be/abcdefghijk")).toBe("https://www.youtube.com/embed/abcdefghijk");
     expect(youtubeEmbed("https://youtube.com.evil.com/watch?v=abcdefghijk")).toBeNull();
   });
   it("enforces origin, content type and actual streamed byte limits", async () => {
@@ -48,4 +54,13 @@ describe("private preview validation", () => {
     await expect(readBody(request("not-json"))).rejects.toMatchObject({ status: 400 });
     await expect(readBody(request("{}", { origin: "http://127.0.0.1:3127", host: "127.0.0.1:3127" }))).resolves.toEqual({});
   });
+});
+
+
+it.each(["pro", "cfb", "hs", "off-field"])("round-trips %s for linked and uploaded videos", level => {
+  for (const source of [{ url: "https://example.com/film.mp4" }, { storagePath: "00000000-0000-4000-8000-000000000001/videos/00000000-0000-4000-8000-000000000002.mp4", mimeType: "video/mp4" }]) {
+    const draft = previewContent.parse({ slug: "film-categories", full_name: "Film Categories", videos: [{ id: "one", title: "Film", thumb: null, level, ...source }] });
+    expect(draft.videos[0].level).toBe(level);
+    expect(previewContent.safeParse({ ...draft, videos: [{ ...draft.videos[0], level: "unknown" }] }).success).toBe(false);
+  }
 });

@@ -12,6 +12,8 @@ describe("isPublicPath", () => {
     expect(isPublicPath("/_next/static/foo.js")).toBe(true);
     expect(isPublicPath("/player/daymeion-hughes")).toBe(true);
     expect(isPublicPath("/preview-lockers/demo-player")).toBe(true);
+    expect(isPublicPath("/keith-rivers")).toBe(true);
+    expect(isPublicPath("/unknown-player")).toBe(true);
   });
 
   it("treats application routes as private outside development preview mode", () => {
@@ -20,6 +22,8 @@ describe("isPublicPath", () => {
     expect(isPublicPath("/onboarding/loader")).toBe(false);
     expect(isPublicPath("/organization/preview")).toBe(false);
     expect(isPublicPath("/organization/preview/media")).toBe(false);
+    expect(isPublicPath("/keith-rivers/videos")).toBe(false);
+    expect(isPublicPath("/admin")).toBe(false);
   });
 
   it("allows the complete CRM preview tree in development only", () => {

@@ -3,16 +3,17 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { PREVIEW_PHOTO_PAGE_SIZE, resolvePreviewPhotos } from "@/lib/preview-lockers/photos";
 import type { PreviewPhoto } from "@/lib/preview-lockers/types";
+import { isPublicPreview } from "@/lib/preview-lockers/server";
 
 export const runtime = "nodejs";
 
 export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
   const session = await createClient();
   const { data: { user } } = await session.auth.getUser();
-  if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-
-  const { data: isAdmin, error: authError } = await session.rpc("is_internal_admin");
-  if (authError || isAdmin !== true) return NextResponse.json({ error: "not_found" }, { status: 404 });
+  const { data: isAdmin, error: authError } = user
+    ? await session.rpc("is_internal_admin")
+    : { data: false, error: null };
+  if (authError) return NextResponse.json({ error: "not_found" }, { status: 404 });
 
   const { id: slug } = await context.params;
   const offsetParam = new URL(request.url).searchParams.get("offset");
@@ -20,12 +21,15 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
   const supabase = createServiceClient();
   const { data, error } = await supabase
     .from("preview_lockers")
-    .select("photos")
+    .select("id,photos")
     .eq("slug", slug)
     .maybeSingle();
 
   if (error) return NextResponse.json({ error: "could_not_load" }, { status: 500 });
   if (!data) return NextResponse.json({ error: "not_found" }, { status: 404 });
+  const publicLink = await isPublicPreview(supabase, data.id);
+  if (isAdmin !== true && !publicLink)
+    return NextResponse.json({ error: "not_found" }, { status: 404 });
 
   try {
     const page = await resolvePreviewPhotos(supabase, data.photos as PreviewPhoto[], {
@@ -42,7 +46,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
         sourceUrl: photo.sourceUrl,
         level: photo.level,
         season: photo.season,
-        licenseLabel: "PREVIEW ONLY — NOT FOR PUBLICATION",
+        licenseLabel: publicLink ? "PREVIEW LOCKER" : "PREVIEW ONLY — NOT FOR PUBLICATION",
         width: null,
         height: null,
       })),

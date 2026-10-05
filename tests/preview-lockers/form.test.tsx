@@ -10,6 +10,40 @@ beforeEach(() => { host = document.createElement("div"); document.body.append(ho
 afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.unstubAllGlobals(); });
 async function fill(label: string, value: string) { const input = host.querySelector<HTMLInputElement | HTMLTextAreaElement>(`[aria-label="${label}"]`)!; await act(async () => { Object.getOwnPropertyDescriptor(input.tagName === "TEXTAREA" ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype, "value")!.set!.call(input, value); input.dispatchEvent(new Event("input", { bubbles: true })); }); }
 async function click(text: string) { const button = [...host.querySelectorAll("button")].find(b => b.textContent === text)!; expect(button).toBeTruthy(); await act(async () => button.click()); }
+it("reviews a college CSV, saves only to the private preview, and reloads the import", async () => {
+  const record = { ...previewContent.parse({ slug: "synthetic-preview", full_name: "Synthetic Preview" }), id: "00000000-0000-4000-8000-000000000001", revision: 3, created_at: "", updated_at: "" };
+  await act(async () => root.render(<PreviewLockerForm record={record} />));
+  await fill("Player source URL", "https://www.sports-reference.com/cfb/players/fixture-player-1.html");
+  await fill("College statistics CSV", "Year,School,G,Solo,Ast,Tot,Sk\n2007,Fixture University,12,20,10,30,2.5");
+  await click("Read CSV columns"); await click("Review college statistics");
+  const add = [...host.querySelectorAll("button")].find(button => button.textContent === "Add reviewed statistics to draft")!;
+  expect(add.disabled).toBe(true);
+  const section = [...host.querySelectorAll('details')].find(item => item.querySelector('summary')?.textContent?.startsWith('Import college statistics'))!;
+  await act(async () => section.querySelector<HTMLInputElement>('input[type="checkbox"]')!.click());
+  await click("Add reviewed statistics to draft");
+  expect(fetcher).not.toHaveBeenCalled();
+  fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ id: record.id, slug: record.slug, revision: 4 })));
+  await click("Save draft");
+  expect(fetcher.mock.calls[0][0]).toBe(`/api/preview-lockers/${record.id}`);
+  const body = JSON.parse(fetcher.mock.calls[0][1].body);
+  expect(body.revision).toBe(3);
+  expect(body.content.cfb_stats[0].seasons[0].statistics.sacks).toBe(2.5);
+  expect(body.content).not.toHaveProperty("player_id");
+  await act(async () => root.render(<PreviewLockerForm key="reload" record={{ ...record, ...body.content, revision: 4 }} />));
+  expect(host.textContent).toContain("defense · 1 season/team rows");
+});
+it("loads a local CSV file without uploading it to an external service", async () => {
+  await act(async () => root.render(<PreviewLockerForm />));
+  const input = host.querySelector<HTMLInputElement>('[aria-label="Upload college CSV"]')!;
+  const text = "Season,Team,G,Sk\n2007,Fixture,12,2.5";
+  const file = new File([text], "college.csv", { type: "text/csv" });
+  Object.defineProperty(input, "files", { configurable: true, value: [file] });
+  await act(async () => { input.dispatchEvent(new Event("change", { bubbles: true })); });
+  expect(host.querySelector<HTMLTextAreaElement>('[aria-label="College statistics CSV"]')!.value).toBe(text);
+  expect(fetcher).not.toHaveBeenCalled();
+  await click("Read CSV columns");
+  expect(host.querySelector('[aria-label="Map column 4: Sk"]')).not.toBeNull();
+});
 it("retains manually entered biography and photo when discovery returns manual fallback", async () => {
   await act(async () => root.render(<PreviewLockerForm />));
   await fill("Full name", "Synthetic Preview"); await fill("Biography", "Manual biography"); await click("Add photo"); await fill("Photo 1 title", "Manual photo"); await fill("Photo 1 url", "https://example.com/manual.jpg");
@@ -171,4 +205,248 @@ it("retains draft edits when saving fails and still validates media", async () =
   const unload = new Event("beforeunload", { cancelable: true });
   window.dispatchEvent(unload);
   expect(unload.defaultPrevented).toBe(true);
+});
+
+it("opens stats-only tools above career totals without scraping or replacing the draft", async () => {
+  const record = { ...previewContent.parse({ slug: "synthetic-preview", full_name: "Synthetic Preview", bio: "Keep biography", career_stats: [{ key: "tackles", value: 42 }], awards: [{ year: "2007", label: "Keep award" }] }), id: "00000000-0000-4000-8000-000000000001", revision: 3, created_at: "", updated_at: "" };
+  await act(async () => root.render(<PreviewLockerForm record={record} />));
+  await fill("Biography", "Keep unsaved biography");
+  fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ player: null, linked: false })));
+  await click("Pull Sportradar stats only");
+  expect(fetcher.mock.calls[0][0]).toContain("?previewId=");
+  expect(host.textContent!.indexOf("Sportradar statistics")).toBeLessThan(host.textContent!.indexOf("Career statistics"));
+  fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ players: [] })));
+  await click("Search BLTZ");
+  expect(fetcher.mock.calls[1][0]).toContain("/api/admin/sportradar?q=");
+  expect(host.querySelector<HTMLTextAreaElement>('[aria-label="Biography"]')!.value).toBe("Keep unsaved biography");
+  expect(host.querySelector<HTMLInputElement>('[aria-label="TACKLES"]')!.value).toBe("42");
+  expect(host.querySelector<HTMLInputElement>('[aria-label="Award 1 label"]')!.value).toBe("Keep award");
+  expect(host.textContent).toContain("Save any unsaved builder changes before importing");
+});
+it("requires a saved preview before offering stats import", async () => {
+  await act(async () => root.render(<PreviewLockerForm />));
+  expect([...host.querySelectorAll("button")].find(b => b.textContent === "Pull Sportradar stats only")!.disabled).toBe(true);
+  expect(fetcher).not.toHaveBeenCalled();
+});
+
+it("imports only reviewed Sportradar statistics and requires reload without saving stale content", async () => {
+  const id = "00000000-0000-4000-8000-000000000001";
+  const record = { ...previewContent.parse({ slug: "synthetic-preview", full_name: "Synthetic Preview", bio: "Keep biography" }), id, revision: 3, created_at: "", updated_at: "" };
+  await act(async () => root.render(<PreviewLockerForm record={record} />));
+  fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ player: null, linked: false })));
+  await click("Pull Sportradar stats only");
+  fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ players: [{ id, full_name: "Synthetic Preview", school: "USC" }] })));
+  await click("Search BLTZ");
+  fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ mappings: [{ league: "nfl", provider_player_id: id }], ingestions: [] })));
+  await act(async () => { await vi.waitFor(() => expect(host.querySelector("ul button")).not.toBeNull()); });
+  await act(async () => host.querySelector<HTMLButtonElement>("ul button")!.click());
+  fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ id, status: "MANUAL_REVIEW", normalized: {}, player: { id, full_name: "Synthetic Preview" }, fetched_at: "2026-09-16" })));
+  fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ successful: 1 })));
+  await click("Fetch / use cached profile API quota if uncached");
+  const approval = [...host.querySelectorAll("label")].find(l => l.textContent?.includes("I verified this profile"))!.querySelector<HTMLInputElement>("input")!;
+  await act(async () => approval.click());
+  fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ status: "IMPORTED" })));
+  fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ successful: 1 })));
+  await click("Approve mapping and import statistics");
+  const writes = fetcher.mock.calls.filter(call => call[1]?.method === "POST");
+  expect(writes.map(call => JSON.parse(call[1].body).action)).toEqual(["preview", "import"]);
+  expect(writes.every(call => call[0] === "/api/admin/sportradar")).toBe(true);
+  expect(host.querySelector<HTMLTextAreaElement>('[aria-label="Biography"]')!.value).toBe("Keep biography");
+  expect(host.textContent).toContain("Reload the saved version before editing");
+  expect(host.querySelector("fieldset")!.disabled).toBe(true);
+});
+
+
+it("preserves media link edits across collapse and saves removal from the draft", async () => {
+  const record = { ...previewContent.parse({ slug: "media-fixture", full_name: "Media Fixture", photos: [{ id: "photo-1", title: "Career photo", url: "https://example.com/old.jpg", level: "pro" }], videos: [{ id: "video-1", title: "Highlight", url: "https://example.com/film.mp4" }] }), id: "00000000-0000-4000-8000-000000000001", revision: 3, created_at: "", updated_at: "" };
+  await act(async () => root.render(<PreviewLockerForm record={record} />));
+  const input = host.querySelector<HTMLInputElement>('[aria-label="Photo 1 url"]')!;
+  const row = input.closest("details")!;
+  const section = row.parentElement!.closest("details")!;
+  await act(async () => { section.open = true; section.dispatchEvent(new Event("toggle")); row.open = true; row.dispatchEvent(new Event("toggle")); });
+  await fill("Photo 1 url", "https://example.com/new.jpg");
+  await act(async () => { row.open = false; row.dispatchEvent(new Event("toggle")); });
+  await act(async () => { row.open = true; row.dispatchEvent(new Event("toggle")); });
+  expect(input.value).toBe("https://example.com/new.jpg");
+  expect(row.querySelector('img[alt="Career photo"]')?.getAttribute("src")).toBe("https://example.com/new.jpg");
+  await click("Remove video from draft");
+  fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ id: record.id, slug: record.slug, revision: 4 })));
+  await click("Save draft");
+  const content = JSON.parse(fetcher.mock.calls[0][1].body).content;
+  expect(content.photos[0].url).toBe("https://example.com/new.jpg");
+  expect(content.videos).toEqual([]);
+});
+
+it("skips a same-name JPEG when a draft photo already uses that title", async () => {
+  const record = { ...previewContent.parse({ slug: "duplicate-preview", full_name: "Duplicate Preview", photos: [
+    { id: "old", title: "Career Image", url: "https://example.com/career-image.html", level: "pro" },
+  ] }), id: "00000000-0000-4000-8000-000000000001", revision: 1, created_at: "", updated_at: "" };
+  await act(async () => root.render(<PreviewLockerForm record={record} />));
+  const input = host.querySelector<HTMLInputElement>('[aria-label="Upload multiple private photos"]')!;
+  Object.defineProperty(input, "files", { configurable: true, value: [new File(["jpg"], "career image.JPEG", { type: "image/jpeg" })] });
+  await act(async () => input.dispatchEvent(new Event("change", { bubbles: true })));
+  expect(host.querySelector('[role="alert"]')?.textContent).toContain("Skipped 1 same-name photo");
+  expect(fetcher).not.toHaveBeenCalled();
+});
+
+it("selects collapsed photos and videos for bulk removal and clears attached media IDs", async () => {
+  const record = { ...previewContent.parse({
+    slug: "bulk-preview", full_name: "Bulk Preview",
+    photos: [
+      { id: "p1", title: "Old HTML image", url: "https://example.com/old.html", level: "pro" },
+      { id: "p2", title: "Keep photo", url: "https://example.com/keep.jpg", level: "pro" },
+    ],
+    videos: [
+      { id: "v1", title: "Old film", url: "https://example.com/old.mp4" },
+      { id: "v2", title: "Keep film", url: "https://example.com/keep.mp4" },
+    ],
+    awards: [{ year: "2010", label: "Award", photoId: "p1" }],
+    social: [{ id: "s1", title: "Post", platform: "X", kind: "post", format: "square", sourceUrl: "https://x.com/athlete/status/123", photoId: "p1", videoId: "v1" }],
+  }), id: "00000000-0000-4000-8000-000000000001", revision: 1, created_at: "", updated_at: "" };
+  await act(async () => root.render(<PreviewLockerForm record={record} />));
+  const select = async (label: string) => {
+    const checkbox = host.querySelector<HTMLInputElement>(`[aria-label="${label}"]`)!;
+    expect(checkbox.closest("details")?.querySelector("summary")?.textContent).toMatch(/Photos|Videos/);
+    expect(checkbox.parentElement?.nextElementSibling?.nodeName).toBe("DETAILS");
+    await act(async () => checkbox.click());
+  };
+  await select("Select photo 1 Old HTML image for removal");
+  await click("Remove selected photos");
+  let dialog = document.querySelector('[role="alertdialog"]')!;
+  expect(dialog.textContent).toContain("Uploaded files are not deleted from storage");
+  await act(async () => [...dialog.querySelectorAll("button")].find(button => button.textContent === "Remove from draft")!.click());
+  await select("Select video 1 Old film for removal");
+  await click("Remove selected videos");
+  dialog = document.querySelector('[role="alertdialog"]')!;
+  await act(async () => [...dialog.querySelectorAll("button")].find(button => button.textContent === "Remove from draft")!.click());
+  fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ id: record.id, slug: record.slug, revision: 2 })));
+  await click("Save draft");
+  const content = JSON.parse(fetcher.mock.calls[0][1].body).content;
+  expect(content.photos.map((photo: { id: string }) => photo.id)).toEqual(["p2"]);
+  expect(content.videos.map((video: { id: string }) => video.id)).toEqual(["v2"]);
+  expect(content.awards[0].photoId).toBeNull();
+  expect(content.social[0].photoId).toBeNull();
+  expect(content.social[0].videoId).toBeNull();
+});
+
+it("loads the saved athlete and provider mapping without a second search", async () => {
+  const id = "00000000-0000-4000-8000-000000000001";
+  const record = { ...previewContent.parse({ slug: "linked-preview", full_name: "Linked Athlete" }), id, revision: 1, created_at: "", updated_at: "" };
+  fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ linked: true, player: { id, full_name: "Linked Athlete" }, mappings: [{ league: "nfl", provider_player_id: id }] })));
+  await act(async () => root.render(<PreviewLockerForm record={record} />));
+  await click("Pull Sportradar stats only");
+  expect(fetcher.mock.calls[0][0]).toBe("/api/admin/sportradar?previewId=" + id);
+  expect(host.textContent).not.toContain("Search BLTZ");
+  expect([...host.querySelectorAll("button")].find(b => b.textContent === "Fetch / use cached profile API quota if uncached")!.disabled).toBe(false);
+});
+it("shows an actionable failure and retries the saved athlete lookup", async () => {
+  const id = "00000000-0000-4000-8000-000000000001";
+  const record = { ...previewContent.parse({ slug: "linked-preview", full_name: "Linked Athlete" }), id, revision: 1, created_at: "", updated_at: "" };
+  fetcher.mockRejectedValueOnce(new DOMException("timeout", "TimeoutError"));
+  await act(async () => root.render(<PreviewLockerForm record={record} />));
+  await click("Pull Sportradar stats only");
+  expect(host.textContent).toContain("request timed out");
+  expect(host.textContent).not.toContain("Search BLTZ");
+  fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ linked: true, player: { id, full_name: "Linked Athlete" }, mappings: [] })));
+  await click("Retry athlete lookup");
+  expect(host.textContent).toContain("No saved Sportradar mapping");
+  expect([...host.querySelectorAll("button")].find(b => b.textContent === "Fetch / use cached profile API quota if uncached")!.disabled).toBe(true);
+});
+
+it("requires review before creating the linked master identity and then unlocks provider controls", async () => {
+  const id = "00000000-0000-4000-8000-000000000001";
+  const record = { ...previewContent.parse({ slug: "master-preview", full_name: "Master Athlete" }), id, revision: 1, created_at: "", updated_at: "" };
+  fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ linked: true, player: null, master: { gsis_id: "GSIS", display_name: "Master Athlete" }, candidates: [] })));
+  await act(async () => root.render(<PreviewLockerForm record={record} />));
+  await click("Pull Sportradar stats only");
+  expect([...host.querySelectorAll("button")].find(b => b.textContent === "Confirm athlete identity")!.disabled).toBe(true);
+  const approval = [...host.querySelectorAll("label")].find(l => l.textContent?.includes("I reviewed this athlete"))!.querySelector<HTMLInputElement>("input")!;
+  await act(async () => approval.click());
+  fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ playerId: id })));
+  fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ linked: true, player: { id, full_name: "Master Athlete" }, mappings: [] })));
+  await click("Confirm athlete identity");
+  const write=fetcher.mock.calls.find(call => call[1]?.method === "POST")!;
+  expect(JSON.parse(write[1].body)).toEqual({ action: "link_identity", previewId: id, gsisId: "GSIS", existingPlayerId: null, approved: true });
+  expect(host.textContent).toContain("Fetch / use cached profile API quota if uncached");
+  expect(host.textContent).not.toContain("Search BLTZ");
+});
+
+it("finds and fetches a provider candidate without typing a GUID", async () => {
+  const id = "00000000-0000-4000-8000-000000000001";
+  const provider = "00000000-0000-4000-8000-000000000002";
+  const record = { ...previewContent.parse({ slug: "search-preview", full_name: "Keith Rivers" }), id, revision: 1, created_at: "", updated_at: "" };
+  fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ linked: true, player: { id, full_name: "Keith Rivers" }, mappings: [] })));
+  await act(async () => root.render(<PreviewLockerForm record={record} />));
+  await click("Pull Sportradar stats only");
+  fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ candidates: [{ id: provider, name: "Keith Rivers", position: "OLB", team: "Buffalo Bills", season: 2014 }], team: "BUF", season: 2014, message: "Select a match" })));
+  await click("Find player on Sportradar API quota if uncached");
+  expect(JSON.parse(fetcher.mock.calls[1][1].body)).toEqual({ action: "search_provider", playerId: id, name: "Keith Rivers" });
+  fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ id, status: "MANUAL_REVIEW", normalized: {}, player: { id, full_name: "Keith Rivers" }, fetched_at: "2026-09-18" })));
+  fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ successful: 1 })));
+  await click("Review Keith Rivers · OLB · Buffalo Bills · 2014 API quota if uncached");
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 1300)); });
+  expect(JSON.parse(fetcher.mock.calls[2][1].body)).toMatchObject({ action: "preview", providerId: provider });
+  expect(host.textContent).toContain("Review normalized statistics");
+  expect([...host.querySelectorAll("button")].find(b => b.textContent === "Approve mapping and import statistics")!.disabled).toBe(true);
+});
+
+
+it("saves and reloads the selected Film Room hero independently of Locker placement", async () => {
+  const record = { ...previewContent.parse({ slug: "hero-preview", full_name: "Hero Preview", videos: [
+    { id: "locker", title: "Locker hero", url: "https://example.com/locker.mp4", thumb: null, heroDevice: "desktop" },
+    { id: "film", title: "Featured film", url: "https://youtu.be/M7lc1UVf-VE", thumb: null },
+  ] }), id: "00000000-0000-4000-8000-000000000001", revision: 1, created_at: "", updated_at: "" };
+  await act(async () => root.render(<PreviewLockerForm record={record} />));
+  const select = host.querySelector<HTMLSelectElement>('[aria-label="Film Room hero video"]')!;
+  await act(async () => { select.value = "film"; select.dispatchEvent(new Event("change", { bubbles: true })); });
+  fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ id: record.id, slug: record.slug, revision: 2 })));
+  await click("Save draft");
+  const body = JSON.parse(fetcher.mock.calls[0][1].body);
+  expect(body.content.videos.map((video: { id: string }) => video.id)).toEqual(["film", "locker"]);
+  expect(body.content.videos[1].heroDevice).toBe("desktop");
+  await act(async () => root.render(<PreviewLockerForm key="reloaded-hero" record={{ ...record, ...body.content, revision: 2 }} />));
+  expect(host.querySelector<HTMLSelectElement>('[aria-label="Film Room hero video"]')!.value).toBe("film");
+});
+
+
+it("saves video categories, reloads them, and preserves them when selecting the hero", async () => {
+  const record = { ...previewContent.parse({ slug: "category-preview", full_name: "Category Preview", videos: [
+    { id: "one", title: "Interview", url: "https://example.com/one.mp4", thumb: null },
+    { id: "two", title: "NFL film", url: "https://example.com/two.mp4", thumb: null },
+  ] }), id: "00000000-0000-4000-8000-000000000001", revision: 1, created_at: "", updated_at: "" };
+  await act(async () => root.render(<PreviewLockerForm record={record} />));
+  const category = host.querySelector<HTMLSelectElement>('[aria-label="Video 1 category"]')!;
+  expect([...category.options].map(option => option.text)).toEqual(["PRO", "CFB", "HS", "Off the Field"]);
+  expect(category.value).toBe("off-field");
+  await act(async () => { category.value = "hs"; category.dispatchEvent(new Event("change", { bubbles: true })); });
+  const hero = host.querySelector<HTMLSelectElement>('[aria-label="Film Room hero video"]')!;
+  await act(async () => { hero.value = "two"; hero.dispatchEvent(new Event("change", { bubbles: true })); });
+  fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ id: record.id, slug: record.slug, revision: 2 })));
+  await click("Save draft");
+  const body = JSON.parse(fetcher.mock.calls[0][1].body);
+  expect(body.content.videos[1]).toMatchObject({ id: "one", level: "hs" });
+  await act(async () => root.render(<PreviewLockerForm key="category-reload" record={{ ...record, ...body.content, revision: 2 }} />));
+  expect(host.querySelector<HTMLSelectElement>('[aria-label="Video 2 category"]')!.value).toBe("hs");
+});
+
+it("saves and reloads award art and Social fields without altering existing media", async () => {
+ const record={...previewContent.parse({slug:"social-fixture",full_name:"Social Fixture",awards:[{year:"2020",label:"Honor"}],photos:[{id:"p1",title:"Trophy",url:"https://example.com/trophy.png",level:"off-field"}]}),id:"00000000-0000-4000-8000-000000000001",revision:1,created_at:"",updated_at:""};
+ await act(async()=>root.render(<PreviewLockerForm record={record} />));
+ const select=async(label:string,value:string)=>{const el=host.querySelector<HTMLSelectElement>(`[aria-label="${label}"]`)!; await act(async()=>{el.value=value;el.dispatchEvent(new Event('change',{bubbles:true}));});};
+ await select('Award 1 image','p1');
+ await click('Add short or social post');
+ await fill('Social 1 title','Career update'); await fill('Social 1 link','https://x.com/athlete/status/123');
+ await select('Social 1 platform','X'); await select('Social 1 placement','post'); await select('Social 1 image','p1');
+ await fill('Social 1 caption','A new chapter');
+ fetcher.mockResolvedValueOnce(new Response(JSON.stringify({id:record.id,slug:record.slug,revision:2})));
+ const save=[...host.querySelectorAll('button')].find(b=>b.textContent==='Save draft')!;
+ await act(async()=>save.click());
+ const payload=JSON.parse(fetcher.mock.calls[0][1].body);
+ expect(payload.content.awards[0].photoId).toBe('p1');
+ expect(payload.content.social[0]).toMatchObject({kind:'post',platform:'X',format:'square',caption:'A new chapter',photoId:'p1'});
+ expect(payload.content.photos).toEqual(record.photos);
+ await act(async()=>root.unmount()); root=createRoot(host);
+ await act(async()=>root.render(<PreviewLockerForm record={{...record,...payload.content,revision:2}} />));
+ expect(host.querySelector<HTMLSelectElement>('[aria-label="Social 1 platform"]')?.value).toBe('X');
+ expect(host.querySelector<HTMLSelectElement>('[aria-label="Award 1 image"]')?.value).toBe('p1');
 });

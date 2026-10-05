@@ -33,10 +33,20 @@ describe("preview media route boundaries", () => {
   });
 
   it("renders an existing preview video with preview navigation and no canonical write target", async () => {
-    mocks.maybeSingle.mockResolvedValue({ data: { slug: "preview", full_name: "Athlete", videos: [{ id: "film", title: "Film", url: null, thumb: null }] }, error: null });
+    mocks.maybeSingle.mockResolvedValue({ data: { id: "preview-id", slug: "preview", full_name: "Athlete", videos: [{ id: "film", title: "Film", url: null, thumb: null }] }, error: null });
     const result = await PreviewVideoPage({ params });
     expect(result.props.data.lockerHref).toBe("/preview-lockers/preview");
     expect(result.props.data.playerId).toBeNull();
     expect(result.props.data.video.id).toBe("film");
+    expect(result.props.footer.props).toMatchObject({ previewId: "preview-id", room: "film_view" });
   });
+});
+
+
+it("opens resolved private uploads and the legacy hero using the same preview reader", async () => {
+  mocks.maybeSingle.mockResolvedValue({ data: { slug: "preview", full_name: "Athlete", hero_video_url: "https://example.com/legacy.mp4", videos: [{ id: "upload", title: "Uploaded film", url: "https://example.com/private.mp4?token=signed", thumb: null, storagePath: "private/videos/upload.mp4" }] }, error: null });
+  const upload = await PreviewVideoPage({ params: Promise.resolve({ slug: "preview", videoId: "upload" }) });
+  expect(upload.props.data.video.playbackUrl).toBe("https://example.com/private.mp4?token=signed");
+  const hero = await PreviewVideoPage({ params: Promise.resolve({ slug: "preview", videoId: "hero-video" }) });
+  expect(hero.props.data.video.playbackUrl).toBe("https://example.com/legacy.mp4");
 });

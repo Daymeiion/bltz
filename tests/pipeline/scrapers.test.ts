@@ -22,12 +22,12 @@ describe("scrapeYouTube", () => {
     globalThis.fetch = originalFetch;
   });
 
-  it("extracts watch URLs from ytInitialData-style HTML", async () => {
-    const html = `
-      <html>{"videoId":"abcDEF12345","other":"stuff"}
-      {"videoId":"xyz9876_QrS","more":"data"}
-      {"videoId":"abcDEF12345"} <!-- duplicate, should be deduped -->
-      </html>`;
+    it("keeps only titled video results containing the player's full name", async () => {
+      const render = (videoId: string, title: string) => JSON.stringify({ videoRenderer: { videoId, title: { runs: [{ text: title }] } } });
+      const html = `<html>${render("abcDEF12345", "Daymeion Hughes California highlights")}
+        ${render("xyz9876_QrS", "Hughes California highlights")}
+        ${render("n0match1234", "California football highlights")}
+        ${render("abcDEF12345", "Daymeion Hughes interview")}</html>`;
     globalThis.fetch = vi.fn(async () =>
       new Response(html, { status: 200, headers: { "content-type": "text/html" } }),
     ) as unknown as typeof fetch;
@@ -37,7 +37,6 @@ describe("scrapeYouTube", () => {
     if (!result.ok) return;
     expect(result.facts?.youtube_urls).toEqual([
       "https://www.youtube.com/watch?v=abcDEF12345",
-      "https://www.youtube.com/watch?v=xyz9876_QrS",
     ]);
   });
 

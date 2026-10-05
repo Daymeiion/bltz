@@ -1,5 +1,6 @@
 "use client";
 
+import { YouTubePlayer } from "@/components/player/YouTubePlayer";
 import Image from "next/image";
 import PreviewRoomNav from "@/components/preview-lockers/PreviewRoomNav";
 import Link from "next/link";
@@ -43,22 +44,21 @@ function yearRange(videos: FilmRoomVideo[]): string {
 
 function FilmCard({
   video,
-  active,
+  href,
   focused,
   onSelect,
 }: {
   video: FilmRoomVideo;
-  active: boolean;
+  href: string;
   focused: boolean;
   onSelect: () => void;
 }) {
   return (
-    <button
-      type="button"
+    <Link
+      href={href}
       className={`${styles.filmCard} ${focused ? styles.filmCardFocused : ""}`}
       onClick={onSelect}
       aria-label={`Play ${video.title}`}
-      aria-pressed={active}
       data-gallery-id={video.id}
     >
       <span className={styles.cardVisual}>
@@ -71,17 +71,17 @@ function FilmCard({
         <strong>{video.title}</strong>
         <span>{video.season ?? "SEASON FILM"} · {video.sourceLabel}</span>
       </span>
-    </button>
+    </Link>
   );
 }
 
 function FilmShelf({
   videos,
-  selectedId,
+  lockerHref,
   onSelect,
 }: {
   videos: FilmRoomVideo[];
-  selectedId: string | null;
+  lockerHref: string;
   onSelect: (id: string) => void;
 }) {
   const rowRef = useRef<HTMLDivElement>(null);
@@ -154,7 +154,7 @@ function FilmShelf({
           <FilmCard
             key={video.id}
             video={video}
-            active={video.id === selectedId}
+            href={`${lockerHref}/videos/${encodeURIComponent(video.id)}`}
             focused={video.id === focusedId}
             onSelect={() => {
               setFocusedId(video.id);
@@ -172,10 +172,9 @@ function FilmShelf({
 
 export default function FilmRoomView({ data }: { data: FilmRoomData }) {
   const isPrivatePreview = data.lockerHref?.startsWith("/preview-lockers/") === true;
-  const [selectedId, setSelectedId] = useState(data.videos[0]?.id ?? null);
   const [playing, setPlaying] = useState(false);
   const [controlsVisible, setControlsVisible] = useState(true);
-  const [muted, setMuted] = useState(false);
+  const [muted, setMuted] = useState(true);
   const [progress, setProgress] = useState(0);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -200,7 +199,8 @@ export default function FilmRoomView({ data }: { data: FilmRoomData }) {
   const pointerInteractionRef = useRef(false);
   const [scrollOverlayOpacity, setScrollOverlayOpacity] = useState(0);
 
-  const selected = data.videos.find((video) => video.id === selectedId) ?? data.videos[0] ?? null;
+  const selected = data.videos[0] ?? null;
+  const isYouTube = selected?.provider === "youtube" || Boolean(selected?.embedUrl);
   const hsVideos = useMemo(() => data.videos.filter((video) => video.level === "hs"), [data.videos]);
   const cfbVideos = useMemo(() => data.videos.filter((video) => video.level === "cfb"), [data.videos]);
   const proVideos = useMemo(() => data.videos.filter((video) => video.level === "pro"), [data.videos]);
@@ -211,7 +211,7 @@ export default function FilmRoomView({ data }: { data: FilmRoomData }) {
     setProgress(0);
     setControlsVisible(true);
     if (videoRef.current) videoRef.current.load();
-  }, [selectedId]);
+  }, [selected?.id]);
 
   useEffect(() => () => {
     if (controlsTimerRef.current !== null) window.clearTimeout(controlsTimerRef.current);
@@ -339,8 +339,6 @@ export default function FilmRoomView({ data }: { data: FilmRoomData }) {
       properties: { media_id: id, media_type: "video", section: "film_room" },
       dedupeKey: `media_viewed:video:${id}`,
     });
-    setSelectedId(id);
-    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   async function toggleFullscreen() {
@@ -384,8 +382,8 @@ export default function FilmRoomView({ data }: { data: FilmRoomData }) {
                 onFocusCapture={() => setControlsVisible(true)}
               >
                 <div className={styles.featuredViewport}>
-                {selected.embedUrl ? (
-                  <iframe src={selected.embedUrl} title={selected.title} allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen style={{ position: "absolute", inset: 0, width: "100%", height: "calc(100% - 90px)", border: 0, zIndex: 4 }} />
+                {isYouTube ? (
+                  <YouTubePlayer key={selected.id} url={selected.originalUrl ?? selected.embedUrl!} title={selected.title} autoPlay muted style={{ position: "absolute", inset: 0, width: "100%", height: "calc(100% - 54px)", border: 0, zIndex: 4 }} />
                 ) : selected.playbackUrl ? (
                   <video
                     ref={videoRef}
@@ -393,6 +391,7 @@ export default function FilmRoomView({ data }: { data: FilmRoomData }) {
                     poster={selected.thumbnailUrl ?? undefined}
                     preload="metadata"
                     playsInline
+                    autoPlay
                     muted={muted}
                     onPlay={() => {
                       setPlaying(true);
@@ -433,8 +432,8 @@ export default function FilmRoomView({ data }: { data: FilmRoomData }) {
                 ) : null}
                 <div className={styles.sourceBadge}>{selected.sourceLabel}</div>
                 <div className={`${styles.mediaShade} ${controlsVisible ? styles.mediaShadeVisible : styles.mediaShadeHidden}`} />
-                <div className={`${styles.controls} ${controlsVisible || selected.embedUrl ? styles.controlsVisible : styles.controlsHidden}`}>
-                  <div className={styles.controlRow} style={selected.embedUrl ? { display: "none" } : undefined}>
+                <div className={`${styles.controls} ${controlsVisible || isYouTube ? styles.controlsVisible : styles.controlsHidden}`}>
+                  <div className={styles.controlRow} style={isYouTube ? { display: "none" } : undefined}>
                     <button type="button" onClick={togglePlayback} disabled={!selected.playbackUrl} aria-label={playing ? "Pause film" : "Play film"}>
                       {playing ? <Pause aria-hidden="true" fill="currentColor" /> : <Play aria-hidden="true" fill="currentColor" />}
                     </button>
@@ -487,13 +486,13 @@ export default function FilmRoomView({ data }: { data: FilmRoomData }) {
         </section>
 
         <div ref={libraryStackRef} className={styles.libraryStack}>
-          {(hsVideos.length > 0 || isPrivatePreview) && (
-            <section className={styles.library} aria-labelledby="hs-heading">
+          {(proVideos.length > 0 || isPrivatePreview) && (
+            <section className={styles.library} aria-labelledby="pro-heading">
               <div className={styles.sectionHeading}>
-                <h1 id="hs-heading">HS</h1>
-                <span>{yearRange(hsVideos)}</span>
+                <h1 id="pro-heading">PRO</h1>
+                <span>{yearRange(proVideos)}</span>
               </div>
-              {hsVideos.length ? <FilmShelf videos={hsVideos} selectedId={selected?.id ?? null} onSelect={chooseVideo} /> : <p className="py-6 text-sm text-white/50">No videos added in this category yet.</p>}
+              {proVideos.length ? <FilmShelf videos={proVideos} lockerHref={data.lockerHref ?? `/player/${data.slug}`} onSelect={chooseVideo} /> : <p className="py-6 text-sm text-white/50">No videos added in this category yet.</p>}
             </section>
           )}
 
@@ -503,17 +502,17 @@ export default function FilmRoomView({ data }: { data: FilmRoomData }) {
                 <h1 id="cfb-heading">CFB</h1>
                 <span>{yearRange(cfbVideos)}</span>
               </div>
-              {cfbVideos.length ? <FilmShelf videos={cfbVideos} selectedId={selected?.id ?? null} onSelect={chooseVideo} /> : <p className="py-6 text-sm text-white/50">No videos added in this category yet.</p>}
+              {cfbVideos.length ? <FilmShelf videos={cfbVideos} lockerHref={data.lockerHref ?? `/player/${data.slug}`} onSelect={chooseVideo} /> : <p className="py-6 text-sm text-white/50">No videos added in this category yet.</p>}
             </section>
           )}
 
-          {(proVideos.length > 0 || isPrivatePreview) && (
-            <section className={styles.library} aria-labelledby="pro-heading">
+          {hsVideos.length > 0 && (
+            <section className={styles.library} aria-labelledby="hs-heading">
               <div className={styles.sectionHeading}>
-                <h1 id="pro-heading">PRO</h1>
-                <span>{yearRange(proVideos)}</span>
+                <h1 id="hs-heading">HS</h1>
+                <span>{yearRange(hsVideos)}</span>
               </div>
-              {proVideos.length ? <FilmShelf videos={proVideos} selectedId={selected?.id ?? null} onSelect={chooseVideo} /> : <p className="py-6 text-sm text-white/50">No videos added in this category yet.</p>}
+              {hsVideos.length ? <FilmShelf videos={hsVideos} lockerHref={data.lockerHref ?? `/player/${data.slug}`} onSelect={chooseVideo} /> : <p className="py-6 text-sm text-white/50">No videos added in this category yet.</p>}
             </section>
           )}
 
@@ -523,7 +522,7 @@ export default function FilmRoomView({ data }: { data: FilmRoomData }) {
                 <h1 id="off-field-heading">OFF THE FIELD</h1>
                 <span>{yearRange(offFieldVideos)}</span>
               </div>
-              {offFieldVideos.length ? <FilmShelf videos={offFieldVideos} selectedId={selected?.id ?? null} onSelect={chooseVideo} /> : <p className="py-6 text-sm text-white/50">No videos added in this category yet.</p>}
+              {offFieldVideos.length ? <FilmShelf videos={offFieldVideos} lockerHref={data.lockerHref ?? `/player/${data.slug}`} onSelect={chooseVideo} /> : <p className="py-6 text-sm text-white/50">No videos added in this category yet.</p>}
             </section>
           )}
         </div>

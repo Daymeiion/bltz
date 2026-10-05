@@ -1,5 +1,8 @@
 "use client";
+import { socialEmbedUrl, type LockerSocial } from "@/lib/preview-lockers/social";
 import { awardDescription } from "@/lib/preview-lockers/award-descriptions";
+import { schoolHistoryName, proHistoryName } from "@/lib/player/team-history-name";
+import { FittedHeroName } from "@/components/player/FittedHeroName";
 import { EditorialCard } from "@/components/player/EditorialCard";
 
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
@@ -9,6 +12,8 @@ import type { SearchResult } from "@/components/ui/search-modal";
 import { trackProductEvent } from "@/lib/analytics/client";
 import { VideoPreview } from "@/components/player/VideoPreview";
 import { StructuredStats } from "@/components/player/StructuredStats";
+import { SAMPLE_MERCH } from "@/lib/preview-lockers/sample-merch";
+import { SpotifyPreviewBadge } from "@/components/player/SpotifyPreviewBadge";
 
 // ---------------------------------------------------------------------------
 // LockerView — fan-facing athlete locker, ported from the standalone design.
@@ -26,6 +31,7 @@ export type LockerData = {
   slug: string;
   lockerHref?: string;
   fullName: string;
+  merch?: { id: string; title: string; imageUrl: string; productUrl?: string; priceLabel?: string }[];
   hometown: string;
   position: string;
   jersey: string;
@@ -95,9 +101,10 @@ export type LockerData = {
   // Rotating hero pills. `schools` cycles the player's colleges (exact school
   // colors); `proTeams` cycles their pro teams. When proTeams is empty (never
   // made the NFL), the right pill falls back to level/status.
-  schools: { label: string; color: string; logo: string | null }[];
-  proTeams: { label: string; color: string; logo: string | null }[];
-  awards: { year: string; label: string; description?: string | null; sourceUrl?: string | null }[];
+  schools: { label: string; name?: string; color: string; logo: string | null }[];
+  proTeams: { label: string; name?: string; color: string; logo: string | null }[];
+  social?: LockerSocial[];
+  awards: { imageUrl?: string | null; year: string; label: string; description?: string | null; sourceUrl?: string | null }[];
   timeline?: { year: string; tag: string; title: string; note: string }[];
   videos: { id: string; title: string; thumb: string | null; playbackUrl?: string | null; embedUrl?: string | null }[];
   podcastAppearances?: {
@@ -109,6 +116,8 @@ export type LockerData = {
     sourceUrl?: string | null;
   }[];
   photos: {
+    isHeadshot?: boolean;
+    inHeroSlideshow?: boolean;
     id: string;
     url: string;
     title: string;
@@ -163,6 +172,13 @@ function safeExternalUrl(value: string) {
   }
 }
 
+function keepHeroVideoSilent(video: HTMLVideoElement | null) {
+  if (!video) return;
+  video.defaultMuted = true;
+  if (!video.muted) video.muted = true;
+  if (video.volume !== 0) video.volume = 0;
+}
+
 type LockerViewerMode = "public" | "athlete";
 type LockerPresentation = "page" | "embedded";
 
@@ -188,8 +204,6 @@ export default function LockerView({
   const [selectedSocialIndex, setSelectedSocialIndex] = useState<number | null>(null);
   const [shortModalIndex, setShortModalIndex] = useState<number | null>(null);
   const [activeShortIndex, setActiveShortIndex] = useState(0);
-  const [shortsScrolling, setShortsScrolling] = useState(false);
-  const [shortsScrollProgress, setShortsScrollProgress] = useState(0);
   const [socialScrolling, setSocialScrolling] = useState(false);
   const [socialScrollProgress, setSocialScrollProgress] = useState(0);
   const [awardsScrolling, setAwardsScrolling] = useState(false);
@@ -211,8 +225,6 @@ export default function LockerView({
   });
   const statsAnimated = useRef(false);
   const screenRef = useRef<HTMLDivElement | null>(null);
-  const heroBackdropVideoRef = useRef<HTMLVideoElement | null>(null);
-  const heroVideoRef = useRef<HTMLVideoElement | null>(null);
   const shortsScrollRef = useRef<HTMLDivElement | null>(null);
   const shortsScrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const shortModalScrollRef = useRef<HTMLDivElement | null>(null);
@@ -230,11 +242,10 @@ export default function LockerView({
   const careerGamesPrimaryRef = useRef<HTMLDivElement | null>(null);
   const shortRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const shortVideoRefs = useRef<(HTMLVideoElement | null)[]>([]);
-  const [heroPlaying, setHeroPlaying] = useState(true);
-  const [heroMuted, setHeroMuted] = useState(true);
   const showAthleteNav = viewerMode === "athlete";
   const isEmbedded = presentation === "embedded";
   const isPrivatePreview = data.lockerHref?.startsWith("/preview-lockers/") === true;
+  const merchandise: NonNullable<LockerData["merch"]> = data.merch?.length ? data.merch : isPrivatePreview ? SAMPLE_MERCH : [];
   const [heroMobile, setHeroMobile] = useState<boolean | null>(null);
   useEffect(() => {
     const media = window.matchMedia("(max-width: 767px)");
@@ -508,16 +519,7 @@ export default function LockerView({
     if (awardsScrollTimerRef.current) clearTimeout(awardsScrollTimerRef.current);
   }, []);
 
-  const handleShortsScroll = () => {
-    const el = shortsScrollRef.current;
-    if (el) {
-      const maxScroll = Math.max(1, el.scrollHeight - el.clientHeight);
-      setShortsScrollProgress(Math.min(1, Math.max(0, el.scrollTop / maxScroll)));
-    }
-    setShortsScrolling(true);
-    if (shortsScrollTimerRef.current) clearTimeout(shortsScrollTimerRef.current);
-    shortsScrollTimerRef.current = setTimeout(() => setShortsScrolling(false), 650);
-  };
+
 
   const handleSocialScroll = () => {
     const el = socialScrollRef.current;
@@ -553,28 +555,6 @@ export default function LockerView({
     });
   }, [activeShortIndex, mediaSort, tab]);
 
-  const toggleHeroVideo = () => {
-    const v = heroVideoRef.current;
-    if (!v) return;
-    const backdrop = heroBackdropVideoRef.current;
-    if (v.paused) {
-      void Promise.allSettled([v.play(), backdrop?.play()]);
-      setHeroPlaying(true);
-    } else {
-      v.pause();
-      backdrop?.pause();
-      setHeroPlaying(false);
-    }
-  };
-
-  const toggleHeroMute = () => {
-    const video = heroVideoRef.current;
-    if (!video) return;
-    const nextMuted = !video.muted;
-    video.muted = nextMuted;
-    setHeroMuted(nextMuted);
-  };
-
   const animateStats = () => {
     if (statsAnimated.current) return;
     statsAnimated.current = true;
@@ -603,11 +583,20 @@ export default function LockerView({
   ];
   const poolAt = (i: number) => imgPool.length ? imgPool[i % imgPool.length] : null;
 
+  const slideshowPhotos = data.photos.filter(photo => photo.inHeroSlideshow !== false && !photo.isHeadshot && safeExternalUrl(photo.url));
+  const slideshowKey = slideshowPhotos.map(photo => photo.id).join("|");
+  const [slideshowIndex, setSlideshowIndex] = useState(0);
+  useEffect(() => {
+    setSlideshowIndex(0);
+    if (!isPrivatePreview || heroVideoUrl || slideshowPhotos.length < 2) return;
+    const timer = window.setInterval(() => setSlideshowIndex(index => (index + 1) % slideshowPhotos.length), 6000);
+    return () => window.clearInterval(timer);
+  }, [isPrivatePreview, heroVideoUrl, slideshowKey, slideshowPhotos.length]);
+  const slideshowPhoto = slideshowPhotos[slideshowIndex % slideshowPhotos.length];
+
+
   const schoolAbbr = data.school?.abbr || "SCHOOL";
 
-  // Hero name shrinks to fit long full names on one line instead of wrapping.
-  const nameLen = data.fullName.length;
-  const heroNameSize = nameLen > 22 ? 22 : nameLen > 18 ? 26 : nameLen > 14 ? 30 : 36;
 
   // ---- pill helpers ----
   const tabTextShadow = "0 1px 3px rgba(0,0,0,.42)";
@@ -662,7 +651,7 @@ export default function LockerView({
 
   // Real: height + weight. Fallbacks are intentionally marked pending until verified data exists.
   const measure = [
-    [data.heightDisplay || pendingMetric, "HEIGHT"],
+    [data.heightDisplay.replace(/([′'])\s+(?=\d)/g, "$1") || pendingMetric, "HEIGHT"],
     [data.weightLbs ? String(data.weightLbs) : pendingMetric, "WEIGHT · LBS"],
     [pendingMetric, "40-YARD"],
     [pendingMetric, "WINGSPAN"],
@@ -691,7 +680,7 @@ export default function LockerView({
     ? data.awards
     : [];
   const awards = awardSrc.map((a, index) => ({
-    cat: "awards", isAward: true, year: a.year, label: a.label, sourceUrl: a.sourceUrl, description: awardDescription(a.label, a.description), img: poolAt(index),
+    cat: "awards", isAward: true, year: a.year, label: a.label, sourceUrl: a.sourceUrl, description: awardDescription(a.label, a.description), img: safeExternalUrl(a.imageUrl ?? "") ?? (isPrivatePreview ? null : poolAt(index)),
     style: { flex: "none", width: 164, scrollSnapAlign: "start", borderRadius: 16, border: "1px solid #1E2640", background: "linear-gradient(160deg,#1a2035,#131829)" } as React.CSSProperties,
   }));
 
@@ -707,13 +696,13 @@ export default function LockerView({
     { source: "TEAM SITE", title: "LOCKER ROOM STANDARD SETTER", meta: "3 MIN READ", img: poolAt(1), dek: "How preparation and practice habits have become part of the weekly team story.", originalUrl: "https://calbears.com/" },
     { source: "LOCAL PRESS", title: "FROM FRIDAY NIGHTS TO FEATURE FILM", meta: "5 MIN READ", img: poolAt(2), dek: "The hometown arc behind the athlete's growing media archive.", originalUrl: "https://www.latimes.com/sports/" },
   ];
-  const mediaShorts = [
+  const mediaShorts: Array<{ source: string; title: string; meta: string; img: string | null; videoUrl: string | null; originalUrl?: string; embedUrl?: string | null }> = isPrivatePreview ? (data.social ?? []).filter(item => item.kind === "short").map(item => ({ source: item.handle || item.platform, title: item.title, meta: item.platform, img: item.imageUrl, videoUrl: item.videoUrl, originalUrl: item.sourceUrl, embedUrl: socialEmbedUrl(item.platform, item.sourceUrl, item.kind) })) : [
     { source: "@ATHLETE", title: "PREGAME WALK", meta: "218K VIEWS", img: poolAt(1), videoUrl: null },
     { source: "@ATHLETE", title: "FILM STUDY · 6AM", meta: "96K VIEWS", img: poolAt(2), videoUrl: null },
     { source: "TEAM CAM", title: "TUNNEL READY", meta: "74K VIEWS", img: poolAt(3), videoUrl: null },
     { source: "BLTZ CUT", title: "SIDELINE ENERGY", meta: "52K VIEWS", img: poolAt(4), videoUrl: null },
   ];
-  const modalShortHasVideo = shortModalIndex !== null && Boolean(mediaShorts[shortModalIndex]?.videoUrl);
+  const modalShortHasVideo = shortModalIndex !== null && Boolean(mediaShorts[shortModalIndex]?.videoUrl || mediaShorts[shortModalIndex]?.embedUrl || mediaShorts[shortModalIndex]?.originalUrl);
   const modalShortCount = mediaShorts.length;
 
   useEffect(() => {
@@ -764,7 +753,7 @@ export default function LockerView({
     return () => window.clearTimeout(timeout);
   }, [modalShortCount, modalShortHasVideo, shortModalIndex]);
   const mediaPodcast = data.podcastAppearances ?? [];
-  const mediaSocial = [
+  const mediaSocial: Array<{ platform: string; handle: string; meta: string; img: string | null; format: string; published: string; caption: string; originalUrl?: string; videoUrl?: string | null; embedUrl?: string | null }> = isPrivatePreview ? (data.social ?? []).filter(item => item.kind === "post").map(item => ({ platform: item.platform === "X" ? "X / Twitter" : item.platform, handle: item.handle || item.title, meta: item.title, img: item.imageUrl, format: item.format, published: "", caption: item.caption, originalUrl: item.sourceUrl, videoUrl: item.videoUrl, embedUrl: socialEmbedUrl(item.platform, item.sourceUrl, item.kind) })) : [
     { platform: "Instagram", handle: "@athlete", meta: "12.4K LIKES", img: poolAt(4), format: "square", published: "OCT 18, 2025", caption: "Game day with the people who make every rep count." },
     { platform: "X", handle: "@athlete", meta: "4.8K REPOSTS", img: poolAt(0), format: "portrait", published: "SEP 29, 2025", caption: "The work travels. Another week, another opportunity to raise the standard." },
     { platform: "Facebook", handle: "Athlete Page", meta: "8.1K REACTIONS", img: poolAt(1), format: "square", published: "AUG 12, 2025", caption: "A hometown moment worth keeping in the career archive." },
@@ -776,7 +765,7 @@ export default function LockerView({
   const contact = { kind: "contact", isContact: true, style: { flex: "none", width: 224, scrollSnapAlign: "start", borderRadius: 16, overflow: "hidden", border: "1px solid rgba(41,82,255,.3)" } as React.CSSProperties };
   let mediaCards: any[] = mediaSort === "podcast" ? mediaPodcast : [];
   mediaCards = [...mediaCards, contact];
-  const mediaPills = [["articles", "ARTICLES"], ["shorts", "SHORTS"], ["podcast", "PODCAST"], ["social", "SOCIAL"]]
+  const mediaPills = [["articles", "ARTICLES"], ["merch", "MERCH"], ["podcast", "PODCAST"], ["social", "SOCIAL"]]
     .map(([key, label]) => ({ key, label, active: mediaSort === key }));
 
   // ---- STATS ----
@@ -799,11 +788,12 @@ export default function LockerView({
   const collegeTeams = data.schools.length
     ? data.schools
     : data.school
-      ? [{ label: data.school.abbr, color: data.school.primaryColor, logo: data.school.logoUrl }]
+      ? [{ label: data.school.abbr, name: data.school.name, color: data.school.primaryColor, logo: data.school.logoUrl }]
       : [];
   const careerTeams = Array.from(
     new Map(
-      [...collegeTeams, ...data.proTeams].map((team) => [team.label.trim().toUpperCase(), team]),
+      [...collegeTeams.map(team => ({ ...team, historyName: schoolHistoryName(team.name || (team.label === data.school?.abbr || collegeTeams.length === 1 ? data.school?.name || team.label : team.label)) })),
+       ...data.proTeams.map(team => ({ ...team, historyName: proHistoryName(team.name || team.label) }))].map((team) => [team.label.trim().toUpperCase(), team]),
     ).values(),
   );
   const maxCareerGames = Math.max(...careerSeasons.map((season) => season.gamesPlayed), 1);
@@ -913,6 +903,7 @@ export default function LockerView({
       aria-label={`Open ${post.platform} post from ${post.handle}`}
       style={{ position: "relative", overflow: "hidden", border: "none", padding: 0, background: GRAD_FIELD, textAlign: "left", cursor: "pointer" }}
     >
+      {!post.img && <p style={{ position: "absolute", inset: "42px 14px 55px", margin: 0, color: "white", fontSize: 15, lineHeight: 1.5, overflow: "hidden", whiteSpace: "pre-wrap" }}>{post.caption || post.meta}</p>}
       {post.img ? <img src={post.img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : null}
       <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top,rgba(5,7,15,.88),rgba(5,7,15,.04) 58%)" }} />
       <div style={{ position: "absolute", top: 8, left: 8, padding: "4px 7px", borderRadius: 9999, background: "rgba(11,14,26,.7)", border: "1px solid rgba(255,255,255,.14)", fontFamily: mono, fontSize: 7.5, letterSpacing: ".1em", color: "#fff", textTransform: "uppercase" }}>{post.platform}</div>
@@ -991,34 +982,37 @@ export default function LockerView({
                 {heroVideoUrl ? (
                   <>
                     <video
-                      ref={heroBackdropVideoRef}
+                      ref={keepHeroVideoSilent}
                       className="locker-hero-video-backdrop"
                       src={heroVideoUrl}
                       autoPlay
                       loop
                       muted
                       playsInline
+                      onVolumeChange={(event) => keepHeroVideoSilent(event.currentTarget)}
                       aria-hidden="true"
                     />
                     <video
-                      ref={heroVideoRef}
+                      ref={keepHeroVideoSilent}
                       key={heroVideoUrl}
                       className="locker-hero-video"
                       src={heroVideoUrl}
                       autoPlay
                       loop
-                      muted={heroMuted}
+                      muted
                       playsInline
+                      onVolumeChange={(event) => keepHeroVideoSilent(event.currentTarget)}
                       onError={() => setFailedHeroVideo(heroVideoUrl)}
-                      onPlay={() => setHeroPlaying(true)}
-                      onPause={() => setHeroPlaying(false)}
                       aria-label={`${data.fullName} hero video`}
                     >
                       Your browser does not support video playback.
                     </video>
                   </>
                 ) : (
-                  [0, 6, 12].map((delay, i) => {
+                  isPrivatePreview ? (slideshowPhoto ? <div style={{ position: "absolute", inset: 0 }}>
+                    <img src={slideshowPhoto.url} alt="" aria-hidden="true" className="locker-hero-photo-backdrop" />
+                    <img src={slideshowPhoto.url} alt="" className="locker-hero-photo" />
+                  </div> : null) : [0, 6, 12].map((delay, i) => {
                     const img = poolAt(i);
                     return img ? isPrivatePreview ? (
                       <div key={i} style={{ ...reelBase, animationDelay: `${delay}s` }}>
@@ -1037,6 +1031,7 @@ export default function LockerView({
 
               {/* Spotify "now playing" — live. Collapses entirely when the athlete
                   hasn't linked Spotify or nothing is currently playing. */}
+              {isPrivatePreview && <SpotifyPreviewBadge />}
               {nowPlaying && (
                 <a
                   href={nowPlaying.url ?? undefined}
@@ -1074,39 +1069,6 @@ export default function LockerView({
                 </a>
               )}
 
-              {/* Hero playback controls */}
-              {heroVideoUrl && (
-                <div style={{ position: "absolute", top: 16, right: 16, zIndex: 6, display: "flex", flexDirection: "column", gap: 8 }}>
-                  <button
-                    type="button"
-                    onClick={toggleHeroVideo}
-                    aria-label={heroPlaying ? "Pause hero video" : "Play hero video"}
-                    style={{ width: 44, height: 44, borderRadius: 9999, border: "1px solid rgba(209,213,219,.72)", background: "rgba(11,14,26,.56)", color: "#D1D5DB", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 8px 22px rgba(0,0,0,.24)" }}
-                  >
-                    {heroPlaying ? (
-                      <span style={{ display: "flex", gap: 4, alignItems: "center", width: 14, height: 16 }}>
-                        <span style={{ width: 4, height: 16, background: "currentColor", borderRadius: 1 }} />
-                        <span style={{ width: 4, height: 16, background: "currentColor", borderRadius: 1 }} />
-                      </span>
-                    ) : (
-                      <span style={{ display: "block", width: 0, height: 0, borderLeft: "14px solid currentColor", borderTop: "9px solid transparent", borderBottom: "9px solid transparent", marginLeft: 3 }} />
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={toggleHeroMute}
-                    aria-label={heroMuted ? "Unmute hero video" : "Mute hero video"}
-                    style={{ width: 44, height: 44, borderRadius: 9999, border: "1px solid rgba(209,213,219,.72)", background: "rgba(11,14,26,.56)", color: "#D1D5DB", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 8px 22px rgba(0,0,0,.24)" }}
-                  >
-                    {heroMuted ? (
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4V5Z" /><path d="m22 9-6 6" /><path d="m16 9 6 6" /></svg>
-                    ) : (
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4V5Z" /><path d="M15.5 8.5a5 5 0 0 1 0 7" /><path d="M18.5 5.5a9 9 0 0 1 0 13" /></svg>
-                    )}
-                  </button>
-                </div>
-              )}
-
               {/* Fully opaque headshot */}
               <img className="locker-hero-headshot" src={data.headshotUrl} alt={data.fullName} style={{ position: "absolute", bottom: 74, left: "50%", transform: "translateX(-50%)", height: 268, width: "80vw", objectFit: "cover", objectPosition: "top", zIndex: 4, opacity: 1, clipPath: "inset(0 0 39px 0)" }} />
               <img className="locker-hero-headshot locker-hero-headshot-gradient" src={data.headshotUrl} alt="" aria-hidden="true" style={{ position: "absolute", bottom: 74, left: "50%", transform: "translateX(-50%)", height: 268, width: "80vw", objectFit: "cover", objectPosition: "top", zIndex: 4, clipPath: "inset(0 0 39px 0)", filter: "brightness(0)", WebkitMaskImage: "linear-gradient(to bottom, transparent 66%, rgba(0,0,0,.72) 82%, #000 100%)", maskImage: "linear-gradient(to bottom, transparent 66%, rgba(0,0,0,.72) 82%, #000 100%)", pointerEvents: "none" }} />
@@ -1119,14 +1081,15 @@ export default function LockerView({
                 {isPrivatePreview && <div className="locker-hero-portrait-stage">
                   <img src={data.headshotUrl} alt={data.fullName} />
                 </div>}
-                <h1 style={{ fontFamily: disp, fontWeight: 900, fontSize: heroNameSize, lineHeight: ".9", letterSpacing: "-.005em", textTransform: "uppercase", color: "#fff", margin: 0, paddingTop: 5, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{data.fullName}</h1>
+                <FittedHeroName name={data.fullName} fontFamily={disp} />
                 <div style={{ fontFamily: mono, fontSize: 14, letterSpacing: ".14em", color: "#F5A623", margin: "4px 0 8px", fontWeight: 700 }}>{data.hometown}</div>
                 <div style={{ display: "flex", gap: 8, alignItems: "center", width: "100%" }}>
-                  <RotatingPill items={collegeTeams} fallback={{ label: "SCHOOL", color: "#1A3DCC" }} />
+                  <RotatingPill items={collegeTeams} fallback={{ label: "SCHOOL", color: "#1A3DCC" }} desktopSchoolNames />
                   <div style={{ width: 46, height: 46, borderRadius: 9999, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(255,255,255,.1)", border: "1px solid rgba(255,255,255,.28)", backdropFilter: "blur(8px)", fontFamily: disp, fontWeight: 800, fontSize: 16, color: "#fff", flex: "none" }}>{data.position || "—"}</div>
                   <RotatingPill items={data.proTeams} fallback={{ label: data.levelLabel.toUpperCase(), color: "#1A3DCC" }} />
                 </div>
               </div>
+
 
               {/* container stroke — fades out toward the bottom */}
               <div className="locker-hero-stroke" style={{ position: "absolute", inset: 0, border: "1px solid rgba(255,255,255,.18)", pointerEvents: "none", WebkitMaskImage: "linear-gradient(to bottom,#000 0%,#000 42%,transparent 88%)", maskImage: "linear-gradient(to bottom,#000 0%,#000 42%,transparent 88%)" }} />
@@ -1153,7 +1116,7 @@ export default function LockerView({
               <a
                 href={`${data.lockerHref ?? `/player/${data.slug}`}/videos`}
                 aria-label="View all videos"
-                style={{ minHeight: 34, padding: "0 12px", borderRadius: 9999, border: "1px solid #1E2640", background: "rgba(255,255,255,.05)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none", textDecoration: "none", fontSize: 12, color: "#ffbb00" }}
+                style={{ minHeight: 40, minWidth: 88, padding: "0 16px", borderRadius: 9999, border: "1px solid #1E2640", background: "rgba(255,255,255,.05)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none", textDecoration: "none", fontSize: 14, fontWeight: 700, color: "#ffbb00" }}
               >
                 See all
               </a>
@@ -1191,7 +1154,7 @@ export default function LockerView({
               <a
                 href={`${data.lockerHref ?? `/player/${data.slug}`}/photos`}
                 aria-label="View all photos"
-                style={{ minHeight: 34, padding: "0 12px", borderRadius: 9999, border: "1px solid #1E2640", background: "rgba(255,255,255,.05)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none", textDecoration: "none", fontSize: 12, color: "#ffbb00" }}
+                style={{ minHeight: 40, minWidth: 88, padding: "0 16px", borderRadius: 9999, border: "1px solid #1E2640", background: "rgba(255,255,255,.05)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none", textDecoration: "none", fontSize: 14, fontWeight: 700, color: "#ffbb00" }}
               >
                 See all
               </a>
@@ -1322,10 +1285,10 @@ export default function LockerView({
                   <div style={{ padding: "14px 18px 10px" }}>
                     <div style={{ borderRadius: 14, border: "1px solid #1E2640", background: "#131829", overflow: "hidden" }}>
                       <div style={{ padding: "18px 18px 16px", background: "#131829", borderBottom: "1px solid #1E2640" }}>
-                        <div style={{ fontFamily: disp, fontWeight: 800, fontSize: 18, lineHeight: 1, letterSpacing: ".02em", textTransform: "uppercase", color: lockerAccent, marginBottom: 14 }}>MEASURABLES</div>
+                        <h2 style={{ fontFamily: disp, fontWeight: 800, fontSize: 18, lineHeight: 1, letterSpacing: ".02em", textTransform: "uppercase", color: lockerAccent, textAlign: "center", margin: "0 0 14px" }}>MEASURABLES</h2>
                         <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 10 }}>
                           <div style={{ borderRadius: 12, padding: "14px 13px", background: "rgba(255,255,255,.05)", border: "1px solid rgba(255,255,255,.08)", textAlign: "center" }}>
-                            <div style={{ fontFamily: disp, fontWeight: 900, fontSize: 38, lineHeight: ".85", color: "#fff" }}>{data.heightDisplay || pendingMetric}</div>
+                            <div style={{ fontFamily: disp, fontWeight: 900, fontSize: 38, lineHeight: ".85", color: "#fff" }}>{data.heightDisplay.replace(/([′'])\s+(?=\d)/g, "$1") || pendingMetric}</div>
                             <div style={{ fontFamily: mono, fontSize: 8.5, letterSpacing: ".13em", color: "rgba(255,255,255,.48)", marginTop: 8 }}>HEIGHT</div>
                           </div>
                           <div style={{ borderRadius: 12, padding: "14px 13px", background: "rgba(255,255,255,.05)", border: "1px solid rgba(255,255,255,.08)", textAlign: "center" }}>
@@ -1356,7 +1319,7 @@ export default function LockerView({
                 ) : bioSort === "story" ? (
                   <div style={{ padding: "14px 18px 10px" }}>
                     <div style={{ borderRadius: 14, border: "1px solid #1E2640", background: "#131829", padding: "22px 20px 24px" }}>
-                      <div style={{ fontFamily: disp, fontWeight: 800, fontSize: 18, lineHeight: 1, letterSpacing: ".02em", textTransform: "uppercase", color: lockerAccent, marginBottom: 16 }}>THE STORY</div>
+                      <h2 style={{ fontFamily: disp, fontWeight: 800, fontSize: 18, lineHeight: 1, letterSpacing: ".02em", textTransform: "uppercase", color: lockerAccent, textAlign: "center", margin: "0 0 16px" }}>THE STORY</h2>
                       <p style={{ fontFamily: body, fontSize: 16, lineHeight: 1.72, color: "rgba(255,255,255,.82)", margin: 0, whiteSpace: "pre-line" }}>{displayStory}</p>
                     </div>
                   </div>
@@ -1402,51 +1365,26 @@ export default function LockerView({
                       </button>}
                     </div>
                   </div>
-                ) : mediaSort === "shorts" ? (
-                  <div style={{ padding: "14px 18px 10px" }}>
-                    <div style={{ position: "relative" }}>
-                      <div
-                        className="media-inner-scroll locker-shorts-grid"
-                        ref={shortsScrollRef}
-                        onScroll={handleShortsScroll}
-                        style={{ height: isPrivatePreview ? "auto" : 408, overflowY: isPrivatePreview ? "visible" : "auto", overscrollBehavior: "auto", paddingRight: 6, display: "grid", gap: 10 }}
-                      >
-                      {mediaShorts.map((short, index) => (
-                        <button
-                          type="button"
-                          key={short.title}
-                          className="locker-short-card"
-                          ref={(node) => { shortRefs.current[index] = node; }}
-                          data-short-index={index}
-                          onClick={() => {
-                            shortModalInitialIndexRef.current = index;
-                            setShortModalIndex(index);
-                          }}
-                          aria-label={`Open short: ${short.title}`}
-                          style={{ borderRadius: 14, overflow: "hidden", border: "1px solid #1E2640", padding: 0, background: "#131829", position: "relative", textAlign: "left", cursor: "pointer" }}
-                        >
-                          {short.videoUrl ? (
-                            <video ref={(node) => { shortVideoRefs.current[index] = node; }} src={short.videoUrl} muted loop playsInline style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                          ) : short.img ? (
-                            <img src={short.img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                ) : mediaSort === "merch" ? (
+                  <section style={{ padding: "14px 18px 10px" }} aria-label="Merchandise">
+                    <h2 style={{ fontFamily: disp, fontWeight: 800, fontSize: 18, color: lockerAccent, textAlign: "center", margin: "0 0 14px" }}>MERCHANDISE</h2>
+                    <div className="locker-merch-grid">
+                      {merchandise.map(item => {
+                        return <article key={item.id} style={{ minWidth: 0, color: "#fff", textAlign: "center" }}>
+                          <img src={item.imageUrl} alt={item.title} style={{ width: "100%", aspectRatio: "1", objectFit: "contain", borderRadius: 14, background: "#131829" }} />
+                          <h3 style={{ fontFamily: "Barlow, sans-serif", fontWeight: 700, fontSize: 18, overflowWrap: "anywhere", margin: "10px 0 4px" }}>{item.title}</h3>
+                          {item.priceLabel && <p>{item.priceLabel}</p>}
+                          {!item.productUrl && <p style={{ fontSize: 12, color: "rgba(255,255,255,.6)", margin: 0 }}>Sample · not for sale</p>}
+                          {item.productUrl ? (
+                            <a className="locker-merch-buy" href={item.productUrl} target="_blank" rel="noopener noreferrer sponsored" aria-label={`Buy ${item.title} from a third-party seller`}>Buy Now</a>
                           ) : (
-                            <div style={{ width: "100%", height: "100%", background: GRAD_FIELD }} />
+                            <button className="locker-merch-buy" type="button" disabled aria-label={`Buy ${item.title} — referral link coming soon`} title="Referral link coming soon">Buy Now</button>
                           )}
-                          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top,rgba(5,7,15,.92),rgba(5,7,15,.08) 58%,rgba(5,7,15,.18))" }} />
-                          <div style={{ position: "absolute", top: 9, left: 9, padding: "4px 7px", borderRadius: 9999, background: activeShortIndex === index ? "rgba(255,185,64,.18)" : "rgba(11,14,26,.68)", border: `1px solid ${activeShortIndex === index ? "rgba(255,185,64,.45)" : "rgba(255,255,255,.13)"}`, fontFamily: mono, fontSize: 7.5, letterSpacing: ".12em", color: activeShortIndex === index ? lockerAccent : "rgba(255,255,255,.72)", textTransform: "uppercase" }}>
-                            {activeShortIndex === index ? "Previewing" : "Short"}
-                          </div>
-                          <div style={{ position: "absolute", left: 11, right: 10, bottom: 11 }}>
-                            <div style={{ fontFamily: mono, fontSize: 8, letterSpacing: ".1em", color: lockerAccent, marginBottom: 5 }}>{short.source}</div>
-                            <div style={{ fontFamily: disp, fontWeight: 800, fontSize: 16, lineHeight: .95, textTransform: "uppercase", color: "#fff" }}>{short.title}</div>
-                            <div style={{ fontFamily: mono, fontSize: 8, letterSpacing: ".08em", color: "rgba(255,255,255,.5)", marginTop: 7 }}>{short.meta}</div>
-                          </div>
-                        </button>
-                      ))}
-                      </div>
-                      {!isPrivatePreview && <div style={{ position: "absolute", top: 14 + shortsScrollProgress * 286, right: 1, width: 2, height: 54, borderRadius: 9999, background: "rgba(210,214,224,.72)", boxShadow: "0 0 8px rgba(210,214,224,.22)", opacity: shortsScrolling ? 1 : 0, transition: "opacity .22s ease, top .08s linear", pointerEvents: "none" }} />}
+                        </article>;
+                      })}
+                      {!merchandise.length && <p style={{ gridColumn: "1 / -1", color: "rgba(255,255,255,.6)", textAlign: "center" }}>No merchandise added yet.</p>}
                     </div>
-                  </div>
+                  </section>
                 ) : mediaSort === "podcast" ? (
                   <div style={{ padding: "14px 18px 10px", display: "flex", flexDirection: "column", gap: 10 }}>
                     {mediaPodcast.length ? (
@@ -1485,6 +1423,7 @@ export default function LockerView({
                   </div>
                 ) : mediaSort === "social" ? (
                   <div style={{ padding: "14px 18px 10px" }}>
+                    <h2 style={{ fontFamily: disp, fontWeight: 800, fontSize: 18, lineHeight: 1, letterSpacing: ".02em", textTransform: "uppercase", color: lockerAccent, textAlign: "center", margin: "0 0 14px" }}>SOCIAL</h2>
                     <div style={{ position: "relative" }}>
                       <div
                         className="media-inner-scroll locker-social-scroll"
@@ -1492,6 +1431,7 @@ export default function LockerView({
                         onScroll={handleSocialScroll}
                         style={{ height: isPrivatePreview ? "auto" : 408, overflowY: isPrivatePreview ? "visible" : "auto", overscrollBehavior: "auto" }}
                       >
+                        {!mediaSocial.length && <p style={{ color: "rgba(255,255,255,.6)" }}>No social posts added yet.</p>}
                         <div className="locker-social-layout locker-social-layout--mobile">
                           {[0, 1].map((column) => (
                             <div className="locker-social-column" key={column}>
@@ -1606,7 +1546,8 @@ export default function LockerView({
                           if (nextIndex !== shortModalIndex) setShortModalIndex(nextIndex);
                         }}
                       >
-                        {mediaShorts.map((short, index) => (
+                        {!mediaShorts.length && <p style={{ color: "rgba(255,255,255,.6)" }}>No shorts added yet.</p>}
+                      {mediaShorts.map((short, index) => (
                           <div
                             key={`modal-${short.title}`}
                             className="locker-short-modal-slide"
@@ -1619,6 +1560,7 @@ export default function LockerView({
                                 muted
                                 playsInline
                                 preload="metadata"
+                                controls
                                 onEnded={() => {
                                   if (index >= modalShortCount - 1) return;
                                   const nextIndex = index + 1;
@@ -1628,6 +1570,8 @@ export default function LockerView({
                                 }}
                                 style={{ width: "100%", height: "100%", objectFit: "cover" }}
                               />
+                            ) : short.embedUrl && index === shortModalIndex ? (
+                              <iframe src={short.embedUrl} title={short.title} allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen referrerPolicy="no-referrer" style={{ width: "100%", height: "calc(100% - 125px)", border: 0, background: "#fff" }} />
                             ) : short.img ? (
                               <img src={short.img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                             ) : (
@@ -1638,6 +1582,7 @@ export default function LockerView({
                               <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: ".12em", color: lockerAccent, textTransform: "uppercase", marginBottom: 7 }}>{short.source}</div>
                               <div style={{ fontFamily: disp, fontWeight: 900, fontSize: 27, lineHeight: .92, color: "#fff", textTransform: "uppercase" }}>{short.title}</div>
                               <div style={{ marginTop: 9, fontFamily: mono, fontSize: 9, letterSpacing: ".1em", color: "rgba(255,255,255,.62)", textTransform: "uppercase" }}>{short.meta}</div>
+                              {short.originalUrl && <a href={safeExternalUrl(short.originalUrl) ?? undefined} target="_blank" rel="noopener noreferrer" style={{ display: "inline-block", marginTop: 12, color: "#fff", textDecoration: "underline" }}>Open original ↗</a>}
                             </div>
                           </div>
                         ))}
@@ -1701,10 +1646,10 @@ export default function LockerView({
                       </div>
                       <div className="locker-social-modal-layout">
                         <div className={`locker-social-modal-media locker-social-modal-media--${selectedSocialPost.format}`} style={{ overflow: "hidden", background: GRAD_FIELD }}>
-                          {selectedSocialPost.img ? <img src={selectedSocialPost.img} alt={`${selectedSocialPost.platform} post by ${selectedSocialPost.handle}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : null}
+                          {selectedSocialPost.videoUrl ? <video src={selectedSocialPost.videoUrl} controls playsInline style={{ width: "100%", height: "100%", objectFit: "contain" }} /> : selectedSocialPost.embedUrl ? <iframe src={selectedSocialPost.embedUrl} title={`${selectedSocialPost.platform} post`} allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen referrerPolicy="no-referrer" style={{ width: "100%", height: "100%", border: 0, background: "#fff" }} /> : selectedSocialPost.img ? <img src={selectedSocialPost.img} alt={`${selectedSocialPost.platform} post by ${selectedSocialPost.handle}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : null}
                         </div>
                         <div style={{ display: "flex", flexDirection: "column", minWidth: 0, padding: "20px 18px 22px" }}>
-                          <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 10, marginBottom: 18 }}>
+                          {!isPrivatePreview && <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 10, marginBottom: 18 }}>
                             <div style={{ padding: "11px 12px", border: "1px solid #1E2640", borderRadius: 10, background: "#131829", textAlign: "center" }}>
                               <div style={{ fontFamily: mono, fontSize: 7.5, letterSpacing: ".13em", color: "rgba(255,255,255,.42)", textTransform: "uppercase", marginBottom: 5 }}>Published</div>
                               <div style={{ fontFamily: mono, fontSize: 9.5, letterSpacing: ".06em", color: "#fff" }}>{selectedSocialPost.published}</div>
@@ -1714,10 +1659,11 @@ export default function LockerView({
                               <div style={{ fontFamily: mono, fontSize: 9.5, letterSpacing: ".06em", color: lockerAccent }}>{selectedSocialPost.meta}</div>
                             </div>
                           </div>
+                          }
                           <div style={{ fontFamily: mono, fontSize: 8, letterSpacing: ".14em", color: "rgba(255,255,255,.42)", textTransform: "uppercase", marginBottom: 8 }}>Post caption</div>
                           <p style={{ margin: 0, fontFamily: body, fontSize: 16, lineHeight: 1.55, color: "rgba(255,255,255,.82)" }}>{selectedSocialPost.caption}</p>
                           <div style={{ marginTop: "auto", paddingTop: 24, fontFamily: mono, fontSize: 8, lineHeight: 1.45, letterSpacing: ".1em", color: "rgba(255,255,255,.4)", textTransform: "uppercase" }}>
-                            Connected account content · Athlete dashboard source
+                            {selectedSocialPost.originalUrl ? <a href={safeExternalUrl(selectedSocialPost.originalUrl) ?? undefined} target="_blank" rel="noopener noreferrer" style={{ color: "#fff", textDecoration: "underline" }}>Open original on {selectedSocialPost.platform} ↗</a> : "Connected account content · Athlete dashboard source"}
                           </div>
                         </div>
                       </div>
@@ -1769,7 +1715,7 @@ export default function LockerView({
                               <div ref={duplicate ? undefined : teamHistoryPrimaryRef} className="team-history-sequence" aria-hidden={duplicate || undefined} key={duplicate ? "duplicate" : "primary"}>
                                 {careerTeams.map((team, index) => (
                                   <div key={`${team.label}-${index}`} style={{ flex: "none", marginRight: 8, borderRadius: 9999, overflow: "hidden", border: "1px solid rgba(255,255,255,.28)" }}>
-                                    <PillContent item={team} />
+                                    <PillContent item={team} historyName={team.historyName} />
                                   </div>
                                 ))}
                               </div>
@@ -1782,9 +1728,8 @@ export default function LockerView({
                     </div>
                   </div>
                 )}
-                {statsSort === "career" && !!data.structuredStats?.length && <StructuredStats records={data.structuredStats} />}
-                {statsSort === "career" && !data.structuredStats?.length && (
-                  <div style={{ animation: "tabIn .35s ease", padding: "14px 18px 4px" }}>
+                {statsSort === "career" && <StructuredStats records={data.structuredStats ?? []} nflFallback={
+                  <div style={{ animation: "tabIn .35s ease" }}>
                     <div style={{ marginBottom: 12, padding: "11px 12px", borderRadius: 12, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.04)", fontFamily: mono, fontSize: 8, letterSpacing: ".11em", color: "rgba(255,255,255,.52)", textTransform: "uppercase", lineHeight: 1.35, textAlign: "center" }}>
                       Career metrics adapt by sport and position from onboarding scrape, athlete upload, or organization data.
                     </div>
@@ -1829,7 +1774,7 @@ export default function LockerView({
                       )}
                     </div>
                   </div>
-                )}
+                } />}
 
                 {statsSort === "awards" && (
                   <div style={{ animation: "tabIn .35s ease", padding: isPrivatePreview ? "14px 6px 10px" : "14px 18px 10px" }}>
@@ -2029,13 +1974,13 @@ function readableText(hex: string): string {
   return lum > 0.62 ? "#0B0E1A" : "#fff";
 }
 
-type PillItem = { label: string; color: string; logo?: string | null };
+type PillItem = { label: string; name?: string; color: string; logo?: string | null };
 const PILL_H = 44;
 
 // One row of a rotating pill: colored background + optional logo + label.
 // Logo + abbreviation center together as one group; with no logo
 // (level/status fallback) the label centers alone.
-function PillContent({ item }: { item: PillItem }) {
+function PillContent({ item, historyName }: { item: PillItem; historyName?: string }) {
   const fg = readableText(item.color);
   const hasLogo = !!item.logo;
   return (
@@ -2044,7 +1989,7 @@ function PillContent({ item }: { item: PillItem }) {
         <img src={item.logo!} alt="" style={{ height: 22, width: 22, objectFit: "contain", flex: "none", filter: "drop-shadow(0 0 1px rgba(255,255,255,.8)) drop-shadow(0 2px 3px rgba(0,0,0,.65))" }} />
       ) : null}
       <span style={{ maxWidth: "100%", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", fontFamily: disp, fontWeight: 700, fontSize: 19, letterSpacing: ".05em", textTransform: "uppercase", color: fg, textShadow: "0 1px 2px rgba(0,0,0,.45)" }}>
-        {item.label}
+        {historyName ? <><span className="team-history-abbreviation">{item.label}</span><span className="team-history-full-name">{historyName}</span></> : item.label}
       </span>
     </div>
   );
@@ -2055,9 +2000,10 @@ function PillContent({ item }: { item: PillItem }) {
 // scroll reads as one continuous loop). Static when it holds a single item;
 // falls back to `fallback` when `items` is empty. White stroke matches the
 // position pill.
-function RotatingPill({ items, fallback }: {
+function RotatingPill({ items, fallback, desktopSchoolNames = false }: {
   items: PillItem[];
   fallback: PillItem;
+  desktopSchoolNames?: boolean;
 }) {
   const list = items.length ? items : [fallback];
   const [tick, setTick] = useState(0);
@@ -2070,15 +2016,15 @@ function RotatingPill({ items, fallback }: {
   const shell: React.CSSProperties = { flex: 1, minWidth: 0, height: PILL_H, borderRadius: 9999, overflow: "hidden", border: "1px solid rgba(255,255,255,.28)", boxShadow: "0 4px 18px rgba(0,0,0,.35)" };
 
   if (list.length <= 1) {
-    return <div style={shell}><PillContent item={list[0]} /></div>;
+    return <div style={shell}><PillContent item={list[0]} historyName={desktopSchoolNames && list[0].name ? schoolHistoryName(list[0].name!) : undefined} /></div>;
   }
   const cur = list[tick % list.length];
   const next = list[(tick + 1) % list.length];
   return (
     <div style={shell}>
       <div key={tick} style={{ position: "relative", animation: "pillScroll .6s cubic-bezier(.16,1,.3,1) forwards" }}>
-        <PillContent item={cur} />
-        <PillContent item={next} />
+        <PillContent item={cur} historyName={desktopSchoolNames && cur.name ? schoolHistoryName(cur.name!) : undefined} />
+        <PillContent item={next} historyName={desktopSchoolNames && next.name ? schoolHistoryName(next.name!) : undefined} />
         {/* blended seam where the two colors meet — only visible mid-scroll,
             faded out by the time the column comes to rest on either side */}
         <div style={{ position: "absolute", left: 0, right: 0, top: PILL_H - 7, height: 14, background: `linear-gradient(to bottom, ${cur.color}, ${next.color})`, pointerEvents: "none", animation: "pillSeamFade .6s ease forwards" }} />
@@ -2160,6 +2106,8 @@ const styleSheet = `
 .bio-headshot-image{position:relative;height:216px;flex:0 0 216px;overflow:hidden;background:${GRAD_FIELD}}
 .bio-headshot-photo{object-fit:cover;object-position:50% 12%}
 .bio-headshot-year{height:34px;flex:0 0 34px;display:flex;align-items:center;justify-content:center;border-top:1px solid #1E2640;color:${lockerAccent};font-family:${mono};font-size:11px;font-weight:700;letter-spacing:.12em;line-height:1;text-align:center;white-space:nowrap}
+.team-history-full-name{display:none}
+@media(min-width:900px){.team-history-full-name{display:inline}.team-history-abbreviation{display:none}}
 .team-history-viewport{min-width:0;flex:1;overflow:hidden;white-space:nowrap}
 .team-history-track{display:flex;width:max-content;will-change:transform}
 .team-history-sequence{display:flex;align-items:center;flex:none}
@@ -2176,6 +2124,13 @@ const styleSheet = `
 .locker-main-tab{font-size:15px}
 .locker-athlete-quote{font-size:13px}
 .locker-athlete-quote-author{font-size:10px}
+.locker-merch-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start}
+.locker-merch-buy{display:flex;align-items:center;justify-content:center;width:fit-content;min-width:96px;max-width:100%;min-height:34px;box-sizing:border-box;margin:10px auto 0;padding:6px 18px;border:1px solid #ffbb00;border-radius:9999px;background:#ffbb00;color:#111;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:800;text-transform:uppercase;text-decoration:none;cursor:pointer}
+.locker-merch-buy:hover{background:#ffd15c}
+.locker-merch-buy:focus-visible{outline:2px solid #fff;outline-offset:3px}
+.locker-merch-buy:disabled{background:rgba(255,187,0,.14);color:#ffbb00;border-color:rgba(255,187,0,.35);cursor:not-allowed}
+
+@media(min-width:900px){.locker-merch-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
 .locker-shorts-grid{grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:max-content;align-content:start;align-items:start}
 .locker-short-card{width:100%;aspect-ratio:9/16;justify-self:center}
 .locker-short-card:focus-visible{outline:2px solid ${lockerAccent};outline-offset:-3px}
@@ -2271,7 +2226,7 @@ const styleSheet = `
   .bltz-frame:not(.bltz-frame-embedded) .locker-hero-stroke{border-radius:8px}
   .bltz-frame:not(.bltz-frame-embedded) .locker-hero-headshot{bottom:82px!important;width:80vw!important;height:282px!important;clip-path:inset(0 0 clamp(47px,4.5vw,68px) 0)!important}
   .bltz-frame:not(.bltz-frame-embedded) .locker-hero-copy{right:50%!important;left:50%!important;width:min(560px,calc(100% - 48px));padding:0!important;transform:translateX(-50%)}
-  .bltz-frame:not(.bltz-frame-embedded) .locker-hero-copy h1{font-size:clamp(52px,5vw,76px)!important}
+  .bltz-frame:not(.bltz-frame-embedded) .locker-hero-copy h1{--hero-name-size:clamp(52px,5vw,76px)}
   .bltz-frame:not(.bltz-frame-embedded) .locker-film-section,
   .bltz-frame:not(.bltz-frame-embedded) .locker-photos-section{padding-right:0!important;padding-left:0!important}
   .bltz-frame:not(.bltz-frame-embedded) .locker-film-section .hs{gap:16px!important;padding-bottom:16px!important}

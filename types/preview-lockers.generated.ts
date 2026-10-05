@@ -1,5 +1,6 @@
-// Generated from the disposable database by Supabase CLI 2.114.0.
+// Preview table regenerated from isolated PostgreSQL information_schema by scripts/verify-preview-cfb-csv.mjs; remaining declarations retain their Supabase CLI provenance.
 // Scoped additive extract; released database.generated.ts remains unchanged.
+// Short-link and inquiry declarations are derived from migrations pending live schema regeneration.
 import type { Json } from "./database.generated";
 export type PreviewDatabase = { public: { Tables: { preview_lockers: {
         Row: {
@@ -8,6 +9,7 @@ export type PreviewDatabase = { public: { Tables: { preview_lockers: {
           awards: Json
           bio: string
           career_stats: Json
+          cfb_stats: Json
           created_at: string
           created_by: string
           full_name: string
@@ -15,6 +17,9 @@ export type PreviewDatabase = { public: { Tables: { preview_lockers: {
           headshot_url: string | null
           height_in: number | null
           hero_video_url: string | null
+          photo_room_banner_url: string | null
+          photo_room_banner_link: string | null
+          photo_room_banner_storage_path: string | null
           hometown: string | null
           id: string
           jersey: string | null
@@ -26,6 +31,7 @@ export type PreviewDatabase = { public: { Tables: { preview_lockers: {
           school: string | null
           schools: Json
           slug: string
+          social: Json
           updated_at: string
           videos: Json
           weight_lbs: number | null
@@ -36,6 +42,7 @@ export type PreviewDatabase = { public: { Tables: { preview_lockers: {
           awards?: Json
           bio?: string
           career_stats?: Json
+          cfb_stats?: Json
           created_at?: string
           created_by?: string
           full_name: string
@@ -43,6 +50,9 @@ export type PreviewDatabase = { public: { Tables: { preview_lockers: {
           headshot_url?: string | null
           height_in?: number | null
           hero_video_url?: string | null
+          photo_room_banner_url?: string | null
+          photo_room_banner_link?: string | null
+          photo_room_banner_storage_path?: string | null
           hometown?: string | null
           id?: string
           jersey?: string | null
@@ -54,6 +64,7 @@ export type PreviewDatabase = { public: { Tables: { preview_lockers: {
           school?: string | null
           schools?: Json
           slug: string
+          social?: Json
           updated_at?: string
           videos?: Json
           weight_lbs?: number | null
@@ -64,6 +75,7 @@ export type PreviewDatabase = { public: { Tables: { preview_lockers: {
           awards?: Json
           bio?: string
           career_stats?: Json
+          cfb_stats?: Json
           created_at?: string
           created_by?: string
           full_name?: string
@@ -71,6 +83,9 @@ export type PreviewDatabase = { public: { Tables: { preview_lockers: {
           headshot_url?: string | null
           height_in?: number | null
           hero_video_url?: string | null
+          photo_room_banner_url?: string | null
+          photo_room_banner_link?: string | null
+          photo_room_banner_storage_path?: string | null
           hometown?: string | null
           id?: string
           jersey?: string | null
@@ -82,11 +97,78 @@ export type PreviewDatabase = { public: { Tables: { preview_lockers: {
           school?: string | null
           schools?: Json
           slug?: string
+          social?: Json
           updated_at?: string
           videos?: Json
           weight_lbs?: number | null
         }
         Relationships: []
+      }
+      preview_locker_short_links: {
+        Row: {
+          alias: string
+          created_at: string
+          created_by: string
+          preview_id: string
+          public_access_enabled: boolean
+          updated_at: string
+        }
+        Insert: {
+          alias: string
+          created_at?: string
+          created_by?: string
+          preview_id: string
+          public_access_enabled?: boolean
+          updated_at?: string
+        }
+        Update: {
+          alias?: string
+          created_at?: string
+          created_by?: string
+          preview_id?: string
+          public_access_enabled?: boolean
+          updated_at?: string
+        }
+        Relationships: [{
+          foreignKeyName: "preview_locker_short_links_preview_id_fkey"
+          columns: ["preview_id"]
+          isOneToOne: true
+          referencedRelation: "preview_lockers"
+          referencedColumns: ["id"]
+        }]
+      }
+      preview_link_inquiries: {
+        Row: {
+          consent_at: string
+          created_at: string
+          email: string
+          feature_requests: string | null
+          id: string
+          preview_id: string
+        }
+        Insert: {
+          consent_at?: string
+          created_at?: string
+          email: string
+          feature_requests?: string | null
+          id?: string
+          preview_id: string
+        }
+        Update: {
+          consent_at?: string
+          created_at?: string
+          email?: string
+          feature_requests?: string | null
+          id?: string
+          preview_id?: string
+        }
+        Relationships: [{
+          foreignKeyName: "preview_link_inquiries_preview_id_fkey"
+          columns: ["preview_id"]
+          isOneToOne: false
+          referencedRelation: "preview_lockers"
+          referencedColumns: ["id"]
+        }]
       }
       preview_locker_viewer_grants: {
         Row: {

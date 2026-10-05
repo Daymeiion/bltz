@@ -24,5 +24,5 @@ export default async function NewPreview({searchParams}:{searchParams:Promise<{i
       if((result.data?.length??0)<1000)break;
     }
   }
-  return <section className="mx-auto max-w-4xl space-y-6 p-6 sm:p-10"><h1 className="text-3xl font-semibold">Create private preview</h1>{reservedId&&<p>This save consumes the referral’s reserved preview ID and links its GTM contact. Viewer access must be assigned separately.</p>}<PreviewLockerForm reservedId={reservedId} referralName={referralName} enrollmentEnabled={enrollmentEnabled} enrollmentContacts={contacts}/></section>;
+  return <section className="mx-auto max-w-4xl space-y-6 p-6 sm:p-10"><h1 className="text-3xl font-semibold">Create private preview</h1>{reservedId&&<p>This save consumes the referral’s reserved preview ID and links its GTM contact. Publish the reviewed invite link before outreach; recipients will not need to sign in.</p>}<PreviewLockerForm reservedId={reservedId} referralName={referralName} enrollmentEnabled={enrollmentEnabled} enrollmentContacts={contacts}/></section>;
 }
