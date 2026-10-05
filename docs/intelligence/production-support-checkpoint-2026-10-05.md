@@ -73,8 +73,8 @@ does not grant publication, licensing or financial rights.
   constraints, signature/transport boundaries, private projections and denied
   publication. It caught/fixed actor lookup, table-specific trigger columns and
   production collector exclusion errors before this checkpoint.
-- Three original measured-loop source tests were extended to cover deployed
-  assignment-gate delegation; no legacy authorization check was removed.
+- Authorization regression checks cover the new endpoints' assignment-gate
+  delegation before service-client construction; no legacy check was removed.
 
 ## Manual verification, limitations and deferred work
 

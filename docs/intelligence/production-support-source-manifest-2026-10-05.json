@@ -101,8 +101,8 @@
     },
     {
       "path": "docs/intelligence/measured-loop-completion-2026-10-05.md",
-      "bytes": 40901,
-      "sha256": "243bdd15746825f2bc3395770d1d66c3ecb54f3f40bd90846cfc1ead4c4ea05d"
+      "bytes": 40900,
+      "sha256": "fd97baa0e9726262fdd6820c11eed7b9cf616eca17e0370c67f1fc3468f77d07"
     },
     {
       "path": "docs/intelligence/measured-loop-implementation-2026-10-05.md",
@@ -116,8 +116,8 @@
     },
     {
       "path": "docs/intelligence/production-support-checkpoint-2026-10-05.md",
-      "bytes": 5793,
-      "sha256": "0a58442a466d1f3e756af02bc02bdbc6840b313eec94078fd419b6d27f04924d"
+      "bytes": 5797,
+      "sha256": "494c716c5780eb1720212cfc9c5fe92e0a4020f9e58bd6ffdc9b2501abf837dc"
     },
     {
       "path": "docs/intelligence/tinybird-qstash-build-readiness.md",
@@ -533,5 +533,6 @@
     "typecheck": true,
     "build": true,
     "lintErrors": 0
-  }
+  },
+  "finalSourceDocumentationReviewed": true
 }

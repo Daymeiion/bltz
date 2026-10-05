@@ -271,4 +271,3 @@ The supplied catalog contains **46 unique rules**: 2 marked implemented, 6 first
 - **Value Graph:** This slice strengthens the boundary and provenance needed for future transaction-linked attribution. It does **not** create earnings, agreements, transactions, financial allocations or payouts; no Value Ledger completion is claimed.
 - **Integration-first:** Existing Locker/event/Lab architecture is reused, with QStash and Tinybird as supporting delivery/analytics infrastructure. No DAM, social publishing suite, general storage system, organization CRM or editing product is rebuilt.
 - **Scope drift:** No generalized media-management expansion. The legacy Moment-to-asset adapter supports identity/history and reviewed use; it is not an early replacement for the authorized Media Graph or rights-engine phases.
-
