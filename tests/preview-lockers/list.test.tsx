@@ -2,36 +2,70 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, expect, it, vi } from "vitest";
 import PreviewList from "@/app/admin/preview-lockers/page";
 const mocked = vi.hoisted(() => ({ admin: vi.fn() }));
-vi.mock("@/lib/preview-lockers/server", () => ({ previewAdmin: mocked.admin }));
 let request: { select: ReturnType<typeof vi.fn>; ilike: ReturnType<typeof vi.fn>; order: ReturnType<typeof vi.fn>; range: ReturnType<typeof vi.fn> };
+let shortLinkRequest: { select: ReturnType<typeof vi.fn>; in: ReturnType<typeof vi.fn> };
+let from: ReturnType<typeof vi.fn>;
 beforeEach(() => {
   request = { select: vi.fn(), ilike: vi.fn(), order: vi.fn(), range: vi.fn() };
   request.select.mockReturnValue(request); request.ilike.mockReturnValue(request); request.order.mockReturnValue(request);
-  mocked.admin.mockResolvedValue({ client: { from: () => request } });
+  shortLinkRequest = { select: vi.fn(), in: vi.fn().mockResolvedValue({ data: [], error: null }) };
+  shortLinkRequest.select.mockReturnValue(shortLinkRequest);
+  from = vi.fn(table => {
+    if (table === "preview_lockers") return request;
+    if (table === "preview_locker_short_links") return shortLinkRequest;
+    throw new Error(`Unexpected preview table: ${table}`);
+  });
+  mocked.admin.mockResolvedValue({ client: { from } });
 });
-it("searches before pagination, retains filters, and provides compact accessible row actions", async () => {
-  request.range.mockResolvedValue({ data: Array.from({ length: 51 }, (_, i) => ({ id: `id-${i}`, slug: `athlete-${i}`, full_name: `Athlete ${i}`, school: null })), error: null });
+vi.mock("@/lib/preview-lockers/server", () => ({ previewAdmin: mocked.admin }));
+it("searches before pagination, scopes publication lookup, and provides compact accessible row actions", async () => {
+  const rows = Array.from({ length: 51 }, (_, i) => ({ id: `id-${i}`, slug: `athlete-${i}`, full_name: `Athlete ${i}`, school: null }));
+  request.range.mockResolvedValue({ data: rows, error: null });
+  shortLinkRequest.in.mockResolvedValue({ data: [{ preview_id: "id-0", public_access_enabled: true }, { preview_id: "id-1", public_access_enabled: false }], error: null });
   const html = renderToStaticMarkup(await PreviewList({ searchParams: Promise.resolve({ q: "Athlete", sort: "name", page: "2" }) }));
+  expect(from).toHaveBeenNthCalledWith(1, "preview_lockers");
+  expect(from).toHaveBeenNthCalledWith(2, "preview_locker_short_links");
   expect(request.ilike).toHaveBeenCalledWith("full_name", "%Athlete%");
+  expect(request.ilike.mock.invocationCallOrder[0]).toBeLessThan(request.range.mock.invocationCallOrder[0]);
   expect(request.range).toHaveBeenCalledWith(50, 100);
   expect(request.order).toHaveBeenCalledWith("full_name", { ascending: true });
+  expect(request.order).toHaveBeenCalledWith("id");
+  expect(shortLinkRequest.select).toHaveBeenCalledWith("preview_id,public_access_enabled");
+  expect(shortLinkRequest.in).toHaveBeenCalledWith("preview_id", rows.map(row => row.id));
   const host = document.createElement("div"); host.innerHTML = html;
   expect(host.querySelectorAll("li")).toHaveLength(50);
+  expect(host.querySelector('[role="search"]')?.getAttribute("aria-label")).toBe("Search preview lockers");
   expect(host.querySelector('[aria-label="Edit Athlete 0"]')?.textContent).toBe("Edit");
   expect(host.querySelector('[title="Photos"]')?.getAttribute("href")).toBe("/preview-lockers/athlete-0/photos");
   expect(host.querySelector('[title="Film Room"]')?.getAttribute("aria-label")).toBe("Film Room for Athlete 0");
+  expect(host.querySelector('[aria-label="Share invite for Athlete 0"]')?.textContent).toBe("Share link");
+  expect(host.querySelector('[aria-label="Publish invite for Athlete 1"]')?.textContent).toBe("Publish");
+  expect(host.querySelectorAll("li")[0].textContent).toContain("Published — no sign-in");
+  expect(host.querySelectorAll("li")[1].textContent).toContain("Unpublished draft");
   expect(html).toContain("q=Athlete&amp;sort=name&amp;page=3");
 });
 it("provides search empty and load error states without exposing rows", async () => {
   request.range.mockResolvedValue({ data: [], error: null });
   expect(renderToStaticMarkup(await PreviewList({ searchParams: Promise.resolve({ q: "Missing" }) }))).toContain("No previews match");
+  expect(shortLinkRequest.in).not.toHaveBeenCalled();
   request.range.mockResolvedValue({ data: null, error: { message: "private database detail" } });
   const html = renderToStaticMarkup(await PreviewList({ searchParams: Promise.resolve({}) }));
   expect(html).toContain("Saved previews are unavailable");
   expect(html).not.toContain("private database detail");
 });
+it("withholds saved rows when publication state cannot be loaded", async () => {
+  request.range.mockResolvedValue({ data: [{ id: "private-id", slug: "private-slug", full_name: "Private Athlete", school: null }], error: null });
+  shortLinkRequest.in.mockResolvedValue({ data: null, error: { message: "private short-link detail" } });
+  const html = renderToStaticMarkup(await PreviewList({ searchParams: Promise.resolve({}) }));
+  expect(html).toContain('role="alert"');
+  expect(html).toContain("Saved previews are unavailable");
+  expect(html).not.toContain("Private Athlete");
+  expect(html).not.toContain("private short-link detail");
+  expect(html).not.toContain("/admin/preview-lockers/private-id");
+});
 it("requires admin authorization before querying saved previews", async () => {
   mocked.admin.mockRejectedValueOnce(new Error("unauthorized"));
   await expect(PreviewList({ searchParams: Promise.resolve({}) })).rejects.toThrow("unauthorized");
+  expect(from).not.toHaveBeenCalled();
   expect(request.select).not.toHaveBeenCalled();
 });

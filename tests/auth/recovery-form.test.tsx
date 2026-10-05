@@ -16,6 +16,7 @@ let host: HTMLDivElement;
 let root: Root;
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   window.history.replaceState(null, "", "/auth/update-password");
   initialize.mockResolvedValue({ error: null });
   getUser.mockResolvedValue({ data: { user: { id: "test-user", email: "synthetic@bltz.invalid" } }, error: null });
@@ -27,6 +28,7 @@ beforeEach(() => {
 afterEach(async () => {
   await act(async () => root.unmount());
   host.remove();
+  vi.unstubAllGlobals();
 });
 const render = () => act(async () => root.render(<StrictMode><UpdatePasswordForm /></StrictMode>));
 async function fillPassword() {
@@ -144,8 +146,9 @@ it("disables the form if the session expires at the actual password write", asyn
   expect(host.querySelector('[role="alert"]')?.textContent).toContain("could not be verified");
 });
 
-it("keeps the released server recovery callback target and hides upstream failures", async () => {
-  resetPasswordForEmail.mockResolvedValueOnce({ error: new Error("private-detail") });
+it.each(["returned", "thrown"])("keeps the server recovery callback target and hides %s upstream failures", async kind => {
+  if (kind === "returned") resetPasswordForEmail.mockResolvedValueOnce({ error: new Error("private-detail") });
+  else resetPasswordForEmail.mockRejectedValueOnce(new Error("private-detail"));
   resetPasswordForEmail.mockResolvedValueOnce({ error: null });
   await act(async () => root.render(<ForgotPasswordForm />));
   await act(async () => {
@@ -157,8 +160,14 @@ it("keeps the released server recovery callback target and hides upstream failur
   expect(resetPasswordForEmail).toHaveBeenCalledExactlyOnceWith("synthetic@bltz.invalid", {
     redirectTo: window.location.origin + "/auth/callback?next=%2Fauth%2Fupdate-password",
   });
-  expect(host.querySelector('[role="alert"]')?.textContent).toBe("Unable to send a reset email right now. Please try again.");
+  expect(host.querySelector('[role="alert"]')?.textContent).toBe("Could not request a password-reset link. Please try again later.");
   expect(host.textContent).not.toContain("private-detail");
+  expect(host.querySelector("button")!.disabled).toBe(false);
+  expect(getUser).not.toHaveBeenCalled();
+  expect(updateUser).not.toHaveBeenCalled();
   await submit();
+  expect(resetPasswordForEmail).toHaveBeenNthCalledWith(2, "synthetic@bltz.invalid", {
+    redirectTo: window.location.origin + "/auth/callback?next=%2Fauth%2Fupdate-password",
+  });
   expect(host.textContent).toContain("If you registered");
 });

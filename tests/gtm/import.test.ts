@@ -48,6 +48,36 @@ describe("GTM CSV normalization", () => {
     expect(() => parseGtmCsv(Buffer.from([0x50, 0x4b, 0x03, 0x04]))).toThrow("not an Excel workbook");
   });
 
+  it("rejects a legacy binary Excel workbook before the CSV parser handles it", () => {
+    const workbook = Buffer.from([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1, 0, 0, 0, 0]);
+    expect(() => parseGtmCsv(workbook)).toThrow("not an Excel workbook");
+  });
+
+  it("preserves quoted commas, escaped quotes and textual leading zeroes", () => {
+    const csv = Buffer.from([
+      'Name,Company,Title,Record ID',
+      '"Taylor, Lane","North ""Coast""",00123,00042',
+    ].join("\r\n"));
+    const result = parseGtmCsv(csv);
+
+    expect(result.rows[0]).toMatchObject({
+      displayName: "Taylor, Lane",
+      currentCompany: 'North "Coast"',
+      currentTitle: "00123",
+    });
+    expect(result.rows[0].sourceRecordId).toBe(parseGtmCsv(Buffer.from("Name,Record ID\nTaylor Lane,00042")).rows[0].sourceRecordId);
+  });
+
+  it("treats prototype-like column names as inert CSV data", () => {
+    const objectPrototype = Object.getPrototypeOf({});
+    const result = parseGtmCsv(Buffer.from("Name,__proto__,constructor\nTaylor Lane,polluted,not-a-function"));
+
+    expect(result.rows[0].displayName).toBe("Taylor Lane");
+    expect(Object.getPrototypeOf({})).toBe(objectPrototype);
+    expect(Object.hasOwn(Object.prototype, "polluted")).toBe(false);
+    expect({}.constructor).toBe(Object);
+  });
+
   it("supports explicit field mapping and rejects invalid rows before commit", () => {
     const csv = Buffer.from("Person,Profile,Mail\nTaylor Lane,not-a-linkedin-url,bad-email");
     const result = parseGtmCsv(csv, { displayName: "Person", linkedinUrl: "Profile", email: "Mail" });

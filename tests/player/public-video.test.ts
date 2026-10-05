@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createMockPublicVideos, publicVideoLevel, toPublicVideo } from "@/lib/player/public-video";
 
 describe("public video mapping", () => {
-  it("classifies career levels from tags and metadata", () => {
+  it("classifies all four supported career levels from tags and metadata", () => {
     expect(publicVideoLevel(["high school"], null)).toBe("hs");
     expect(publicVideoLevel(["nfl"], null)).toBe("pro");
     expect(publicVideoLevel(["community"], null)).toBe("off-field");
@@ -22,14 +22,23 @@ describe("public video mapping", () => {
       meta: { level: "pro", season: 2025, publisher: "Team Media" },
     }, "Athlete Name");
 
-    expect(video.level).toBe("pro");
-    expect(video.season).toBe("2025");
-    expect(video.attribution).toBe("Team Media");
-    expect(video.publishedAt).toBe("2026-07-15T12:00:00.000Z");
+    expect(video).toMatchObject({
+      id: "video-1", title: "Season Film", description: "A verified reel.",
+      thumbnailUrl: "/thumb.jpg", playbackUrl: "/film.mp4", durationSeconds: 95,
+      level: "pro", season: "2025", attribution: "Team Media", sourceLabel: "BLTZ FILM",
+      tags: ["highlights"], publishedAt: "2026-07-15T12:00:00.000Z",
+    });
   });
 
-  it("provides every public Film Room category in the development preview", () => {
-    const levels = new Set(createMockPublicVideos("Demo Player").map((video) => video.level));
-    expect(levels).toEqual(new Set(["hs", "cfb", "pro", "off-field"]));
+  it("preserves the published college and pro demo films without inventing absent categories", () => {
+    const videos = createMockPublicVideos("Demo Player");
+    expect(new Set(videos.map(video => video.level))).toEqual(new Set(["cfb", "pro"]));
+    expect(videos.map(({ id, level, season }) => ({ id, level, season }))).toEqual([
+      { id: "dante-film-01", level: "cfb", season: "2006" },
+      { id: "dante-film-02", level: "cfb", season: "2006" },
+      { id: "dante-film-03", level: "pro", season: "2011" },
+    ]);
+    expect(videos.every(video => video.attribution === "Demo Player" && video.sourceLabel === "PRIVATE FILM" && video.publishedAt === null)).toBe(true);
+    expect(videos.every(video => video.playbackUrl?.endsWith(".mp4") && video.thumbnailUrl && (video.durationSeconds ?? 0) > 0)).toBe(true);
   });
 });

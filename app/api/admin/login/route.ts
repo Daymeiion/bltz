@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextRequest, NextResponse } from "next/server";
+import { expireAdminSessionCookies } from "@/lib/auth/admin-session-cookies";
 import { TEST_AUTH_COOKIE } from "@/lib/onboarding/test-auth";
 
 function classifySignInError(error: unknown) {
@@ -44,7 +45,6 @@ export async function POST(request: NextRequest) {
   const formData = await request.formData();
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
-  if (!email || !password) return adminLoginRedirect(request, "missing_fields");
 
   const cookieResponse = NextResponse.next();
   const supabase = createServerClient(
@@ -62,22 +62,49 @@ export async function POST(request: NextRequest) {
     },
   );
 
+  async function rejectSignIn(reason: string) {
+    // Rejected reauthentication must not leave an older browser session active.
+    // A local sign-out never ends another browser/device's Supabase session.
+    try { await supabase.auth.signOut({ scope: "local" }); } catch { /* Expire local cookies even when the Auth service is unavailable. */ }
+    const response = adminLoginRedirect(request, reason);
+    response.headers.set("Cache-Control", "private, no-store");
+    const projectRef = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL!).hostname.split(".")[0];
+    const storageKey = `sb-${projectRef}-auth-token`;
+    const isProjectAuthCookie = (name: string) => {
+      const key = name.replace(/\.\d+$/, "");
+      if ([storageKey, `${storageKey}-user`, `${storageKey}-code-verifier`, `${storageKey}-flows-code-verifier`].includes(key)) return true;
+      const flowPrefix = `${storageKey}-flow-`;
+      return key.startsWith(flowPrefix) && /^[A-Za-z0-9_-]{8,64}-code-verifier$/.test(key.slice(flowPrefix.length));
+    };
+    // The shared logout helper expires all staged names. Supply only this
+    // project's auth names, including newer SDK flow verifiers and their chunks;
+    // never forward staged session values or clear unrelated project cookies.
+    const expirationCookies = NextResponse.next();
+    for (const { name } of [...request.cookies.getAll(), ...cookieResponse.cookies.getAll()]) {
+      if (isProjectAuthCookie(name)) expirationCookies.cookies.set(name, "", { path: "/", maxAge: 0 });
+    }
+    expireAdminSessionCookies(request, response, expirationCookies);
+    return response;
+  }
+  if (!email || !password) return rejectSignIn("missing_fields");
+
   const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     .catch((error: unknown) => ({ data: { user: null }, error }));
   if (error || !data.user) {
     const reason = classifySignInError(error);
     console.warn("admin_login_failed", { reason });
-    return adminLoginRedirect(request, reason);
+    return rejectSignIn(reason);
   }
 
   const { data: isAdmin, error: authorizationError } = await Promise.resolve(supabase.rpc(
     "is_internal_admin",
   )).catch(() => ({ data: null, error: true }));
 
-  if (authorizationError) return adminLoginRedirect(request, "authorization_unavailable");
-  if (isAdmin !== true) return adminLoginRedirect(request, "not_admin");
+  if (authorizationError) return rejectSignIn("authorization_unavailable");
+  if (isAdmin !== true) return rejectSignIn("not_admin");
 
   const response = NextResponse.redirect(new URL("/admin/beta", request.url), 303);
+  response.headers.set("Cache-Control", "private, no-store");
   cookieResponse.cookies.getAll().forEach((cookie) => response.cookies.set(cookie));
   response.cookies.delete(TEST_AUTH_COOKIE);
   return response;

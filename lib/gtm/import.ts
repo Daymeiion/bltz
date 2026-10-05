@@ -114,7 +114,9 @@ function sourceIdentity(
 export function parseGtmCsv(buffer: Buffer, mappingOverride?: GtmFieldMapping): ParsedGtmImport {
   if (buffer.byteLength === 0) throw new Error("Choose a non-empty CSV file.");
   if (buffer.byteLength > GTM_CSV_MAX_BYTES) throw new Error("CSV files must be smaller than 2 MB.");
-  if (buffer[0] === 0x50 && buffer[1] === 0x4b) throw new Error("Choose a CSV file, not an Excel workbook.");
+  const isZipWorkbook = buffer[0] === 0x50 && buffer[1] === 0x4b;
+  const isLegacyWorkbook = buffer.subarray(0, 8).equals(Buffer.from([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1]));
+  if (isZipWorkbook || isLegacyWorkbook) throw new Error("Choose a CSV file, not an Excel workbook.");
   const contentSha256 = createHash("sha256").update(buffer).digest("hex");
 
   // CSV identity/date fields must remain textual. SheetJS otherwise coerces
