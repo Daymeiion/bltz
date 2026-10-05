@@ -10,6 +10,10 @@ import { isSafeSourceLocator } from "./ingestion/contracts";
 import { evaluateGraphIntelligence } from "./signals";
 import { projectGraphEvidenceData } from "./evidence-projection";
 import type { WorkspaceAthleteSummary, WorkspaceMedia, WorkspaceProfile, WorkspaceResult } from "./workspace-types";
+import { loadMeasuredIntelligence, unavailableMeasurements } from "./measured-server";
+import { resolveMediaPermissions as resolveLegacyMediaPermissions } from "./workflows/permissions";
+import { intelligenceWorkflowsEnabled } from "./workflows/contracts";
+import { loadWorkflows } from "./workflows/server";
 
 const uuid = z.string().uuid();
 const nullable = z.string().nullable();
@@ -53,11 +57,11 @@ export function safeWorkspaceUrl(value: unknown): string | null {
 }
 
 /** Legacy eligibility adapter for internal inspection, not the future rights engine. */
-function resolveMediaPermissions(asset: z.infer<typeof mediaSchema>, usageContext: "internal_intelligence_preview") {
+function resolveWorkspacePreview(asset: z.infer<typeof mediaSchema>) {
   const url = safeWorkspaceUrl(asset.url);
-  const allowed = usageContext === "internal_intelligence_preview" && asset.license_status === "approved"
-    && asset.public_locker_approved && !!asset.license_kind?.trim() && !!url
-    && ["photo", "headshot", "video"].includes(asset.kind);
+  const allowed = !!url && resolveLegacyMediaPermissions({ model: "legacy_media", associationReviewed: true,
+    athleteRelationshipVerified: true, kind: asset.kind, licenseStatus: asset.license_status,
+    publicLockerApproved: asset.public_locker_approved, licenseKind: asset.license_kind }, "internal_review").allowed;
   return { previewUrl: allowed ? url : null, reason: allowed ? "Existing legacy asset approval; no additional use rights inferred." : "Preview withheld: explicit existing asset approval and a safe URL are required." };
 }
 
@@ -147,11 +151,11 @@ async function selectedExtras(db: Db, result: WorkspaceResult["result"]): Promis
   const metadataOnly = "Preview withheld: existing asset approval metadata is unavailable.";
   const media: LabSection<WorkspaceMedia> = { ...athlete.media, rows: athlete.media.rows.map(row => {
     const asset = row.model === "legacy media" ? permissions.rows.find(item => item.id === row.id) : null;
-    const resolved = asset ? resolveMediaPermissions(asset, "internal_intelligence_preview") : null;
+    const resolved = asset ? resolveWorkspacePreview(asset) : null;
     return { ...row, previewUrl: resolved?.previewUrl ?? null, sourceUrl: safeWorkspaceUrl(asset?.source_url), credits: asset?.credits ?? null, publicationStatus: asset?.license_status ?? "unverified", permissionReason: resolved?.reason ?? metadataOnly, momentIds: [] };
   }) };
   const knownPortrait = [player?.headshot_url, player?.image_url, player?.profile_image].map(safeWorkspaceUrl).find(Boolean) ?? null;
-  const portraitAsset = knownPortrait ? permissions.rows.find(asset => safeWorkspaceUrl(asset.url) === knownPortrait && resolveMediaPermissions(asset, "internal_intelligence_preview").previewUrl) : null;
+  const portraitAsset = knownPortrait ? permissions.rows.find(asset => safeWorkspaceUrl(asset.url) === knownPortrait && resolveWorkspacePreview(asset).previewUrl) : null;
   // This explicit canonical link permits inspection of the existing private
   // Locker portrait. It conveys neither public eligibility nor ownership.
   const previewPortrait = safeWorkspaceUrl(preview?.headshot_url);
@@ -208,5 +212,12 @@ export async function loadIntelligenceWorkspace(params: { q?: string; athlete?: 
   }
   const result: WorkspaceResult["result"] = { ...lab, query, search: { ...search, rows } };
   const extras = await selectedExtras(db, result);
-  return { result, directory, ...extras, momentMediaState: "not_supported" };
+  const measured = selected ? await loadMeasuredIntelligence(selected.id).catch(() => unavailableMeasurements("Measurements could not be loaded.")) : unavailableMeasurements("Select an athlete to inspect measurements.");
+  const workflows = selected && intelligenceWorkflowsEnabled() ? await loadWorkflows(selected.id).catch(() => null) : null;
+  const workflowState = intelligenceWorkflowsEnabled() ? workflows ? "ready" : "unavailable" : "disabled";
+  if (workflows) for (const row of extras.media.rows) {
+    row.momentIds = workflows.momentAssetLinks.filter(link => link.status === "verified" && link.current_display_eligible
+      && (row.model === "legacy media" ? link.legacy_media_id === row.id : link.legacy_video_id === row.id)).map(link => link.moment_id);
+  }
+  return { result, directory, ...extras, momentMediaState: workflowState === "ready" ? "ready" : workflowState === "disabled" ? "not_supported" : "unavailable", measured, workflows, workflowState, dataMode: "live" };
 }

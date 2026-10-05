@@ -3,7 +3,8 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import type { PipelineDraft, PipelineEvent, ScraperSource } from "@/lib/pipeline/types";
-import { analyticsEventIdFromParts, recordTrustedAnalyticsEvent } from "@/lib/analytics/server";
+import { analyticsEventIdFromParts } from "@/lib/analytics/server";
+import { recordImmutableClaimAnalyticsEvent } from "@/lib/analytics/claim-events";
 
 export const runtime = "nodejs";
 
@@ -40,7 +41,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "expired" }, { status: 410 });
 
   const analyticsSession = z.string().uuid().safeParse(req.headers.get("x-bltz-analytics-session"));
-  await recordTrustedAnalyticsEvent({
+  await recordImmutableClaimAnalyticsEvent({
     eventName: "claim_link_validated",
     clientEventId: analyticsEventIdFromParts("claim_link_validated", user.id, tokenRow.player_id, body.token),
     userId: user.id,
@@ -59,7 +60,7 @@ export async function POST(req: Request) {
     .maybeSingle();
   if (activeRun) {
     if (activeRun.user_id === user.id) {
-      await recordTrustedAnalyticsEvent({
+      await recordImmutableClaimAnalyticsEvent({
         eventName: "claim_completed",
         clientEventId: analyticsEventIdFromParts("claim_completed", activeRun.id),
         userId: user.id,
@@ -67,7 +68,7 @@ export async function POST(req: Request) {
         sessionId: analyticsSession.success ? analyticsSession.data : null,
         source: "onboarding",
         page: "/onboarding/claim/[token]",
-        properties: { reused: true },
+        properties: { entry_point: "claim_recap" },
       }).catch(() => undefined);
       return NextResponse.json({ runId: activeRun.id, reused: true });
     }
@@ -187,7 +188,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "could_not_seed", detail: insertErr?.message }, { status: 500 });
   }
 
-  await recordTrustedAnalyticsEvent({
+  await recordImmutableClaimAnalyticsEvent({
     eventName: "claim_completed",
     clientEventId: analyticsEventIdFromParts("claim_completed", run.id),
     userId: user.id,
@@ -195,7 +196,7 @@ export async function POST(req: Request) {
     sessionId: analyticsSession.success ? analyticsSession.data : null,
     source: "onboarding",
     page: "/onboarding/claim/[token]",
-    properties: { reused: false },
+    properties: { entry_point: "claim_recap" },
   }).catch(() => undefined);
 
   return NextResponse.json({ runId: run.id });

@@ -1,0 +1,177 @@
+{
+  "schema_version": 1,
+  "artifact_kind": "synthetic_expected_result_specification",
+  "created_for": "BLTZ Intelligence Lab reconciliation",
+  "synthetic": true,
+  "not_executable_detector_output": true,
+  "environment": "isolated_development_only",
+  "exclude_from": ["production_features", "live_watchlist", "financial_allocations", "payouts", "real_partner_reporting"],
+  "labels": {"athlete": "Synthetic Athlete A", "organization": "Synthetic University", "brand": "Synthetic Brand A", "provider": "synthetic_partner"},
+  "ids": {
+    "player_id": "10000000-0000-4000-8000-000000000001",
+    "moment_id": "20000000-0000-4000-8000-000000000001",
+    "asset_id": "30000000-0000-4000-8000-000000000001",
+    "activation_id": "40000000-0000-4000-8000-000000000001"
+  },
+  "scenarios": [
+    {
+      "id": "anniversary_blocked_media",
+      "as_of": "2026-10-04T23:59:59Z",
+      "input": {
+        "moment_title": "Synthetic University vs Synthetic Opponent",
+        "occurred_on": "2006-10-07",
+        "date_precision": "day",
+        "moment_status": "verified",
+        "association_status": "verified",
+        "moment_confidence": 0.99,
+        "association_confidence": 0.98,
+        "occurrence_evidence": {"status": "verified", "confidence": 0.97, "occurred_on": "2006-10-07", "source_id": "50000000-0000-4000-8000-000000000001", "provider": "manual", "source_label": "Synthetic reviewed source", "locator": null, "fetched_at": "2026-10-01T12:00:00Z"},
+        "anniversary_window_days": 30,
+        "reviewed_moment_asset_count": 0,
+        "use_permission": "unknown",
+        "athlete_preference": "unknown"
+      },
+      "expected": {
+        "signal_type": "historical_anniversary",
+        "target_date": "2026-10-07",
+        "anniversary_years": 20,
+        "days_until": 3,
+        "editorial_priority": 96,
+        "confidence": 0.97,
+        "opportunity_type": "anniversary_retrospective_review",
+        "opportunity_state": "candidate",
+        "readiness": "research_needed",
+        "blockers": ["moment_media", "use_permission", "athlete_preferences"],
+        "activation_count": 0,
+        "earnings_cents": null
+      }
+    },
+    {
+      "id": "measured_discovery_to_activation_draft",
+      "as_of": "2026-10-04T00:00:00Z",
+      "input": {
+        "metric": "eligible_distinct_sessions",
+        "current_window": {"start": "2026-09-27T00:00:00Z", "end": "2026-10-04T00:00:00Z", "sessions": 120},
+        "baseline_window": {"start": "2026-09-20T00:00:00Z", "end": "2026-09-27T00:00:00Z", "sessions": 40},
+        "complete_comparable_coverage": true,
+        "measurement_version_unchanged": true,
+        "signed_athlete_distributed_sessions_current": 72,
+        "proposed_thresholds": {"minimum_baseline": 20, "minimum_current": 40, "minimum_increase": 20, "minimum_growth": 1.0},
+        "reviewed_moment_link": true,
+        "reviewed_asset_link": true,
+        "use_permission": "unknown",
+        "activation_user_action": "create_draft"
+      },
+      "expected": {
+        "proposed_signal_type": "locker_discovery_spike",
+        "absolute_increase": 80,
+        "growth": 2.0,
+        "growth_display": "+200%",
+        "athlete_distributed_session_fraction": 0.6,
+        "opportunity": "athlete_redistribution_review",
+        "activation_state": "draft",
+        "approved_brand_agreement": false,
+        "activation_reach": null,
+        "activation_impressions": null,
+        "permission_blocker": true,
+        "publishing_allowed": false,
+        "earnings_cents": null
+      }
+    },
+    {
+      "id": "zero_baseline_and_partial_coverage",
+      "as_of": "2026-10-04T00:00:00Z",
+      "input": {"baseline_sessions": 0, "current_sessions": 12, "baseline_complete": false, "current_complete": true},
+      "expected": {
+        "growth": null,
+        "activity_label": "new_activity",
+        "coverage_state": "partial",
+        "engagement_spike_signal_count": 0,
+        "suppression_reasons": ["incomplete_baseline_coverage", "insufficient_sample"],
+        "opportunity_count": 0,
+        "no_infinite_percentage": true
+      }
+    },
+    {
+      "id": "license_distribution_conversion_and_refund",
+      "as_of": "2026-10-04T23:59:59Z",
+      "input": {
+        "currency": "USD",
+        "eligible_net_sale_cents": 10000,
+        "commission_rate": 0.15,
+        "athlete_share_of_received_commission": 0.4,
+        "bltz_variable_cost_cents": 250,
+        "agreement": "synthetic_signed_distribution_agreement_v1",
+        "attribution_policy": "last_eligible_bltz_click_7d_v1",
+        "touch_received_at": "2026-10-01T12:00:00Z",
+        "provider_confirmed_at": "2026-10-03T12:00:00Z",
+        "provider_order_id": "synthetic-order-001",
+        "provider_order_line_id": "synthetic-order-line-001",
+        "provider_authenticated": true,
+        "commission_actually_received": true,
+        "payout_executed": false,
+        "refund": {"event_id": "synthetic-refund-001", "full_commission_reversal": true, "athlete_not_yet_paid": true, "variable_cost_recovered": false, "delivery_count": 2}
+      },
+      "expected": {
+        "attribution_basis": "confirmed_tracked_conversion",
+        "vendor_retained_cents": 8500,
+        "bltz_commission_cents": 1500,
+        "allocated_athlete_cents": 600,
+        "paid_athlete_cents": 0,
+        "bltz_contribution_before_refund_cents": 650,
+        "logical_confirmed_order_lines": 1,
+        "logical_refund_reversals": 1,
+        "athlete_allocation_after_refund_cents": 0,
+        "net_commission_after_refund_cents": 0,
+        "bltz_contribution_after_refund_cents": -250,
+        "no_browser_authorized_conversion": true
+      }
+    },
+    {
+      "id": "rights_revocation_after_approval",
+      "as_of": "2026-10-04T20:00:00Z",
+      "input": {
+        "activation_state": "scheduled",
+        "approved_revision": 1,
+        "current_revision": 1,
+        "intended_use": "synthetic_career_poster",
+        "permission_before": "allowed",
+        "permission_now": "revoked",
+        "revocation_source": "synthetic_rightsholder_notice",
+        "release_at": "2026-10-07T12:00:00Z",
+        "feature_refresh_pending": true
+      },
+      "expected": {
+        "signal_type": "rights_revoked",
+        "publishing_allowed": false,
+        "synchronous_permission_enforcement": true,
+        "activation_state": "paused",
+        "requires_governance_review": true,
+        "requires_audit_record": true,
+        "do_not_wait_for_analytics_refresh": true,
+        "rights_exception_created": false
+      }
+    },
+    {
+      "id": "duplicate_delivery_and_stale_feature_job",
+      "as_of": "2026-10-04T20:00:00Z",
+      "input": {
+        "event_id": "60000000-0000-4000-8000-000000000001",
+        "batch_id": "synthetic-batch-001",
+        "raw_delivery_count": 3,
+        "first_insert_succeeded_but_worker_ack_lost": true,
+        "replay_after_queue_dedup_window": true,
+        "incoming_feature_watermark": "2026-10-04T18:00:00Z",
+        "stored_feature_watermark": "2026-10-04T19:00:00Z"
+      },
+      "expected": {
+        "logical_event_count": 1,
+        "deduplicate_before_aggregation": true,
+        "reconciliation_required": true,
+        "old_feature_write_allowed": false,
+        "feature_watermark_retained": "2026-10-04T19:00:00Z",
+        "no_duplicate_signal_or_allocation": true
+      }
+    }
+  ]
+}

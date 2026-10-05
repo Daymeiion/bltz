@@ -9,6 +9,7 @@ import {
 import { createHmac } from "node:crypto";
 import { createServiceClient } from "@/lib/supabase/service";
 import type { Json } from "@/types/database";
+import { getAnalyticsRuntimeEnvironment, toBLTZEvent } from "./bltz-event";
 
 export interface TrustedAnalyticsEvent {
   eventName: AnalyticsEventName;
@@ -20,6 +21,9 @@ export interface TrustedAnalyticsEvent {
   source: AnalyticsSource;
   page?: string | null;
   properties?: Record<string, unknown>;
+  /** Server-derived operational/internal exclusion, never supplied by a browser. */
+  activityClass?: "internal" | "operational";
+  validatedContext?: { momentId?: string; assetId?: string; assetModel?: "legacy_media" | "legacy_video" };
 }
 
 /**
@@ -37,7 +41,25 @@ export async function recordTrustedAnalyticsEvent(event: TrustedAnalyticsEvent):
     throw new Error("analytics_properties_sensitive");
   }
 
+  const environment = getAnalyticsRuntimeEnvironment();
+  if (process.env.BLTZ_ANALYTICS_PIPELINE_ENABLED === "true" && !environment) {
+    throw new Error("analytics_environment_not_authorized");
+  }
   const supabase = createServiceClient();
+  if (process.env.BLTZ_ANALYTICS_PIPELINE_ENABLED === "true" && environment) {
+    const envelope = toBLTZEvent(event, undefined, environment);
+    const { data: accepted, error: acceptanceError } = await supabase.rpc("accept_analytics_delivery_event", {
+      p_event: {
+        client_event_id: event.clientEventId, event_name: event.eventName,
+        occurred_at: event.occurredAt ?? envelope.occurred_at, user_id: event.userId ?? null,
+        athlete_id: event.athleteId ?? null, session_id: event.sessionId ?? null,
+        source: event.source, page: event.page ?? null, properties,
+      },
+      p_envelope: envelope,
+    });
+    if (acceptanceError || !accepted || typeof accepted.event_id !== "string") throw new Error("analytics_acceptance_failed");
+    return { eventId: accepted.event_id, duplicate: accepted.duplicate === true };
+  }
   const { data, error } = await supabase
     .from("analytics_events")
     .insert({

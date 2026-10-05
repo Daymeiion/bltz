@@ -5,23 +5,36 @@ import type { ProductEventInput } from "@/lib/analytics/events";
 const SESSION_KEY = "bltz.analytics.session.v1";
 const DEDUPE_PREFIX = "bltz.analytics.intent.v2:";
 const inFlightDedupeKeys = new Set<string>();
+const fallbackIntents = new Map<string, StoredIntent>();
+let fallbackSessionId: string | null = null;
 
 type StoredIntent = { eventId: string; occurredAt: string; status: "pending" | "sent" };
 
 function sessionId(): string {
   try {
     const existing = window.sessionStorage.getItem(SESSION_KEY);
-    if (existing) return existing;
-    const created = window.crypto.randomUUID();
+    if (existing) {
+      fallbackSessionId = existing;
+      return existing;
+    }
+    const created = fallbackSessionId ?? window.crypto.randomUUID();
     window.sessionStorage.setItem(SESSION_KEY, created);
+    fallbackSessionId = created;
     return created;
   } catch {
-    return window.crypto.randomUUID();
+    fallbackSessionId ??= window.crypto.randomUUID();
+    return fallbackSessionId;
   }
 }
 
 function claimIntent(key: string): StoredIntent | null {
   if (inFlightDedupeKeys.has(key)) return null;
+  const fallback = fallbackIntents.get(key);
+  if (fallback) {
+    if (fallback.status === "sent") return null;
+    inFlightDedupeKeys.add(key);
+    return fallback;
+  }
   try {
     const storageKey = `${DEDUPE_PREFIX}${key}`;
     const stored = window.sessionStorage.getItem(storageKey);
@@ -40,10 +53,14 @@ function claimIntent(key: string): StoredIntent | null {
     inFlightDedupeKeys.add(key);
     return intent;
   } catch {
+    const existing = fallbackIntents.get(key);
+    if (existing?.status === "sent") return null;
     inFlightDedupeKeys.add(key);
-    return {
+    const intent = existing ?? {
       eventId: window.crypto.randomUUID(), occurredAt: new Date().toISOString(), status: "pending",
-    };
+    } satisfies StoredIntent;
+    fallbackIntents.set(key, intent);
+    return intent;
   }
 }
 
@@ -55,8 +72,10 @@ function finishIntent(key: string | undefined, intent: StoredIntent, sent: boole
       `${DEDUPE_PREFIX}${key}`,
       JSON.stringify({ ...intent, status: sent ? "sent" : "pending" } satisfies StoredIntent),
     );
+    fallbackIntents.delete(key);
   } catch {
-    // Storage is optional; failed analytics must remain invisible to the user.
+    // Keep retry identity within this tab when browser storage is unavailable.
+    fallbackIntents.set(key, { ...intent, status: sent ? "sent" : "pending" });
   }
 }
 
@@ -68,7 +87,7 @@ export async function trackProductEvent(
   if (event.source === "public_locker" && !event.athleteId && !event.athleteSlug) return false;
 
   const eventName = event.eventName;
-  const page = (event.page ?? event.route ?? window.location.pathname).split("?")[0].slice(0, 512);
+  const page = (event.page ?? event.route ?? window.location.pathname).split(/[?#]/, 1)[0].slice(0, 512);
   const intent = event.dedupeKey ? claimIntent(event.dedupeKey) : {
     eventId: window.crypto.randomUUID(),
     occurredAt: new Date().toISOString(),
@@ -79,8 +98,10 @@ export async function trackProductEvent(
     eventId: intent.eventId,
     eventName,
     occurredAt: intent.occurredAt,
+    // The strict collector accepts exactly one target. Keep the canonical
+    // Career ID when known; the server still checks it against the route slug.
     athleteId: event.athleteId || undefined,
-    athleteSlug: event.athleteSlug,
+    athleteSlug: event.athleteId ? undefined : event.athleteSlug,
     sessionId: sessionId(),
     page,
     properties: event.properties ?? {},

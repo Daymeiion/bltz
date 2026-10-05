@@ -1,0 +1,537 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-05T23:31:33.597Z",
+  "branch": "codex/analytics-production-support-2026-10-05",
+  "parent": "889df1ba2eb6eaecfb1376c6b0527a1b57789a2a",
+  "files": [
+    {
+      "path": ".env.example",
+      "bytes": 2010,
+      "sha256": "10a500dc32002298868fdfcf5c5978022767b183b90ca87390978fd715096c43"
+    },
+    {
+      "path": "app/admin/intelligence/CareerWorkspace.tsx",
+      "bytes": 56182,
+      "sha256": "209ad23b69b237d2cbefa00d6b64e90cc8cc11517a9fe8a627540b8d2549f938"
+    },
+    {
+      "path": "app/admin/intelligence/MeasuredIntelligence.tsx",
+      "bytes": 4956,
+      "sha256": "105f07d939dde51c1b8ab1179d5aa379721a9b2e2b5198b7fe02d82056b12046"
+    },
+    {
+      "path": "app/admin/intelligence/WorkflowReviewPanel.tsx",
+      "bytes": 18365,
+      "sha256": "7b31287d380d55187a39418e4c7d8a5ff91b5147f2c3d25ad3756d99177be831"
+    },
+    {
+      "path": "app/admin/intelligence/career-workspace.module.css",
+      "bytes": 28663,
+      "sha256": "97e0239d76a3ae3ffd88f61df595a6c05bc956ef52be2f18e9e53daf3d444cdc"
+    },
+    {
+      "path": "app/admin/intelligence/examples/SyntheticExamples.tsx",
+      "bytes": 6704,
+      "sha256": "76c5323946a86feaa313b568b5e2a78f61d7ce61fe7e78cbf8ba366f81637cb7"
+    },
+    {
+      "path": "app/admin/intelligence/examples/examples.module.css",
+      "bytes": 2210,
+      "sha256": "16747e18d2542f564e028686957971016678534236800e5c8a370c8a913b2044"
+    },
+    {
+      "path": "app/admin/intelligence/examples/page.tsx",
+      "bytes": 1290,
+      "sha256": "7dcf0bfd14141a674aad14c1cd3bc6910d47c8b9ee4dc0b334bd90b63a2e07df"
+    },
+    {
+      "path": "app/api/admin/intelligence/features/route.ts",
+      "bytes": 1723,
+      "sha256": "6a146b8517e8627d41b584336163df7a8706e61a595e71611a91c10e9cbb4aa0"
+    },
+    {
+      "path": "app/api/admin/intelligence/workflows/route.ts",
+      "bytes": 2349,
+      "sha256": "95adc8fe78da7d0cac98b82dc49a10b3dc12042eaa9e6e2d2fae3bb684a7341b"
+    },
+    {
+      "path": "app/api/analytics/events/route.ts",
+      "bytes": 8305,
+      "sha256": "e57ed469c25c7918617d2848838be849d160ca9fe76ee52d3a82e65c72981680"
+    },
+    {
+      "path": "app/api/internal/analytics/deliver/route.ts",
+      "bytes": 1850,
+      "sha256": "bc8ec65b2709f7598d73a7b5ab2e1015d2000faf9093dae572dafad041b61763"
+    },
+    {
+      "path": "app/api/internal/analytics/dispatch/route.ts",
+      "bytes": 2001,
+      "sha256": "c0864f1482d13b7ea8e7a8085a33b3e8013b4fcbdb5585608cfb8be8c5b8c1cc"
+    },
+    {
+      "path": "app/api/internal/analytics/reconcile/route.ts",
+      "bytes": 1858,
+      "sha256": "af6b5266a84eca4ebabd94244ec2340a6552d41ef235b0a3bdcbc2dbb7197192"
+    },
+    {
+      "path": "app/api/onboarding/claim/route.ts",
+      "bytes": 7330,
+      "sha256": "7f77524e147b8e200721a6718755d62c9d3406e13be8bc4113211cd108bc296b"
+    },
+    {
+      "path": "docs/BLTZ_BUILD_ORDER.md",
+      "bytes": 14098,
+      "sha256": "42b2582fe3765c109563faab6fb4b475cd1de439cdb195f8a9fc2f6e354ca751"
+    },
+    {
+      "path": "docs/intelligence/auth-qstash-setup-2026-10-05.md",
+      "bytes": 13056,
+      "sha256": "40d95c01cfffea8c83a1978791f84d08e34a2083c9734aa816831d839256805e"
+    },
+    {
+      "path": "docs/intelligence/fixtures/BLTZ-Intelligence-Signal-Catalog-2026-10-04.csv",
+      "bytes": 12309,
+      "sha256": "0395c40adefc55bb8bf9026fb2f6a061e2e4aac697b7542e7601e7ce4bfb5ca3"
+    },
+    {
+      "path": "docs/intelligence/fixtures/BLTZ-Intelligence-Workflow-Fixtures-2026-10-04.json",
+      "bytes": 7349,
+      "sha256": "b59109d2fc96ec35df4b49b0693086edcb8a91bb1aafc68522d6960eb5c42fd2"
+    },
+    {
+      "path": "docs/intelligence/measured-loop-completion-2026-10-05.md",
+      "bytes": 40901,
+      "sha256": "243bdd15746825f2bc3395770d1d66c3ecb54f3f40bd90846cfc1ead4c4ea05d"
+    },
+    {
+      "path": "docs/intelligence/measured-loop-implementation-2026-10-05.md",
+      "bytes": 7061,
+      "sha256": "88031c7df57fa9ab522942d508f00cff8cb342785498fb0e8873acd4a5134688"
+    },
+    {
+      "path": "docs/intelligence/production-release-plan-2026-10-05.md",
+      "bytes": 4622,
+      "sha256": "6c270a7a484456b9cdd6f4c4714f0f82f8e0a17861b6937427439f889f38b767"
+    },
+    {
+      "path": "docs/intelligence/production-support-checkpoint-2026-10-05.md",
+      "bytes": 5793,
+      "sha256": "0a58442a466d1f3e756af02bc02bdbc6840b313eec94078fd419b6d27f04924d"
+    },
+    {
+      "path": "docs/intelligence/tinybird-qstash-build-readiness.md",
+      "bytes": 4298,
+      "sha256": "9fe462a09e3de44617db8d2d4e1a83804579d698847f9775593433e515ea12fe"
+    },
+    {
+      "path": "docs/intelligence/upstash-connection-status.md",
+      "bytes": 20138,
+      "sha256": "e863f7a528c635d6b2e8ec12f2b4146d738bb0296e4e52d903284b8fd28e7de4"
+    },
+    {
+      "path": "docs/media/MEDIA-GRAPH-ROADMAP.md",
+      "bytes": 27055,
+      "sha256": "bb7c008b94cd74abd83a2109b672deb91d29383ed4c7062e9c7ac8377e21191f"
+    },
+    {
+      "path": "lib/analytics/bltz-event.ts",
+      "bytes": 5317,
+      "sha256": "ace6ea30ec8a8c29334009db522c5205ac91ae688cd34f23380d559c9e8e596b"
+    },
+    {
+      "path": "lib/analytics/claim-events.ts",
+      "bytes": 2553,
+      "sha256": "283fd003199a10d662ba43366fb39ae66bad4adc55fff078525a5fa4c1c1d205"
+    },
+    {
+      "path": "lib/analytics/client.ts",
+      "bytes": 4970,
+      "sha256": "3a019fb04561cf91400196fea743893d0d31bc00c993388d70c4f7d6643ccb3f"
+    },
+    {
+      "path": "lib/analytics/delivery/authentication.ts",
+      "bytes": 1480,
+      "sha256": "5b9c7789f84d55deb3fe12016601d763a0f90af42c7b9d715a8afe9b82117cca"
+    },
+    {
+      "path": "lib/analytics/delivery/config.ts",
+      "bytes": 5070,
+      "sha256": "efd2c79451b7ad706908f20bebbbfa8a50f3c703deb26c5c2e68e3760e6eb737"
+    },
+    {
+      "path": "lib/analytics/delivery/contracts.ts",
+      "bytes": 2481,
+      "sha256": "d9b80e3899f4f4da9736e3cc7e9f9d08ae1a260610bd23583595a34e37261ec6"
+    },
+    {
+      "path": "lib/analytics/delivery/http.ts",
+      "bytes": 1331,
+      "sha256": "0191e5c1835dd2ac767ae10b388b4d55d1f472953e921994d6cce296d0fd06b9"
+    },
+    {
+      "path": "lib/analytics/delivery/pipeline.ts",
+      "bytes": 5979,
+      "sha256": "6f9f9d929dc4a627969c33b4ebf61832563c612624c6b57675a348a344274607"
+    },
+    {
+      "path": "lib/analytics/delivery/store.ts",
+      "bytes": 6249,
+      "sha256": "ff1a7fff8d295dd81359b87b2a124f41136a0f47ce5f4ac31a79f8cb11b364ba"
+    },
+    {
+      "path": "lib/analytics/delivery/tinybird-definitions.ts",
+      "bytes": 8684,
+      "sha256": "a7bd4d341cbbfd05e2ef30a9ce4abfd782904b1a9e08ff387abc3f3e44b3c0d2"
+    },
+    {
+      "path": "lib/analytics/delivery/tinybird.ts",
+      "bytes": 8760,
+      "sha256": "78effc568c4a076541c6ab685c7ac33c0a5c5c6c204acdfc6b6700a91fb9bc71"
+    },
+    {
+      "path": "lib/analytics/server.ts",
+      "bytes": 6507,
+      "sha256": "fab2ba89d6a0e52f055a41060b2f7f64e91820c25bdbc349efe7edb8a68d5868"
+    },
+    {
+      "path": "lib/intelligence/features/contracts.ts",
+      "bytes": 9883,
+      "sha256": "dfca7089a33ef10579cd6bf4ba32d095c9671d4dccb7b62b1ca6c5f22ab2dc1e"
+    },
+    {
+      "path": "lib/intelligence/features/examples.ts",
+      "bytes": 24665,
+      "sha256": "3218ed333af5b72e30df53420c14c24319806913a0d64429d2970137edd4a50a"
+    },
+    {
+      "path": "lib/intelligence/features/index.ts",
+      "bytes": 401,
+      "sha256": "7445e5d58ec7595519bdf84077a99e706ed6fdd88098281852204e075c09d0b4"
+    },
+    {
+      "path": "lib/intelligence/features/parse.ts",
+      "bytes": 16162,
+      "sha256": "e29f71037eee27cdad3219cbb7f5e57ae08b8e6ad8c743211af79cf3745e1757"
+    },
+    {
+      "path": "lib/intelligence/features/project.ts",
+      "bytes": 32768,
+      "sha256": "b389c60cc5e893e51c9d226552bf619c4aa98a81247ee641bb3de0153e79cc4d"
+    },
+    {
+      "path": "lib/intelligence/features/signals.ts",
+      "bytes": 10152,
+      "sha256": "e5415c534151a9f02fc56708ebafff218848b42f9f0f1dfc2f2bd83464498d57"
+    },
+    {
+      "path": "lib/intelligence/measured-integrity.ts",
+      "bytes": 1055,
+      "sha256": "813873ad284d7ef4962305ca31141d62ba6d2eff6895679c824a883d9ad209db"
+    },
+    {
+      "path": "lib/intelligence/measured-server.ts",
+      "bytes": 7055,
+      "sha256": "17ba1fdddb29f4c48ec1d9cc6508bf21a05247017e1d8ffd3b9ed6876d930645"
+    },
+    {
+      "path": "lib/intelligence/measured-validation.ts",
+      "bytes": 1452,
+      "sha256": "8e53d726d603bb69f3a3ce015d3cf40e94b3ff71a1f0c7cc0bc63f49de840e2e"
+    },
+    {
+      "path": "lib/intelligence/workflows/contracts.ts",
+      "bytes": 8104,
+      "sha256": "3d2dc20b6d1f60bdf5f4448445502e356e5ff6ddd9b3199a6ddf34d57e110cba"
+    },
+    {
+      "path": "lib/intelligence/workflows/permissions.ts",
+      "bytes": 1626,
+      "sha256": "2c2e6aaa3930868833014c0a833225eba36a0b73f42e9d3c3b87c1e33178e691"
+    },
+    {
+      "path": "lib/intelligence/workflows/server.ts",
+      "bytes": 4866,
+      "sha256": "39c2d09f99f349d1fb986864864050f94143aa75ddc18b04ccdf8a56cd802531"
+    },
+    {
+      "path": "lib/intelligence/workspace-server.ts",
+      "bytes": 20331,
+      "sha256": "fd26fb3bfc575244aa2816dbec86c044a48cb292804c999e7786855bad549b86"
+    },
+    {
+      "path": "lib/intelligence/workspace-types.ts",
+      "bytes": 2131,
+      "sha256": "62f462f45b3719ac1723c2f17c58e457cd3f151d779c6ff2fcb7aaacbfac6621"
+    },
+    {
+      "path": "lib/tinybird-client.ts",
+      "bytes": 216,
+      "sha256": "15588916d48f6f11adc8f1b02379776050c8714d656f0a610c5e035187b53b3c"
+    },
+    {
+      "path": "lib/tinybird.ts",
+      "bytes": 1684,
+      "sha256": "a17b70447d1314e41c84766db967a7be843d08b93f52cf79c71df16a592af19e"
+    },
+    {
+      "path": "package-lock.json",
+      "bytes": 409654,
+      "sha256": "72978cb798601aff2ef62993541b6ba5cd4dacd5f5d1d6bff3abeb883c9b5b62"
+    },
+    {
+      "path": "package.json",
+      "bytes": 4178,
+      "sha256": "56305049fbba78b21363112ad4864a9a4dd7f774261ad1f18ac4e14566fe47d4"
+    },
+    {
+      "path": "scripts/configure-qstash-local.mjs",
+      "bytes": 9690,
+      "sha256": "f602e1ef9d2dba67207b24a5917286c31f1a0f9d5ddc7b78d7d96a4b21588834"
+    },
+    {
+      "path": "scripts/generate-intelligence-types.mjs",
+      "bytes": 4556,
+      "sha256": "9252a392de28ac572f3c1471f006894b0bc57d6d4dd55f373913a0cd559cf6e8"
+    },
+    {
+      "path": "scripts/generate-intelligence-workflow-types.mjs",
+      "bytes": 4470,
+      "sha256": "03742d2290a26e924e592d84c47b1e4b0e96aa8df697cb37fbe981fe243ccaac"
+    },
+    {
+      "path": "scripts/generate-measured-intelligence-types.mjs",
+      "bytes": 3328,
+      "sha256": "b09942860e743a08490836fc779f7a412c43b6d057e2721e35602b44d6f8b9e1"
+    },
+    {
+      "path": "scripts/qstash-env.mjs",
+      "bytes": 11624,
+      "sha256": "86dc22d3da9a5169f7bc97b879ca6c4189e980d2ab1770e4a168b2a61d923181"
+    },
+    {
+      "path": "scripts/qstash-status.mjs",
+      "bytes": 1802,
+      "sha256": "3b634d2c9a5698be3db11bf0575fd73c8fecad21a3748d1ec30af3ed7d0a8def"
+    },
+    {
+      "path": "scripts/serve-measured-intelligence-qa.mjs",
+      "bytes": 2907,
+      "sha256": "294a41d00c356b376c86329d8c874934e2f35ddd97e2d07912d4f5bae28044a4"
+    },
+    {
+      "path": "scripts/tinybird-check.mjs",
+      "bytes": 1030,
+      "sha256": "aa5d8e29915fb159c9424b630a5f8fb9bbdc636f923f39110b359898bc3a2b9d"
+    },
+    {
+      "path": "scripts/tinybird-status.mjs",
+      "bytes": 2722,
+      "sha256": "56ae68a255390b03b6d15618d9cb15b915b5eea396107b7f4b6ac1320499cf87"
+    },
+    {
+      "path": "supabase/migrations/20260930181840_intelligence_graph_foundation.sql",
+      "bytes": 9350,
+      "sha256": "a398b99966fe132417441dc01abe425dd3f0c1ca80b77a4c04f594751cc07f0f"
+    },
+    {
+      "path": "supabase/migrations/20261001035756_intelligence_source_review.sql",
+      "bytes": 11275,
+      "sha256": "d5d8cc7435a173a654774c4ce291a491450cc175380893356c939df2808159db"
+    },
+    {
+      "path": "supabase/migrations/20261005183837_intelligence_measured_delivery.sql",
+      "bytes": 23115,
+      "sha256": "4fd582ca6bbf8943854cf98e3958b2a64c07c7ae4f9591487c763116b951912a"
+    },
+    {
+      "path": "supabase/migrations/20261005184406_intelligence_review_workflows.sql",
+      "bytes": 31699,
+      "sha256": "76adfe4b1495252a09221d21ca3f655e93a4b6a6747425ad672555badadce109"
+    },
+    {
+      "path": "supabase/migrations/20261005231340_production_delivery_environment.sql",
+      "bytes": 10399,
+      "sha256": "92f691cbd87d9c7a58fe73040a6c1c6fe814b4b8450d693cecbe2087b8202d20"
+    },
+    {
+      "path": "supabase/migrations/20261005231344_production_review_environment.sql",
+      "bytes": 30248,
+      "sha256": "2f70d2afe14e80c774a7f74c2d214a9fe6690d991e733bf82b9257a479e53674"
+    },
+    {
+      "path": "tests/analytics/bltz-event.test.ts",
+      "bytes": 3039,
+      "sha256": "35b67a4b274c027afb09d6f61e39419561ff50def0bf26d03d74a83c20130f9d"
+    },
+    {
+      "path": "tests/analytics/client.test.ts",
+      "bytes": 8373,
+      "sha256": "f085e78ec3636627e4e8e87f74a10ff69a428ca10f8329e158c48727b4cc0084"
+    },
+    {
+      "path": "tests/analytics/component-delivery.test.tsx",
+      "bytes": 15081,
+      "sha256": "5e965315dfd5644cfc427416bff4a9d212893c7d8f6f6996727fd2e25a08b89f"
+    },
+    {
+      "path": "tests/analytics/delivery-claim-producer.test.ts",
+      "bytes": 4686,
+      "sha256": "0f4f7e7e98c82244a0983d106dc57d0dea1619b00547e15e83ee3a144089bac4"
+    },
+    {
+      "path": "tests/analytics/delivery-production.test.ts",
+      "bytes": 14988,
+      "sha256": "cd91df5891a4e6ba78c119554e117bbb57c7a0ae420745ff67f324cafbb692f6"
+    },
+    {
+      "path": "tests/analytics/delivery-routes.test.ts",
+      "bytes": 8522,
+      "sha256": "af8fb9bff715966c1ef3e364489b60cb9d1d223493667750b7225c1aacf53745"
+    },
+    {
+      "path": "tests/analytics/delivery.test.ts",
+      "bytes": 15372,
+      "sha256": "4392cfe6b1703c11e6a8bdbb103f4a74f185c381cd7e3a93686ccc2ace95aa50"
+    },
+    {
+      "path": "tests/analytics/events-route.test.ts",
+      "bytes": 11823,
+      "sha256": "269aad21728fc8aa34ac05755bdacf3d6c98334eb8b13edd14d2feb63cdcc8c3"
+    },
+    {
+      "path": "tests/analytics/production-writer.test.ts",
+      "bytes": 2533,
+      "sha256": "8ada0753143ce729e2d63aa6d09f38c845a500dcbf56092ed66b49d834c1ddf5"
+    },
+    {
+      "path": "tests/auth/platform-authorization.test.ts",
+      "bytes": 4735,
+      "sha256": "1059a5fa844c95de2411684e901e5ebc9803004ea68db1556ab90ed65e10bc29"
+    },
+    {
+      "path": "tests/database/intelligence-delivery-production.test.ts",
+      "bytes": 11419,
+      "sha256": "24c4918afc3087c228d922a3a952a518c80bb671129c62faa9ad5e9d5dbd0318"
+    },
+    {
+      "path": "tests/database/intelligence-delivery.test.ts",
+      "bytes": 9984,
+      "sha256": "d143a19b23ad94fbb3ed95d0a56a44dec202a2b742fb6948cc581b3b463a661f"
+    },
+    {
+      "path": "tests/database/intelligence-graph-migration.test.ts",
+      "bytes": 8596,
+      "sha256": "d613aa6d2264f8ab089d19aeb55ec64bc25560c5f7127f6ad003b165d97c4e3e"
+    },
+    {
+      "path": "tests/database/intelligence-source-review.test.ts",
+      "bytes": 10125,
+      "sha256": "dd2b956fbef82415be4b99361f65ff6b24e3fcd2bf958c32d90f4a1faf697f09"
+    },
+    {
+      "path": "tests/intelligence/career-workspace.test.tsx",
+      "bytes": 18361,
+      "sha256": "4fe1d4dbf6b1841fc4f04c53e4e28d0a57607920611ffacd8c781463b60215f3"
+    },
+    {
+      "path": "tests/intelligence/features-contracts.test.ts",
+      "bytes": 8596,
+      "sha256": "92584199e9105384bb30a090431bef634dbaf6144372d1929f6930cd64eb9c1e"
+    },
+    {
+      "path": "tests/intelligence/features-examples-page.test.tsx",
+      "bytes": 2898,
+      "sha256": "802367a1139646d74a66a7ec3c11e6937140f8d77f5cf275ff2b8692ab773df5"
+    },
+    {
+      "path": "tests/intelligence/features-examples-ui.test.tsx",
+      "bytes": 5199,
+      "sha256": "f37e750d0a71fdd809c378a4efdd0f995bab93dd83b50944d2a9c5da6fcc0492"
+    },
+    {
+      "path": "tests/intelligence/features-examples.test.ts",
+      "bytes": 6972,
+      "sha256": "927d1a9c9493e24cf88704e5cab3b56fb4657ad41fcdbbabe7f706ca17d02050"
+    },
+    {
+      "path": "tests/intelligence/features-projection.test.ts",
+      "bytes": 19079,
+      "sha256": "2df30faf6f45b359883b437da4aaf8670a144a8fe7667d8275779f3caf300174"
+    },
+    {
+      "path": "tests/intelligence/features-signals.test.ts",
+      "bytes": 16374,
+      "sha256": "c5c443da4b7237329ec2d0d05659cda1c9cc8415d754d17c8559fa9dff7e2e92"
+    },
+    {
+      "path": "tests/intelligence/measured-server.test.ts",
+      "bytes": 22111,
+      "sha256": "b6403c9c15720fdd0b0dfa12db0d45374e6cc59eb7e212218f371b53df0d4e0a"
+    },
+    {
+      "path": "tests/intelligence/measured-ui-environment.test.tsx",
+      "bytes": 3996,
+      "sha256": "72befa21266a4dcf795fd618c1961dae49533bbe2f4f7e198dc7fff257e3e18a"
+    },
+    {
+      "path": "tests/intelligence/workflow-review-panel.test.tsx",
+      "bytes": 18346,
+      "sha256": "83cd602d8311e325a143479bb091470ccbd2c20e47075a402be46c7d12a1e352"
+    },
+    {
+      "path": "tests/intelligence/workflows-api.test.ts",
+      "bytes": 10781,
+      "sha256": "e9a0dccecc935c854b7f93d604a7cc2962e31bea1c7ff02f181f1816d471e2eb"
+    },
+    {
+      "path": "tests/intelligence/workflows-permissions.test.ts",
+      "bytes": 4576,
+      "sha256": "12342950f85f8d022b20c72f8f4358a3f0d2e87d49aebcd9edf5b79bf820c3bf"
+    },
+    {
+      "path": "tests/intelligence/workflows-sql.test.ts",
+      "bytes": 31554,
+      "sha256": "48897de081a81e706392c7d8c09877f9943cc304b3d1203aec78bbace1409a01"
+    },
+    {
+      "path": "tests/qstash/setup.test.ts",
+      "bytes": 19149,
+      "sha256": "3396b0c7f01ce935aaf665de03fee6c18ee7ed464013eed04b51f6ab8ae4325e"
+    },
+    {
+      "path": "tests/tinybird/status.test.ts",
+      "bytes": 1880,
+      "sha256": "cc636108c30b6befad2b6dd26a118c1c9db066e9ed523ce5427020522b7dc8e2"
+    },
+    {
+      "path": "tinybird.config.json",
+      "bytes": 124,
+      "sha256": "a9580de49749bdd9d8280d217bf332f488be543e76811072bb953ed2631fe0d4"
+    },
+    {
+      "path": "types/intelligence-workflows.generated.ts",
+      "bytes": 7667,
+      "sha256": "90971ccce071e7c1fa7406a2cabb27f0c7a7cf71dd6d1b5c34f8fdbd3a9308a2"
+    },
+    {
+      "path": "types/measured-intelligence.generated.ts",
+      "bytes": 7193,
+      "sha256": "ee8b7f0390a087300a1cb95bf59847199746588f8e1e79aa794cb4965e1de4c3"
+    }
+  ],
+  "fileCount": 103,
+  "secretMatches": 0,
+  "productionFlagsEnabled": false,
+  "remoteMigrationsApplied": false,
+  "deployed": false,
+  "liveDeliveryVerified": false,
+  "isolatedValidation": {
+    "testsPassed": 1406,
+    "testsFailed": 0,
+    "skipped": 24,
+    "typecheck": true,
+    "build": true,
+    "lintErrors": 0
+  }
+}

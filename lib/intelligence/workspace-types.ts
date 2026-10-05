@@ -1,5 +1,7 @@
 import type { IntelligenceContentItem } from "./content";
 import type { AthleteSummary, LabMedia, LabResult, LabSection } from "./lab-types";
+import type { WorkspaceMeasuredData } from "./measured-server";
+import type { WorkflowSummary } from "./workflows/contracts";
 
 export type WorkspaceAthleteSummary = AthleteSummary & {
   teamLabel: string | null;
@@ -50,7 +52,11 @@ export type WorkspaceResult = {
   media: LabSection<WorkspaceMedia>;
   mediaPreviewState: "ready" | "unavailable";
   content: LabSection<IntelligenceContentItem>;
-  momentMediaState: "not_supported";
+  momentMediaState: "not_supported" | "ready" | "unavailable";
+  measured?: WorkspaceMeasuredData;
+  workflows?: WorkflowSummary | null;
+  workflowState?: "ready" | "unavailable" | "disabled";
+  dataMode?: "live" | "synthetic";
 };
 
 export type IntelligenceWorkspaceData = WorkspaceResult;

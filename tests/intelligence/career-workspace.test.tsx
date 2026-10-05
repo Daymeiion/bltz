@@ -66,7 +66,7 @@ describe("Career workspace fact boundaries", () => {
   it("uses real supplied records with honest image, contact and activation empty states", () => {
     const html = renderToStaticMarkup(<CareerWorkspace initial={fixture()} />);
     expect(html).toContain("Test Athlete"); expect(html).toContain("Portrait not recorded");
-    expect(html).toContain("Career status not recorded"); expect(html).toContain("No activations recorded");
+    expect(html).toContain("Career status not recorded"); expect(html).toContain("Activation records unavailable.");
     expect(html).not.toMatch(/SAMPLE ACTIVATION|Nike|124,000|Retired July|activation-sample|BLTZ_DATA|ROSTER_DATA/);
     expect(html).not.toContain("See activation"); expect(html).not.toContain("Reach</");
   });

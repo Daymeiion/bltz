@@ -9,6 +9,10 @@ import {
 import { consumeAnalyticsRateLimits, recordTrustedAnalyticsEvent } from "@/lib/analytics/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { analyticsPipelineEnabled } from "@/lib/analytics/bltz-event";
+import { resolveMediaPermissions } from "@/lib/intelligence/workflows/permissions";
+import type { TrustedAnalyticsEvent } from "@/lib/analytics/server";
+import { AnalyticsBodyLimitError, readBoundedBody } from "@/lib/analytics/delivery/http";
 
 export const runtime = "nodejs";
 
@@ -32,8 +36,10 @@ export async function POST(request: Request) {
 
   let json: unknown;
   try {
-    json = await request.json();
-  } catch {
+    const raw = await readBoundedBody(request, MAX_REQUEST_BYTES);
+    json = JSON.parse(raw);
+  } catch (error) {
+    if (error instanceof AnalyticsBodyLimitError) return NextResponse.json({ error: "payload_too_large" }, { status: 413 });
     return NextResponse.json({ error: "invalid_json" }, { status: 400 });
   }
 
@@ -138,6 +144,34 @@ export async function POST(request: Request) {
   }
 
   try {
+    let activityClass: TrustedAnalyticsEvent["activityClass"];
+    let validatedContext: TrustedAnalyticsEvent["validatedContext"];
+    if (analyticsPipelineEnabled()) {
+      if (user) {
+        const { data: internal, error: internalError } = await sessionClient.rpc("is_internal_admin");
+        if (internalError) throw new Error("analytics_actor_check_failed");
+        if (internal === true) activityClass = "internal";
+      }
+      if (/bot|crawler|spider|headless/i.test(request.headers.get("user-agent") ?? "")) activityClass = "operational";
+      // Legacy media URLs/IDs are hints. Export only a current canonical asset
+      // demonstrably attached to this public athlete and eligible for display.
+      const hint = event.properties.media_id;
+      if (source === "public_locker" && event.eventName === "media_viewed" && typeof hint === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(hint)) {
+        // Public video visibility alone does not attest asset rights or reviewed
+        // Moment context. Preserve the open without exporting an asset binding.
+        if (event.properties.media_type !== "video") {
+          const { data: asset, error: assetError } = await service.from("media")
+            .select("id,kind,license_status,public_locker_approved,license_kind").eq("id", hint).eq("player_id", athleteId!).maybeSingle();
+          if (assetError) throw new Error("analytics_asset_check_failed");
+          const permission = asset ? resolveMediaPermissions({
+            model: "legacy_media", associationReviewed: true, athleteRelationshipVerified: true,
+            kind: asset.kind, licenseStatus: asset.license_status, publicLockerApproved: asset.public_locker_approved,
+            licenseKind: asset.license_kind,
+          }, "public_display") : null;
+          if (asset && permission?.allowed) validatedContext = { assetId: asset.id, assetModel: "legacy_media" };
+        }
+      }
+    }
     const result = await recordTrustedAnalyticsEvent({
       eventName: event.eventName,
       clientEventId: event.eventId,
@@ -148,6 +182,8 @@ export async function POST(request: Request) {
       source,
       page,
       properties: event.properties,
+      ...(activityClass ? { activityClass } : {}),
+      ...(validatedContext ? { validatedContext } : {}),
     });
     return NextResponse.json({ accepted: true, eventId: result.eventId, duplicate: result.duplicate }, { status: 202 });
   } catch {

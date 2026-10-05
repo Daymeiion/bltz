@@ -8,6 +8,29 @@ This file is the **authoritative implementation sequence** for BLTZ. Codex must 
 
 ## Phase 0 — Repository Audit and Stable Baseline
 
+### Authorized Intelligence implementation exception — October 5, 2026
+
+The user's current implementation assignment authorizes bounded work beneath the
+existing internal Intelligence Lab: event-targeting repair, development-only
+transactional outbox/QStash/Tinybird delivery, versioned features and deterministic
+signals, durable reviewed opportunities and activation drafts, and explicit
+reviewed media/intended-use boundaries. Follow
+`docs/intelligence/measured-loop-implementation-2026-10-05.md` for owners, interfaces,
+validation and the exact October 5 production checkpoint. Preserve the Lab layout.
+
+This task-specific exception does not mark organization foundation, complete
+Media Graph/rights engine, campaigns or financial/payout phases complete. No
+production schema/application promotion, partner agreements, purchases, outreach,
+pooling or payout execution is inferred. Commercial assumptions and synthetic
+fixtures do not establish real rights, partnerships, metrics or earnings.
+
+Subsequent explicit user approval on October 5 authorizes reviewed source
+checkpoints, bounded production environment support, and release of the approved
+authentication/security fixes with the new analytics and review workflows
+disabled. Follow `docs/intelligence/production-release-plan-2026-10-05.md`.
+Live pipeline activation and production application of the new analytics schema
+remain gated by migration reconciliation and hosted canary evidence.
+
 - Confirm the app runs locally and the current deployment works.
 - Map routes, authentication, Supabase clients, schema, migrations, generated types, storage, components, tests, environment-variable names, and deployment configuration.
 - Review the existing Player Locker and identify incomplete, broken, duplicated, placeholder, and unsecured functionality.

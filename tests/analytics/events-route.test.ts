@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
 const createClient = vi.fn();
@@ -152,6 +152,70 @@ describe("beta analytics ingestion", () => {
       page: "/player/example", properties: {},
     }));
     expect(response.status).toBe(429);
+    expect(recordTrustedAnalyticsEvent).not.toHaveBeenCalled();
+  });
+});
+
+describe("production audience and asset boundaries", () => {
+  const playerId = "c0ffb93f-7851-44d4-96e6-e3044b4b3d55";
+  const assetId = "8047df5b-87da-47bd-8468-7bb4181c2743";
+  let actorCheck: ReturnType<typeof vi.fn>;
+  let assetQuery: { select: ReturnType<typeof vi.fn>; eq: ReturnType<typeof vi.fn>; maybeSingle: ReturnType<typeof vi.fn> };
+  beforeEach(() => {
+    vi.resetModules(); vi.clearAllMocks();
+    vi.stubEnv("BLTZ_ANALYTICS_PIPELINE_ENABLED", "true");
+    vi.stubEnv("BLTZ_ANALYTICS_ENVIRONMENT", "production");
+    vi.stubEnv("BLTZ_ANALYTICS_PRODUCTION_ENABLED", "true");
+    vi.stubEnv("VERCEL_ENV", "production");
+    consumeAnalyticsRateLimits.mockResolvedValue(true);
+    recordTrustedAnalyticsEvent.mockResolvedValue({ eventId: envelope().eventId, duplicate: false });
+    actorCheck = vi.fn().mockResolvedValue({ data: false, error: null });
+    createClient.mockResolvedValue({ auth: { getUser: vi.fn().mockResolvedValue({ data: { user: null } }) }, rpc: actorCheck });
+    const playerQuery = {
+      select: vi.fn(() => playerQuery), eq: vi.fn(() => playerQuery),
+      maybeSingle: vi.fn().mockResolvedValue({ data: { id: playerId, slug: "example" }, error: null }),
+    };
+    assetQuery = {
+      select: vi.fn(() => assetQuery), eq: vi.fn(() => assetQuery),
+      maybeSingle: vi.fn().mockResolvedValue({ data: { id: assetId, kind: "photo", license_status: "approved", public_locker_approved: true, license_kind: "owned" }, error: null }),
+    };
+    createServiceClient.mockReturnValue({ from: vi.fn(table => table === "players" ? playerQuery : assetQuery) });
+  });
+  afterEach(() => vi.unstubAllEnvs());
+  const publicBody = () => ({ ...envelope(), eventName: "locker_viewed", athleteId: playerId,
+    sessionId: "c682bce7-76ac-4c02-9132-8fc6705bf163", page: "/player/example", properties: {} });
+  it("marks authenticated internal admins as internal in production", async () => {
+    actorCheck.mockResolvedValue({ data: true, error: null });
+    createClient.mockResolvedValue({ auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: "internal-user" } } }) }, rpc: actorCheck });
+    const { POST } = await import("@/app/api/analytics/events/route");
+    expect((await POST(request(publicBody()))).status).toBe(202);
+    expect(actorCheck).toHaveBeenCalledWith("is_internal_admin");
+    expect(recordTrustedAnalyticsEvent).toHaveBeenCalledWith(expect.objectContaining({ activityClass: "internal" }));
+  });
+  it("marks bot traffic as operational in production", async () => {
+    const req = request(publicBody()); req.headers.set("user-agent", "ExampleCrawler");
+    const { POST } = await import("@/app/api/analytics/events/route");
+    expect((await POST(req)).status).toBe(202);
+    expect(recordTrustedAnalyticsEvent).toHaveBeenCalledWith(expect.objectContaining({ activityClass: "operational" }));
+  });
+  it("binds a currently approved asset only after athlete-scoped lookup", async () => {
+    const { POST } = await import("@/app/api/analytics/events/route");
+    expect((await POST(request({ ...publicBody(), eventName: "media_viewed", properties: { media_id: assetId, media_type: "photo" } }))).status).toBe(202);
+    expect(assetQuery.eq).toHaveBeenCalledWith("id", assetId);
+    expect(assetQuery.eq).toHaveBeenCalledWith("player_id", playerId);
+    expect(recordTrustedAnalyticsEvent).toHaveBeenCalledWith(expect.objectContaining({ validatedContext: { assetId, assetModel: "legacy_media" } }));
+  });
+  it("preserves an open without exporting a revoked asset binding", async () => {
+    assetQuery.maybeSingle.mockResolvedValue({ data: { id: assetId, kind: "photo", license_status: "revoked", public_locker_approved: true, license_kind: "owned" }, error: null });
+    const { POST } = await import("@/app/api/analytics/events/route");
+    expect((await POST(request({ ...publicBody(), eventName: "media_viewed", properties: { media_id: assetId, media_type: "photo" } }))).status).toBe(202);
+    expect(recordTrustedAnalyticsEvent.mock.calls[0][0]).not.toHaveProperty("validatedContext");
+  });
+  it("does not store a public audience event if internal actor verification fails", async () => {
+    actorCheck.mockResolvedValue({ data: null, error: { message: "unavailable" } });
+    createClient.mockResolvedValue({ auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: "internal-user" } } }) }, rpc: actorCheck });
+    const { POST } = await import("@/app/api/analytics/events/route");
+    expect((await POST(request(publicBody()))).status).toBe(503);
     expect(recordTrustedAnalyticsEvent).not.toHaveBeenCalled();
   });
 });

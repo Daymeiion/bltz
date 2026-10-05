@@ -43,6 +43,15 @@ describe("platform assignment authorization", () => {
       }
 
       expect(route).not.toContain("getCurrentUserProfile");
+      if (file.endsWith(join("intelligence", "features", "route.ts")) || file.endsWith(join("intelligence", "workflows", "route.ts"))) {
+        const implementation = file.endsWith(join("features", "route.ts"))
+          ? source("lib/intelligence/measured-server.ts") : source("lib/intelligence/workflows/server.ts");
+        // New service-only operations share the existing assignment gate. Their
+        // route tests also exercise unauthorized requests, not just imports.
+        expect(implementation.indexOf("await authorizeIntelligenceLab()")).toBeGreaterThanOrEqual(0);
+        expect(implementation.indexOf("await authorizeIntelligenceLab()")).toBeLessThan(implementation.indexOf("createServiceClient()"));
+        continue;
+      }
       if (file.endsWith(join("intelligence", "route.ts"))) {
         // Intelligence delegates to its existing server-only assignment gate.
         // Check the whole boundary rather than only the route's helper name.

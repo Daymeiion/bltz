@@ -262,6 +262,11 @@
 .railContent p { margin-top: 5px; overflow-wrap: anywhere; }
 .railContent .cardAction { width: 100%; margin-top: 13px; }
 .railContent details { margin-top: 8px; }
+.railContent label, label.railNote { display: grid; gap: 5px; margin-top: 10px; }
+.railContent input, .railContent textarea, .railContent select, label.railNote textarea { width: 100%; min-width: 0; min-height: 40px; padding: 8px; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; font: inherit; }
+.railContent textarea, label.railNote textarea { min-height: 76px; resize: vertical; }
+.railContent input[type='checkbox'] { width: 18px; min-height: 18px; accent-color: #ffbb00; }
+.railContent :is(input, textarea, select):focus-visible, label.railNote textarea:focus-visible { outline: 2px solid #ffbb00; outline-offset: 2px; }
 .trace { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 11px; color: var(--ink); font-size: 12px; }
 .trace span { border: 1px solid var(--line); border-radius: 5px; padding: 3px 6px; background: var(--soft); }
 .railEmpty { padding: 12px 5px; color: var(--muted); font-size: 14px; line-height: 1.65; }

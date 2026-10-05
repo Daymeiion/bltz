@@ -3,6 +3,7 @@ import { trackProductEvent } from "@/lib/analytics/client";
 
 describe("analytics client", () => {
   beforeEach(() => {
+    vi.restoreAllMocks();
     window.sessionStorage.clear();
   });
 
@@ -122,5 +123,63 @@ describe("analytics client", () => {
       eventName: "locker_viewed",
       athleteSlug: "test-athlete",
     });
+  });
+
+  it("selects the canonical athlete ID when a component also supplies its slug", async () => {
+    const transport = vi.fn<typeof fetch>(async () => new Response(null, { status: 202 }));
+    expect(await trackProductEvent({
+      eventName: "media_viewed",
+      source: "public_locker",
+      athleteId: "c0ffb93f-7851-44d4-96e6-e3044b4b3d55",
+      athleteSlug: "test-athlete",
+      page: "/player/test-athlete/videos/film?token=private#secret-fragment",
+      properties: { media_type: "video", section: "video_detail" },
+    }, transport)).toBe(true);
+
+    const body = JSON.parse(String(transport.mock.calls[0]?.[1]?.body));
+    expect(body.athleteId).toBe("c0ffb93f-7851-44d4-96e6-e3044b4b3d55");
+    expect(body).not.toHaveProperty("athleteSlug");
+    expect(body.page).toBe("/player/test-athlete/videos/film");
+  });
+
+  it("keeps retry and tab-session identity when session storage is disabled", async () => {
+    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => { throw new Error("disabled"); });
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => { throw new Error("disabled"); });
+    const transport = vi.fn<typeof fetch>()
+      .mockRejectedValueOnce(new Error("offline"))
+      .mockRejectedValueOnce(new Error("offline"))
+      .mockResolvedValueOnce(new Response(null, { status: 202 }));
+    const event = {
+      eventName: "locker_viewed" as const,
+      source: "public_locker" as const,
+      athleteSlug: "test-athlete",
+      dedupeKey: "storage-disabled-retry",
+    };
+
+    expect(await trackProductEvent(event, transport)).toBe(false);
+    expect(await trackProductEvent(event, transport)).toBe(true);
+    expect(await trackProductEvent(event, transport)).toBe(false);
+    const requests = transport.mock.calls.map(([, init]) => JSON.parse(String(init?.body)));
+    expect(new Set(requests.map((body) => body.eventId)).size).toBe(1);
+    expect(new Set(requests.map((body) => body.occurredAt)).size).toBe(1);
+    expect(new Set(requests.map((body) => body.sessionId)).size).toBe(1);
+    expect(transport).toHaveBeenCalledTimes(3);
+  });
+
+  it("preserves a pending intent when browser storage becomes available before retry", async () => {
+    const getItem = vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => { throw new Error("disabled"); });
+    const setItem = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => { throw new Error("disabled"); });
+    const transport = vi.fn<typeof fetch>()
+      .mockRejectedValueOnce(new Error("offline"))
+      .mockRejectedValueOnce(new Error("offline"))
+      .mockResolvedValueOnce(new Response(null, { status: 202 }));
+    const event = { eventName: "locker_viewed" as const, athleteSlug: "test-athlete", dedupeKey: "storage-restored-retry" };
+    expect(await trackProductEvent(event, transport)).toBe(false);
+    getItem.mockRestore(); setItem.mockRestore();
+    expect(await trackProductEvent(event, transport)).toBe(true);
+    expect(await trackProductEvent(event, transport)).toBe(false);
+    const requests = transport.mock.calls.map(([, init]) => JSON.parse(String(init?.body)));
+    expect(new Set(requests.map((body) => body.eventId)).size).toBe(1);
+    expect(new Set(requests.map((body) => body.sessionId)).size).toBe(1);
   });
 });

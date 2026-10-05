@@ -13,7 +13,12 @@
     "phase2:preflight": "node scripts/phase2-deployment-preflight.mjs --stage pre",
     "phase2:verify": "node scripts/phase2-deployment-preflight.mjs --stage post",
     "phase2:team-report": "node scripts/phase2-deployment-preflight.mjs --stage post --team-csv",
-    "phase2:rls": "node scripts/verify-staging-beta-rls.mjs"
+    "phase2:rls": "node scripts/verify-staging-beta-rls.mjs",
+    "tinybird:check": "node scripts/tinybird-check.mjs",
+    "tinybird:status": "node scripts/tinybird-status.mjs",
+    "tinybird:build": "tinybird build --branch",
+    "qstash:setup": "node --use-system-ca scripts/configure-qstash-local.mjs",
+    "qstash:status": "node --use-system-ca scripts/qstash-status.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -83,7 +88,10 @@
     "three": "^0.185.1",
     "vaul": "^1.1.2",
     "zod": "^4.1.8",
-    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
+    "@tinybirdco/sdk": "0.0.84",
+    "@upstash/qstash": "2.12.0",
+    "entities": "7.0.1"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
@@ -102,7 +110,8 @@
     "tailwindcss": "^3.4.1",
     "tailwindcss-animate": "^1.0.7",
     "typescript": "^5",
-    "vitest": "^4.1.11"
+    "vitest": "^4.1.11",
+    "@electric-sql/pglite": "0.5.8"
   },
   "overrides": {
     "brace-expansion@<2.0.0": "1.1.21"

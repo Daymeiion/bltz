@@ -2,13 +2,16 @@
 
 import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { useTheme } from "next-themes";
-import { ArrowLeft, ArrowUpRight, BadgeCheck, Camera, Check, ChevronRight, CircleAlert, ExternalLink, FileImage, Fingerprint, FlaskConical, ImageOff, Mail, Moon, Network, Phone, Plus, Search, Shield, Sun, Target, Users, X, Zap } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, Camera, Check, ChevronRight, CircleAlert, ExternalLink, FileImage, Fingerprint, FlaskConical, ImageOff, Mail, Moon, Network, Phone, Plus, Search, Shield, Sun, Target, Users, X, Zap } from "lucide-react";
 import type { GraphEvidence } from "@/lib/intelligence/contracts";
 import type { LabAthlete, LabGraphMoment, LabSection } from "@/lib/intelligence/lab-types";
 import type { IntelligenceOpportunity, IntelligenceSignal } from "@/lib/intelligence/signals";
 import type { WorkspaceAthleteSummary, WorkspaceProfile, WorkspaceResult } from "@/lib/intelligence/workspace-types";
 import { safeSourceUrl, scalarStatistics } from "@/lib/intelligence/lab-format";
 import styles from "./career-workspace.module.css";
+import { MeasuredIntelligence, MeasuredSignalCard } from "./MeasuredIntelligence";
+import type { WorkspaceMeasuredData } from "@/lib/intelligence/measured-server";
+import { WorkflowReviewPanel } from "./WorkflowReviewPanel";
 
 const WATCHLIST_KEY = "bltz.intelligence.watchlist.v1";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -195,7 +198,7 @@ function EvidenceCard({ row }: { row: GraphEvidence }) {
 }
 function SourceGrid({ rows }: { rows: GraphEvidence[] }) { return <div className={styles.sourceGrid}>{rows.map(row => <EvidenceCard key={row.id} row={row} />)}</div>; }
 function CareerTimeline({ athlete }: { athlete: LabAthlete }) { return <section className={styles.section}><h3>Career relationships</h3><SectionState section={athlete.relationships} empty="No normalized career relationships are recorded." /><ol className={styles.timeline}>{athlete.relationships.rows.map(row => <li key={row.id}><strong>{row.team} · {row.season}</strong><p>{row.organization}</p><p>{dateLabel(row.startsOn)} → {row.endsOn ? dateLabel(row.endsOn) : "End not recorded"} · {human(row.status)}</p></li>)}</ol></section>; }
-function AthleteIntelligence({ data, onMoment }: { data: WorkspaceResult; onMoment: (id: string) => void }) {
+function AthleteIntelligence({ data, onMoment, onRefresh, measurementBusy }: { data: WorkspaceResult; onMoment: (id: string) => void; onRefresh: () => void; measurementBusy: boolean }) {
   const athlete = data.result.selected!;
   const standalone = athlete.evidence.rows.filter(row => !row.momentId);
   return <>
@@ -203,6 +206,7 @@ function AthleteIntelligence({ data, onMoment }: { data: WorkspaceResult; onMome
     <section className={styles.section}><h3>Reviewed career evidence</h3><SectionState section={athlete.moments} empty="No Moments are linked to this athlete." /><ul className={styles.reviewLinks}>{athlete.moments.rows.map(moment => <li key={moment.id}><button type="button" className={styles.reviewLink} onClick={() => onMoment(moment.id)}><strong>{moment.title}</strong><time dateTime={moment.datePrecision === "day" ? exactDay(moment.occurredOn) ?? undefined : undefined}>{momentDate(moment)}</time><ArrowUpRight size={15} aria-hidden="true" /></button></li>)}</ul></section>
     <section className={styles.section}><h3>Completeness</h3><dl className={styles.completeness}><div><dt>Athlete identity</dt><dd>{athlete.verified === true ? "Verified" : athlete.verified === false ? "Unverified" : "Verification not recorded"}</dd></div><div><dt>Graph evidence</dt><dd>{athlete.intelligenceState === "ready" ? "Loaded for this review" : "Incomplete — signals withheld"}</dd></div><div><dt>External mapping</dt><dd>{athlete.externalIdentities.rows.length ? "Reviewed mappings available" : "Not recorded"}</dd></div><div><dt>Moment media</dt><dd>Links not established</dd></div></dl><p className={styles.sectionDescription}>Profile labels, provider mapping and athlete verification are separate assessments.</p></section>
     <CareerTimeline athlete={athlete} />
+    <MeasuredIntelligence data={data.measured} onRefresh={onRefresh} busy={measurementBusy} />
     <details className={styles.disclosure}><summary>Source evidence<ChevronRight size={14} aria-hidden="true" /></summary><SectionState section={athlete.evidence} empty="No graph evidence is recorded." />{standalone.length ? <SourceGrid rows={standalone} /> : <p className={styles.sectionDescription}>Moment evidence is attached to each career event.</p>}</details>
     <details className={styles.disclosure}><summary>Season statistics<ChevronRight size={14} aria-hidden="true" /></summary><SectionState section={athlete.statistics} empty="No season statistics are recorded." /><p className={styles.sectionDescription}>Season context does not automatically establish a verified milestone or Moment.</p><ul className={styles.mediaList}>{athlete.statistics.rows.map(row => <li key={row.id} className={styles.evidenceCard}><h3>{row.season} · {row.phase}</h3><p className={styles.sourceSubtitle}>{row.team ?? "Team not recorded"} · {row.source}</p><dl className={styles.statistics}>{scalarStatistics(row.stats).map(([key, value]) => <div key={key}><dt>{key.replace(/_/g, " ")}</dt><dd>{value}</dd></div>)}</dl></li>)}</ul></details>
   </>;
@@ -217,7 +221,11 @@ function MomentHeader({ moment, onBack }: { moment: LabGraphMoment; onBack: () =
   return <header className={styles.momentEvent}><button type="button" className={styles.backButton} onClick={onBack}><ArrowLeft size={13} aria-hidden="true" />Back to athlete</button><p className={styles.momentOverline}>{moment.sport ?? "Sport not recorded"}</p><h2 className={styles.momentTitle}>{moment.title}</h2><time className={styles.momentDate} dateTime={moment.datePrecision === "day" ? exactDay(moment.occurredOn) ?? undefined : undefined}>{momentDate(moment)}</time>{performance.length > 0 && <dl className={styles.performanceGrid} aria-label="Source-reported performance">{performance.map(([key, value], index) => <div key={`${key}-${index}`}><dt>{key.replace(/_/g, " ")}</dt><dd>{value}</dd></div>)}</dl>}</header>;
 }
 function MomentConnections({ moment }: { moment: LabGraphMoment }) { return <section className={styles.section}><h3>Recorded relationships</h3><dl className={styles.completeness}><div><dt>Athlete role</dt><dd>{human(moment.relationship)}</dd></div><div><dt>Relationship review</dt><dd>{human(moment.relationshipStatus)}</dd></div><div><dt>Relationship confidence</dt><dd>{confidencePercent(moment.relationshipConfidence) === null ? "Not recorded" : `${confidencePercent(moment.relationshipConfidence)}%`}</dd></div><div><dt>Moment review</dt><dd>{human(moment.status)}</dd></div><div><dt>Event ID</dt><dd className={styles.recordId}>{moment.eventId ?? "Not recorded"}</dd></div><div><dt>Moment ID</dt><dd className={styles.recordId}>{moment.id}</dd></div></dl><p className={styles.sectionDescription}>Recorded participation does not infer contribution, rights ownership or financial participation.</p>{moment.athletes.length > 1 && <p className={styles.sectionDescription}>{moment.athletes.length} athlete relationships are recorded. Their identities and roles require their own evidence.</p>}</section>; }
-function MomentMedia() { return <div className={styles.empty}><ImageOff size={27} aria-hidden="true" /><h3>No verified Moment media</h3><p>A photo or video has not been linked to this event. Athlete portraits and source documents do not establish a Moment media relationship.</p></div>; }
+function MomentMedia({ data, moment }: { data: WorkspaceResult; moment: LabGraphMoment }) {
+  const links = data.workflows?.momentAssetLinks.filter(link => link.moment_id === moment.id && link.status === "verified") ?? [];
+  const rows = data.media.rows.filter(row => links.some(link => link.current_display_eligible && (row.model === "legacy media" ? link.legacy_media_id === row.id : link.legacy_video_id === row.id)));
+  if (rows.length) return <div><h3>Reviewed Moment media</h3><ul className={styles.mediaList}>{rows.map(row => <li className={styles.mediaCard} key={`${row.model}-${row.id}`}><strong>{row.title}</strong><p>{row.permissionReason}</p>{row.previewUrl && <PortraitImage url={row.previewUrl} name={row.title} />}</li>)}</ul><p className={styles.sectionDescription}>Reviewed associations establish context. Intended-use clearance remains separate.</p></div>;
+  return <div className={styles.empty}><ImageOff size={27} aria-hidden="true" /><h3>No verified Moment media</h3><p>A photo or video has not been linked to this event. Athlete portraits and source documents do not establish a Moment media relationship.</p></div>; }
 
 function AthleteMedia({ data }: { data: WorkspaceResult }) { return <>
   <h3 className={styles.sectionDescription}>Connected athlete media</h3><SectionState section={data.media} empty="No media metadata is linked to this athlete." />{data.mediaPreviewState === "unavailable" && <p className={styles.sectionDescription}>Preview metadata could not be loaded.</p>}
@@ -243,14 +251,15 @@ function FolderTabs({ view, active, onChange }: { view: View; active: Tab; onCha
 function RailEvidence({ evidence }: { evidence: IntelligenceSignal["evidence"] }) { return <details className={styles.disclosure}><summary>Supporting evidence<ChevronRight size={13} aria-hidden="true" /></summary><ul>{evidence.map(row => <li key={row.id}><p>{row.assertion}</p><p>{row.sourceLabel} · {row.sourceProvider}</p><p>Fetched: {row.fetchedAt || "Not recorded"}</p>{safeSourceUrl(row.sourceUrl) && <a className={styles.sourceLink} href={safeSourceUrl(row.sourceUrl)!} target="_blank" rel="noopener noreferrer">Open source<ArrowUpRight size={12} aria-hidden="true" /></a>}</li>)}</ul></details>; }
 function SignalRow({ signal, moment, onMoment }: { signal: IntelligenceSignal; moment: LabGraphMoment | undefined; onMoment: (id: string) => void }) { return <details className={styles.railCard}><summary><span><small>{human(signal.type)}</small><strong>{moment?.title ?? "Recorded career signal"}</strong><time dateTime={exactDay(signal.targetDate) ?? undefined}>Target · {dateLabel(signal.targetDate)}</time></span><ChevronRight size={15} aria-hidden="true" /></summary><div className={styles.railContent}><Metrics priority={signal.score} confidence={signal.confidence} /><h3>Why it matters</h3><p>{signal.explanation}</p><p className={styles.railNote}>{signal.scoreScale}</p><RailEvidence evidence={signal.evidence} />{moment && <button type="button" className={styles.cardAction} onClick={() => onMoment(signal.momentId)}>Inspect moment<ArrowUpRight size={13} aria-hidden="true" /></button>}</div></details>; }
 function OpportunityRow({ opportunity, moment, onMoment }: { opportunity: IntelligenceOpportunity; moment: LabGraphMoment | undefined; onMoment: (id: string) => void }) { return <details className={styles.railCard}><summary><span><small>From {opportunity.signalKeys.length} qualifying signal{opportunity.signalKeys.length === 1 ? "" : "s"}</small><strong>{human(opportunity.type)}</strong><small>Research needed</small></span><ChevronRight size={15} aria-hidden="true" /></summary><div className={styles.railContent}><Metrics priority={opportunity.strength} confidence={opportunity.confidence} /><p>{opportunity.explanation}</p><div className={styles.trace} aria-label="Moment to signal to opportunity"><span>Moment</span><ChevronRight size={10} aria-hidden="true" /><span>Signal</span><ChevronRight size={10} aria-hidden="true" /><span>Opportunity</span></div><p className={styles.railNote}>Potential action for human review. Media availability, rights and athlete preferences require separate verification.</p><RailEvidence evidence={opportunity.evidence} />{moment && <button type="button" className={styles.cardAction} onClick={() => onMoment(opportunity.momentId)}>Review moment<ArrowUpRight size={13} aria-hidden="true" /></button>}</div></details>; }
-function IntelligenceRail({ athlete, moment, evaluatedAt, onMoment }: { athlete: LabAthlete | null; moment: LabGraphMoment | null; evaluatedAt: string; onMoment: (id: string) => void }) {
+function IntelligenceRail({ athlete, moment, evaluatedAt, onMoment, measured, data, onWorkflowUpdate }: { athlete: LabAthlete | null; moment: LabGraphMoment | null; evaluatedAt: string; onMoment: (id: string) => void; measured?: WorkspaceMeasuredData; data: WorkspaceResult; onWorkflowUpdate: (records: NonNullable<WorkspaceResult["workflows"]>) => void }) {
   const ready = athlete?.intelligenceState === "ready";
   const signals = ready ? athlete.intelligence.signals.filter(row => !moment || row.momentId === moment.id) : [];
   const opportunities = ready ? athlete.intelligence.opportunities.filter(row => !moment || row.momentId === moment.id) : [];
+  const measuredSignals = measured?.evaluation?.signals.filter(row => !moment || row.momentId === moment.id) ?? [];
   return <aside className={styles.rail} aria-label="Intelligence findings">
-    <section className={styles.railSection} aria-label="Signals"><div className={styles.railHeading}><div><Zap size={14} aria-hidden="true" /><h2>Signals</h2></div><span>{signals.length}</span></div>{signals.length ? <ul className={styles.railList}>{signals.map(signal => <li key={signal.key}><SignalRow signal={signal} moment={athlete?.moments.rows.find(row => row.id === signal.momentId)} onMoment={onMoment} /></li>)}</ul> : <p className={styles.railEmpty}>{!athlete ? "Select an athlete to inspect evidence-backed signals." : !ready ? "Signals are withheld while supporting graph evidence is incomplete." : "No qualifying signals in this evaluation window."}</p>}<p className={styles.railNote}>Evaluated {evaluatedAt} UTC. Review priority and evidence confidence are separate.</p></section>
+    <section className={styles.railSection} aria-label="Signals"><div className={styles.railHeading}><div><Zap size={14} aria-hidden="true" /><h2>Signals</h2></div><span>{signals.length + measuredSignals.length}</span></div>{signals.length ? <ul className={styles.railList}>{signals.map(signal => <li key={signal.key}><SignalRow signal={signal} moment={athlete?.moments.rows.find(row => row.id === signal.momentId)} onMoment={onMoment} /></li>)}</ul> : <p className={styles.railEmpty}>{!athlete ? "Select an athlete to inspect evidence-backed signals." : !ready ? "Signals are withheld while supporting graph evidence is incomplete." : "No qualifying signals in this evaluation window."}</p>}{measuredSignals.length > 0 && <ul className={styles.railList} aria-label="Measured signals">{measuredSignals.map(signal => <li key={signal.key}><MeasuredSignalCard signal={signal} /></li>)}</ul>}<p className={styles.railNote}>Evaluated {evaluatedAt} UTC. Review priority and evidence confidence are separate.</p></section>
     <section className={styles.railSection} aria-label="Opportunities"><div className={styles.railHeading}><div><Target size={14} aria-hidden="true" /><h2>Opportunities</h2></div><span>{opportunities.length}</span></div>{opportunities.length ? <ul className={styles.railList}>{opportunities.map(opportunity => <li key={opportunity.key}><OpportunityRow opportunity={opportunity} moment={athlete?.moments.rows.find(row => row.id === opportunity.momentId)} onMoment={onMoment} /></li>)}</ul> : <p className={styles.railEmpty}>No opportunities have been derived from qualifying signals.</p>}</section>
-    <section className={styles.railSection} aria-label="Activations"><div className={styles.railHeading}><div><BadgeCheck size={14} aria-hidden="true" /><h2>Activations</h2></div><span>0</span></div><details className={styles.railCard}><summary><span><small>Recorded activity</small><strong>No activations recorded</strong></span><ChevronRight size={15} aria-hidden="true" /></summary><div className={styles.railContent}><p>A potential opportunity has not been converted into an approved activation record.</p><p>Brands, release dates, connected media and measured reach will appear when verified records exist.</p></div></details></section>
+    <WorkflowReviewPanel key={`${athlete?.id ?? "empty"}:${moment?.id ?? "athlete"}`} data={data} momentId={moment?.id ?? null} onUpdate={onWorkflowUpdate} />
   </aside>;
 }
 
@@ -272,6 +281,7 @@ export function CareerWorkspace({ initial, initialMomentId = null }: { initial: 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [measurementBusy, setMeasurementBusy] = useState(false);
   const [momentId, setMomentId] = useState<string | null>(() => initial.result.selected?.moments.rows.some(row => row.id === initialMomentId) ? initialMomentId : null);
   const [tab, setTab] = useState<Tab>(() => initialMomentId ? "evidence" : "intelligence");
   const [asOf, setAsOf] = useState(initial.result.asOf);
@@ -287,6 +297,21 @@ export function CareerWorkspace({ initial, initialMomentId = null }: { initial: 
   const athlete = data.result.selected;
   const moment = athlete?.moments.rows.find(row => row.id === momentId) ?? null;
   const view: View = moment ? "moment" : "athlete";
+  async function refreshMeasurements() {
+    if (!athlete || data.dataMode === "synthetic" || !data.measured?.refreshAllowed) return;
+    const playerId = athlete.id;
+    setMeasurementBusy(true); setError("");
+    try {
+      const response = await fetch("/api/admin/intelligence/features", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ playerId }) });
+      if (!response.ok) throw new Error("Development measurements could not be refreshed. Missing observations remain unavailable.");
+      const refreshed = await fetch(`/api/admin/intelligence/features?${new URLSearchParams({ playerId })}`, { credentials: "same-origin", cache: "no-store" });
+      if (!refreshed.ok) throw new Error("The new feature run could not be loaded. Reload before reviewing it.");
+      const measured = await refreshed.json() as WorkspaceMeasuredData;
+      setData(current => current.result.selected?.id === playerId ? { ...current, measured } : current);
+      setNotice("Development measurements refreshed. Coverage and suppression labels remain explicit.");
+    } catch (failure) { setError(failure instanceof Error ? failure.message : "Measurements unavailable."); }
+    finally { setMeasurementBusy(false); }
+  }
 
   useEffect(() => {
     try {
@@ -391,9 +416,9 @@ export function CareerWorkspace({ initial, initialMomentId = null }: { initial: 
           <div className={styles.folderWrap} id="career-folder"><div className={styles.folder}><FolderTabs view={view} active={activeTab} onChange={setTab} /><div className={styles.folderBody}>
             {moment && <MomentHeader moment={moment} onBack={backToAthlete} />}
             {tabs.map(key => <section key={`${view}-${key}`} id={`career-panel-${key}`} className={styles.folderPanel} role="tabpanel" aria-labelledby={`career-tab-${key}`} tabIndex={0} hidden={activeTab !== key}>
-              {key === "intelligence" && <AthleteIntelligence data={data} onMoment={inspectMoment} />}
+              {key === "intelligence" && <AthleteIntelligence data={data} onMoment={inspectMoment} onRefresh={() => void refreshMeasurements()} measurementBusy={measurementBusy} />}
               {key === "moments" && <MomentCards athlete={athlete} onMoment={inspectMoment} />}
-              {key === "media" && (moment ? <MomentMedia /> : <AthleteMedia data={data} />)}
+              {key === "media" && (moment ? <MomentMedia data={data} moment={moment} /> : <AthleteMedia data={data} />)}
               {key === "evidence" && moment && (moment.evidence.length ? <SourceGrid rows={moment.evidence} /> : <p className={styles.sectionDescription}>Supporting evidence is not recorded or could not be loaded.</p>)}
               {key === "connections" && moment && <MomentConnections moment={moment} />}
             </section>)}
@@ -401,7 +426,7 @@ export function CareerWorkspace({ initial, initialMomentId = null }: { initial: 
           <form className={styles.evaluation} onSubmit={event => { event.preventDefault(); const row = summaryFor(data); if (row && exactDay(asOf)) void selectAthlete(row, asOf); }}><label htmlFor="career-evaluation-date">Evaluation date · UTC</label><input type="date" id="career-evaluation-date" value={asOf} onChange={event => setAsOf(event.target.value)} /><button type="submit" disabled={busy || !exactDay(asOf)}>Re-evaluate</button></form>
         </>}
       </div>
-      <IntelligenceRail athlete={athlete} moment={moment} evaluatedAt={data.result.evaluatedAt ?? data.result.asOf} onMoment={inspectMoment} />
+      <IntelligenceRail athlete={athlete} moment={moment} evaluatedAt={data.result.evaluatedAt ?? data.result.asOf} onMoment={inspectMoment} measured={data.measured} data={data} onWorkflowUpdate={records => setData(current => ({ ...current, workflows: records }))} />
     </div>
   </div>;
 }
