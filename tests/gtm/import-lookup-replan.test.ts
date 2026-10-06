@@ -121,7 +121,7 @@ describe("GTM importer narrowly re-plans changing identity lookups", () => {
     expect(await metadata()).toEqual(attributes);
     expect(bodyMd5(baseline)).toBe("c17054ebf22e4acd185df3d9003b5052");
     expect(bodyMd5(func(migration, "gtm_private.import_gtm_contacts_v2_impl"))).toBe("b2fd020687b8b21c268c1d40578d222e");
-    expect((await db.query("select has_function_privilege('anon',$1,'EXECUTE') allowed", [signature])).rows[0].allowed).toBe(false);
+    expect((await db.query<{ allowed: boolean }>("select has_function_privilege('anon',$1,'EXECUTE') allowed", [signature])).rows[0].allowed).toBe(false);
   });
 
   it("fails closed on a changed body and on a missing or changed reviewed email index", async () => {
@@ -159,7 +159,7 @@ describe("GTM importer narrowly re-plans changing identity lookups", () => {
     await db.exec("truncate gtm_contacts,gtm_contact_players cascade");
     await seed({ id: randomUUID(), source: "contacts_csv", record: input.sourceRecordId, archived: true });
     expect(await commit(await prepare([input]), [input])).toMatchObject({ rows_created: 0, rows_updated: 1, rows_failed: 0 });
-    expect((await db.query("select archived from gtm_contacts")).rows[0].archived).toBe(true);
+    expect((await db.query<{ archived: boolean }>("select archived from gtm_contacts")).rows[0].archived).toBe(true);
   });
 
   it("rejects conflicting LinkedIn, email and source signals without mutating any candidate", async () => {
@@ -193,7 +193,7 @@ describe("GTM importer narrowly re-plans changing identity lookups", () => {
     await expect(commit(key, [{ ...rows[0], displayName: "Changed source" }])).rejects.toThrow("does not match its approved preview");
     await db.query("select set_config('fixture.actor',$1,false)", [other]);await db.exec("set role authenticated");
     await expect(commit(key, rows)).rejects.toThrow("GTM access denied");await db.exec("reset role");
-    expect(await count("gtm_contacts")).toBe(0);expect((await db.query("select status from gtm_import_jobs")).rows[0].status).toBe("preview_ready");
+    expect(await count("gtm_contacts")).toBe(0);expect((await db.query<{ status: string }>("select status from gtm_import_jobs")).rows[0].status).toBe("preview_ready");
   });
 
   it("commits an audited6100-row batch from analyzed-empty state and replays the same receipt without writes", async () => {
@@ -206,7 +206,7 @@ describe("GTM importer narrowly re-plans changing identity lookups", () => {
     await db.exec("reset role");expect(await count("gtm_contacts")).toBe(6100);expect(await count("gtm_contact_players")).toBe(0);expect(await count("players")).toBe(1);
     expect((await db.query("select identity_review_status,count(*)::int n from gtm_contacts group by identity_review_status order by identity_review_status")).rows)
       .toEqual([{ identity_review_status: "ambiguous", n: 80 }, { identity_review_status: "clear", n: 5556 }, { identity_review_status: "possible", n: 464 }]);
-    expect((await db.query("select count(*)::int n from audit_logs where action='gtm.contact.created'")).rows[0].n).toBe(6100);
+    expect((await db.query<{ n: number }>("select count(*)::int n from audit_logs where action='gtm.contact.created'")).rows[0].n).toBe(6100);
     const before = { contacts: await count("gtm_contacts"), jobs: await count("gtm_import_jobs"), audits: await count("audit_logs") };
     await db.exec("set role authenticated");expect(await commit(key, rows, 278)).toEqual(receipt);await db.exec("reset role");
     expect({ contacts: await count("gtm_contacts"), jobs: await count("gtm_import_jobs"), audits: await count("audit_logs") }).toEqual(before);
