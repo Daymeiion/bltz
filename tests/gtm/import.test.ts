@@ -94,20 +94,121 @@ describe("GTM CSV normalization", () => {
     expect(result.duplicateCount).toBe(1);
   });
 
-  it("deduplicates repeated emails even when source record IDs differ", () => {
+  it("holds every row when a shared email has different source record IDs", () => {
     const csv = Buffer.from("Name,Email,Record ID\nA Person,a@example.com,one\nA Person,a@example.com,two");
     const result = parseGtmCsv(csv, { displayName: "Name", email: "Email", sourceRecordId: "Record ID" });
 
-    expect(result.rows).toHaveLength(1);
-    expect(result.duplicateCount).toBe(1);
+    expect(result.rows).toEqual([]);
+    expect(result.duplicateCount).toBe(0);
+    expect(result.issues.map((issue) => issue.rowNumber)).toEqual([2, 3]);
+    expect(result.issues.every((issue) => issue.code === "identity_conflict")).toBe(true);
   });
 
-  it("checks email duplication even when both rows have different LinkedIn URLs", () => {
+  it("does not select a contact when a shared email has different LinkedIn URLs", () => {
     const csv = Buffer.from("Name,Email,LinkedIn,Record ID\nA Person,a@example.com,https://linkedin.com/in/a-one,one\nA Person,a@example.com,https://linkedin.com/in/a-two,two");
     const result = parseGtmCsv(csv, { displayName: "Name", email: "Email", linkedinUrl: "LinkedIn", sourceRecordId: "Record ID" });
 
+    expect(result.rows).toEqual([]);
+    expect(result.duplicateCount).toBe(0);
+    expect(result.issues.map((issue) => issue.rowNumber)).toEqual([2, 3]);
+  });
+
+  it("skips harmless duplicates after identity and date normalization", () => {
+    const csv = Buffer.from([
+      "Name,Email,LinkedIn,Connected On,Record ID",
+      "A Person,A@example.com,linkedin.com/in/a-person?trk=test,17 Aug 2024,00042",
+      "A Person,a@example.com,https://www.linkedin.com/in/a-person,2024-08-17,00042",
+    ].join("\n"));
+    const result = parseGtmCsv(csv);
+
     expect(result.rows).toHaveLength(1);
     expect(result.duplicateCount).toBe(1);
+    expect(result.issues).toEqual([]);
+  });
+
+  it.each([
+    ["Email", "a@example.com"],
+    ["LinkedIn", "https://linkedin.com/in/a-person"],
+    ["Record ID", "00042"],
+  ])("quarantines different fields for the same %s, including the earlier row", (header, identity) => {
+    const csv = Buffer.from(`Name,Company,${header}\nA Person,First Company,${identity}\nA Person,Changed Company,${identity}`);
+    const result = parseGtmCsv(csv);
+
+    expect(result.rows).toEqual([]);
+    expect(result.duplicateCount).toBe(0);
+    expect(result.issues).toHaveLength(2);
+    expect(result.issues[0]).toMatchObject({ code: "identity_conflict", rowNumber: 2, conflictGroupRowNumber: 2, conflictGroupSize: 2 });
+    expect(result.issues[1]).toMatchObject({ code: "identity_conflict", rowNumber: 3, conflictGroupRowNumber: 2, conflictGroupSize: 2 });
+  });
+
+  it("quarantines a transitive email, profile and source-ID conflict without merging any row", () => {
+    const csv = Buffer.from([
+      "Name,Email,LinkedIn,Record ID",
+      "First Person,first@example.com,https://linkedin.com/in/first,first",
+      "Second Person,first@example.com,https://linkedin.com/in/second,second",
+      "Third Person,third@example.com,https://linkedin.com/in/second,third",
+      "Fourth Person,fourth@example.com,https://linkedin.com/in/fourth,third",
+      "Unrelated Person,unrelated@example.com,https://linkedin.com/in/unrelated,unrelated",
+    ].join("\n"));
+    const result = parseGtmCsv(csv);
+
+    expect(result.rows.map((row) => row.displayName)).toEqual(["Unrelated Person"]);
+    expect(result.duplicateCount).toBe(0);
+    expect(result.issues.map((issue) => issue.rowNumber)).toEqual([2, 3, 4, 5]);
+    expect(result.issues.every((issue) => issue.conflictGroupSize === 4 && issue.conflictGroupRowNumber === 2)).toBe(true);
+    expect(result.issues[0].identityKinds).toEqual(expect.arrayContaining(["email", "linkedin", "source"]));
+    const publicIssues = JSON.stringify(result.issues);
+    expect(publicIssues).not.toContain("first@example.com");
+    expect(publicIssues).not.toContain("linkedin.com/in/second");
+    expect(publicIssues).not.toContain("First Person");
+  });
+
+  it("keeps earlier identical repeats in the exception group if a later row conflicts", () => {
+    const result = parseGtmCsv(Buffer.from("Name,Email\nA Person,a@example.com\nA Person,a@example.com\nDifferent Person,a@example.com"));
+
+    expect(result.rows).toEqual([]);
+    expect(result.duplicateCount).toBe(0);
+    expect(result.issues.map((issue) => issue.rowNumber)).toEqual([2, 3, 4]);
+    expect(result.issues.every((issue) => issue.conflictGroupSize === 3)).toBe(true);
+  });
+
+  it("does not let an invalid row silently select a conflicting valid identity", () => {
+    const result = parseGtmCsv(Buffer.from("Name,Email,Connected On\nA Person,a@example.com,2024-08-17\nDifferent Person,a@example.com,not-a-date"));
+
+    expect(result.rows).toEqual([]);
+    expect(result.duplicateCount).toBe(0);
+    expect(result.issues.map((issue) => issue.rowNumber)).toEqual([2, 3]);
+    expect(result.issues.every((issue) => issue.code === "identity_conflict")).toBe(true);
+  });
+
+  it("preserves leading-zero source IDs as distinct identities despite matching names", () => {
+    const result = parseGtmCsv(Buffer.from("Name,Record ID\nAlex Smith,00042\nAlex Smith,42"));
+
+    expect(result.rows).toHaveLength(2);
+    expect(result.duplicateCount).toBe(0);
+    expect(result.issues).toEqual([]);
+    expect(result.rows[0].sourceRecordId).not.toBe(result.rows[1].sourceRecordId);
+  });
+
+  it.each([
+    ["Record ID", "x".repeat(255), "Source record ID"],
+    ["Email", `${"x".repeat(320)}@example.com`, "Email address"],
+    ["LinkedIn", `https://linkedin.com/in/${"x".repeat(500)}`, "LinkedIn URL"],
+  ])("rejects overlength %s values instead of collapsing their prefixes", (header, prefix, label) => {
+    const result = parseGtmCsv(Buffer.from(`Name,${header}\nA Person,${prefix}a\nA Person,${prefix}b`));
+
+    expect(result.rows).toEqual([]);
+    expect(result.duplicateCount).toBe(0);
+    expect(result.issues.map((issue) => issue.rowNumber)).toEqual([2, 3]);
+    expect(result.issues.every((issue) => issue.message === `${label} exceeds the supported length.`)).toBe(true);
+  });
+
+  it("keeps same-name contacts with different stable profiles and emails", () => {
+    const result = parseGtmCsv(Buffer.from("Name,Email,LinkedIn\nAlex Smith,first@example.com,https://linkedin.com/in/first\nAlex Smith,second@example.com,https://linkedin.com/in/second"));
+
+    expect(result.rows).toHaveLength(2);
+    expect(result.duplicateCount).toBe(0);
+    expect(result.issues).toEqual([]);
   });
 
   it("does not collapse name-only rows into one contact identity", () => {

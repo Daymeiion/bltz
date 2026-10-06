@@ -101,6 +101,11 @@ function getValue(row: Record<string, unknown>, mapping: GtmFieldMapping, field:
   return header ? clean(row[header], maxLength) : "";
 }
 
+function getIdentityValue(row: Record<string, unknown>, mapping: GtmFieldMapping, field: GtmImportField) {
+  const header = mapping[field];
+  return header ? String(row[header] ?? "").trim() : "";
+}
+
 function sourceIdentity(
   row: Omit<NormalizedGtmImportRow, "sourceRecordId">,
   explicitId: string,
@@ -109,6 +114,87 @@ function sourceIdentity(
   const seed = explicitId || row.linkedinUrl || row.email
     || uploadRowIdentity;
   return createHash("sha256").update(seed).digest("hex");
+}
+
+interface ImportCandidate {
+  row: NormalizedGtmImportRow;
+  identityKeys: string[];
+  signature: string;
+  validationIssue?: GtmImportRowIssue;
+}
+
+/** Resolve all shared identities before keeping any row, including earlier rows. */
+function resolveImportCandidates(candidates: ImportCandidate[]) {
+  const parent = candidates.map((_, index) => index);
+  const ranks = candidates.map(() => 0);
+  const find = (index: number): number => {
+    while (parent[index] !== index) {
+      parent[index] = parent[parent[index]];
+      index = parent[index];
+    }
+    return index;
+  };
+  const join = (left: number, right: number) => {
+    let leftRoot = find(left);
+    let rightRoot = find(right);
+    if (leftRoot === rightRoot) return;
+    if (ranks[leftRoot] < ranks[rightRoot]) [leftRoot, rightRoot] = [rightRoot, leftRoot];
+    parent[rightRoot] = leftRoot;
+    if (ranks[leftRoot] === ranks[rightRoot]) ranks[leftRoot] += 1;
+  };
+  const identityOwners = new Map<string, number>();
+  candidates.forEach((candidate, index) => {
+    for (const key of candidate.identityKeys) {
+      const owner = identityOwners.get(key);
+      if (owner !== undefined) join(index, owner);
+      else identityOwners.set(key, index);
+    }
+  });
+
+  const groups = new Map<number, ImportCandidate[]>();
+  candidates.forEach((candidate, index) => {
+    const root = find(index);
+    const group = groups.get(root);
+    if (group) group.push(candidate);
+    else groups.set(root, [candidate]);
+  });
+
+  const rows: NormalizedGtmImportRow[] = [];
+  const issues: GtmImportRowIssue[] = [];
+  let duplicateCount = 0;
+  for (const group of groups.values()) {
+    const signatures = new Set(group.map((candidate) => candidate.signature));
+    if (signatures.size > 1) {
+      const keyCounts = new Map<string, number>();
+      for (const candidate of group) {
+        for (const key of candidate.identityKeys) keyCounts.set(key, (keyCounts.get(key) ?? 0) + 1);
+      }
+      const identityKinds = [...new Set([...keyCounts].filter(([, count]) => count > 1)
+        .map(([key]) => key.slice(0, key.indexOf(":")) as "linkedin" | "email" | "source"))];
+      for (const candidate of group) {
+        issues.push({
+          rowNumber: candidate.row.rowNumber,
+          message: "Shared contact identifiers have conflicting values. Every row in this group is held for review; no contact was selected or merged.",
+          code: "identity_conflict",
+          identityKinds,
+          conflictGroupRowNumber: group[0].row.rowNumber,
+          conflictGroupSize: group.length,
+        });
+      }
+      continue;
+    }
+    if (group.some((candidate) => candidate.validationIssue)) {
+      for (const candidate of group) {
+        if (candidate.validationIssue) issues.push(candidate.validationIssue);
+      }
+      continue;
+    }
+    rows.push(group[0].row);
+    duplicateCount += group.length - 1;
+  }
+  rows.sort((left, right) => left.rowNumber - right.rowNumber);
+  issues.sort((left, right) => left.rowNumber - right.rowNumber);
+  return { rows, issues, duplicateCount };
 }
 
 export function parseGtmCsv(buffer: Buffer, mappingOverride?: GtmFieldMapping): ParsedGtmImport {
@@ -131,20 +217,19 @@ export function parseGtmCsv(buffer: Buffer, mappingOverride?: GtmFieldMapping): 
   const headers = Object.keys(rawRows[0]);
   const suggestedMapping = suggestMapping(headers);
   const mapping = { ...suggestedMapping, ...mappingOverride };
-  const rows: NormalizedGtmImportRow[] = [];
-  const issues: GtmImportRowIssue[] = [];
-  const seen = new Set<string>();
-  const seenIdentities = new Set<string>();
-  let duplicateCount = 0;
+  const candidates: ImportCandidate[] = [];
 
   rawRows.forEach((raw, index) => {
     const rowNumber = index + 2;
     const firstName = getValue(raw, mapping, "firstName", 120);
     const lastName = getValue(raw, mapping, "lastName", 120);
     const displayName = getValue(raw, mapping, "displayName", 240) || [firstName, lastName].filter(Boolean).join(" ");
-    const rawLinkedIn = getValue(raw, mapping, "linkedinUrl", 500);
-    const linkedinUrl = normalizeLinkedIn(rawLinkedIn);
-    const email = getValue(raw, mapping, "email", 320).toLowerCase();
+    // Stable identifiers must be rejected at their limits, never truncated into
+    // a different identifier that could collide with another person's record.
+    const rawLinkedIn = getIdentityValue(raw, mapping, "linkedinUrl");
+    const linkedinUrl = rawLinkedIn.length <= 500 ? normalizeLinkedIn(rawLinkedIn) : "";
+    const email = getIdentityValue(raw, mapping, "email").toLowerCase();
+    const explicitId = getIdentityValue(raw, mapping, "sourceRecordId");
     const rawConnectedOn = getValue(raw, mapping, "connectedOn", 80);
     const connectedOn = normalizeDate(rawConnectedOn);
     const rawType = getValue(raw, mapping, "contactType", 40).toLowerCase().replace(/\s+/g, "_");
@@ -165,37 +250,40 @@ export function parseGtmCsv(buffer: Buffer, mappingOverride?: GtmFieldMapping): 
       doNotAutomate: truthy(getValue(raw, mapping, "doNotAutomate", 40)),
     };
 
-    if (!displayName) {
-      issues.push({ rowNumber, message: "A display name or first and last name is required." });
-      return;
-    }
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      issues.push({ rowNumber, message: "Email address is not valid." });
-      return;
-    }
-    if (rawLinkedIn && !linkedinUrl) {
-      issues.push({ rowNumber, message: "LinkedIn URL is not valid." });
-      return;
-    }
-    if (rawConnectedOn && !connectedOn) {
-      issues.push({ rowNumber, message: "LinkedIn connection date is not valid." });
-      return;
-    }
-
+    const validationMessage = !displayName ? "A display name or first and last name is required."
+      : email.length > 320 ? "Email address exceeds the supported length."
+        : email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? "Email address is not valid."
+          : rawLinkedIn.length > 500 ? "LinkedIn URL exceeds the supported length."
+            : rawLinkedIn && !linkedinUrl ? "LinkedIn URL is not valid."
+              : explicitId.length > 255 ? "Source record ID exceeds the supported length."
+                : rawConnectedOn && !connectedOn ? "LinkedIn connection date is not valid."
+                  : null;
     const sourceRecordId = sourceIdentity(
       base,
-      getValue(raw, mapping, "sourceRecordId", 255),
+      explicitId,
       `${contentSha256}:${rowNumber}`,
     );
-    const identityKeys = [linkedinUrl && `linkedin:${linkedinUrl}`, email && `email:${email}`].filter(Boolean) as string[];
-    if (seen.has(sourceRecordId) || identityKeys.some((key) => seenIdentities.has(key))) {
-      duplicateCount += 1;
-      return;
-    }
-    seen.add(sourceRecordId);
-    identityKeys.forEach((key) => seenIdentities.add(key));
-    rows.push({ ...base, sourceRecordId });
+    const identityKeys = [
+      `source:${sourceRecordId}`,
+      linkedinUrl && `linkedin:${linkedinUrl}`,
+      email && `email:${email}`,
+    ].filter(Boolean) as string[];
+    // Row number identifies an occurrence, not contact content. Explicit source
+    // IDs are included so different IDs cannot be collapsed via a shared email.
+    candidates.push({
+      row: { ...base, sourceRecordId },
+      identityKeys,
+      signature: JSON.stringify({
+        ...base,
+        rowNumber: undefined,
+        explicitId,
+        ...(validationMessage ? { rawLinkedIn, rawConnectedOn } : {}),
+      }),
+      ...(validationMessage ? { validationIssue: { rowNumber, message: validationMessage } } : {}),
+    });
   });
+
+  const { rows, issues, duplicateCount } = resolveImportCandidates(candidates);
 
   return {
     headers,

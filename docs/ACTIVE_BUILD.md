@@ -1,10 +1,11 @@
 # Active BLTZ build — October 5, 2026
 
 The Product Doctrine v1.2 is authoritative; `BLTZ_BUILD_ORDER.md` controls phases.
-The primary checkout now uses `codex/doctrine-reconciliation-2026-10-05`, based on
-the reviewed, pushed production-support checkpoint
-`9b5897cbf1fb2cede68ebc6cbb964bfcc9748322`. It no longer runs from the old mixed
-`codex/preview-locker-release` working copy.
+The primary checkout now uses `codex/csv-matching-recovery-2026-10-05`, based on
+the pushed reconciliation/source-protection checkpoint
+`3c31bd99ab78c717430b6938df333e03c011c7a0`. It no longer runs from the old mixed
+`codex/preview-locker-release` working copy. Source checkpoints do not change the
+production alias or authorize a live import.
 
 ## Preserved and reconciled
 
@@ -31,6 +32,20 @@ differences. Source protections and campus-safe school matching were subsequentl
 approved for selective restoration. Follow
 `reconciliation/source-protections-2026-10-05.md` for the follow-up checkpoint.
 The older NFL importer remains a separate reviewed candidate, not active code.
+
+## Unfinished contact import
+
+Read-only recovery identified the original LinkedIn export and three uncommitted
+preview jobs. The hosted directory already has 24,740 NFL reference records;
+do not replace it with the older local NFL master or merge repeated names.
+There are no existing GTM contacts in the audited project.
+
+The guarded contact workflow can preserve 6,100 eligible contacts while explicitly
+deferring 544 uncertain Player links. Another 278 excluded rows remain available
+in the original file and complete diagnostics. Review choices can be downloaded
+and restored against the same file, mapping and current candidate evidence.
+The source checkpoint, validations and production gates are recorded in
+`reconciliation/csv-matching-completion-2026-10-05.md`. No live import has run.
 
 ## Production remains gated
 

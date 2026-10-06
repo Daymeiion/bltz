@@ -32,6 +32,11 @@ export interface NormalizedGtmImportRow {
 export interface GtmImportRowIssue {
   rowNumber: number;
   message: string;
+  code?: "identity_conflict";
+  /** Identity categories only; never expose the conflicting values. */
+  identityKinds?: Array<"linkedin" | "email" | "source">;
+  conflictGroupRowNumber?: number;
+  conflictGroupSize?: number;
 }
 
 export interface ParsedGtmImport {

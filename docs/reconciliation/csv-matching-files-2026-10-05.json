@@ -1,0 +1,114 @@
+{
+  "reviewDate": "2026-10-05",
+  "branch": "codex/csv-matching-recovery-2026-10-05",
+  "baseline": "3c31bd99ab78c717430b6938df333e03c011c7a0",
+  "scope": "Private contact matching workflow; no live import, migration or deployment",
+  "manifestExcludedFromOwnHashes": true,
+  "records": [
+    {
+      "file": "app/admin/gtm/actions.ts",
+      "bytes": 52374,
+      "sha256": "7bee168f0e4ad8bfaa9e2f9a2b0295fce1e8712faafb5829a3174431f52321c8"
+    },
+    {
+      "file": "components/admin/gtm/GtmImportWorkspace.tsx",
+      "bytes": 29432,
+      "sha256": "cbe878a25d8e4cf2cdfa348dfa1e346e2be0732b82be47fbbd6911f88d5750de"
+    },
+    {
+      "file": "lib/gtm/import-contract.ts",
+      "bytes": 1450,
+      "sha256": "a86b847f0d35965d845e46c8e4e47a6f73049e152059b96d6629a429f39d5450"
+    },
+    {
+      "file": "lib/gtm/import.ts",
+      "bytes": 12541,
+      "sha256": "3bc5a493b5f6937d3ad6ba0614e1b15d0ce3c5e83094322e6d7cd00b8d41ee36"
+    },
+    {
+      "file": "lib/gtm/player-matching.ts",
+      "bytes": 5088,
+      "sha256": "34235d265ff1b990c33e322bc3ea60970ac7c04b0139c2645b38a8bb568a40fa"
+    },
+    {
+      "file": "lib/gtm/import-review-progress.ts",
+      "bytes": 9921,
+      "sha256": "1eb6fc478f7c3dd6baebc09f2118a691c29a08efa27910582ce0e62bc8016629"
+    },
+    {
+      "file": "package.json",
+      "bytes": 4208,
+      "sha256": "1ee6ced20aa96adb92b8d22387519ff41712161eba97f19a6437ed37b26e551a"
+    },
+    {
+      "file": "package-lock.json",
+      "bytes": 409860,
+      "sha256": "ff340e738a4f04fda42419b76cc17c8a3268ab05d4de9f58f9ea5eb7c7d72c29"
+    },
+    {
+      "file": "tests/admin/gtm-prompt6-live-import-contract.test.ts",
+      "bytes": 2091,
+      "sha256": "558cc3668e048cf6a132cb44555fc1c988211f0d36661097b84f1ddf2c3e8ec8"
+    },
+    {
+      "file": "tests/admin/gtm-ui-qa.test.tsx",
+      "bytes": 3784,
+      "sha256": "a1fbfda8e45c5c0b70baed028de1a2561cf248d44ea3c37bf66ea42655f7fa8b"
+    },
+    {
+      "file": "tests/gtm/import.test.ts",
+      "bytes": 13340,
+      "sha256": "c221c81fa7684c1f0762c4f9313bd40a55edb916d7408753f471f02340d24b2c"
+    },
+    {
+      "file": "tests/gtm/player-matching.test.ts",
+      "bytes": 4514,
+      "sha256": "23edb4ef9856c7021f53d3207c493a54004f8affb0d838da2bfdabf80e6e361c"
+    },
+    {
+      "file": "tests/gtm/import-review-progress.test.ts",
+      "bytes": 7332,
+      "sha256": "962b15792ec0bf0e8f53bf7c12db70c526d770aaa80e7a0e6a77175eb3ea0ade"
+    },
+    {
+      "file": "tests/gtm/import-review-security.test.ts",
+      "bytes": 11870,
+      "sha256": "f671c997198a5d8260cf3814074582469276f3b69be7ecd2bef74217404fc809"
+    },
+    {
+      "file": "tests/gtm/import-review-sql.test.ts",
+      "bytes": 9470,
+      "sha256": "014e3eeaa05712a26ffa2155ee67022b11dadebe880f4ac4de9365b066705c95"
+    },
+    {
+      "file": "tests/gtm/import-review-workspace.test.tsx",
+      "bytes": 9495,
+      "sha256": "8e537198281726518415da858a6c972ef7c8e3f0d1f4a4644466f65b8f9c0842"
+    },
+    {
+      "file": "docs/ACTIVE_BUILD.md",
+      "bytes": 4801,
+      "sha256": "1b32e1010f39150517ce5dccf40dab94f951836df5afe9947e5148da4cccea33"
+    },
+    {
+      "file": "docs/intelligence/CTO-STATUS.md",
+      "bytes": 2801,
+      "sha256": "b00132b88c34379ae7514609ae474d151bb041c7cbc70a599f5e996fa6ea28c5"
+    },
+    {
+      "file": "docs/design-reference/contact-import-match-review-2026-10-05.md",
+      "bytes": 2748,
+      "sha256": "244699a6d1be75ac0f2e4d9c3779e968cc71a8a2a5dcd8707b7088f5a70459bf"
+    },
+    {
+      "file": "docs/reconciliation/csv-matching-completion-2026-10-05.md",
+      "bytes": 10125,
+      "sha256": "4b2f8ea16013c3904cddedf1de7311be03867813794c3c7a4234998db30c62cc"
+    },
+    {
+      "file": "docs/reconciliation/csv-matching-recovery-2026-10-05.md",
+      "bytes": 10690,
+      "sha256": "e2205f0da647eb2bd8bc97acfe90e513027699bddfef3b1a137c72b5f793d123"
+    }
+  ]
+}

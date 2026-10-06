@@ -8,7 +8,8 @@ their recoverable original is in the reconciliation snapshot.
   checks and rollback are recorded in [release handoff](release-handoff-2026-10-05.md).
 - Production analytics/review support is committed and pushed, not activated.
   All four flags remain false. No new production schema/scheduler is inferred.
-- Primary source now uses `codex/doctrine-reconciliation-2026-10-05`.
+- Primary source now uses `codex/csv-matching-recovery-2026-10-05`, based on the
+  pushed reconciliation/source-protection checkpoint `3c31bd99`.
   Awards/news enrichment and Tavily hardening are selectively restored while
   preserving the current UI and access rules.
 - Approved source protections and campus-safe school matching are restored.
@@ -25,6 +26,12 @@ their recoverable original is in the reconciliation snapshot.
   force-deleted. The NFL importer received a separate restoration review and
   remains held for a scoped implementation/source decision. Never run the
   historical CFB backfill during cleanup.
+- CSV recovery confirmed an unfinished private contact preview, not missing NFL
+  directory data. The original files are preserved. The source workflow supports
+  explicit deferral and resumable review without name-based identity merging.
+  See [completion report](../reconciliation/csv-matching-completion-2026-10-05.md)
+  for the 6,100-contact proposal, 544 uncertain links and remaining hosted gates.
+  No contact import, migration or deployment was executed.
 
 No completed foundation phase, partner agreement, publishing or payment entitlement
 is inferred. Partial coverage and nine rules are not the full Intelligence engine.

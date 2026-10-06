@@ -56,4 +56,20 @@ describe("GTM canonical Player Master matching", () => {
     ]);
     expect(reviews.get("row-1")?.candidates[0]).toMatchObject({ id: "one", matchType: "name_and_college", confidence: 0.93 });
   });
+
+  it("keeps loose team or college context as review suggestions, never automatic matches", () => {
+    for (const company of ["Denver Broncos Fan Club", "University of Utah Alumni Group"]) {
+      const rows = [{ ...connection("Alex Smith"), currentCompany: company }];
+      const candidates = [player("one", "Alex Smith", { team: "Denver Broncos", college: "University of Utah" })];
+      expect(buildPlayerMatchReviewMap(rows, candidates).get("row-1")).toMatchObject({ strength: "possible" });
+      expect(buildUniquePlayerMatchMap(rows, candidates).size).toBe(0);
+    }
+  });
+
+  it("does not choose between same-name Players with equal exact context", () => {
+    const rows = [{ ...connection("Alex Smith"), currentCompany: "Denver Broncos" }];
+    const candidates = [player("one", "Alex Smith", { team: "Denver Broncos" }), player("two", "Alex Smith", { team: "Denver Broncos" })];
+    expect(buildPlayerMatchReviewMap(rows, candidates).get("row-1")).toMatchObject({ strength: "ambiguous" });
+    expect(buildUniquePlayerMatchMap(rows, candidates).size).toBe(0);
+  });
 });
