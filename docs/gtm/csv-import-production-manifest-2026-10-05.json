@@ -1,11 +1,11 @@
 {
-  "reviewDate": "2026-10-05",
+  "reviewDate": "2026-10-06",
   "branch": "codex/csv-import-production-2026-10-05",
   "baseline": "af0b7077a1228581ebeb13a18158080c07e3fe97",
   "selectedSource": "b02d015ae57b3df1195de8f5b62eb16677e750b5",
-  "status": "prepared-not-committed-or-deployed",
+  "status": "source-checkpoint-release-blocked-after-second-hosted-retry",
   "manifestExcludedFromOwnHashes": true,
-  "scope": "Isolated private contact matching release; no new migrations or analytics activation",
+  "scope": "Isolated private contact matching release plus one nonunique active-email lookup index; no analytics activation or auth/limit changes",
   "records": [
     {
       "file": "app/admin/gtm/actions.ts",
@@ -102,9 +102,60 @@
       "sha256": "461ea7adf2448571aba3324541ed24cb81a9ec7e0babe9ac29f929de0d1e37b2"
     },
     {
+      "file": "supabase/migrations/20261006033000_index_gtm_import_email_lookup.sql",
+      "bytes": 798,
+      "sha256": "b87b7815fcce4b78b56f217aa43df134ff65e5ecd962553b967f72fe22a2dd10",
+      "copiedFrom": "36b31278169768b567d45ac12821585050372330",
+      "isolatedSourceCheckpointPending": false
+    },
+    {
+      "file": "tests/gtm/import-email-index.test.ts",
+      "bytes": 4239,
+      "sha256": "f459fb2a2d7c6616585a75b68965c78800edd396a2df6ccb356554a2b8ddcbbd",
+      "copiedFrom": "36b31278169768b567d45ac12821585050372330",
+      "isolatedSourceCheckpointPending": false
+    },
+    {
       "file": "docs/gtm/csv-import-production-candidate-2026-10-05.md",
-      "bytes": 9480,
-      "sha256": "f03dfb71cfbaa6860ac856980fd351ab78e62a0f84949c0829a4b8a25b29cdef"
+      "bytes": 15080,
+      "sha256": "a66fa77f75e0275df0299d03f60ae85f0aeb4909c8fb83de8a8f0212454facea"
     }
-  ]
+  ],
+  "approvedIndexSource": "36b31278169768b567d45ac12821585050372330",
+  "parentCheckpoint": "8ac5768cf5da39d02476e2341e37d6761cce8819",
+  "expectedReleasePaths": 20,
+  "expectedForwardPaths": [
+    "supabase/migrations/20261006033000_index_gtm_import_email_lookup.sql",
+    "tests/gtm/import-email-index.test.ts",
+    "docs/gtm/csv-import-production-candidate-2026-10-05.md",
+    "docs/gtm/csv-import-production-manifest-2026-10-05.json"
+  ],
+  "sourceOnlyCheckpoint": true,
+  "productionReleaseAuthorized": false,
+  "productionContactImportAuthorized": false,
+  "hostedPerformanceGate": {
+    "passed": false,
+    "secondSameKeyRetryAfterIndex": true,
+    "sqlstate": "57014",
+    "stageOnlyCountsPreserved": {
+      "contacts": 0,
+      "links": 0,
+      "jobs": 3,
+      "nflDirectory": 624,
+      "canonicalPlayers": 2,
+      "platformRoleAssignments": 7,
+      "auditRows": 62
+    }
+  },
+  "localQaLinkage": {
+    "receipt": "output/csv-import-production-2026-10-05/index-forward-qa/receipt.json",
+    "testedManifestSha256": "3348dbeda5db69e03e3af8657739a27ebc000f7c36ec49019f5a0be3e9d2fb3f",
+    "localQaPassed": true,
+    "passed": 1118,
+    "failed": 0,
+    "existingSkips": 24,
+    "files": 148,
+    "documentationOnlyUpdatedAfterQa": true,
+    "runtimeSqlTestsPackagesConfigUnchanged": true
+  }
 }
