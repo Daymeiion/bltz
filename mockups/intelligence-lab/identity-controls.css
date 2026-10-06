@@ -1,0 +1,75 @@
+/* Small identity disclosures and contact controls. No application styles are changed. */
+body:is([data-view="athlete"], [data-view="moment"]) .portrait-frame {position:relative}
+body:is([data-view="athlete"], [data-view="moment"]) .portrait-attribution {display:flex;align-items:center;justify-content:center;gap:6px}
+body:is([data-view="athlete"], [data-view="moment"]) .portrait-credit {position:absolute;left:0;right:0;bottom:7px;width:fit-content;margin:0 auto;padding:4px;border-radius:999px;background:color-mix(in srgb,var(--night) 88%,transparent);border:1px solid color-mix(in srgb,var(--cloud) 22%,transparent);z-index:3}
+.portrait-credit .portrait-icon-pill {color:var(--cloud);background:color-mix(in srgb,var(--navy) 75%,transparent);border-color:color-mix(in srgb,var(--cloud) 28%,transparent)}
+.portrait-credit .portrait-icon-pill:hover,.portrait-credit .portrait-icon-pill[aria-expanded="true"] {color:var(--accent);border-color:var(--accent)}
+.portrait-disclosure {position:relative;display:inline-flex}
+.portrait-disclosure[data-reveal-on-hover]:has([aria-expanded="true"])::after {content:'';position:absolute;left:0;bottom:100%;width:272px;height:10px;z-index:19}
+.portrait-icon-pill {display:inline-flex;justify-content:center;align-items:center;width:42px;height:30px;padding:0;border:1px solid var(--line);border-radius:999px;background:var(--soft);color:var(--ink);cursor:pointer;transition:background 160ms ease,border-color 160ms ease}
+.portrait-icon-pill:hover,.portrait-icon-pill[aria-expanded="true"] {background:var(--selected);border-color:var(--accent)}
+.portrait-icon-pill:focus-visible,.contact-copy:focus-visible {outline:2px solid var(--accent);outline-offset:3px}
+.identity-popover {position:absolute;bottom:calc(100% + 9px);left:0;display:grid;gap:7px;width:272px;max-width:calc(100vw - 40px);padding:13px;border:1px solid var(--line);border-radius:12px;background:var(--panel);color:var(--ink);box-shadow:0 12px 36px color-mix(in srgb,var(--night) 25%,transparent);font:11px/1.5 var(--body);text-align:left;z-index:20;white-space:normal}
+.identity-popover[hidden] {display:none}
+.identity-popover strong {font-size:12px;font-weight:650}
+.identity-popover > span {display:block}
+.identity-popover a {display:inline-flex;align-items:center;gap:5px;color:var(--evidence);text-decoration:underline;text-underline-offset:3px}
+.identity-popover .ui-icon {flex:0 0 auto;width:14px;height:14px}
+.athlete-contact-grid {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:13px;min-width:0}
+.athlete-contact-grid .portrait-disclosure {display:flex;min-width:0}
+.athlete-contact-grid .contact-item {display:flex;align-items:center;justify-content:flex-start;gap:8px;min-width:0;width:100%;height:auto;min-height:42px;padding:0;border:0;border-radius:0;background:transparent;text-align:left;font:11px/1.4 var(--body)}
+.contact-icon {display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;width:34px;height:34px;border:1px solid var(--line);border-radius:9px;background:var(--soft);color:var(--muted);transition:background 160ms ease,border-color 160ms ease,color 160ms ease}
+.contact-icon .ui-icon {width:17px;height:17px}
+.contact-item:is(:hover,[aria-expanded="true"]) .contact-icon {background:var(--selected);border-color:var(--accent);color:var(--ink)}
+.athlete-contact-grid .contact-text {display:block;min-width:0}
+.contact-summary {color:var(--ink);overflow-wrap:anywhere}
+.contact-item.is-unavailable .contact-summary {color:var(--muted)}
+.athlete-contact-grid .identity-popover {top:calc(100% + 8px);bottom:auto}
+.athlete-contact-grid .portrait-disclosure[data-reveal-on-hover]:has([aria-expanded="true"])::after {top:100%;bottom:auto;left:auto;right:0;width:min(272px,calc(100vw - 40px))}
+.contact-value {overflow-wrap:anywhere;user-select:all}
+.contact-copy {display:inline-flex;justify-self:start;align-items:center;gap:6px;padding:8px 11px;border:1px solid var(--line);border-radius:7px;color:var(--ink);background:var(--soft);font:12px var(--body);cursor:pointer}
+.contact-social-list {display:grid;gap:0;list-style:none;margin:0;padding:0}
+.contact-social-list li + li {border-top:1px solid var(--line)}
+.contact-social-list a {justify-content:space-between;width:100%;min-height:32px;padding:6px 0;overflow-wrap:anywhere}
+.roster-avatar {position:relative}
+.roster-avatar .portrait-fallback {font:12px var(--body)}
+.roster-avatar img {position:relative}
+body:is([data-view="athlete"], [data-view="moment"]) .athlete-status {display:inline-flex;align-items:center;padding:4px 9px;margin:0 0 8px;border:1px solid var(--line);border-radius:999px;color:var(--ink);background:var(--selected);font:11px/1.2 var(--utility)}
+.desktop-identity-content {display:none}
+.identity-details {text-align:center}
+.identity-details > summary {justify-content:center}
+.identity-details > div {text-align:left}
+.identity-id-list {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin:4px 0 14px}
+.identity-id-list dt {font:11px var(--utility);color:var(--muted);margin-bottom:7px}
+.identity-id-list dd {margin:0;font-size:12px;line-height:1.6;overflow-wrap:anywhere;user-select:all}
+#portrait-provenance {width:330px}
+#portrait-provenance .identity-id-list {grid-template-columns:1fr;gap:12px;margin:2px 0 0}
+#portrait-provenance .identity-id-list dt {font-size:10px}
+#portrait-provenance .identity-id-list dd {font:10px/1.6 var(--utility)}
+.identity-verification {margin:0;font:11px/1.5 var(--body);color:var(--muted)}
+.portrait-missing-credit {font:10px/1.4 var(--body);color:var(--muted)}
+.portrait-locker-link:hover {text-decoration:none}
+@media(min-width:991px){
+  body:is([data-view="athlete"], [data-view="moment"]) .portrait-frame {container-type:inline-size}
+  .athlete-contact-grid .portrait-disclosure:nth-child(2n) .identity-popover {left:auto;right:0}
+  .athlete-contact-grid .portrait-disclosure:nth-child(2n)[data-reveal-on-hover]::after {left:auto;right:0}
+  body:is([data-view="athlete"], [data-view="moment"]) .desktop-identity-content {display:block}
+  body:is([data-view="athlete"], [data-view="moment"]) .compact-identity-summary {display:none}
+}
+@media(max-width:990px){
+  .athlete-contact-grid {gap:6px;margin-top:10px}
+  .athlete-contact-grid .contact-item {gap:5px;min-height:40px;font-size:10px}
+  .athlete-contact-grid .contact-icon {width:28px;height:28px;border-radius:8px}
+  .athlete-contact-grid .contact-icon .ui-icon {width:14px;height:14px}
+  body:is([data-view="athlete"], [data-view="moment"]) .portrait-attribution {gap:4px}
+  body:is([data-view="athlete"], [data-view="moment"]) .portrait-attribution .portrait-icon-pill {width:24px;height:26px}
+  body:is([data-view="athlete"], [data-view="moment"]) .portrait-attribution .ui-icon {width:14px;height:14px}
+  body:is([data-view="athlete"], [data-view="moment"]) .identity-popover {position:fixed;left:20px;right:20px;top:245px;bottom:auto;width:auto;max-height:calc(100dvh - 265px);overflow:auto;transform:none;z-index:45}
+  body:is([data-view="athlete"], [data-view="moment"]) #portrait-provenance {width:auto}
+  .identity-id-list {grid-template-columns:1fr;gap:13px}
+}
+/* Pointer users can cross the hover bridge into the social account links. */
+@media(hover:hover){
+  .athlete-contact-grid #portrait-social {position:absolute;left:auto;right:0;top:calc(100% + 8px);bottom:auto;width:min(272px,calc(100vw - 40px))}
+}
+@media(prefers-reduced-motion:reduce){.portrait-icon-pill,.contact-icon{transition:none}}

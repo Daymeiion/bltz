@@ -6,3 +6,17 @@ output
 outputs
 .vercel
 *.tsbuildinfo
+# Review-only pitch material and offline design references are not deployment source.
+deck-build
+deliverables
+Outreach
+mockups
+# Local checkout metadata, browser evidence and provider caches are not app files.
+.codex-worktrees
+.codex
+.claude
+.playwright-cli
+.gstack
+.tinyb
+.tinybird
+supabase/.temp

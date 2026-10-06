@@ -1,5 +1,11 @@
 # Intelligence Lab: selected B refinement
 
+> Historical concept report. Current application source and
+> [the current design index](current-design-index.md) supersede this report.
+> Intermediate screenshots below were retired from active source; recover them
+> from the reconciliation snapshot when needed. Prototype completion does not
+> establish hosted integration, verified records, rights or measured outcomes.
+
 Design date: October 2, 2026. Evidence evaluation stays **October 1, 2026**. Status: interactive design refinement complete; live integration remains a separate step.
 
 Latest revision: [Priority athletes and search additions](intelligence-lab-priority-athletes-2026-10-04.md). The report below records the preceding branded B pass; the latest revision report defines current screenshots and validation.

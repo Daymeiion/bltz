@@ -90,6 +90,11 @@ export type PreviewContent = z.infer<typeof previewContent>;
 export type PreviewRecord = z.infer<typeof previewRecord>;
 export type ResolvedPreviewRecord = Omit<PreviewRecord, "videos" | "photos"> & {
   photo_room_banner_resolved_url?: string | null;
+  enrichment_identity_key?: string;
+  enrichment?: {
+    awards: import("./types").PreviewAward[];
+    articles: import("@/lib/enrichment/news").PlayerArticle[];
+  };
   videos: Array<z.infer<typeof previewVideo> & { url: string }>;
   photos: Array<z.infer<typeof previewPhoto> & { url: string }>;
 };

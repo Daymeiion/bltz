@@ -1,0 +1,897 @@
+{
+  "date": "2026-10-05",
+  "branch": "codex/doctrine-reconciliation-2026-10-05",
+  "base": "9b5897cbf1fb2cede68ebc6cbb964bfcc9748322",
+  "hashAlgorithm": "SHA-256",
+  "note": "Deleted records hash the prior checkpoint bytes. The manifest itself is excluded to avoid circular hashing. Held deck/deliverable/outreach paths and recovery archives are excluded.",
+  "files": [
+    {
+      "path": ".env.example",
+      "action": "update",
+      "bytes": 2021,
+      "sha256": "9c6070a5152ddb048595c3e565a172fb85e5b93775d9f68e01cd23f8809208bb"
+    },
+    {
+      "path": ".gitignore",
+      "action": "update",
+      "bytes": 1173,
+      "sha256": "6a61d35485f3b3ba785b075324c96df6d9d5d097bd8f0c8713c12f155eec49c2"
+    },
+    {
+      "path": ".vercelignore",
+      "action": "update",
+      "bytes": 384,
+      "sha256": "aa29d7297c0e3aa89b022507e12d17d9c013c0c10d64b5ced78e6895de7da353"
+    },
+    {
+      "path": "app/admin/preview-lockers/[id]/edit/page.tsx",
+      "action": "update",
+      "bytes": 3975,
+      "sha256": "68ea991b519f646a88a254f77843008d83c2126d2cbc01b68027aba41f2f771f"
+    },
+    {
+      "path": "app/admin/preview-lockers/EnrichmentPanel.tsx",
+      "action": "add",
+      "bytes": 3583,
+      "sha256": "20d52c7cb4f77b8d704db198578e8780bddd9d4ad6f46830db8f7ada2ad6a851"
+    },
+    {
+      "path": "app/api/award-reference/all-american/route.ts",
+      "action": "add",
+      "bytes": 333,
+      "sha256": "3c0f4bc1f8a8b8f257ac9418bd30fefede117af34d6fb647a7ccc691d611c97f"
+    },
+    {
+      "path": "app/api/preview-lockers/[id]/news/route.ts",
+      "action": "add",
+      "bytes": 1480,
+      "sha256": "524e839402e8b6bc1c1814efcc8fc2cd739eaffeb35d4e8fd34cbbfa190edc11"
+    },
+    {
+      "path": "app/api/preview-lockers/[id]/route.ts",
+      "action": "update",
+      "bytes": 2274,
+      "sha256": "d8c5b409db71676d3d87d8020fbe5167f345b5f06d709d648c8fe6423e736f07"
+    },
+    {
+      "path": "app/api/preview-lockers/route.ts",
+      "action": "update",
+      "bytes": 3280,
+      "sha256": "1e7bc999ef53c237b929222cb14e1ab85553f84767d6e4f335c9846bfaeabcfc"
+    },
+    {
+      "path": "app/player/[slug]/LockerView.tsx",
+      "action": "update",
+      "bytes": 166806,
+      "sha256": "c18846c1e52d6ef3c7952a042596b6cd127c91f454f0d8c2049f8d3d751340a4"
+    },
+    {
+      "path": "app/preview-lockers/[slug]/page.tsx",
+      "action": "update",
+      "bytes": 1200,
+      "sha256": "f640b217d0f2c84c470ce34cb9f195bb7b1884c2ed791e98e7ce8671f8466837"
+    },
+    {
+      "path": "components/player/EditorialCard.tsx",
+      "action": "update",
+      "bytes": 4818,
+      "sha256": "f469d0a93f77e5943d0df6aa4df54386893b45ade792e0804f2760b7a0666507"
+    },
+    {
+      "path": "docs/ACTIVE_BUILD.md",
+      "action": "add",
+      "bytes": 3774,
+      "sha256": "a41314d3f51c8e4bc43637b4ab5add83da66e879431223a9dab0721b32547153"
+    },
+    {
+      "path": "docs/design-reference/current-design-index.md",
+      "action": "add",
+      "bytes": 2237,
+      "sha256": "170173503ad2819a9b90afcdaf3de832ab1b97095d04958930a2a051042cc364"
+    },
+    {
+      "path": "docs/design-reference/current/intelligence-lab-production-captions-2026-10-04.png",
+      "action": "add",
+      "bytes": 97916,
+      "sha256": "7c4872669893c95c2d7eca0226dff3de6ad6e6329baf1eb8ea95e871ee9f0a02"
+    },
+    {
+      "path": "docs/design-reference/intelligence-lab-250px-portrait-2026-10-04.md",
+      "action": "add",
+      "bytes": 3323,
+      "sha256": "4c64c774d4339fb3993b9238eab0196cafe9aa30a30cb336ddf879c9263cf6b1"
+    },
+    {
+      "path": "docs/design-reference/intelligence-lab-priority-athletes-2026-10-04.md",
+      "action": "add",
+      "bytes": 8386,
+      "sha256": "cba362b1d778d25d977a7f0cdfbc3a5b182c1d6238fecf8e5c7c407f005ba207"
+    },
+    {
+      "path": "docs/design-reference/intelligence-lab-sample-activations-2026-10-04.md",
+      "action": "add",
+      "bytes": 6626,
+      "sha256": "1a3d6a1261ea8ec763729b386227fe237ca501fa79294de742c18ba1dd33a381"
+    },
+    {
+      "path": "docs/design-reference/intelligence-lab-selected-b-2026-10-02.md",
+      "action": "update",
+      "bytes": 12828,
+      "sha256": "3ef17468d6075c8cf27c370dce85e75558ab93dcf3540113f9bd6ac668e4f112"
+    },
+    {
+      "path": "docs/intelligence/career-workspace-release-2026-10-04.md",
+      "action": "add",
+      "bytes": 9756,
+      "sha256": "a38ded717d9f41bb39ea122c69f04481dcf87853e2a28dff1e8b5751d412de2c"
+    },
+    {
+      "path": "docs/intelligence/career-workspace-spacing-2026-10-04.md",
+      "action": "add",
+      "bytes": 4310,
+      "sha256": "ca39c880c2bd9894422129f95f28c695c694b16e5b37692e1ba0ebbb27df950b"
+    },
+    {
+      "path": "docs/intelligence/career-workspace-typography-2026-10-04.md",
+      "action": "add",
+      "bytes": 4923,
+      "sha256": "081abd317f2a963f4f0cd97ce7eb65f705da421d994e6c9e70c3e77a7121bde4"
+    },
+    {
+      "path": "docs/intelligence/CTO-STATUS.md",
+      "action": "add",
+      "bytes": 1822,
+      "sha256": "6a55583f96aa81426e7487dbeba1ee6ee4e1af18eafb00c3151d787f9c11c882"
+    },
+    {
+      "path": "docs/planning/dashboard-plan.md",
+      "action": "update",
+      "bytes": 24923,
+      "sha256": "d37a22233005a89fef7673d72438fdf249f9db50774de65d39b6a0241361e268"
+    },
+    {
+      "path": "docs/planning/position-stats.md",
+      "action": "update",
+      "bytes": 8587,
+      "sha256": "1e6cb7f6f1de9ff268acdef319b70600e4f11e2a27ae530584d10698f2cf8207"
+    },
+    {
+      "path": "docs/planning/search-architecture.md",
+      "action": "update",
+      "bytes": 8049,
+      "sha256": "71b078ab9f81ccf4a56aad2eb8f6dfeb7688b7eff4ec3a5080f78ef2867e582f"
+    },
+    {
+      "path": "docs/reconciliation/checkpoint-2026-10-05.md",
+      "action": "add",
+      "bytes": 9161,
+      "sha256": "9763a3816c50ee0a52b431485e364c5195d3afd88e29965bbc91e27c48ee8db4"
+    },
+    {
+      "path": "docs/reconciliation/held-work-2026-10-05.md",
+      "action": "add",
+      "bytes": 4057,
+      "sha256": "80ff13fa0a100d7f9d338a5c21f5f55a84905ca99bd62c8aba4d67d1d8b7f566"
+    },
+    {
+      "path": "lib/enrichment/article-metadata.ts",
+      "action": "add",
+      "bytes": 5293,
+      "sha256": "d4d8e8841cbd80dda324608d503a8488ffd5bb3712de0fdafe3b30088799d323"
+    },
+    {
+      "path": "lib/enrichment/award-reference-images.ts",
+      "action": "add",
+      "bytes": 464,
+      "sha256": "64b27d5a3ed55b9823aabf1f22d13d6eae34a6db26ccb46158fe67f15ea166be"
+    },
+    {
+      "path": "lib/enrichment/awards.ts",
+      "action": "add",
+      "bytes": 3274,
+      "sha256": "de546e985f0f207ad921dc4f4b4808646612aa156279d854d32a9428f22d78df"
+    },
+    {
+      "path": "lib/enrichment/news-classification.ts",
+      "action": "add",
+      "bytes": 642,
+      "sha256": "1032b4411ecef876ea40049311a57730f59efa1b29590e04e025fa6d1463e2c5"
+    },
+    {
+      "path": "lib/enrichment/news.ts",
+      "action": "add",
+      "bytes": 6821,
+      "sha256": "b3d493e9097e967e1ad501b4502cbc9742f07b28834a0c77a444a9529c278b90"
+    },
+    {
+      "path": "lib/enrichment/permissions.ts",
+      "action": "add",
+      "bytes": 751,
+      "sha256": "7399198cc236c133b2a06f6c0973484bc5cfd2a44bfe888130f06e1a9b092a97"
+    },
+    {
+      "path": "lib/enrichment/safe-fetch.ts",
+      "action": "add",
+      "bytes": 3541,
+      "sha256": "eb8d5b9de5a35ff5021891d2bd65e28fd10fff2a7896dc570f306ad4039a06e6"
+    },
+    {
+      "path": "lib/enrichment/search-provider.ts",
+      "action": "add",
+      "bytes": 693,
+      "sha256": "4aaba0f339c18c471153b8acc6828863d84edeb3352aa665589d6f293d18d69c"
+    },
+    {
+      "path": "lib/pipeline/scrapers/wikipedia.ts",
+      "action": "update",
+      "bytes": 16801,
+      "sha256": "88234910ed10ee44a6fbe42364fa0338eca55d396c1c97f884aa2ef0d23ad2dc"
+    },
+    {
+      "path": "lib/preview-lockers/enrichment.ts",
+      "action": "add",
+      "bytes": 10465,
+      "sha256": "892805135d54680bed1679ae8bcc48eb9e030574de80b4beb6f6b2793f8b11cc"
+    },
+    {
+      "path": "lib/preview-lockers/mapper.ts",
+      "action": "update",
+      "bytes": 9249,
+      "sha256": "c24b0e22863dfcf92c73a2642c7de90932bd59d3ff3c54b638db0cd8580692ec"
+    },
+    {
+      "path": "lib/preview-lockers/server.ts",
+      "action": "update",
+      "bytes": 9737,
+      "sha256": "919359c0b7f19e3672cdd8b092fe6cd90ec7a35247896998fe6aba45d2c3cc9d"
+    },
+    {
+      "path": "lib/preview-lockers/types.ts",
+      "action": "update",
+      "bytes": 3590,
+      "sha256": "30f2cace55882a83303262c665f34b402ea598955a2dde93a10c7c4dd5a00d24"
+    },
+    {
+      "path": "lib/preview-lockers/validation.ts",
+      "action": "update",
+      "bytes": 10166,
+      "sha256": "0ac08eed71f85368ba5ff059a15ff43e2eb2720bd8f4ca41eb65ba712d82b16c"
+    },
+    {
+      "path": "lib/search/errors.ts",
+      "action": "add",
+      "bytes": 1378,
+      "sha256": "de6a73bd5aeb4b110098fa926eec81a0eb7eecb3d8da81e9a531436894d07f17"
+    },
+    {
+      "path": "lib/search/tavily.ts",
+      "action": "update",
+      "bytes": 4287,
+      "sha256": "82343f86920ab27587850a1e8fca6789391138962d7a34160fa53c71eea311f0"
+    },
+    {
+      "path": "mockups/assets/bltz-logo.svg",
+      "action": "retire",
+      "bytes": 3276,
+      "sha256": "bc3e02a7c4acf908d3307b12a5e68c87abac57520755fd731ba22deafa9af487"
+    },
+    {
+      "path": "mockups/assets/bltz-text-logo.png",
+      "action": "retire",
+      "bytes": 76124,
+      "sha256": "d23bbdba8613fce766bbf2fb1236b3df1c5d1b41a23ba7b34a543093051b145b"
+    },
+    {
+      "path": "mockups/assets/bltz-wordmark.png",
+      "action": "retire",
+      "bytes": 5056,
+      "sha256": "3c91e71e894864dd3eaf4c2ca22bb1daec30be5a1763f8e3b51cf09c78187607"
+    },
+    {
+      "path": "mockups/assets/spotify-logo.svg",
+      "action": "retire",
+      "bytes": 629,
+      "sha256": "61a618a9f28b317a24fab6dd90595a5b0b565801e5b52dce443705e34ca6036e"
+    },
+    {
+      "path": "mockups/dashboard.html",
+      "action": "retire",
+      "bytes": 134506,
+      "sha256": "dcdda255825a2356bf8e1befe01c9ce0a71781c223dd0335f0856108a841a4a1"
+    },
+    {
+      "path": "mockups/images/awards/Award-AllAmericanIcon.png",
+      "action": "retire",
+      "bytes": 65560,
+      "sha256": "1dd3d5e6420b0b52c629c40a35f91f0038682ce3af4993879d68598888114c25"
+    },
+    {
+      "path": "mockups/images/awards/Award-ConferenceIcon.png",
+      "action": "retire",
+      "bytes": 46307,
+      "sha256": "249b2f62fe1fa6acbb961514512be464191c5543b13cc44de512780306720f4b"
+    },
+    {
+      "path": "mockups/images/awards/Award-JerseyIcon.png",
+      "action": "retire",
+      "bytes": 64131,
+      "sha256": "eeca2b5209e891602916d92014237a91ede47abb1780116c2f0e6dc13089e0e0"
+    },
+    {
+      "path": "mockups/images/awards/Award-RingIcon.png",
+      "action": "retire",
+      "bytes": 89079,
+      "sha256": "66e4807e0312de7a6517917a6a9367133b152a32538b17b90e6d266ef2744f24"
+    },
+    {
+      "path": "mockups/images/awards/Award-StarIcon.png",
+      "action": "retire",
+      "bytes": 36661,
+      "sha256": "981dc465c07ca449adef6af3e7ce3f8f8adca7de3b12daeb04d7419f07edd8b3"
+    },
+    {
+      "path": "mockups/images/dashboard-01-overview-desktop.png",
+      "action": "retire",
+      "bytes": 1634730,
+      "sha256": "f1ef56707003a86eefbfe6ffec36002fbfaf691fbe206f7b05d50a5fffd77a83"
+    },
+    {
+      "path": "mockups/images/dashboard-02-locker-editor-split.png",
+      "action": "retire",
+      "bytes": 1400797,
+      "sha256": "f98d0773d3cdf2f9d328e4f507a9075453db761d85a59ac76a9835b1e8b47e8e"
+    },
+    {
+      "path": "mockups/images/dashboard-03-pipeline-queue.png",
+      "action": "retire",
+      "bytes": 1502717,
+      "sha256": "3addca21fb38788ad3ffed6c28b12b24bc37170d2c67dd6096a8b66292168e54"
+    },
+    {
+      "path": "mockups/intelligence-lab/activations.css",
+      "action": "add",
+      "bytes": 12934,
+      "sha256": "570e24119d33faf3428fc090bd5f59c05dbcabe97b5c278f129f4cd42584930e"
+    },
+    {
+      "path": "mockups/intelligence-lab/activations.js",
+      "action": "add",
+      "bytes": 23592,
+      "sha256": "8a2860009119fdc72e3d26d121d4ebb7dcd0b779edf3e7b4e117b8e8af8599c3"
+    },
+    {
+      "path": "mockups/intelligence-lab/assets/activation-sample-poster.svg",
+      "action": "add",
+      "bytes": 2547,
+      "sha256": "8c8f1d4d687138570b1e6a6125f90c6b369ef5599625ed05e2cf0f99e4da7a35"
+    },
+    {
+      "path": "mockups/intelligence-lab/assets/activation-sample-reel.mp4",
+      "action": "add",
+      "bytes": 52189,
+      "sha256": "51ea51b6e5588feecd065442058a9fc6732c2f3fa73c67b4d8f38b96cd37548c"
+    },
+    {
+      "path": "mockups/intelligence-lab/assets/barlow-400-latin.woff2",
+      "action": "add",
+      "bytes": 22196,
+      "sha256": "b0a8ad37ac45f5fb22ced461576db72e44e295107aad7a9c8a7a4bad728fd03b"
+    },
+    {
+      "path": "mockups/intelligence-lab/assets/barlow-500-latin.woff2",
+      "action": "add",
+      "bytes": 22008,
+      "sha256": "cd759df8ef9efc98fee14307b4eb5ba27f08b1f8f2f3ad2872432e25c89907a8"
+    },
+    {
+      "path": "mockups/intelligence-lab/assets/barlow-600-latin.woff2",
+      "action": "add",
+      "bytes": 22772,
+      "sha256": "4b52ddd4836b592df0e4832b8286956883cdc651b015126bdd18f184b7f90cc3"
+    },
+    {
+      "path": "mockups/intelligence-lab/assets/barlow-700-latin.woff2",
+      "action": "add",
+      "bytes": 22788,
+      "sha256": "2d797dd8b35dcb3413e1af9d7052b3f4f8c341a147cdcb01f4f06af80db53289"
+    },
+    {
+      "path": "mockups/intelligence-lab/assets/barlow-800-latin.woff2",
+      "action": "add",
+      "bytes": 22976,
+      "sha256": "231d487a993e28bc5567c2be8da48acd8e0a209891c11448491eab45db0f8d7c"
+    },
+    {
+      "path": "mockups/intelligence-lab/assets/barlow-900-latin.woff2",
+      "action": "add",
+      "bytes": 22368,
+      "sha256": "6f5d995ccc4d8ffd9e8cb4c303fc1f3646d6c62d40269ef59463332f12d5b897"
+    },
+    {
+      "path": "mockups/intelligence-lab/assets/barlow-condensed-700-latin.woff2",
+      "action": "add",
+      "bytes": 22444,
+      "sha256": "3787a5a419171630e6890cfa47c4da067474d005cd0ff8dc11ec090fdc3ee2b8"
+    },
+    {
+      "path": "mockups/intelligence-lab/assets/barlow-OFL.txt",
+      "action": "add",
+      "bytes": 4470,
+      "sha256": "b4cc842153e834885f3f9385ce26de4e1213d3ffbe473a6c0519e5522a8e3608"
+    },
+    {
+      "path": "mockups/intelligence-lab/assets/barlowcondensed-OFL.txt",
+      "action": "add",
+      "bytes": 4377,
+      "sha256": "186d750eb496a4c17a76385f82be6aea2ac1cf2de074a811d63786cf374ea73f"
+    },
+    {
+      "path": "mockups/intelligence-lab/assets/bltz-white-logo.svg",
+      "action": "add",
+      "bytes": 30411,
+      "sha256": "a1e48593dd04c8612b985d0528b4c0e0e409f5088260741bffaff458b7f7af38"
+    },
+    {
+      "path": "mockups/intelligence-lab/assets/FONT-SOURCES.md",
+      "action": "add",
+      "bytes": 1622,
+      "sha256": "51542283b570df1d99d1afffefcb4c78c7e69bbf1fc1cebcf793e91c930a9a80"
+    },
+    {
+      "path": "mockups/intelligence-lab/assets/geist-latin.woff2",
+      "action": "add",
+      "bytes": 29288,
+      "sha256": "9b6f5ff45b278c744b5f379a2c4ecbaf858a842b8eaf82ac8d21b699ca16c608"
+    },
+    {
+      "path": "mockups/intelligence-lab/assets/jetbrains-mono-400-latin.woff2",
+      "action": "add",
+      "bytes": 31432,
+      "sha256": "83c005d49d8a6a50474c73a5a36ac0468076e9c4a29da7bdb14995d80560a5be"
+    },
+    {
+      "path": "mockups/intelligence-lab/assets/jetbrainsmono-OFL.txt",
+      "action": "add",
+      "bytes": 4492,
+      "sha256": "ef2870fd9ccb5f68d6b89aba72c3b30a27ab66f317b41d8c2c048693236bee01"
+    },
+    {
+      "path": "mockups/intelligence-lab/assets/oswald-latin.woff2",
+      "action": "add",
+      "bytes": 21412,
+      "sha256": "9dde3797547520f762f4ba3a822d417a0872b962bc78753a7ee9f955382b6b85"
+    },
+    {
+      "path": "mockups/intelligence-lab/assets/roboto-condensed-latin.woff2",
+      "action": "add",
+      "bytes": 46080,
+      "sha256": "718ced55c5d8e207d6d14b1765fe6cf5886882834f45cc0ad23283cd210f9a96"
+    },
+    {
+      "path": "mockups/intelligence-lab/assets/SOURCE-LOGOS.md",
+      "action": "add",
+      "bytes": 1343,
+      "sha256": "3d1fc17bfcda5268fe3eddcd9401ced6fb35188cc24982177486bae8499518ce"
+    },
+    {
+      "path": "mockups/intelligence-lab/assets/sportradar-logo.svg",
+      "action": "add",
+      "bytes": 13917,
+      "sha256": "473fadca4324642a8c6b95dc134418d33e705bd196503d1f94b964cb62785add"
+    },
+    {
+      "path": "mockups/intelligence-lab/assets/usc-athletics-logo.svg",
+      "action": "add",
+      "bytes": 1679,
+      "sha256": "b854728ee85ef859df3aa4edc4cd29bbc4630adc02ef6a2e12ba005870faf161"
+    },
+    {
+      "path": "mockups/intelligence-lab/athlete-display-data.js",
+      "action": "add",
+      "bytes": 3918,
+      "sha256": "8dd1357e6452bfae58e920392d39780775b7739143cf3d2348ef3bb82449e75b"
+    },
+    {
+      "path": "mockups/intelligence-lab/athlete-display-notes.md",
+      "action": "add",
+      "bytes": 5672,
+      "sha256": "7066e6906ff3db409a93a23fc1691ef264d3f763c35d42527621b89d62f25e7f"
+    },
+    {
+      "path": "mockups/intelligence-lab/athlete-identity.css",
+      "action": "add",
+      "bytes": 9687,
+      "sha256": "084386c1cf40cbaa2a9aede45e259e2ec5c0bd9e1ca136adbe7f0ad69a300867"
+    },
+    {
+      "path": "mockups/intelligence-lab/athlete-notes.md",
+      "action": "add",
+      "bytes": 18337,
+      "sha256": "805ade58b4d26941e56e6a49dd54433c900f6b0a0138436dbb737b8006bcd205"
+    },
+    {
+      "path": "mockups/intelligence-lab/athlete.html",
+      "action": "add",
+      "bytes": 1173,
+      "sha256": "ee748454fc5bf503ced17d3b9095e03ab1d51dfd21eac9ae1debda91242fdb4f"
+    },
+    {
+      "path": "mockups/intelligence-lab/brand-fonts.css",
+      "action": "add",
+      "bytes": 4484,
+      "sha256": "adbac52c6e5412dd15c01726994e52b715b97312cd656049e49eca885da32380"
+    },
+    {
+      "path": "mockups/intelligence-lab/career-folder.css",
+      "action": "add",
+      "bytes": 3268,
+      "sha256": "a8ddf6e941b2bddb554a3173b21358854db7b0f907a8679d8766547932fb524d"
+    },
+    {
+      "path": "mockups/intelligence-lab/CONTRACT.md",
+      "action": "add",
+      "bytes": 38182,
+      "sha256": "43bb8240d1d1045f04cd31e213fe9e0a62a6528e1fccb111ceaf054ba2c2c67b"
+    },
+    {
+      "path": "mockups/intelligence-lab/data.js",
+      "action": "add",
+      "bytes": 7586,
+      "sha256": "a79921a21fb8a1f6770047cacbba7cecea177ad471ded860344a2355e5f741d4"
+    },
+    {
+      "path": "mockups/intelligence-lab/identity-controls.css",
+      "action": "add",
+      "bytes": 7566,
+      "sha256": "f8a076678b77a908e69d6acc8c02b040ac6d28c2f43bec70fd6776801c7f833d"
+    },
+    {
+      "path": "mockups/intelligence-lab/index.html",
+      "action": "add",
+      "bytes": 2706,
+      "sha256": "27910850ad6cdf02fab677ce97b859208f8325c1a11f18d86cffa3fae1639f16"
+    },
+    {
+      "path": "mockups/intelligence-lab/middle-athlete.css",
+      "action": "add",
+      "bytes": 16049,
+      "sha256": "228b25972b7a358d2fca7df50c02ffd433c5b3af7844b187f5a7751bf8f26f4c"
+    },
+    {
+      "path": "mockups/intelligence-lab/middle-athlete.js",
+      "action": "add",
+      "bytes": 14807,
+      "sha256": "3d727fe62ba0a1f87e36270135f8a5b33b8b7d9ae5ea6199d9df5182923987a0"
+    },
+    {
+      "path": "mockups/intelligence-lab/middle-moment.css",
+      "action": "add",
+      "bytes": 7099,
+      "sha256": "75dbeb6614467dd5c9c0c21667603475f3de4d623e7d122e5074e3c9e0d800be"
+    },
+    {
+      "path": "mockups/intelligence-lab/middle-moment.js",
+      "action": "add",
+      "bytes": 10273,
+      "sha256": "b1364fac594a30f78d9c708428d2839f7a4e4509334ac2c77b94c84ab35ca1f6"
+    },
+    {
+      "path": "mockups/intelligence-lab/moment-notes.md",
+      "action": "add",
+      "bytes": 5672,
+      "sha256": "42dd3bfd4fef7ac75e4f126f9052396272408ed14072acb51dcaa8ccad5d9b14"
+    },
+    {
+      "path": "mockups/intelligence-lab/moment.html",
+      "action": "add",
+      "bytes": 1169,
+      "sha256": "5e66df2df7ad24966263846990de73e362d9adcfe200e5aa177336792f1295ed"
+    },
+    {
+      "path": "mockups/intelligence-lab/portraits-notes.md",
+      "action": "add",
+      "bytes": 4196,
+      "sha256": "cd86460f5a1575088f9160cabdd6be43a9f7c924a1c337a73054fb4caf402db4"
+    },
+    {
+      "path": "mockups/intelligence-lab/portraits.js",
+      "action": "add",
+      "bytes": 1481,
+      "sha256": "e8d315a0e1eb0e1d20fe6c3f0b0839a255098a5b9149e2083b7a0edb0fe04353"
+    },
+    {
+      "path": "mockups/intelligence-lab/previews/activation-modal-mobile-dark.jpg",
+      "action": "add",
+      "bytes": 41258,
+      "sha256": "67d3e66a9bb0d9427fc97663f69eec6c1402f76464fba8274e547a12b80e5ca2"
+    },
+    {
+      "path": "mockups/intelligence-lab/previews/activation-modal-overview-dark.jpg",
+      "action": "add",
+      "bytes": 38816,
+      "sha256": "c4a4085c28932c2c009006cdb4ae1d09579b00a020211720234bc51879e44aa4"
+    },
+    {
+      "path": "mockups/intelligence-lab/previews/athlete-250px-portrait-dark.jpg",
+      "action": "add",
+      "bytes": 55817,
+      "sha256": "d322326cfced4660c8d95d54ca88e56159844998478bc8fd09077a1a3142949d"
+    },
+    {
+      "path": "mockups/intelligence-lab/previews/athlete-250px-portrait-light.jpg",
+      "action": "add",
+      "bytes": 50340,
+      "sha256": "936b15bcc1fea773d9695d23dcb0ccc5bcb82ca1181f61ffa3881a9d3278854c"
+    },
+    {
+      "path": "mockups/intelligence-lab/previews/athlete-dark.jpg",
+      "action": "add",
+      "bytes": 55817,
+      "sha256": "d322326cfced4660c8d95d54ca88e56159844998478bc8fd09077a1a3142949d"
+    },
+    {
+      "path": "mockups/intelligence-lab/previews/athlete-light.jpg",
+      "action": "add",
+      "bytes": 50340,
+      "sha256": "936b15bcc1fea773d9695d23dcb0ccc5bcb82ca1181f61ffa3881a9d3278854c"
+    },
+    {
+      "path": "mockups/intelligence-lab/previews/athlete-mobile-dark.jpg",
+      "action": "add",
+      "bytes": 33202,
+      "sha256": "09931fd0a38d964c483975dc0e315e543568f981eba43053fb576413afe37b4c"
+    },
+    {
+      "path": "mockups/intelligence-lab/previews/athlete-mobile-light.jpg",
+      "action": "add",
+      "bytes": 31508,
+      "sha256": "b18220a73a126bb02b9178de4947c7007517a6add777caa92b2bb7dd52b614d4"
+    },
+    {
+      "path": "mockups/intelligence-lab/previews/athlete-wider-list-unified-spacing-dark.jpg",
+      "action": "add",
+      "bytes": 104258,
+      "sha256": "0039ba60413dc34b5bf295c1039cd526a555d9b1a97f94d1bbcb364ed394156f"
+    },
+    {
+      "path": "mockups/intelligence-lab/previews/moment-250px-portrait-dark.jpg",
+      "action": "add",
+      "bytes": 59978,
+      "sha256": "49491cf3980471028cb819b5ac5e61a9e41aac54a5d9bc69980a89772c9efab9"
+    },
+    {
+      "path": "mockups/intelligence-lab/previews/moment-250px-portrait-light.jpg",
+      "action": "add",
+      "bytes": 55790,
+      "sha256": "e9301f11c55b44f0861b02bbc9414c2637f8eb3446d968c7c98d08334c7f92e6"
+    },
+    {
+      "path": "mockups/intelligence-lab/previews/moment-dark.jpg",
+      "action": "add",
+      "bytes": 59978,
+      "sha256": "49491cf3980471028cb819b5ac5e61a9e41aac54a5d9bc69980a89772c9efab9"
+    },
+    {
+      "path": "mockups/intelligence-lab/previews/moment-light.jpg",
+      "action": "add",
+      "bytes": 55790,
+      "sha256": "e9301f11c55b44f0861b02bbc9414c2637f8eb3446d968c7c98d08334c7f92e6"
+    },
+    {
+      "path": "mockups/intelligence-lab/previews/moment-mobile-dark.jpg",
+      "action": "add",
+      "bytes": 34826,
+      "sha256": "4273f9bfb44e3cc2fa79a108a9dee66cfc396435d6f5816947508a20dd31990b"
+    },
+    {
+      "path": "mockups/intelligence-lab/previews/moment-mobile-light.jpg",
+      "action": "add",
+      "bytes": 33867,
+      "sha256": "f7fbbe067d485a2e7b3a48bf254aeab5da9b41b14db828af525339a165a7d5ac"
+    },
+    {
+      "path": "mockups/intelligence-lab/previews/priority-list-mobile-dark.jpg",
+      "action": "add",
+      "bytes": 22737,
+      "sha256": "43472940c235165462d690aa26dc8cebe2a5045dc0395773b874411332a903fd"
+    },
+    {
+      "path": "mockups/intelligence-lab/previews/priority-search-dark.jpg",
+      "action": "add",
+      "bytes": 83803,
+      "sha256": "5768755bddafee1f2288e683007eb1bb7f9cf1f1a9be3efc32424f0593c060b7"
+    },
+    {
+      "path": "mockups/intelligence-lab/previews/priority-search-light.jpg",
+      "action": "add",
+      "bytes": 83794,
+      "sha256": "fe850258e78d4c971a00f8aacba18fbfbe58be63251bcbf249a94a6233000b0a"
+    },
+    {
+      "path": "mockups/intelligence-lab/README.md",
+      "action": "add",
+      "bytes": 1156,
+      "sha256": "28df27e89d091d4e0a5c7947f47f4ce47d4260f167e06d7d9794d421dfabf1cb"
+    },
+    {
+      "path": "mockups/intelligence-lab/review.css",
+      "action": "add",
+      "bytes": 1011,
+      "sha256": "2be0e03984e84c37c0e7fe634fd48743bf192b47d3eeacd9e4984b97da873b91"
+    },
+    {
+      "path": "mockups/intelligence-lab/roster-data.js",
+      "action": "add",
+      "bytes": 1702,
+      "sha256": "ecb94472360adfe14e8a44e99d8efd4c2031bb1295f97977614194ad1fcf3b25"
+    },
+    {
+      "path": "mockups/intelligence-lab/serve.cjs",
+      "action": "add",
+      "bytes": 2522,
+      "sha256": "10b4ae328a86aaedee44f2affac2babdc4491ebe7c9e28009d8062a3555e72f1"
+    },
+    {
+      "path": "mockups/intelligence-lab/shared.css",
+      "action": "add",
+      "bytes": 20226,
+      "sha256": "d3bb1cf88911c12431f1ac865f6dc3bfb5f70e78e822e08a690f0666908b9ff6"
+    },
+    {
+      "path": "mockups/intelligence-lab/shared.js",
+      "action": "add",
+      "bytes": 5561,
+      "sha256": "fbd22a8a8ba1091a4f1f1393d7e6fb2c934547dde703af0e80e5a3b1d46f8ff2"
+    },
+    {
+      "path": "mockups/intelligence-lab/theme.js",
+      "action": "add",
+      "bytes": 337,
+      "sha256": "3f1b1f194c993464b72c54a54d62a1aa4200c92acb5521b10349c5860d91813f"
+    },
+    {
+      "path": "mockups/intelligence-lab/watchlist.css",
+      "action": "add",
+      "bytes": 5044,
+      "sha256": "d8dcb5dd62e104918f0cadf647ada95e79586bc1227607003bbfd180bb7c90f1"
+    },
+    {
+      "path": "mockups/intelligence-lab/workspace.js",
+      "action": "add",
+      "bytes": 34994,
+      "sha256": "3177901b0be8df873f4278075f3abe189b5a38f3e2bc06d6717296ebb733134c"
+    },
+    {
+      "path": "mockups/locker-page.html",
+      "action": "retire",
+      "bytes": 157600,
+      "sha256": "9a754dcc4630b2ef7a092f3637b239794edac332b34b63db79d279b97daf3c2d"
+    },
+    {
+      "path": "mockups/photo-room.css",
+      "action": "retire",
+      "bytes": 11932,
+      "sha256": "80d4485e3c2ad465c3497bdabf974aea9cbd0316d3a02262106d6067befe9f91"
+    },
+    {
+      "path": "mockups/photo-room.html",
+      "action": "retire",
+      "bytes": 7418,
+      "sha256": "a9e23ad397a9d3cff61489784131df0779271c0ac1ec319ddf4504a4fc257bed"
+    },
+    {
+      "path": "public/images/Awards/all-american-medallion-illustration.png",
+      "action": "add",
+      "bytes": 219892,
+      "sha256": "f4dfad9a4470f497d0bb394f882fdcbf380f5c9c3a65289efc66b75ddbfec033"
+    },
+    {
+      "path": "README.md",
+      "action": "update",
+      "bytes": 3030,
+      "sha256": "c0e814c77e4ef52e46f8778685a267e7936a5cb3523b75ea1d24c5c7ce435c88"
+    },
+    {
+      "path": "scripts/verify-preview-enrichment.mjs",
+      "action": "add",
+      "bytes": 14129,
+      "sha256": "e9f492356de27e66cd6dad91f7d1c642d03f0beb7962761f49774c4b5d711daa"
+    },
+    {
+      "path": "supabase/migrations/20260929205021_preview_awards_news_enrichment.sql",
+      "action": "add",
+      "bytes": 19696,
+      "sha256": "3bd674a723a52a32fc92891fd69fb5e9e88aadc25c612aae856a8624f966242e"
+    },
+    {
+      "path": "supabase/migrations/20260929214716_preview_enrichment_nonretryable_conflicts.sql",
+      "action": "add",
+      "bytes": 8589,
+      "sha256": "5e305dd3a5e2611aa22f9cd9335dd26e4fce3517ed3e594a8b8b942c19dc2e4b"
+    },
+    {
+      "path": "tests/preview-lockers/award-news-regressions.test.ts",
+      "action": "add",
+      "bytes": 2588,
+      "sha256": "84353520307f265c17ca106b35daa36a6dc48a6fcc2154e1c744df15d7ffddb6"
+    },
+    {
+      "path": "tests/preview-lockers/enrichment-access.test.ts",
+      "action": "add",
+      "bytes": 4379,
+      "sha256": "b37ba7fad4ec66b170594ceb6824e5fb5c30f48ce6759e050cf9c15a68b4e814"
+    },
+    {
+      "path": "tests/preview-lockers/enrichment-api.test.ts",
+      "action": "add",
+      "bytes": 4273,
+      "sha256": "53288fc86c5cb13c828aed0e8799652c4258e3e0fefc9f9cdbdb9a9ac0c47c69"
+    },
+    {
+      "path": "tests/preview-lockers/enrichment-fetch.test.ts",
+      "action": "add",
+      "bytes": 3237,
+      "sha256": "01e17732ceba748c703c92797044380f44447941e63fe68d2bdc9fe8aed8718e"
+    },
+    {
+      "path": "tests/preview-lockers/enrichment-page.test.tsx",
+      "action": "add",
+      "bytes": 6480,
+      "sha256": "8cf31abe9ffdb6f88809009c8e9039efe5903bfb2f6981fc0f5bb4a53fd2bd43"
+    },
+    {
+      "path": "tests/preview-lockers/enrichment-persistence.test.ts",
+      "action": "add",
+      "bytes": 7428,
+      "sha256": "6803254e5a2bae9a29295b4734e89e889e8364decba98bf5398c4735f30bf844"
+    },
+    {
+      "path": "tests/preview-lockers/enrichment-ui.test.tsx",
+      "action": "add",
+      "bytes": 8982,
+      "sha256": "3989018d0b09fd99c4a43cc64c815fa4403a5160ba11546a72d2b9893ce3ecde"
+    },
+    {
+      "path": "tests/preview-lockers/enrichment.test.ts",
+      "action": "add",
+      "bytes": 12984,
+      "sha256": "670cdae6256554f8cf0d73c58c1466d7250c9eba37575049c0695adb122759d2"
+    },
+    {
+      "path": "tests/preview-lockers/media-disclosure.test.tsx",
+      "action": "update",
+      "bytes": 4227,
+      "sha256": "9f1bba63eaf75fc6f823a940f89f1d01435e2fdfc482fe5f270424c131e06838"
+    },
+    {
+      "path": "tests/preview-lockers/media-stats.regression-1.test.tsx",
+      "action": "update",
+      "bytes": 4210,
+      "sha256": "7046d5b9dd5e84a77da889da56cc6400a1ceb8a8323aa4acc0efdfc6fd60a1f8"
+    },
+    {
+      "path": "tests/preview-lockers/tavily-workflow.test.ts",
+      "action": "add",
+      "bytes": 6329,
+      "sha256": "102be7d9cc68263c365beeb56c8fa465d89d0d14d264527264f6bb3dc27b4134"
+    },
+    {
+      "path": "tests/preview-lockers/tavily.test.ts",
+      "action": "add",
+      "bytes": 5897,
+      "sha256": "27be2ec873b12b053af4598203f05cc58c912345ffd49d4d1d08f7aea30b6ec9"
+    },
+    {
+      "path": "types/enrichment.generated.ts",
+      "action": "add",
+      "bytes": 9386,
+      "sha256": "f529747690d6a3563361b55b29b527909770e4cc013d57f9198a6236185b27d3"
+    },
+    {
+      "path": "types/static-images.d.ts",
+      "action": "add",
+      "bytes": 50,
+      "sha256": "f833f44facf0f1d98b6b5840ef10dde871851f4bf49c8f6c86b764243956e4a4"
+    }
+  ]
+}

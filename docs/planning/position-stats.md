@@ -1,5 +1,10 @@
 # BLTZ Position-Driven Stats Spec
 
+> Historical layout reference. The standalone Locker mockup is retired.
+> Current structured-stats implementation and verified provider/manual data
+> behavior take precedence. Do not infer that every statistic described below
+> exists, is verified or should be populated with placeholder values.
+
 The locker page renders different stats depending on the player's primary position.
 Each position has **3 hero stats** (the big gold callouts on the front of the locker)
 and a **full set** that lives in the See Full Stats modal as season-by-season tables.

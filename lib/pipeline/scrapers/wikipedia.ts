@@ -178,7 +178,24 @@ function parseWeight(text: string): number | undefined {
   return Number.isNaN(w) ? undefined : w;
 }
 
-function extractAwards(text: string, sourceUrl: string): ScrapedAward[] {
+export function extractWikipediaAwardEvidence(html: string, sourceUrl: string): ScrapedAward[] {
+  // Read the athlete infobox's own honors list, not mentions of other winners
+  // in biographical prose. Preserve unknown honors and original edition text.
+  const heading = /Career highlights and awards/i.exec(html);
+  if (!heading) return [];
+  const section = html.slice(heading.index, heading.index + 24000);
+  const cell = /<td\b[^>]*>([\s\S]*?)<\/td>/i.exec(section)?.[1] ?? "";
+  return [...cell.matchAll(/<li\b[^>]*>([\s\S]*?)<\/li>/gi)].slice(0, 40).flatMap(match => {
+    const name = stripHtml(match[1]).replace(/\[\d+\]/g, "").trim();
+    if (!name || name.length > 200) return [];
+    const year = [...new Set(name.match(/\b(?:19|20)\d{2}\b/g) ?? [])].join(", ");
+    return [{ name, year: year.slice(0, 20), source_url: sourceUrl }];
+  });
+}
+
+function extractAwards(text: string, sourceUrl: string, html?: string): ScrapedAward[] {
+  const infobox = html ? extractWikipediaAwardEvidence(html, sourceUrl) : [];
+  if (infobox.length) return infobox;
   const awards: ScrapedAward[] = [];
   // Very conservative — Wikipedia bios mention these by name. We pull
   // each match as a candidate; the synthesis step will dedupe.
@@ -351,7 +368,7 @@ export async function scrapeWikipedia(
         weight_lbs: parseWeight(fullText),
         hometown: extractHometown(fullText),
         pro_teams: extractProTeams(fullText),
-        awards: extractAwards(fullText, summary.url),
+        awards: extractAwards(fullText, summary.url, articleHtml.ok ? articleHtml.html : undefined),
         photos: summary.thumbnail
           ? [{ url: summary.thumbnail, credits: "Wikipedia" }]
           : [],

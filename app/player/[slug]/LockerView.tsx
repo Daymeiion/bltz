@@ -104,7 +104,8 @@ export type LockerData = {
   schools: { label: string; name?: string; color: string; logo: string | null }[];
   proTeams: { label: string; name?: string; color: string; logo: string | null }[];
   social?: LockerSocial[];
-  awards: { imageUrl?: string | null; year: string; label: string; description?: string | null; sourceUrl?: string | null }[];
+  awards: { evidenceStatus?: "unverified" | "verified"; imageUrl?: string | null; year: string; label: string; description?: string | null; sourceUrl?: string | null; attribution?: string | null }[];
+  articles?: import("@/lib/enrichment/news").PlayerArticle[];
   timeline?: { year: string; tag: string; title: string; note: string }[];
   videos: { id: string; title: string; thumb: string | null; playbackUrl?: string | null; embedUrl?: string | null }[];
   podcastAppearances?: {
@@ -680,7 +681,7 @@ export default function LockerView({
     ? data.awards
     : [];
   const awards = awardSrc.map((a, index) => ({
-    cat: "awards", isAward: true, year: a.year, label: a.label, sourceUrl: a.sourceUrl, description: awardDescription(a.label, a.description), img: safeExternalUrl(a.imageUrl ?? "") ?? (isPrivatePreview ? null : poolAt(index)),
+    cat: "awards", isAward: true, evidenceStatus: isPrivatePreview ? "unverified" : a.evidenceStatus, year: a.year, label: a.label, sourceUrl: a.sourceUrl, attribution: a.attribution, description: awardDescription(a.label, a.description), img: safeExternalUrl(a.imageUrl ?? "") ?? (isPrivatePreview ? null : poolAt(index)),
     style: { flex: "none", width: 164, scrollSnapAlign: "start", borderRadius: 16, border: "1px solid #1E2640", background: "linear-gradient(160deg,#1a2035,#131829)" } as React.CSSProperties,
   }));
 
@@ -690,7 +691,7 @@ export default function LockerView({
     .map(([key, label]) => ({ key, label, active: bioSort === key }));
 
   // ---- MEDIA cards (visuals use real photos; SAMPLE article/podcast copy) ----
-  const mediaArticles = [
+  const mediaArticles = isPrivatePreview ? (data.articles ?? []).map(article => ({ source: article.publisher, title: article.headline, meta: article.published_at ? new Date(article.published_at).toLocaleDateString("en-US", { timeZone: "UTC", month: "short", day: "numeric", year: "numeric" }) : "Date unavailable", img: article.thumbnail_url, dek: article.summary, originalUrl: article.article_url })) : [
     { source: "THE ATHLETIC", title: "THE CONFERENCE'S BEST COVER MAN", meta: "6 MIN READ", img: poolAt(0), dek: "Film, leadership, and the week-by-week rise of a verified locker profile.", originalUrl: "https://www.nytimes.com/athletic/" },
     { source: "ESPN", title: "DRAFT STOCK RISING", meta: "4 MIN READ", img: poolAt(3), dek: "Scouts circle the traits, production, and projection behind the latest board movement.", originalUrl: "https://www.espn.com/" },
     { source: "TEAM SITE", title: "LOCKER ROOM STANDARD SETTER", meta: "3 MIN READ", img: poolAt(1), dek: "How preparation and practice habits have become part of the weekly team story.", originalUrl: "https://calbears.com/" },
@@ -1357,6 +1358,7 @@ export default function LockerView({
                 {mediaSort === "articles" ? (
                   <div className={isPrivatePreview ? "preview-article-list" : undefined} style={{ padding: "14px 18px 10px" }}>
                     <div className={isPrivatePreview ? "preview-articles-grid grid grid-cols-[repeat(auto-fit,260px)] justify-center gap-3" : "grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"}>
+                      {isPrivatePreview && !mediaArticles.length && <p className="col-span-full py-8 text-center text-sm text-white/60">No matching news articles have been added yet.</p>}
                       {(isPrivatePreview ? mediaArticles : mediaArticles.slice(0, 3)).map((article) => (
                         <EditorialCard compactMobile={isPrivatePreview} key={article.title} title={article.title} image={article.img} description={article.dek} meta={[article.source, article.meta].filter(Boolean).join(' · ')} onClick={isPrivatePreview ? (safeExternalUrl(article.originalUrl) ? () => { const url = safeExternalUrl(article.originalUrl); if (url) setPendingArticleRedirect({ source: article.source, title: article.title, url }); } : undefined) : () => setArticleModalOpen(true)} />
                       ))}
@@ -1787,7 +1789,7 @@ export default function LockerView({
                           style={isPrivatePreview ? { height: "auto", overflowY: "visible", paddingRight: 6 } : { height: 408, overflowY: "auto", overscrollBehavior: "auto", paddingRight: 6, display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 10 }}
                         >
                           {awards.map((award: any, i) => (
-                            <EditorialCard key={i} title={award.label} description={award.description} image={award.img} meta={String(award.year || '')} award={isPrivatePreview} href={safeExternalUrl(award.sourceUrl)} />
+                            <EditorialCard key={i} title={award.label} description={award.description} image={award.img} meta={[award.year, award.evidenceStatus === "unverified" ? "Unverified evidence" : award.evidenceStatus === "verified" ? "Verified award" : null].filter(Boolean).join(" · ")} attribution={award.attribution} award={isPrivatePreview} href={safeExternalUrl(award.sourceUrl)} />
                           ))}
                         </div>
                         {!isPrivatePreview && <div style={{ position: "absolute", top: 14 + awardsScrollProgress * 286, right: 1, width: 2, height: 54, borderRadius: 9999, background: "rgba(210,214,224,.72)", boxShadow: "0 0 8px rgba(210,214,224,.22)", opacity: awardsScrolling ? 1 : 0, transition: "opacity .22s ease, top .08s linear", pointerEvents: "none" }} />}
@@ -1797,7 +1799,7 @@ export default function LockerView({
                         <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: ".16em", color: lockerAccent, textTransform: "uppercase", marginBottom: 12 }}>Awards archive</div>
                         <div style={{ fontFamily: disp, fontWeight: 900, fontSize: 28, lineHeight: .9, textTransform: "uppercase", color: "#fff", marginBottom: 12 }}>Legacy still loading</div>
                         <p style={{ fontFamily: body, fontSize: 14, lineHeight: 1.55, color: "rgba(255,255,255,.68)", margin: 0 }}>
-                          No verified awards are attached yet, but a great career is more than a trophy case. BLTZ will add honors as they are verified.
+                          {isPrivatePreview ? "No award evidence has been added yet. Discovered honors will require verification." : "No awards are attached yet. Honors will appear here when available."}
                         </p>
                       </div>
                     )}

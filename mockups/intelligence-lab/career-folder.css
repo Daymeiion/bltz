@@ -1,0 +1,88 @@
+/* Shared folder layout for Athlete records and Moment evidence. */
+.center-content { padding-top: 10px; }
+.career-folder { --folder-flare: 12px; min-width: 0; }
+.career-folder-tabs {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-end;
+  min-height: 50px;
+  padding: 0 29px 0 24px;
+  margin: 0 0 -1px;
+  gap: 5px;
+}
+.career-folder-tabs button {
+  position: relative;
+  --folder-tab-surface: var(--panel);
+  isolation: isolate;
+  z-index: 1;
+  flex: 0 1 132px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 12px 16px;
+  border: 1px solid var(--line);
+  border-radius: 16px 16px 0 0;
+  background: var(--folder-tab-surface);
+  color: var(--muted);
+  font: 12px/1.4 var(--body);
+  cursor: pointer;
+  transition: color 160ms ease;
+}
+.career-folder-tabs button::before,
+.career-folder-tabs button::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+  bottom: -1px;
+  width: var(--folder-flare);
+  height: var(--folder-flare);
+}
+.career-folder-tabs button::before {
+  left: calc(-1 * var(--folder-flare));
+  background: radial-gradient(circle at top left, transparent calc(var(--folder-flare) - 1px), var(--line) calc(var(--folder-flare) - 1px) var(--folder-flare), var(--folder-tab-surface) var(--folder-flare));
+}
+.career-folder-tabs button::after {
+  right: calc(-1 * var(--folder-flare));
+  background: radial-gradient(circle at top right, transparent calc(var(--folder-flare) - 1px), var(--line) calc(var(--folder-flare) - 1px) var(--folder-flare), var(--folder-tab-surface) var(--folder-flare));
+}
+.career-folder-tabs button[aria-selected='true'] { --folder-tab-surface: var(--soft); z-index: 2; min-height: 50px; color: var(--ink); border-bottom-color: transparent; }
+.career-folder-label { position: relative; display: inline-block; }
+.career-folder-tabs button[aria-selected='true'] .career-folder-label::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -7px;
+  width: 20px;
+  height: 2px;
+  transform: translateX(-50%);
+  background: var(--accent);
+}
+.career-folder-tabs button:hover { color: var(--ink); }
+.career-folder-tabs button:focus-visible { z-index: 3; outline: 2px solid var(--evidence); outline-offset: 4px; }
+.career-folder-body { position: relative; min-width: 0; padding: 14px; border: 1px solid var(--line); border-radius: 22px; background: var(--soft); }
+@media (min-width: 991px) {
+  .center-content > :is(.lab-ath-center, .moment-center) {
+    padding-top: 0;
+    padding-left: max(0px, calc(40% - var(--desktop-portrait-size)));
+    padding-right: 0;
+  }
+  .career-folder-tabs { min-height: 46px; }
+  .career-folder-tabs button {
+    flex-basis: 120px;
+    min-height: 42px;
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+  .career-folder-tabs button[aria-selected='true'] { min-height: 46px; }
+}
+@media (max-width: 760px) {
+  .career-folder { --folder-flare: 7px; }
+  .career-folder-tabs { justify-content: center; padding: 0 15px; gap: 2px; }
+  .career-folder-tabs button { flex: 0 1 auto; padding: 12px 8px; }
+  .career-folder-body { padding: 11px; }
+}
+@media (max-width: 380px) {
+  .career-folder-tabs button { min-width: 44px; padding-inline: 6px; }
+}
+@media (prefers-reduced-motion: reduce) { .career-folder-tabs button { transition: none; } }

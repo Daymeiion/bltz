@@ -1,5 +1,10 @@
 # BLTZ Player Search — Architecture & Production Plan
 
+> Historical prototype plan, retained for context. The referenced standalone
+> mockups are retired from active source. Follow the Product Doctrine, current
+> build order and existing application implementation; this document does not
+> authorize replacing current search or expanding a static demo into production.
+
 The mockup ships a **production-shaped** search layer over a static in-memory
 dataset. When the real product lands, only the network call changes; the
 debounce, cache, abort, and race-guard layers stay identical.

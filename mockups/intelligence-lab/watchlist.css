@@ -1,0 +1,63 @@
+/* Priority athletes and explicit search additions share the existing roster geometry. */
+.directory-top h2 { min-width: 0; font-size: 14px; }
+.directory-top { column-gap: 8px; }
+.directory-top .result-count { flex-shrink: 0; }
+.watchlist-legend { display: flex; flex-wrap: wrap; gap: 6px 10px; padding: 0 9px 12px; color: var(--muted); font: 10px/1.3 var(--utility); }
+.watchlist-legend > span { display: inline-flex; align-items: center; gap: 5px; }
+.priority-dot { display: inline-block; flex: 0 0 7px; width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
+.priority-high { background: #f87171; }
+.priority-mid { background: #facc15; }
+.priority-low { background: #4ade80; }
+.priority-unscored { background: transparent; border: 1px solid var(--muted); }
+[data-theme="light"] .priority-high { background: #c72c35; }
+[data-theme="light"] .priority-mid { background: #997100; }
+[data-theme="light"] .priority-low { background: #18834a; }
+.watchlist-entry { display: grid; grid-template-columns: minmax(0, 1fr) 32px; gap: 1px; align-items: center; min-width: 0; }
+.watchlist-entry .athlete-row { min-width: 0; gap: 7px; padding-inline: 7px 4px; }
+.watchlist-entry .roster-avatar { width: 32px; height: 38px; }
+.watchlist-entry .athlete-row > .ui-icon { display: none; }
+.row-name { display: flex; align-items: center; gap: 5px; min-width: 0; }
+.row-name .priority-dot { flex-shrink: 0; }
+.row-context { overflow-wrap: anywhere; }
+.row-priority { display: block; margin-top: 4px; color: var(--muted); font: 10px/1.35 var(--utility); overflow-wrap: anywhere; }
+.watchlist-entry .row-name, .watchlist-entry .row-context, .watchlist-entry .row-priority { line-height: 1.2; }
+.watchlist-remove, .search-results-close, .watchlist-toggle, .search-add { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; padding: 0; border: 1px solid var(--line); border-radius: 7px; background: transparent; color: var(--muted); }
+.watchlist-remove, .search-results-close { width: 32px; height: 32px; }
+.watchlist-remove .ui-icon, .search-results-close .ui-icon { width: 14px; height: 14px; }
+.watchlist-remove { border: 0; background: transparent; }
+.watchlist-remove:hover { background: transparent; color: var(--ink); }
+.search-results-close:hover, .watchlist-toggle:hover { background: var(--soft); color: var(--ink); }
+.watchlist-remove:focus-visible, .search-results-close:focus-visible, .watchlist-toggle:focus-visible, .search-add:focus-visible { outline: 2px solid var(--evidence); outline-offset: 3px; }
+.athlete-search { position: relative; z-index: 61; }
+.watchlist-toggle { display: none; }
+.search-results-panel { position: absolute; inset: calc(100% + 9px) 0 auto; z-index: 60; max-height: min(65vh, 520px); min-width: 0; overflow: auto; padding: 12px 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); box-shadow: 0 16px 40px color-mix(in srgb, var(--night) 28%, transparent); overscroll-behavior: contain; }
+.search-results-heading { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 0 4px 8px; }
+.search-results-heading > :first-child { min-width: 0; flex: 1; font-size: 13px; font-weight: 550; }
+.search-results-heading #search-result-count { flex-shrink: 0; font: 10px/1.3 var(--utility); color: var(--muted); }
+.search-result-entry { display: grid; grid-template-columns: minmax(0, 1fr) 44px; gap: 4px; align-items: center; min-width: 0; padding: 4px 0; border-top: 1px solid var(--line); }
+.search-result-entry .athlete-row { min-width: 0; padding-inline: 6px; }
+.search-result-entry .athlete-row > .ui-icon { display: none; }
+.search-add { width: 44px; height: 44px; color: var(--ink); background: var(--soft); }
+.search-add:hover:not(:disabled) { color: var(--night); border-color: var(--accent); background: var(--accent); }
+.search-add:disabled { color: var(--muted); background: transparent; }
+.search-results-panel .no-results { padding: 15px 6px; }
+.directory-column .directory-note { line-height: 1.5; }
+@media (max-width: 720px) {
+  /* The search panel lives inside the sticky header, above its outside-click shade. */
+  .topbar { z-index: 65; }
+  .watchlist-toggle { display: inline-flex; width: 40px; height: 40px; border-radius: 6px; }
+  .watchlist-toggle .ui-icon { width: 15px; height: 15px; }
+  .search-field { gap: 6px; padding-inline: 8px; }
+  .search-field > .ui-icon { width: 14px; height: 14px; }
+  .search-field input { min-width: 0; }
+  .search-field .search-clear { flex-shrink: 0; }
+  .search-results-panel { position: fixed; inset: 74px 14px auto; max-height: 65vh; padding: 12px 10px; }
+  .watchlist-entry { grid-template-columns: minmax(0, 1fr) 40px; gap: 4px; }
+  .watchlist-remove { width: 40px; height: 40px; }
+  .watchlist-entry .athlete-row { gap: 10px; }
+  .watchlist-entry .roster-avatar { width: 38px; height: 43px; }
+  .watchlist-legend { padding-bottom: 8px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .watchlist-remove, .search-results-close, .watchlist-toggle, .search-add { transition: none; }
+}

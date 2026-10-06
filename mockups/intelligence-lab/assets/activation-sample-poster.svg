@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360" role="img" aria-labelledby="title desc">
+  <title id="title">Sample activation: Keith Rivers career rewind</title>
+  <desc id="desc">Original abstract concept artwork for a sample activation. It does not depict Keith Rivers or contain historical event media. Navy, gold and blue geometric lines frame a Career Rewind title.</desc>
+  <defs>
+    <linearGradient id="ground" x2="1" y2="1">
+      <stop stop-color="#101a2b"/>
+      <stop offset="1" stop-color="#080d17"/>
+    </linearGradient>
+    <linearGradient id="beam" x2="1" y2="0">
+      <stop stop-color="#ffbb00" stop-opacity=".06"/>
+      <stop offset=".6" stop-color="#ffbb00" stop-opacity=".7"/>
+      <stop offset="1" stop-color="#ffbb00" stop-opacity=".1"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="360" fill="url(#ground)"/>
+  <g stroke="#243147" stroke-width="1" opacity=".75">
+    <path d="M0 240H640M0 280H640M0 320H640M400 0V360M460 0V360M520 0V360M580 0V360"/>
+  </g>
+  <g fill="none" stroke-linecap="round">
+    <circle cx="566" cy="170" r="108" stroke="#4288e8" stroke-width="1" opacity=".48"/>
+    <circle cx="566" cy="170" r="78" stroke="#4288e8" stroke-width="1" opacity=".3"/>
+    <path d="M566 62A108 108 0 0 1 674 170" stroke="#ffbb00" stroke-width="5"/>
+    <path d="M474 268L593 149" stroke="#4288e8" stroke-width="8" opacity=".55"/>
+    <path d="M455 250L562 143" stroke="#ffbb00" stroke-width="3"/>
+  </g>
+  <path d="M0 245L640 87V126L0 284Z" fill="url(#beam)" opacity=".32"/>
+  <rect x="30" y="28" width="173" height="27" rx="4" fill="#ffbb00"/>
+  <text x="43" y="46" font-family="Arial, sans-serif" font-weight="700" font-size="12" fill="#10131b" letter-spacing="1.2">SAMPLE ACTIVATION</text>
+  <text x="32" y="110" font-family="Arial, sans-serif" font-size="12" fill="#8da5c4" letter-spacing="2">KEITH RIVERS · USC / WASHINGTON 06</text>
+  <text x="29" y="167" font-family="Impact, Arial Narrow, sans-serif" font-size="59" fill="#f3f5f9" letter-spacing="1">CAREER</text>
+  <text x="29" y="224" font-family="Impact, Arial Narrow, sans-serif" font-size="59" fill="#ffbb00" letter-spacing="1">REWIND</text>
+  <rect x="32" y="256" width="43" height="3" fill="#4288e8"/>
+  <text x="32" y="289" font-family="Arial, sans-serif" font-size="13" fill="#bac5d7">A career moment, brought back into focus.</text>
+  <text x="32" y="331" font-family="Arial, sans-serif" font-size="10" fill="#7d8da4" letter-spacing=".5">CONCEPT ARTWORK · NOT HISTORICAL MEDIA</text>
+</svg>

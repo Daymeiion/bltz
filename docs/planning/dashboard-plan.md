@@ -1,5 +1,10 @@
 # BLTZ Player Dashboard — Plan + Review
 
+> Historical dashboard plan, retained for context. Current Product Doctrine,
+> build order, approved claim workflow and application UI take precedence.
+> Retired mockups and the older media-first framing below do not authorize a
+> dashboard rewrite or future-phase schema work.
+
 **Source design doc:** `~/.gstack/projects/Daymeiion-bltz/Administrator-claude-busy-hellman-6b7937-design-20260501-131831.md`
 **Status:** V1 TESTING INTERFACE COMPLETE (2026-08-11) — production release deferred pending athlete feedback
 **Branch:** claude/busy-hellman-6b7937
