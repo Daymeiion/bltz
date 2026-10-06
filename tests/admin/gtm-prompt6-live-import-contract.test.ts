@@ -15,7 +15,7 @@ describe("Prompt 6 live import contract", () => {
 
   it("requires review for non-strong Player matches", () => {
     expect(actions).toContain('review.strength !== "strong"');
-    expect(actions).toContain("Review or reject the possible Player match");
+    expect(actions).toContain("Review, reject, or defer the possible Player match");
     expect(actions).toContain("manual_player_match");
   });
 

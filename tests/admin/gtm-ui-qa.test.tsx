@@ -43,8 +43,8 @@ describe("Prompt 4 GTM Admin experience", () => {
     expect(actions).toContain("export async function inspectGtmCsv");
     expect(actions).toContain("await getAuthorizedClient()");
     expect(actions).toContain("parsePlayerMatchDecisions");
-    expect(actions).toContain("review?.candidates.find");
-    expect(actions).toContain("is no longer valid. Preview the import again.");
+    expect(actions).toContain("validateImportReviewSelections");
+    expect(actions).toContain("resolveImportPlayerReview");
   });
 
   it("supports audited note edits without changing canonical Player records", () => {

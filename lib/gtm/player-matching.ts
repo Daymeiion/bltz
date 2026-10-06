@@ -43,14 +43,17 @@ function normalized(value: string | null | undefined) {
 
 function contextMatches(company: string, candidate: CanonicalPlayerCandidate) {
   if (!company) return null;
-  const contexts = [candidate.team, candidate.college]
-    .map(normalized)
-    .filter(Boolean);
-  const matched = contexts.find((context) => company === context
-    || (context.length >= 5 && company.includes(context))
+  const contexts = [
+    { type: "team" as const, value: normalized(candidate.team) },
+    { type: "college" as const, value: normalized(candidate.college) },
+  ].filter((context) => context.value);
+  const exact = contexts.find((context) => company === context.value);
+  if (exact) return { type: exact.type, exact: true };
+  const matched = contexts.find(({ value: context }) =>
+    (context.length >= 5 && company.includes(context))
     || (company.length >= 5 && context.includes(company)));
   if (!matched) return null;
-  return normalized(candidate.team) === matched ? "team" as const : "college" as const;
+  return { type: matched.type, exact: false };
 }
 
 function optionFor(candidate: CanonicalPlayerCandidate, company: string): UniquePlayerMatch {
@@ -65,8 +68,8 @@ function optionFor(candidate: CanonicalPlayerCandidate, company: string): Unique
     position: candidate.position,
     level: "NFL",
     status: candidate.status,
-    matchType: context === "team" ? "name_and_team" : context === "college" ? "name_and_college" : "name_only",
-    confidence: context === "team" ? 0.96 : context === "college" ? 0.93 : 0.65,
+    matchType: context?.type === "team" ? "name_and_team" : context?.type === "college" ? "name_and_college" : "name_only",
+    confidence: context?.exact ? context.type === "team" ? 0.96 : 0.93 : context ? 0.75 : 0.65,
   };
 }
 
@@ -102,7 +105,7 @@ export function buildPlayerMatchReviewMap(
       const company = normalized(row.currentCompany);
       const options = candidates.map((candidate) => optionFor(candidate, company))
         .sort((left, right) => right.confidence - left.confidence || left.name.localeCompare(right.name));
-      const contextual = options.filter((candidate) => candidate.matchType !== "name_only");
+      const contextual = options.filter((candidate) => candidate.matchType !== "name_only" && candidate.confidence >= 0.9);
       const strength: PlayerMatchStrength = contextual.length === 1
         ? "strong"
         : candidates.length === 1 ? "possible" : "ambiguous";
