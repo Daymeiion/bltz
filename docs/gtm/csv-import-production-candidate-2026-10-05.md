@@ -2,7 +2,9 @@
 
 ## Status and authority
 
-Prepared forward update for the user-approved guarded contact-import release.
+Prepared source-only lookup replanning checkpoint for the user-approved guarded
+contact-import release. The previous isolated email-index checkpoint is
+`f3b34bb4f8d3815f4b05c6dfe8137d220dc7fe9e`; it remains undeployed.
 The first isolated 18-path source checkpoint was committed and pushed as
 `8ac5768cf5da39d02476e2341e37d6761cce8819`; it was not deployed or promoted.
 Its full hosted staging batch failed with SQLSTATE `57014` under the unchanged
@@ -24,6 +26,8 @@ Doctrine and the current build order continue to govern identity and permissions
 Candidate branch: `codex/csv-import-production-2026-10-05`.
 Known live authentication/security baseline: `af0b7077a1228581ebeb13a18158080c07e3fe97`.
 Selected matching source: `b02d015ae57b3df1195de8f5b62eb16677e750b5`.
+Selected lookup-replanning migration: `4379c1f169c18703eb9e63f500f1ace69357ac22`.
+Selected typed regression test: `93e970c9c9fe150b08d989314c997e54e421e8bd`.
 Checkout: `C:/Users/Administrator/.codex/worktrees/auth-security-production/bltz`.
 The original security branch still references the unchanged baseline; it was not
 reset, deleted or overwritten. The broader reconciliation head and stale main
@@ -32,12 +36,13 @@ are not this release candidate.
 ## Included files and behavior
 
 Exactly six runtime files and eight reviewed tests remain byte-for-byte equal
-to the selected matching source commit. This forward checkpoint adds only one
-email lookup index migration and its semantic regression test, plus updates this
-report and its manifest. There are twenty release paths relative to the live
-security baseline, and four changed/new paths relative to the first isolated
-checkpoint. The manifest records nineteen file hashes and excludes its own
-circular hash. Package files and all fourteen copied matching paths are retained
+to the selected matching source commit. The email index and its regression test
+remain identical to primary checkpoint `36b31278169768b567d45ac12821585050372330`.
+This forward checkpoint adds only the lookup-replanning migration and its
+semantic regression test, plus updates this report and its manifest. There are
+twenty-two release paths relative to the live security baseline, and four
+changed/new paths relative to the isolated email-index checkpoint. The manifest
+records twenty-one file hashes and excludes its own circular hash. Package files and all fourteen copied matching paths are retained
 unchanged. The new source checkpoint must be explicitly pinned after review;
 existing deployment wrappers remain pinned to the blocked first checkpoint.
 
@@ -78,12 +83,23 @@ row/file bindings and founder field locks remain in place.
 ## Routes, database, migrations and permissions
 
 Existing route: `/admin/gtm/imports`. No route was added.
-One schema change is included: the nonunique partial expression email lookup
-index in `supabase/migrations/20261006033000_index_gtm_import_email_lookup.sql`.
-It accelerates the existing active-contact `lower(btrim(email))` lookup without
-changing duplicate/email matching semantics or adding a uniqueness constraint.
-It does not alter table columns, existing rows, RPC bodies, triggers, generated
-database types, authentication, roles, grants, RLS or statement limits. Existing
+Two forward database migrations are included. The nonunique partial expression
+email index in `supabase/migrations/20261006033000_index_gtm_import_email_lookup.sql`
+accelerates the existing active-contact `lower(btrim(email))` lookup without
+changing matching semantics or adding a uniqueness constraint.
+
+`supabase/migrations/20261006043000_replan_gtm_import_identity_lookups.sql` changes
+only three per-row lookups in the existing private V2 importer to constant
+`EXECUTE ... USING` statements, allowing each query to be replanned as contacts
+are inserted. The normalized previous body must match `c17054ebf22e4acd185df3d9003b5052`,
+and the reviewed email index must be present, valid and ready. All lookup
+predicates and values, collision checks, preview bindings, manual locks,
+row exceptions, audit behavior and result counts remain unchanged. Reversing
+only those three substitutions reproduces the prior normalized function body.
+Signature and default arguments, owner/ACL, SECURITY DEFINER and empty search
+path are preserved. No table columns, existing rows, public RPC wrappers,
+triggers, generated database types, authentication, roles, grants, RLS or
+statement limits change. Existing
 GTM contact and import-job RPCs remain required. No NFL directory import, Career
 ID creation or automatic identity merge is included. Contacts remain private
 under existing Admin/RLS boundaries. Later canonical attribution remains a
@@ -113,8 +129,8 @@ No environment file, secret or cloud value was changed. `next.config.ts` and
 Server Action transport cap remain. All four analytics/workflow flags remain
 explicitly false. Existing Supabase migrations, generated types, RBAC,
 Supabase client, classification helpers, navigation and shared utilities retain
-baseline content; the email lookup index migration is the sole forward database
-addition. No timeout, role, grant, environment or hosted setting is changed.
+baseline content except for the two explicitly reviewed forward migrations.
+The private lookup change is the only RPC-body delta. No timeout, role, grant, environment or hosted setting is changed.
 No original CSV, private recovery data, pitch material or other checkout was
 copied, edited or deleted. Ignored `output` remains excluded from deployment.
 
@@ -152,7 +168,8 @@ function-owner lookup-plan regression coverage. The primary focused run reported
 35 passing tests across the email-index, SQL-review and action-security suites;
 scoped lint passed. These results do not attest a new isolated full release run.
 
-The reviewed forward candidate completed isolated QA: **1,118 passed, zero
+The previous email-index candidate, saved as
+`f3b34bb4f8d3815f4b05c6dfe8137d220dc7fe9e`, completed isolated QA: **1,118 passed, zero
 failed, 24 existing skips across 148 files**; typecheck, lint and production build
 passed; lint retained zero errors and 287 existing warnings; runtime dependency
 audit found zero vulnerabilities. Fresh dry source review contained 1,099 files,
@@ -183,6 +200,47 @@ typecheck-final.log, lint-final.log, build-final.log and runtime-audit-final.jso
 Passing component and disposable PostgreSQL tests do not substitute for a live
 Admin session, actual hosted RLS or a 6,100-row hosted execution canary.
 
+## Lookup replanning validation and pending hosted gate
+
+Read-only hosted evidence showed zero contact reltuples, relpages and size,
+valid/ready indexes and three zero-cost sequential lookup scans under the
+function/table owner. This corroborates the locally reproduced analyzed-empty
+cached-plan hypothesis; it does not prove nested timeout attribution or a
+successful hosted batch. The latest hosted attempt after the index still FAILED
+with `57014`; contacts and links remained zero, and the existing job/history
+were preserved. No successful retry with this new migration has been attested.
+
+Independent focused review ran 45 tests across lookup-replanning, email-index,
+SQL-review and action-security suites, all passing. The disposable analyzed-empty
+6,100-row import preserved 278 exclusions, 544 deferred identities, zero links,
+6,100 creation audits and a same-job replay without writes. Its local measured
+6.83 seconds is not hosted acceptance or a production performance guarantee.
+Injection strings are bound values; conflicting/ambiguous identities, archived
+scope, absent keys, manual locks and unauthorized preview changes retain
+existing behavior. Scoped migration/test QA at the primary source also passed.
+
+The first isolated run passed 1,128 tests with no test failures, but TypeScript
+and the production build caught four untyped query-result fields in the new
+disposable test. Test-only checkpoint `93e970c9c9fe150b08d989314c997e54e421e8bd`
+adds four result generics without changing assertions or database behavior.
+Its focused ten tests, scoped lint and primary full TypeScript check passed.
+The failed first-run evidence remains under ignored
+`output/csv-import-production-2026-10-05/replan-forward-qa-4379-first-failed/`.
+
+Isolated full QA for the exact twenty-two-path candidate passed: **1,128
+passed, zero failed, 24 existing skips across 149 files**. Typecheck,
+full lint and production build passed; lint retained 0 errors and 287 existing
+warnings; runtime dependency audit found zero vulnerabilities. The fresh dry
+upload contained 1,101 files with all selected paths, only the two reviewed
+new migrations, and no private input or analytics delivery source. The full
+receipt is retained under ignored
+`output/csv-import-production-2026-10-05/replan-forward-qa/receipt.json`.
+
+This final documentation-only result update follows QA. Runtime, tests, SQL,
+packages and configuration remain unchanged; the manifest binds the tested
+source hashes and identifies the documentation update. The hosted replanning
+canary remains unproven and production release/import remain blocked.
+
 ## Production and contact-batch gates
 
 The coordinator must verify the exact selected upload, candidate deployment,
@@ -196,8 +254,8 @@ latest pre-index production snapshot retained zero contacts/links, three preview
 jobs, 24,740 NFL directory rows, 296 canonical Player IDs and one platform role
 assignment; the required email index was absent. This snapshot is not permission
 to apply to a different database or a changed migration history. Apply only the
-reviewed version-controlled index through the guarded migration process after
-staging proves the full transaction. No direct role/timeout workaround is allowed.
+two reviewed version-controlled migrations through the guarded process after
+staging proves the full transaction and unchanged authorization boundaries. No direct role/timeout workaround is allowed.
 
 Before the approved contact batch:
 
@@ -230,8 +288,8 @@ remain gates. No production data action occurred from this task.
 
 The existing SQL completed-replay branch returns before all its binding checks.
 This action's owner/file/mapping precheck guards its receipts, but direct-RPC
-correction needs a separately reviewed migration. The email lookup index does
-not correct or expand that receipt contract; no RPC rewrite is included.
+correction needs a separately reviewed migration. Neither the email index nor lookup replanning corrects or expands that receipt
+contract. The three query-plan substitutions preserve the existing replay debt.
 Existing cross-contact identity collisions remain skipped counts without per-row
 collision reasons; they differ from fully exposed in-file parser conflicts.
 The first audited batch had no stored contacts. Future repeat imports can change
