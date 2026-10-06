@@ -2,6 +2,7 @@ import "server-only";
 import { z } from "zod";
 import { League } from "./types";
 import { StatsError, responseError } from "./errors";
+import { requireSourceAction } from "@/lib/source-policy/policy";
 
 export function profileEndpoint(league: League, id: string) {
   League.parse(league); z.string().uuid().parse(id);
@@ -37,6 +38,8 @@ export async function fetchLookup(endpoint: string) {
 
 async function fetchProviderJson(endpoint: string, key: string): Promise<{ raw: unknown; status: number }> {
   try {
+    requireSourceAction(`https://api.sportradar.com${endpoint}`, "EXTRACT_FACTS");
+    requireSourceAction(`https://api.sportradar.com${endpoint}`, "PERSIST_FACTS");
     const response = await fetch(`https://api.sportradar.com${endpoint}`, {
       headers: { "x-api-key": key, Accept: "application/json" },
       signal: AbortSignal.timeout(12000), cache: "no-store", redirect: "error",

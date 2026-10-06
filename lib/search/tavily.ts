@@ -1,5 +1,6 @@
 import "server-only";
 import { SearchProviderError } from "./errors";
+import { evaluateSource, requireSourceAction } from "@/lib/source-policy/policy";
 
 export type SearchResult = { title: string; url: string; snippet?: string };
 
@@ -11,6 +12,7 @@ export async function tavilySearch(query: string, max_results = 6, options: { si
   const signal = AbortSignal.any([...(options.signal ? [options.signal] : []), AbortSignal.timeout(Math.max(1000, Math.min(15000, options.timeoutMs ?? 5000)))]);
   try {
     signal.throwIfAborted();
+    requireSourceAction("https://api.tavily.com/search", "DISCOVERY");
     const r = await fetch("https://api.tavily.com/search", {
       method: "POST",
       cache: "no-store",
@@ -71,10 +73,14 @@ export async function tavilySearch(query: string, max_results = 6, options: { si
     if (json.results.some(x => !x || typeof x !== "object" || typeof x.url !== "string" || !x.url.trim() || x.url.length > 2048)) {
       throw new SearchProviderError("search_invalid_response");
     }
-    return json.results.slice(0, limit).map(x => ({
-      title: typeof x.title === "string" ? x.title.slice(0, 500) : "", url: x.url,
-      snippet: typeof x.content === "string" ? x.content.slice(0, 1200) : undefined,
-    }));
+    return json.results.slice(0, limit).filter(x => evaluateSource(x.url).discovery_allowed).map(x => {
+      const canExtract = evaluateSource(x.url).allowed_actions.includes("EXTRACT_METADATA");
+      return {
+        title: canExtract && typeof x.title === "string" ? x.title.slice(0, 500) : "Reference link",
+        url: x.url,
+        snippet: canExtract && typeof x.content === "string" ? x.content.slice(0, 1200) : undefined,
+      };
+    });
   } catch (error) {
     if (signal.aborted) throw new SearchProviderError(signal.reason?.name === "TimeoutError" ? "search_timeout" : "search_aborted");
     if (error instanceof SearchProviderError) throw error;

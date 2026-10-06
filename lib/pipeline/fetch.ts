@@ -8,6 +8,9 @@
  * in a Playwright path later if a specific source needs JS execution.
  */
 
+import { fetchSourceFacts } from "@/lib/source-policy/fetch";
+import { requireSourceAction, SourcePolicyError } from "@/lib/source-policy/policy";
+
 const DEFAULT_UA =
   "Mozilla/5.0 (compatible; BLTZ-OnboardBot/1.0; +https://bltz.com/bots)";
 
@@ -23,25 +26,35 @@ export async function fetchHtml(
   const ctl = new AbortController();
   const timer = setTimeout(() => ctl.abort(), opts.timeoutMs ?? 8000);
   try {
-    const r = await fetch(url, {
+    const r = await fetchSourceFacts(url, {
       signal: ctl.signal,
-      redirect: "follow",
       headers: {
         "User-Agent": opts.ua ?? DEFAULT_UA,
         Accept: "text/html,application/xhtml+xml",
       },
     });
-    clearTimeout(timer);
     if (r.status === 404) return { ok: false, reason: "not_found" };
     if (r.status === 403 || r.status === 429) return { ok: false, reason: "blocked" };
     if (!r.ok) return { ok: false, reason: "network" };
-    const html = await r.text();
-    return { ok: true, html, finalUrl: r.url };
-  } catch (e: any) {
-    clearTimeout(timer);
-    if (e?.name === "AbortError") return { ok: false, reason: "timeout" };
+    const finalUrl = r.url || url;
+    requireSourceAction(finalUrl, "EXTRACT_FACTS");
+    const reader = r.body?.getReader();
+    if (!reader) return { ok: false, reason: "network" };
+    const chunks: Uint8Array[] = []; let size = 0;
+    try {
+      while (true) {
+        const { done, value } = await reader.read(); if (done) break;
+        size += value.byteLength;
+        if (size > 1024 * 1024) return { ok: false, reason: "blocked" };
+        chunks.push(value);
+      }
+    } finally { void reader.cancel().catch(() => {}); }
+    return { ok: true, html: new TextDecoder().decode(Buffer.concat(chunks)), finalUrl };
+  } catch (error) {
+    if (error instanceof SourcePolicyError) return { ok: false, reason: "blocked" };
+    if (ctl.signal.aborted || error instanceof Error && error.name === "AbortError") return { ok: false, reason: "timeout" };
     return { ok: false, reason: "network" };
-  }
+  } finally { clearTimeout(timer); }
 }
 
 /**

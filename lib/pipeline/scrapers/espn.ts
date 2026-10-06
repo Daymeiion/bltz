@@ -1,4 +1,5 @@
 import type { PlayerIdentityInput, ScraperResult } from "../types";
+import { fetchSourceFacts } from "@/lib/source-policy/fetch";
 
 /**
  * ESPN scraper. Uses ESPN's public JSON endpoints (the same backend that
@@ -81,6 +82,7 @@ export async function scrapeESPN(
           full_name: match.displayName,
         },
         urls: [match.webUrl],
+        fact_source_urls: ["https://site.web.api.espn.com/apis/search/v2"],
       };
     }
 
@@ -89,6 +91,7 @@ export async function scrapeESPN(
       ok: true,
       facts: factsFromProfile(profile),
       urls: [match.webUrl],
+      fact_source_urls: [`https://sports.core.api.espn.com/v2/sports/football/leagues/${match.league}/athletes/${match.athleteId}`],
     };
   } catch {
     return { source: "espn", ok: false, reason: "unreachable" };
@@ -110,7 +113,7 @@ async function searchAthletes(name: string): Promise<SearchMatch[]> {
     const url =
       `https://site.web.api.espn.com/apis/search/v2` +
       `?region=us&lang=en&limit=10&query=${encodeURIComponent(name)}`;
-    const res = await fetch(url, {
+    const res = await fetchSourceFacts(url, {
       signal: ctl.signal,
       headers: { "User-Agent": "BLTZ-OnboardBot/1.0" },
     });
@@ -215,11 +218,9 @@ async function fetchAthleteProfile(
   const ctl = new AbortController();
   const timer = setTimeout(() => ctl.abort(), PROFILE_TIMEOUT_MS);
   try {
-    // Note: this is the `core` API on http (not https). It's the only
-    // one that returns full athlete profiles for inactive/historical
-    // players; the `site` API errors out for them.
-    const url = `http://sports.core.api.espn.com/v2/sports/football/leagues/${league}/athletes/${athleteId}`;
-    const res = await fetch(url, {
+    // Keep the fixed historical-player endpoint, using HTTPS and refusing redirects.
+    const url = `https://sports.core.api.espn.com/v2/sports/football/leagues/${league}/athletes/${athleteId}`;
+    const res = await fetchSourceFacts(url, {
       signal: ctl.signal,
       headers: { "User-Agent": "BLTZ-OnboardBot/1.0" },
     });

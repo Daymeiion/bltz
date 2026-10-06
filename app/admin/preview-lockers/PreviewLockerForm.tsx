@@ -153,7 +153,11 @@ export default function PreviewLockerForm({
         method: saved ? "PATCH" : "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify(saved ? { revision: revision.current, content: parsed.data } : { id: createId.current, content: parsed.data, ...(enrollmentData?.success ? { enrollment: enrollmentData.data } : {}) }),
       });
-      if (!response.ok) throw new Error(response.status === 409 ? "Save conflict: this slug or GTM contact may already be linked, enrollment details changed, or the record changed. Your draft is retained. Open the saved list before retrying." : response.status === 401 || response.status === 403 ? "Your Admin session is no longer authorized. Sign in again before saving." : "Save failed. Your draft is retained; retry is safe.");
+      if (!response.ok) {
+        const failure = await response.json().catch(() => null);
+        if (failure?.error === "source_policy_blocked") throw new Error("This statistics source is reference-only. Keep or remove previously saved imports; new or changed imports cannot be saved. Your draft is retained.");
+        throw new Error(response.status === 409 ? "Save conflict: this slug or GTM contact may already be linked, enrollment details changed, or the record changed. Your draft is retained. Open the saved list before retrying." : response.status === 401 || response.status === 403 ? "Your Admin session is no longer authorized. Sign in again before saving." : "Save failed. Your draft is retained; retry is safe.");
+      }
       const data = await response.json(); savedDraft.current = JSON.stringify(parsed.data); setSaved(data); revision.current = data.revision; setReviewed(false); setCompletionReviewed(false); setDirty(false);
       if (gtmLinked) setCompleted(data.complete === true);
       setMessage(asDraft ? "Draft saved privately. You can close this editor and resume from the preview list. No new enrollment or completion was recorded." : data.completionStatus === "unavailable"

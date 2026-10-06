@@ -1,5 +1,6 @@
 import { resolveMediaPermissions } from "./permissions";
 import { SUPER_BOWL_REFERENCE } from "./award-reference-images";
+import { requireSourceAction, sourceProvenance, type SourceProvenance } from "@/lib/source-policy/policy";
 
 export interface CatalogAward {
   id: string; slug: string; name: string; sport: string; league: string | null;
@@ -14,7 +15,7 @@ export interface AwardEvidence {
 export interface NormalizedAward {
   award_id: string | null; raw_label: string; year: string; edition: string;
   source_url: string | null; source_type: string; confidence: number;
-  verified: boolean; metadata: { description: string | null; mapping: "alias" | "unmapped" };
+  verified: boolean; metadata: { description: string | null; mapping: "alias" | "unmapped"; provenance?: SourceProvenance };
 }
 
 export function awardKey(value: string): string {
@@ -24,6 +25,9 @@ export function awardKey(value: string): string {
 
 /** Normalization identifies the award, never proves that the athlete won it. */
 export function normalizeAward(evidence: AwardEvidence, catalog: CatalogAward[]): NormalizedAward {
+  // This persists an unverified citation supplied by the reviewed preview,
+  // not permission to fetch a reference-only source or verify an achievement.
+  if (evidence.sourceUrl) requireSourceAction(evidence.sourceUrl, "PERSIST_METADATA");
   const raw = evidence.label.trim();
   const edition = /\b(?:super\s*bowl|sb)\s+([IVXLCDM]+|\d{1,3})\b/i.exec(raw)?.[1]?.toUpperCase()
     ?? (/\b(?:super\s*bowl|sb)\b/i.test(raw) ? /\(([IVXLCDM]+(?:\s*,\s*[IVXLCDM]+)*)\)/i.exec(raw)?.[1]?.toUpperCase() : "") ?? "";
@@ -37,7 +41,8 @@ export function normalizeAward(evidence: AwardEvidence, catalog: CatalogAward[])
   return { award_id: award?.id ?? null, raw_label: raw, year, edition,
     source_url: evidence.sourceUrl ?? null, source_type: evidence.sourceUrl ? "source_reference" : "admin_input",
     confidence: award ? 1 : 0, verified: false,
-    metadata: { description: evidence.description ?? null, mapping: award ? "alias" : "unmapped" } };
+    metadata: { description: evidence.description ?? null, mapping: award ? "alias" : "unmapped",
+      ...(evidence.sourceUrl ? { provenance: sourceProvenance(evidence.sourceUrl, "preview_award_evidence") } : {}) } };
 }
 
 export function normalizeAwards(evidence: AwardEvidence[], catalog: CatalogAward[]) {

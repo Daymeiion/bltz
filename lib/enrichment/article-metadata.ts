@@ -1,6 +1,7 @@
 import { isPreviewUrl } from "@/lib/preview-lockers/validation";
 import { decodeHTML } from "entities";
 import { normalizeArticleUrl, type ArticleMetadata } from "./news";
+import { requireSourceAction, remoteAssetReference, sourceProvenance } from "@/lib/source-policy/policy";
 
 type ObjectValue = Record<string, unknown>;
 const object = (v: unknown): ObjectValue => v && typeof v === "object" && !Array.isArray(v) ? v as ObjectValue : {};
@@ -33,6 +34,8 @@ function nameValue(value: unknown): string {
 /** Reads metadata only. Article body fields and HTML are never returned or persisted. */
 export function extractArticleMetadata(html: string, articleUrl: string): ArticleMetadata | null {
   const url = normalizeArticleUrl(articleUrl); if (!url) return null;
+  requireSourceAction(url, "EXTRACT_METADATA");
+  requireSourceAction(url, "PERSIST_METADATA");
   const meta: Record<string, string> = {}; const structured: ObjectValue[] = [];
   let canonical = "";
   const document = html.replace(/<!--[\s\S]*?-->/g, "");
@@ -58,6 +61,8 @@ export function extractArticleMetadata(html: string, articleUrl: string): Articl
   const canonicalCandidate = normalizeArticleUrl(canonical || clean(pick("url"), 2048) || clean(object(pick("mainEntityOfPage"))["@id"], 2048) || meta["og:url"] || url, url);
   // Cross-domain canonical hints are untrusted. Keep the fetched publisher URL.
   const canonicalUrl = canonicalCandidate && new URL(canonicalCandidate).hostname.replace(/^www\./, "") === new URL(url).hostname.replace(/^www\./, "") ? canonicalCandidate : url;
+  requireSourceAction(canonicalUrl, "EXTRACT_METADATA");
+  requireSourceAction(canonicalUrl, "PERSIST_METADATA");
   const rawDate = clean(pick("datePublished") || meta["article:published_time"] || meta["date"], 80);
   const date = rawDate ? new Date(rawDate) : null;
   const thumbnail = [meta["og:image:secure_url"], meta["og:image"], meta["og:image:url"], meta["twitter:image"], meta["twitter:image:src"], imageValue(news?.image), imageValue(article?.image)]
@@ -67,8 +72,9 @@ export function extractArticleMetadata(html: string, articleUrl: string): Articl
     publisher: nameValue(pick("publisher")) || clean(meta["og:site_name"], 200) || new URL(url).hostname.replace(/^www\./, ""),
     author: nameValue(pick("author")) || clean(meta.author, 200) || null,
     published_at: date && Number.isFinite(date.getTime()) ? date.toISOString() : null,
-    thumbnail_url: thumbnail,
+    thumbnail_url: remoteAssetReference(thumbnail),
     summary: clean(pick("description") || meta["og:description"] || meta["twitter:description"] || meta.description, 500),
-    metadata: { extraction: news ? "NewsArticle" : article ? "Article" : meta["og:title"] ? "OpenGraph" : meta["twitter:title"] ? "Twitter" : "HTML" },
+    metadata: { extraction: news ? "NewsArticle" : article ? "Article" : meta["og:title"] ? "OpenGraph" : meta["twitter:title"] ? "Twitter" : "HTML",
+      provenance: sourceProvenance(canonicalUrl, "direct_metadata") },
   };
 }

@@ -1,4 +1,6 @@
 import { findAwardDescription } from "@/lib/preview-lockers/award-descriptions";
+import { fetchSourceFacts } from "@/lib/source-policy/fetch";
+import { evaluateSource, requireSourceAction } from "@/lib/source-policy/policy";
 import { fetchHtml, stripHtml } from "../fetch";
 import type { PlayerIdentityInput, ScraperResult, ScrapedAward } from "../types";
 import { NFL_FULL_NAMES } from "../teams";
@@ -50,7 +52,7 @@ async function searchCandidates(
   const out: SearchHit[] = [];
   for (const q of queries) {
     const url = `https://en.wikipedia.org/w/api.php?action=query&list=search&format=json&origin=*&srlimit=5&srsearch=${encodeURIComponent(q)}`;
-    const r = await fetch(url, {
+    const r = await fetchSourceFacts(url, {
       headers: { "User-Agent": "BLTZ-OnboardBot/1.0" },
     });
     if (!r.ok) continue;
@@ -74,18 +76,24 @@ async function fetchSummary(title: string): Promise<{
   thumbnail?: string;
 } | null> {
   const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`;
-  const r = await fetch(url, {
+  const r = await fetchSourceFacts(url, {
     headers: { "User-Agent": "BLTZ-OnboardBot/1.0" },
   });
   if (!r.ok) return null;
   const j = (await r.json()) as SummaryResponse;
   if (!j?.extract) return null;
+  const articleUrl = j.content_urls?.desktop?.page;
+  // Facts came from this registered Wikipedia adapter. A response-provided
+  // article URL cannot redirect extraction or attribution to another source.
+  const canonicalUrl = articleUrl && evaluateSource(articleUrl).policy_id === "wikipedia-player"
+    ? articleUrl
+    : `https://en.wikipedia.org/wiki/${encodeURIComponent(title)}`;
   return {
     extract: j.extract,
     description: j.description ?? "",
     type: j.type ?? "",
     title,
-    url: j.content_urls?.desktop?.page ?? `https://en.wikipedia.org/wiki/${encodeURIComponent(title)}`,
+    url: canonicalUrl,
     thumbnail: j.thumbnail?.source,
   };
 }
@@ -179,6 +187,8 @@ function parseWeight(text: string): number | undefined {
 }
 
 export function extractWikipediaAwardEvidence(html: string, sourceUrl: string): ScrapedAward[] {
+  requireSourceAction(sourceUrl, "EXTRACT_FACTS");
+  requireSourceAction(sourceUrl, "PERSIST_FACTS");
   // Read the athlete infobox's own honors list, not mentions of other winners
   // in biographical prose. Preserve unknown honors and original edition text.
   const heading = /Career highlights and awards/i.exec(html);

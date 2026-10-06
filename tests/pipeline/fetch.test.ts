@@ -1,5 +1,22 @@
-import { describe, expect, it } from "vitest";
-import { stripHtml, pickFirst } from "@/lib/pipeline/fetch";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { fetchHtml, stripHtml, pickFirst } from "@/lib/pipeline/fetch";
+
+afterEach(() => vi.unstubAllGlobals());
+
+it("refuses restricted and metadata-only raw extraction before a request", async () => {
+  const fetcher = vi.fn(); vi.stubGlobal("fetch", fetcher);
+  expect(await fetchHtml("https://www.pro-football-reference.com/players/F/Fixture00.htm")).toEqual({ ok: false, reason: "blocked" });
+  expect(await fetchHtml("https://example.com/story")).toEqual({ ok: false, reason: "blocked" });
+  expect(fetcher).not.toHaveBeenCalled();
+});
+
+it("bounds registered HTML and never follows a redirect to another source", async () => {
+  const fetcher = vi.fn().mockResolvedValue(new Response("<p>Biography</p>")); vi.stubGlobal("fetch", fetcher);
+  expect(await fetchHtml("https://en.wikipedia.org/wiki/Fixture_Athlete")).toMatchObject({ ok: true, html: "<p>Biography</p>" });
+  expect(fetcher.mock.calls[0][1]).toMatchObject({ cache: "no-store", redirect: "error" });
+  fetcher.mockResolvedValue(new Response("x".repeat(1024 * 1024 + 1)));
+  expect(await fetchHtml("https://en.wikipedia.org/wiki/Fixture_Athlete")).toEqual({ ok: false, reason: "blocked" });
+});
 
 describe("stripHtml", () => {
   it("strips tags and condenses whitespace", () => {

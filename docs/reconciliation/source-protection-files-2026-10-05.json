@@ -1,0 +1,278 @@
+{
+  "reviewDate": "2026-10-05",
+  "base": "1f987276a84fb3728fb83bdf562d5f12a1f43970",
+  "branch": "codex/doctrine-reconciliation-2026-10-05",
+  "excludesOwnHash": true,
+  "files": [
+    {
+      "file": "app/admin/preview-lockers/CfbCsvImport.tsx",
+      "action": "update",
+      "bytes": 7434,
+      "sha256": "600cef19f6eac742c4691078d51a108a67c53db4edae41d0d72d82405f9b7874"
+    },
+    {
+      "file": "app/admin/preview-lockers/PreviewLockerForm.tsx",
+      "action": "update",
+      "bytes": 48253,
+      "sha256": "46615af21d3d8327aa4e58e37f46ee8cb12819e9ac8abb718eebe2b7db42e0b3"
+    },
+    {
+      "file": "app/api/preview-lockers/[id]/route.ts",
+      "action": "update",
+      "bytes": 2970,
+      "sha256": "a2b32512693c5a4281c18561a72c8b506fc92e6611197cd8c58b1560f84c772d"
+    },
+    {
+      "file": "app/api/preview-lockers/route.ts",
+      "action": "update",
+      "bytes": 4189,
+      "sha256": "0273660445bd33a1d850d5417f40d26d89569a178fc5e6c050f83dc14826a4b8"
+    },
+    {
+      "file": "docs/ACTIVE_BUILD.md",
+      "action": "update",
+      "bytes": 3921,
+      "sha256": "da970e29390f4f6229a24e4e0338d41faa5293ce3a41129718f5cfd3c1498d0a"
+    },
+    {
+      "file": "docs/intelligence/CTO-STATUS.md",
+      "action": "update",
+      "bytes": 2262,
+      "sha256": "9c684be2541f3309b9eb0044c999ff442691dec4b2c129e17c3c800c26a47ef2"
+    },
+    {
+      "file": "docs/reconciliation/held-work-2026-10-05.md",
+      "action": "update",
+      "bytes": 4381,
+      "sha256": "20434724b9071bf5532eb5b5eb4045007908c219ff6d6ede2f8221d643e1d7c9"
+    },
+    {
+      "file": "docs/reconciliation/nfl-master-import-review-2026-10-05.md",
+      "action": "add",
+      "bytes": 19789,
+      "sha256": "2ff3004356508dadf724a85fde1c7b106d5250f0c8edd04728876c77df502184"
+    },
+    {
+      "file": "docs/reconciliation/source-protections-2026-10-05.md",
+      "action": "add",
+      "bytes": 8023,
+      "sha256": "61976b0aaca14027a9ce76554c72fd40d1f15b82e4c9ce4db11839a046107c56"
+    },
+    {
+      "file": "lib/enrichment/article-metadata.ts",
+      "action": "update",
+      "bytes": 5708,
+      "sha256": "c662cc4d50a4080a639554df350f543915bfba65d4ddd787467d58269dcafca5"
+    },
+    {
+      "file": "lib/enrichment/awards.ts",
+      "action": "update",
+      "bytes": 3771,
+      "sha256": "3d0a6349c30dfe47d45b4864ade28d1ff5a51811c2660400703e76aca06fa084"
+    },
+    {
+      "file": "lib/enrichment/news.ts",
+      "action": "update",
+      "bytes": 8437,
+      "sha256": "1eda19ed74f2f0339c12a3df15b44db2bace32562a6d61e5f32885fdaa51746f"
+    },
+    {
+      "file": "lib/enrichment/safe-fetch.ts",
+      "action": "update",
+      "bytes": 4115,
+      "sha256": "75f487714f66a474d10cc7ccc825019da14cc408b3b2aeb3c51329b35c6bff87"
+    },
+    {
+      "file": "lib/pipeline/claude.ts",
+      "action": "update",
+      "bytes": 10875,
+      "sha256": "bc3485cb01d340ccbcc73fb6e7cb0f64f89947967c7443e4bc2c3f403d49052d"
+    },
+    {
+      "file": "lib/pipeline/fetch.ts",
+      "action": "update",
+      "bytes": 3131,
+      "sha256": "50894822b91169ff7de51410de4f76e2205d451723daef3cd89189133939b677"
+    },
+    {
+      "file": "lib/pipeline/run.ts",
+      "action": "update",
+      "bytes": 13287,
+      "sha256": "1ee576d72a754336b69a075327931023841d59523269b36900ae0a9c26abc55a"
+    },
+    {
+      "file": "lib/pipeline/scrapers/cfbverse.ts",
+      "action": "update",
+      "bytes": 5890,
+      "sha256": "a107585ee3d620ddde5edad959ab1c3006d18a9e8ecb2ceb5de12badf46a1d26"
+    },
+    {
+      "file": "lib/pipeline/scrapers/espn.ts",
+      "action": "update",
+      "bytes": 10096,
+      "sha256": "02f74ed19aa2c245bdfe35f553601ed9873ca43b1cee0fd8d1314cc5127ab19a"
+    },
+    {
+      "file": "lib/pipeline/scrapers/nflverse.ts",
+      "action": "update",
+      "bytes": 6097,
+      "sha256": "1a706322e957709d34cc386b3da2c7c88f363d4f25d20a310a032be7977b07bc"
+    },
+    {
+      "file": "lib/pipeline/scrapers/wikipedia.ts",
+      "action": "update",
+      "bytes": 17386,
+      "sha256": "f6214f404c2b5fdf15800e04703e000962c92cf2176855f806a08d76854f9912"
+    },
+    {
+      "file": "lib/pipeline/scrapers/youtube.ts",
+      "action": "update",
+      "bytes": 3608,
+      "sha256": "1a7b8e77cd4b5709d6d69d517f22d76c08e91d6c98134e7a98899fb01d6ecd64"
+    },
+    {
+      "file": "lib/pipeline/types.ts",
+      "action": "update",
+      "bytes": 5834,
+      "sha256": "d384665aeb2be9c93dc10b7a941b0c113ed12a261cf81c6671288ef4feb637e7"
+    },
+    {
+      "file": "lib/player/school-identity.ts",
+      "action": "add",
+      "bytes": 3857,
+      "sha256": "0444df6ac08d056e5d095f93599d0dbc1d2fdc5cc59c5ecacd1012b053429cb9"
+    },
+    {
+      "file": "lib/preview-lockers/branding.ts",
+      "action": "update",
+      "bytes": 4103,
+      "sha256": "0344e4c0f3b7adfc6be29c385e46071cea0d987137bae5ff1d586f1e6a14faca"
+    },
+    {
+      "file": "lib/preview-lockers/enrichment.ts",
+      "action": "update",
+      "bytes": 11653,
+      "sha256": "d838486f89d9395a2a9f6dd0cc9de2f00ddda43501488591c1974f273baf0606"
+    },
+    {
+      "file": "lib/preview-lockers/school-branding.ts",
+      "action": "update",
+      "bytes": 1344,
+      "sha256": "68f55e378698519fc4778dc440307b6bab443256548708021dc1de82fb0ab475"
+    },
+    {
+      "file": "lib/search/tavily.ts",
+      "action": "update",
+      "bytes": 4668,
+      "sha256": "60a646d4b9b58e01d2d739ab33f0150a34d06c7e1af17c0efb60fa692baa9993"
+    },
+    {
+      "file": "lib/source-policy/fetch.ts",
+      "action": "add",
+      "bytes": 661,
+      "sha256": "6484c20f29dd99e8d16c19fa5475db616c2c0f13f6abaa3d56e22c5a764b90f2"
+    },
+    {
+      "file": "lib/source-policy/policy.ts",
+      "action": "add",
+      "bytes": 8419,
+      "sha256": "b51acd253ef875c723fad54965d4f8cee69d088b081d46eec5706248d08a97c5"
+    },
+    {
+      "file": "lib/source-policy/preview-stats.ts",
+      "action": "add",
+      "bytes": 665,
+      "sha256": "73230018149a7bad2ae2b4f9ce9e4eaa1004e29feb45f979a930fc6c0b2f5899"
+    },
+    {
+      "file": "lib/source-policy/results.ts",
+      "action": "add",
+      "bytes": 2035,
+      "sha256": "e3520dac35c0d51d4260e51cee00c3203e74aa323e748bd8bee6deb2dcd3a7ac"
+    },
+    {
+      "file": "lib/sportradar/client.ts",
+      "action": "update",
+      "bytes": 3377,
+      "sha256": "f99d6234cbebb7f42429aaefc041393a319d8a09fef7f4861c732dffcf942cf0"
+    },
+    {
+      "file": "tests/pipeline/fetch.test.ts",
+      "action": "update",
+      "bytes": 2318,
+      "sha256": "1c256eb4813a341b61bf70953c309b254c1d588c261eb40c8172d2645a07b042"
+    },
+    {
+      "file": "tests/pipeline/source-policy.test.ts",
+      "action": "add",
+      "bytes": 2602,
+      "sha256": "3e4ec607ac75d8793aecb3c346ee7ce84392e8d2f73f8145e5566da455072a5e"
+    },
+    {
+      "file": "tests/pipeline/wikipedia-source-policy.test.ts",
+      "action": "add",
+      "bytes": 2622,
+      "sha256": "69c8361af4cfb1c6272f4f1e5649520f87deecbd2f39b137a7ff94a604f9d81e"
+    },
+    {
+      "file": "tests/player/school-identity.test.ts",
+      "action": "add",
+      "bytes": 5950,
+      "sha256": "53deddb7ba25c392bacd535c408def8b259147d690db8257336be19c973b3c7b"
+    },
+    {
+      "file": "tests/preview-lockers/enrichment-fetch.test.ts",
+      "action": "update",
+      "bytes": 4065,
+      "sha256": "1c89dcdd7bddf22b579bac6e103d491d5c63c9696901a57d1191a3a3745c7d46"
+    },
+    {
+      "file": "tests/preview-lockers/enrichment-persistence.test.ts",
+      "action": "update",
+      "bytes": 7999,
+      "sha256": "f8d6167202d54079c651f4196cf05961161eca2561a5f5e3f931fc7db6955823"
+    },
+    {
+      "file": "tests/preview-lockers/enrichment.test.ts",
+      "action": "update",
+      "bytes": 13107,
+      "sha256": "e4a4a87ca6dc39069b3eee78e0db008ff8053d83dd50d1843f7eebde5298c010"
+    },
+    {
+      "file": "tests/preview-lockers/form.test.tsx",
+      "action": "update",
+      "bytes": 37856,
+      "sha256": "0fca3542aea8d4d35035c8651e7d4e502438333503c1c22e3b3f9160ec6f71af"
+    },
+    {
+      "file": "tests/preview-lockers/tavily-workflow.test.ts",
+      "action": "update",
+      "bytes": 6522,
+      "sha256": "95f78fe666380da848009f648d00b7b2b425125ab33045e76daf642b3630684b"
+    },
+    {
+      "file": "tests/preview-lockers/tavily.test.ts",
+      "action": "update",
+      "bytes": 6664,
+      "sha256": "24e49d6c31b6a7a4630b476cea06231d821b1490ae2ad8c8fbe9599f1ac07dd6"
+    },
+    {
+      "file": "tests/source-policy/policy.test.ts",
+      "action": "add",
+      "bytes": 8002,
+      "sha256": "f2e977a308862bba85e7fdc4dc378aeed7ba098a70c68991218e026f392d7147"
+    },
+    {
+      "file": "tests/source-policy/preview-api.test.ts",
+      "action": "add",
+      "bytes": 5447,
+      "sha256": "44414febb871d5c30a19a20fd31186865965ae71734580cf44c22d559838c472"
+    },
+    {
+      "file": "tests/source-policy/stats-persistence.test.ts",
+      "action": "add",
+      "bytes": 2796,
+      "sha256": "f36fc51708ca7df6bc22ac33c67a63d0453c617f6d7f0d3ebf830c146652851b"
+    }
+  ]
+}

@@ -11,14 +11,20 @@ their recoverable original is in the reconciliation snapshot.
 - Primary source now uses `codex/doctrine-reconciliation-2026-10-05`.
   Awards/news enrichment and Tavily hardening are selectively restored while
   preserving the current UI and access rules.
+- Approved source protections and campus-safe school matching are restored.
+  Sports Reference remains link-only; exact saved college CSV entries may be
+  retained or removed, but no new manual CSV source is authorized. Automated
+  adapter permissions do not authorize arbitrary uploaded tables. See
+  [restoration report](../reconciliation/source-protections-2026-10-05.md).
 - Original source is backed up and tracked edits stashed. Old prototypes are
   retired; latest references/licenses remain. Decks/deliverables stay uncommitted.
 - Hosted enrichment migration history and provider/browser checks remain release
   gates. Missing storage stops before paid discovery and preserves the preview.
   Unverified awards do not become verified achievements, rights or earnings.
 - Historical checkouts with unknown ownership/unique work are catalogued, not
-  force-deleted. Unique importer/source protections are held for review. Never run
-  the historical CFB backfill during cleanup.
+  force-deleted. The NFL importer received a separate restoration review and
+  remains held for a scoped implementation/source decision. Never run the
+  historical CFB backfill during cleanup.
 
 No completed foundation phase, partner agreement, publishing or payment entitlement
 is inferred. Partial coverage and nine rules are not the full Intelligence engine.

@@ -27,6 +27,18 @@ it("accepts an explicit empty results array", async () => {
   expect(await tavilySearch("Fixture Athlete")).toEqual([]);
 });
 
+it("keeps restricted discovery links without their title/snippet and drops denied URLs", async () => {
+  fetcher.mockResolvedValue(Response.json({ results: [
+    { title: "Restricted extracted title", url: "https://www.pro-football-reference.com/players/F/Fixture00.htm", content: "Restricted statistics" },
+    { title: "Local", url: "http://localhost/private", content: "Do not retain" },
+    { title: "Story", url: "https://example.com/story", content: "Allowed metadata" },
+  ] }));
+  expect(await tavilySearch("Fixture Athlete")).toEqual([
+    { title: "Reference link", url: "https://www.pro-football-reference.com/players/F/Fixture00.htm", snippet: undefined },
+    { title: "Story", url: "https://example.com/story", snippet: "Allowed metadata" },
+  ]);
+});
+
 it.each([undefined, "", "   "])("never sends a request with missing/blank credentials (%s)", async key => {
   vi.stubEnv("TAVILY_API_KEY", key);
   expect(configuredSearchProvider()).toBeNull();

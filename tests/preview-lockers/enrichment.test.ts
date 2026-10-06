@@ -73,7 +73,8 @@ describe("publisher metadata", () => {
     expect(articleRelevance({ ...article, headline: "John Hughes returns to Cal" }, identity)).toBe(0);
     expect(articleRelevance({ ...article, headline: "Daymeion Hughes speaks", summary: "The actor spoke today." }, identity)).toBeLessThan(0.8);
     expect(articleRelevance({ ...article, headline: "Daymeion Hughes speaks", summary: "Football news" }, identity)).toBeLessThan(0.8);
-    expect(identityQueries(identity)).toContain('Daymeion Hughes football Cal news interviews');
+    expect(identityQueries(identity)).toContain('Daymeion Hughes football California news interviews');
+    expect(identityQueries({ ...identity, schools: ["Cal", "California", "CAL", "UC Berkeley"] })).toHaveLength(2);
   });
   it("deduplicates search candidates and survives blocked publishers", async () => {
     const extract = vi.fn(async (url: string) => { if (url.endsWith("blocked")) throw new Error("blocked"); return article; });

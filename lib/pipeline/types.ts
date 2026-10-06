@@ -2,6 +2,7 @@
  * Shared types for the onboarding pipeline. These are the only things the
  * SSE consumer (client) and the run orchestrator (server) need to agree on.
  */
+import type { PolicyDiagnostics, SourceProvenance } from "@/lib/source-policy/policy";
 
 export type PipelineStatus =
   | "pending"
@@ -111,7 +112,7 @@ export interface ScraperResult {
     bio_text: string;
     awards: ScrapedAward[];
     youtube_urls: string[];
-    photos: { url: string; credits?: string; width?: number; height?: number }[];
+    photos: { url: string; credits?: string; width?: number; height?: number; source_url?: string; provenance?: SourceProvenance }[];
     /**
      * Stable cross-source player ID. Currently only emitted by the nflverse
      * scraper (NFL `gsis_id`). Persisted to `players.gsis_id` on publish so
@@ -121,6 +122,10 @@ export interface ScraperResult {
   }>;
   /** Raw URLs visited so we can show provenance to the athlete. */
   urls?: string[];
+  /** Actual registered extraction endpoints, distinct from display citations. */
+  fact_source_urls?: string[];
+  provenance?: SourceProvenance[];
+  source_policy?: PolicyDiagnostics;
 }
 
 export interface PipelineDraft {
@@ -156,5 +161,5 @@ export interface PipelineDraft {
    * scrapers default to false until the athlete confirms during Review. */
   confirmed: Partial<Record<string, boolean>>;
   /** Provenance summary for ClaimRecap and the Review trust badges. */
-  sources: { url: string; source: ScraperSource }[];
+  sources: { url: string; source: ScraperSource; provenance?: SourceProvenance }[];
 }

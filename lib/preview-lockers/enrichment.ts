@@ -5,11 +5,12 @@ import { normalizeAward, normalizeAwards, catalogImage, type CatalogAward, type 
 import type { EnrichmentDatabase } from "@/types/enrichment.generated";
 import type { Json } from "@/types/database.generated";
 import { discoverNews, headlineKey, type NewsIdentity, type NewsResult, type PlayerArticle } from "@/lib/enrichment/news";
-import { extractArticleMetadata } from "@/lib/enrichment/article-metadata";
-import { fetchArticleHtml } from "@/lib/enrichment/safe-fetch";
+import { fetchArticleMetadata } from "@/lib/enrichment/safe-fetch";
 import { configuredSearchProvider } from "@/lib/enrichment/search-provider";
 import { isNewsArticleUrl } from "@/lib/enrichment/news-classification";
 import type { PreviewContent } from "./validation";
+import { directorySchoolAliases, type SchoolBrandRow } from "./branding";
+import { requireSourceAction, remoteAssetReference, type PolicyDiagnostics } from "@/lib/source-policy/policy";
 
 export function previewNewsIdentity(content: Pick<PreviewContent, "full_name" | "position" | "pro_teams" | "school" | "schools">): NewsIdentity {
   return { fullName: content.full_name, sport: "football", position: content.position ?? undefined,
@@ -19,6 +20,7 @@ export function previewIdentityKey(content: Pick<PreviewContent, "full_name" | "
   return createHash("sha256").update(JSON.stringify(previewNewsIdentity(content))).digest("hex");
 }
 export interface EnrichmentReport {
+  source_policy?: PolicyDiagnostics;
   news_status?: NewsResult["status"] | "skipped";
   last_news_success?: Omit<EnrichmentReport, "last_news_success"> | null;
   status: "complete" | "partial" | "unavailable";
@@ -45,6 +47,7 @@ export async function buildEnrichment(content: PreviewContent, dependencies: {
     unmapped_awards: normalized?.filter(a => !a.award_id).map(a => a.raw_label) ?? [],
     article_candidates: articles?.candidates ?? 0, articles_accepted: articles?.articles.length ?? 0,
     articles_rejected: articles?.rejected ?? 0, article_duplicates: articles?.duplicates ?? 0,
+    source_policy: articles?.source_policy,
     errors, updated_at: new Date().toISOString(),
   } };
 }
@@ -71,20 +74,33 @@ export async function enrichSavedPreview(client: SupabaseClient, id: string, con
       if (!needsNews) return { articles: [], candidates: 0, rejected: 0, duplicates: 0, errors: [], status: "complete" };
       const provider = configuredSearchProvider();
       if (!provider) return discoverNews(previewNewsIdentity(content), null, async () => null, AbortSignal.timeout(1));
+      const identity = previewNewsIdentity(content);
+      // Aliases are reference context for discovery only, never stored affiliations
+      // or input to the saved identity hash used by revision-scoped persistence.
+      try {
+        const { data, error } = await client.from("cfb_teams").select("display_name,location,mascot,abbreviation,primary_color,logo_url,logo_dark_url").limit(1000);
+        if (!error && data) identity.schools = directorySchoolAliases(identity.schools, data as SchoolBrandRow[]);
+      } catch { /* Missing directory access preserves the original saved identity. */ }
       // Reuse the existing per-admin daily budget and identity cooldown.
       const admission = await client.rpc("admit_preview_discovery", { p_identity_hash: createHash("sha256").update(`news:${identityKey}`).digest("hex") });
       if (admission.error || !admission.data) throw new Error("news_rate_limited");
       let succeeded = false;
       try {
-        const result = await discoverNews(previewNewsIdentity(content), provider, async (url, signal) => {
-          const page = await fetchArticleHtml(url, signal);
-          return extractArticleMetadata(page.html, page.url);
-        }, AbortSignal.timeout(50_000), knownUrls);
+        const result = await discoverNews(identity, provider, fetchArticleMetadata, AbortSignal.timeout(50_000), knownUrls);
         succeeded = result.status !== "unavailable";
         return result;
       } finally { await client.rpc("finalize_preview_discovery", { p_request_id: admission.data, p_succeeded: succeeded }); }
     },
   });
+  // Defense at the persistence boundary, even if an alternate discovery adapter
+  // returns metadata that did not pass the normal source checks.
+  for (const article of snapshot.news?.articles ?? []) {
+    requireSourceAction(article.article_url, "EXTRACT_METADATA");
+    requireSourceAction(article.article_url, "PERSIST_METADATA");
+    requireSourceAction(article.canonical_url, "EXTRACT_METADATA");
+    requireSourceAction(article.canonical_url, "PERSIST_METADATA");
+    article.thumbnail_url = remoteAssetReference(article.thumbnail_url);
+  }
   snapshot.report.news_status = !needsNews ? "skipped" : snapshot.news?.status ?? "unavailable";
   const { data, error } = await (client as SupabaseClient<EnrichmentDatabase>).rpc("save_preview_enrichment", {
     p_preview_id: id, p_revision: revision, p_identity_key: identityKey, p_started_at: startedAt,

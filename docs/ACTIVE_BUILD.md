@@ -27,8 +27,10 @@ hosted migration history; remote application is not part of this reconciliation.
 
 Do not restore the original stash wholesale. It mixes useful additions and stale
 removals. Do not merge deferred Organization/CRM branches to resolve ordinary app
-differences. Historical unique importer/source-policy work is held for review,
-not automatically discarded or represented as integrated.
+differences. Source protections and campus-safe school matching were subsequently
+approved for selective restoration. Follow
+`reconciliation/source-protections-2026-10-05.md` for the follow-up checkpoint.
+The older NFL importer remains a separate reviewed candidate, not active code.
 
 ## Production remains gated
 

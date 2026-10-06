@@ -5,6 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ConversionDatabase } from "@/types/preview-conversion.generated";
 import type { PreviewDatabase } from "@/types/preview-lockers.generated";
 import { tryEnrichSavedPreview } from "@/lib/preview-lockers/enrichment";
+import { canSaveStatsImports } from "@/lib/source-policy/preview-stats";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,6 +17,16 @@ export async function POST(req: Request) {
     if (!parsed.success) throw new PreviewError("invalid_input", 400);
     const { id, content, enrollment } = parsed.data;
     if (enrollment && process.env.PREVIEW_CONVERSION_ENABLED !== "true") throw new PreviewError("conversion_unavailable", 503);
+    if (!canSaveStatsImports(content.cfb_stats)) {
+      // Old restricted records may be retried unchanged, never created or expanded.
+      const previous = await client.from("preview_lockers").select(PREVIEW_COLUMNS).eq("id", id).maybeSingle();
+      if (previous.error) throw new PreviewError("preview_unavailable", 503);
+      if (!previous.data) throw new PreviewError("source_policy_blocked", 400);
+      const row = previewRecord.parse(previous.data);
+      if (row.revision !== 1 || !Object.entries(content).every(([key, value]) => equivalentPreview(row[key as keyof typeof row], value))) throw new PreviewError("preview_conflict", 409);
+      if (!enrollment) return json({ id: row.id, slug: row.slug, revision: row.revision });
+      // Enrollment retries still pass through the existing identity-bound RPC.
+    }
     if (!previewMediaBelongsTo(id, content)) throw new PreviewError("invalid_media_path", 400);
     await assertPreviewMediaExists(client, content);
     if (enrollment) {

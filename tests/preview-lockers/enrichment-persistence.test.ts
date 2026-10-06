@@ -44,6 +44,16 @@ it("passes successful empty discovery as an explicit replacement", async () => {
   await enrichSavedPreview(db, "preview", content, 2);
   expect(rpc).toHaveBeenCalledWith("save_preview_enrichment", expect.objectContaining({ p_articles: [] }));
 });
+it("checks alternate discovery output before the persistence RPC", async () => {
+  const { db, rpc } = client();
+  mocks.discover.mockResolvedValue({ ...news, articles: [{
+    article_url: "https://www.pro-football-reference.com/players/H/HughDa20.htm",
+    canonical_url: "https://www.pro-football-reference.com/players/H/HughDa20.htm",
+    thumbnail_url: null,
+  }] });
+  await expect(enrichSavedPreview(db, "preview", content, 2)).rejects.toThrow("source_policy_blocked");
+  expect(rpc.mock.calls.some(([name]) => name === "save_preview_enrichment")).toBe(false);
+});
 it("reports HTTP conflicts as preview changes without pretending the attempt saved", async () => {
   const { db, rpc } = client();
   rpc.mockImplementation(async name => name === "save_preview_enrichment"

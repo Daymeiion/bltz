@@ -251,7 +251,9 @@ export async function synthesize(opts: SynthesizeOptions): Promise<PipelineDraft
     confirmed: { bio: Boolean(wikiBio), dob: false, height_in: false, weight_lbs: false, games_played: false },
     sources: results
       .filter((r) => r.ok && r.urls?.length)
-      .flatMap((r) => r.urls!.map((u) => ({ url: u, source: r.source }))),
+      .flatMap((r) => r.urls!.map((u) => ({ url: u, source: r.source,
+        ...(r.provenance?.find(p => p.source_url === u) ? { provenance: r.provenance.find(p => p.source_url === u) } : {}),
+      }))),
   };
 
   return gate(draft, factual);

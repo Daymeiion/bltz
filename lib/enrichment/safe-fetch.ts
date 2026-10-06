@@ -3,6 +3,8 @@ import { lookup } from "node:dns/promises";
 import { request } from "node:https";
 import { isIP } from "node:net";
 import { isPreviewUrl } from "@/lib/preview-lockers/validation";
+import { requireSourceAction } from "@/lib/source-policy/policy";
+import { extractArticleMetadata } from "./article-metadata";
 
 /** Deliberately restrict outbound metadata fetches to globally routable IPv4. */
 export function isPublicAddress(address: string): boolean {
@@ -24,11 +26,14 @@ async function publicAddress(hostname: string, signal: AbortSignal) {
     return result[0].address;
   } finally { signal.removeEventListener("abort", onAbort); }
 }
-export async function fetchArticleHtml(input: string, parentSignal: AbortSignal): Promise<{ html: string; url: string }> {
+async function fetchArticleHtml(input: string, parentSignal: AbortSignal): Promise<{ html: string; url: string }> {
   const signal = AbortSignal.any([parentSignal, AbortSignal.timeout(7000)]);
   let url = input;
   for (let redirects = 0; redirects <= 3; redirects++) {
     if (!isPreviewUrl(url) || signal.aborted) throw new Error("unsafe_destination");
+    // Every redirected destination is a separate permission decision, before DNS.
+    requireSourceAction(url, "EXTRACT_METADATA");
+    requireSourceAction(url, "PERSIST_METADATA");
     const parsed = new URL(url);
     const address = await publicAddress(parsed.hostname, signal);
     const result = await new Promise<{ html?: string; location?: string }>((resolve, reject) => {
@@ -58,4 +63,10 @@ export async function fetchArticleHtml(input: string, parentSignal: AbortSignal)
     url = new URL(result.location!, url).href;
   }
   throw new Error("too_many_redirects");
+}
+
+/** The sanctioned public boundary returns metadata only, never publisher HTML. */
+export async function fetchArticleMetadata(url: string, signal: AbortSignal) {
+  const page = await fetchArticleHtml(url, signal);
+  return extractArticleMetadata(page.html, page.url);
 }

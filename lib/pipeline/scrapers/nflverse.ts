@@ -1,4 +1,5 @@
 import type { PlayerIdentityInput, ScraperResult } from "../types";
+import { requireSourceAction } from "@/lib/source-policy/policy";
 
 /**
  * nflverse scraper.
@@ -51,6 +52,8 @@ export async function scrapeNflverse(
   if (!name) return { source: "nflverse", ok: false, reason: "no_match" };
 
   try {
+    requireSourceAction(NFLVERSE_SOURCE_URL, "EXTRACT_FACTS");
+    requireSourceAction(NFLVERSE_SOURCE_URL, "PERSIST_FACTS");
     const q = await queryByName(sbUrl, sbKey, name);
     if ("error" in q) {
       return { source: "nflverse", ok: false, reason: q.error };
@@ -87,6 +90,7 @@ async function queryByName(
   let res: Response;
   try {
     res = await fetch(url, {
+      redirect: "error", cache: "no-store", signal: AbortSignal.timeout(8000),
       headers: {
         apikey: sbKey,
         Authorization: `Bearer ${sbKey}`,
@@ -167,5 +171,6 @@ function toResult(row: NflPlayerRow): ScraperResult {
       gsis_id: row.gsis_id,
     },
     urls,
+    fact_source_urls: [NFLVERSE_SOURCE_URL],
   };
 }

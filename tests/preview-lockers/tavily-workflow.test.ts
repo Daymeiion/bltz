@@ -2,7 +2,10 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ client: vi.fn(), html: vi.fn() }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: mocks.client }));
-vi.mock("@/lib/enrichment/safe-fetch", () => ({ fetchArticleHtml: mocks.html }));
+vi.mock("@/lib/enrichment/safe-fetch", () => ({ fetchArticleMetadata: async (url: string, signal: AbortSignal) => {
+  const page = await mocks.html(url, signal);
+  return (await import("@/lib/enrichment/article-metadata")).extractArticleMetadata(page.html, page.url);
+} }));
 import { POST } from "@/app/api/preview-lockers/route";
 import { previewContent } from "@/lib/preview-lockers/validation";
 import { previewIdentityKey } from "@/lib/preview-lockers/enrichment";

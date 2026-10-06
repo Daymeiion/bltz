@@ -13,6 +13,7 @@
 import { createServiceClient } from "@/lib/supabase/service";
 import { SCRAPERS } from "./scrapers";
 import { synthesize } from "./claude";
+import { policyCheckedResult } from "@/lib/source-policy/results";
 import {
   SOURCE_UNHEALTHY_REASONS,
   type PipelineDraft,
@@ -202,7 +203,7 @@ export async function executePipeline(
 
   for (const { source, run } of SCRAPERS) {
     try {
-      const result = await withTimeout(run(identity), 12_000, source);
+      const result = policyCheckedResult(await withTimeout(run(identity), 12_000, source));
       results.push(result);
       if (result.ok) {
         await sink.emit({
@@ -217,7 +218,7 @@ export async function executePipeline(
         // paused dependency) — a `no_match` / `ambiguous` is an expected miss
         // and stays quiet. This is the observability the paused-Supabase
         // incident was missing: it failed silently behind a clean "miss".
-        if (result.reason && SOURCE_UNHEALTHY_REASONS.has(result.reason)) {
+        if (result.reason && !result.source_policy?.rejected && SOURCE_UNHEALTHY_REASONS.has(result.reason)) {
           console.warn(
             `[pipeline] source unhealthy source=${source} reason=${result.reason} athlete=${JSON.stringify(identity.full_name)}`,
           );
@@ -226,7 +227,9 @@ export async function executePipeline(
           at: nowIso(),
           phase: "scrape_miss",
           source,
-          message: friendlyMiss(source, result.reason),
+          message: result.source_policy?.rejected
+            ? `${source}: configured source policy blocks this data; continue with permitted sources.`
+            : friendlyMiss(source, result.reason),
         });
       }
     } catch {
@@ -252,7 +255,7 @@ export async function executePipeline(
   const everyFailureIsSourceSide =
     results.length > 0 &&
     results.every(
-      (r) => !r.ok && r.reason != null && SOURCE_UNHEALTHY_REASONS.has(r.reason),
+      (r) => !r.ok && !r.source_policy?.rejected && r.reason != null && SOURCE_UNHEALTHY_REASONS.has(r.reason),
     );
   const dbBackedDown = results
     .filter((r) => DB_BACKED_SOURCES.has(r.source))

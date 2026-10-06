@@ -1,6 +1,8 @@
 import { isPreviewUrl } from "@/lib/preview-lockers/validation";
 import { SearchProviderError } from "@/lib/search/errors";
 import { isNewsArticleUrl } from "./news-classification";
+import { evaluateSource, requireSourceAction, remoteAssetReference, sourceProvenance, policyDiagnostics, type SourceProvenance, type PolicyDiagnostics } from "@/lib/source-policy/policy";
+import { mentionsSchool, schoolDisplayName } from "@/lib/player/school-identity";
 
 export interface NewsIdentity {
   fullName: string; aliases?: string[]; sport: string; league?: string;
@@ -13,7 +15,7 @@ export interface SearchProvider {
 export interface ArticleMetadata {
   headline: string; article_url: string; canonical_url: string; publisher: string;
   source_domain: string; author: string | null; published_at: string | null;
-  thumbnail_url: string | null; summary: string; metadata: { extraction: string };
+  thumbnail_url: string | null; summary: string; metadata: { extraction: string; provenance?: SourceProvenance };
 }
 export interface PlayerArticle extends ArticleMetadata {
   discovery_source: string; discovered_at: string; relevance_score: number; confidence: number;
@@ -22,6 +24,7 @@ export interface PlayerArticle extends ArticleMetadata {
 export interface NewsResult {
   articles: PlayerArticle[]; candidates: number; rejected: number; duplicates: number;
   errors: string[]; status: "complete" | "partial" | "unavailable";
+  source_policy?: PolicyDiagnostics;
 }
 export function normalizeArticleUrl(value: string, base?: string): string | null {
   try {
@@ -48,7 +51,7 @@ export function dedupeArticles<T extends ArticleMetadata>(articles: T[]): T[] {
   });
 }
 export function identityQueries(identity: NewsIdentity): string[] {
-  const context = [identity.teams[0] || identity.sport, ...identity.schools.slice(0, 1)];
+  const context = [identity.teams[0] || identity.sport, ...identity.schools.slice(0, 1).map(schoolDisplayName)];
   if (!context.length) context.push(identity.sport);
   return [...new Set(context.map(term => `${identity.fullName.replace(/["\\]/g, "")} ${identity.sport} ${term} news interviews`))].slice(0, 2);
 }
@@ -58,7 +61,7 @@ export function articleRelevance(article: ArticleMetadata, identity: NewsIdentit
   if (![identity.fullName, ...(identity.aliases ?? [])].some(has)) return 0;
   const sport = has(identity.sport) || (identity.sport === "football" && (has("NFL") || has("Super Bowl")));
   const rams = identity.teams.some(team => /^(?:Los Angeles|St\.? Louis) Rams$/i.test(team));
-  const affiliation = [...identity.teams, ...identity.schools].some(has) || (rams && sport && has("Rams"));
+  const affiliation = identity.teams.some(has) || identity.schools.some(school => mentionsSchool(`${article.headline} ${article.summary}`, school)) || (rams && sport && has("Rams"));
   // Names, sport, league and position can all be shared by different athletes.
   // This workflow requires an explicit saved affiliation in publisher metadata.
   if (!affiliation) return 0.35;
@@ -69,13 +72,20 @@ export async function discoverNews(identity: NewsIdentity, provider: SearchProvi
   const result: NewsResult = { articles: [], candidates: 0, rejected: 0, duplicates: 0, errors: [], status: "complete" };
   if (!provider) return { ...result, status: "unavailable", errors: ["search_not_configured"] };
   const urls = new Set<string>();
+  const discovered: string[] = [];
+  const permitsMetadata = (url: string) => {
+    discovered.push(url);
+    result.source_policy = policyDiagnostics(discovered, "EXTRACT_METADATA");
+    return evaluateSource(url).allowed_actions.includes("EXTRACT_METADATA");
+  };
   // Previously accepted URLs are candidates, never automatic retained evidence.
   // Re-fetch their publisher metadata and apply the same current identity gates.
   for (const candidate of [...new Set(knownUrls)].slice(0, 6)) {
     const url = normalizeArticleUrl(candidate);
     if (!url || !isNewsArticleUrl(url)) continue;
-    urls.add(url);
     result.candidates++;
+    if (!permitsMetadata(url)) { result.rejected++; continue; }
+    urls.add(url);
   }
   for (const query of identityQueries(identity)) {
     if (signal.aborted) break;
@@ -83,6 +93,7 @@ export async function discoverNews(identity: NewsIdentity, provider: SearchProvi
       const candidates = await provider.search(query, signal);
       for (const candidate of candidates.slice(0, 8)) {
         result.candidates++;
+        if (!permitsMetadata(candidate.url)) { result.rejected++; continue; }
         const url = normalizeArticleUrl(candidate.url);
         if (!url) { result.rejected++; continue; }
         if (!isNewsArticleUrl(url)) { result.rejected++; continue; }
@@ -98,13 +109,22 @@ export async function discoverNews(identity: NewsIdentity, provider: SearchProvi
   // Small bounded batches, no background jobs. Keep data only after metadata and identity gates.
   const candidates = [...urls].slice(0, 12);
   for (let i = 0; i < candidates.length && !signal.aborted; i += 4) {
-    const batch = await Promise.all(candidates.slice(i, i + 4).map(async url => {
+    const batch = await Promise.all(candidates.slice(i, i + 4).map(async (url): Promise<PlayerArticle | null> => {
       try {
+        requireSourceAction(url, "EXTRACT_METADATA");
+        requireSourceAction(url, "PERSIST_METADATA");
         const article = await extract(url, signal);
         if (!article) { result.rejected++; return null; }
+        requireSourceAction(article.article_url, "EXTRACT_METADATA");
+        requireSourceAction(article.article_url, "PERSIST_METADATA");
+        requireSourceAction(article.canonical_url, "EXTRACT_METADATA");
+        requireSourceAction(article.canonical_url, "PERSIST_METADATA");
+        if (!isNewsArticleUrl(article.article_url) || !isNewsArticleUrl(article.canonical_url)) { result.rejected++; return null; }
         const confidence = articleRelevance(article, identity);
         if (confidence < 0.8) { result.rejected++; return null; }
-        return { ...article, discovery_source: provider.name, discovered_at: new Date().toISOString(),
+        return { ...article, thumbnail_url: remoteAssetReference(article.thumbnail_url),
+          metadata: { extraction: article.metadata.extraction, provenance: sourceProvenance(article.canonical_url, provider.name, confidence) },
+          discovery_source: provider.name, discovered_at: new Date().toISOString(),
           confidence, relevance_score: confidence, featured: false, status: "accepted" as const };
       } catch { result.rejected++; result.errors.push("metadata_unavailable"); return null; }
     }));

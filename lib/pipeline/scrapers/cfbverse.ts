@@ -1,4 +1,5 @@
 import type { PlayerIdentityInput, ScraperResult } from "../types";
+import { requireSourceAction } from "@/lib/source-policy/policy";
 
 /**
  * cfbverse scraper.
@@ -57,6 +58,8 @@ export async function scrapeCfbverse(
   if (!name) return { source: "cfbverse", ok: false, reason: "no_match" };
 
   try {
+    requireSourceAction(CFBD_SOURCE_URL, "EXTRACT_FACTS");
+    requireSourceAction(CFBD_SOURCE_URL, "PERSIST_FACTS");
     const q = await queryByName(sbUrl, sbKey, name);
     if ("error" in q) {
       return { source: "cfbverse", ok: false, reason: q.error };
@@ -90,6 +93,7 @@ async function queryByName(
   let res: Response;
   try {
     res = await fetch(url, {
+      redirect: "error", cache: "no-store", signal: AbortSignal.timeout(8000),
       headers: {
         apikey: sbKey,
         Authorization: `Bearer ${sbKey}`,
@@ -166,5 +170,6 @@ function toResult(row: CfbPlayerRow): ScraperResult {
     ok: true,
     facts,
     urls,
+    fact_source_urls: [CFBD_SOURCE_URL],
   };
 }
