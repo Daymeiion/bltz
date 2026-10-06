@@ -1,5 +1,6 @@
 import { YouTubePlayer } from "@/components/player/YouTubePlayer";
 import ConversionSurface from "@/components/preview-lockers/ConversionSurface";
+import PreviewEventTracker from "@/components/preview-lockers/PreviewEventTracker";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { readPrivatePreview } from "@/lib/preview-lockers/server";
@@ -13,5 +14,5 @@ export function PreviewVideoSource({ video }: { video: { id: string; title: stri
 export default async function PreviewVideos({ params }: { params: Promise<{ slug: string }> }) {
   const row = await readPrivatePreview((await params).slug); if (!row) notFound();
   const data = toFilmRoomData(row);
-  return <><FilmRoomView data={data} /><div className="p-6 text-center"><Link className="text-sm text-white/60 underline" href={`/preview-lockers/${row.slug}`}>Back to Locker</Link></div><ConversionSurface previewId={row.id} room="film_view"/></>;
+  return <><FilmRoomView data={data} /><PreviewEventTracker previewId={row.id} eventName="film_view"/><div className="p-6 text-center"><Link className="text-sm text-white/60 underline" href={`/preview-lockers/${row.slug}`}>Back to Locker</Link></div><ConversionSurface previewId={row.id} room="film_view"/></>;
 }

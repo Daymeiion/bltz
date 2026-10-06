@@ -11,5 +11,5 @@ export default async function PreviewVideoPage({ params }: { params: Promise<{ s
   const film = toFilmRoomData(data);
   const video = film.videos.find((item) => item.id === videoId);
   if (!video) return notFound();
-  return <VideoDetailView footer={<ConversionSurface previewId={data.id} room="film_view" />} data={{ ...film, video, views: 0, likes: 0, taggedTeammates: [], playerId: null, isFollowing: false }} />;
+  return <VideoDetailView previewId={data.id} footer={<ConversionSurface previewId={data.id} room="film_view" />} data={{ ...film, video, views: 0, likes: 0, taggedTeammates: [], playerId: null, isFollowing: false }} />;
 }

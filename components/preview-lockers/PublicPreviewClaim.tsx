@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { previewAnalyticsSessionId, trackPreviewEvent } from "@/lib/analytics/preview-client";
 import { Dialog, DialogContent, DialogDescription, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 export default function PublicPreviewClaim({ previewId }: { previewId: string }) {
@@ -19,7 +20,7 @@ export default function PublicPreviewClaim({ previewId }: { previewId: string })
       const response = await fetch("/api/preview-link-inquiries", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ previewId, email, featureRequests: feedback, consent }),
+        body: JSON.stringify({ previewId, email, featureRequests: feedback, consent, sessionId: previewAnalyticsSessionId() }),
       });
       if (!response.ok) throw new Error("We could not save your request. Please try again.");
       setSaved(true);
@@ -34,7 +35,7 @@ export default function PublicPreviewClaim({ previewId }: { previewId: string })
     <h2 className="text-3xl font-bold uppercase text-[#ffbb00]">CLAIM YOUR LOCKER</h2>
     <p className="mx-auto mb-6 mt-3 max-w-md text-sm text-white/70">Your career deserves a permanent home. Tell BLTZ where to reach you.</p>
     <Dialog>
-      <DialogTrigger asChild><button id="preview-locker-claim-trigger" className="min-h-11 rounded-xl bg-[#ffbb00] px-5 font-semibold text-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-white">Claim the locker ↗</button></DialogTrigger>
+      <DialogTrigger asChild><button id="preview-locker-claim-trigger" onClick={() => { void trackPreviewEvent({ previewId, eventName: "claim_click" }); }} className="min-h-11 rounded-xl bg-[#ffbb00] px-5 font-semibold text-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-white">Claim the locker ↗</button></DialogTrigger>
       <DialogContent className="max-h-[85dvh] overflow-y-auto rounded-[28px] border-white/10 bg-[#0B0E1A] text-left text-white sm:max-w-xl">
         <DialogTitle className="text-2xl font-bold uppercase text-[#ffbb00]">Claim your Locker</DialogTitle>
         <DialogDescription className="text-white/70">Share your email and optional feedback. BLTZ will review your request; Locker ownership requires verification.</DialogDescription>

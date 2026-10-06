@@ -29,6 +29,8 @@ import {
 import type { PublicVideo, PublicVideoLevel } from "@/lib/player/public-video";
 import { createClient } from "@/lib/supabase/client";
 import { trackProductEvent } from "@/lib/analytics/client";
+import { trackPreviewEvent } from "@/lib/analytics/preview-client";
+import PreviewEventTracker from "@/components/preview-lockers/PreviewEventTracker";
 import styles from "./video-detail.module.css";
 
 export type VideoDetailData = {
@@ -122,7 +124,7 @@ function VideoListItem({ video, lockerHref, current }: { video: PublicVideo; loc
   );
 }
 
-export default function VideoDetailView({ data, footer }: { data: VideoDetailData; footer?: React.ReactNode }) {
+export default function VideoDetailView({ data, footer, previewId }: { data: VideoDetailData; footer?: React.ReactNode; previewId?: string }) {
   const isPrivatePreview = data.lockerHref?.startsWith("/preview-lockers/") === true;
   const router = useRouter();
   const [searchOpen, setSearchOpen] = useState(false);
@@ -194,6 +196,7 @@ export default function VideoDetailView({ data, footer }: { data: VideoDetailDat
   const playerRef = useRef<HTMLElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const controlsTimerRef = useRef<number | null>(null);
+  const previewPlaybackRef = useRef({ assetId: data.video.id, started: false, lastTime: 0, watchedSeconds: 0 });
   const grouped = useMemo(
     () => LEVELS.map((level) => ({
       ...level,
@@ -203,6 +206,7 @@ export default function VideoDetailView({ data, footer }: { data: VideoDetailDat
   );
 
   useEffect(() => {
+    if (isPrivatePreview) return;
     void trackProductEvent({
       eventName: "media_viewed",
       source: "public_locker",
@@ -211,13 +215,37 @@ export default function VideoDetailView({ data, footer }: { data: VideoDetailDat
       properties: { media_id: data.video.id, media_type: "video", section: "video_detail" },
       dedupeKey: `media_viewed:video:${data.video.id}`,
     });
-  }, [data.playerId, data.slug, data.video.id]);
+  }, [data.playerId, data.slug, data.video.id, isPrivatePreview]);
+
+  function previewPlayback(video: HTMLVideoElement) {
+    if (previewPlaybackRef.current.assetId !== data.video.id) {
+      previewPlaybackRef.current = { assetId: data.video.id, started: false, lastTime: video.currentTime, watchedSeconds: 0 };
+    }
+    return previewPlaybackRef.current;
+  }
+
+  function trackPreviewProgress(video: HTMLVideoElement) {
+    if (!isPrivatePreview || !previewId) return;
+    const playback = previewPlayback(video);
+    const elapsed = video.currentTime - playback.lastTime;
+    playback.lastTime = video.currentTime;
+    // Count continuous native playback; seeking alone never earns a milestone.
+    if (!playback.started || document.visibilityState !== "visible" || video.paused || video.seeking || elapsed <= 0 || elapsed > Math.max(2, video.playbackRate * 2)) return;
+    playback.watchedSeconds += elapsed;
+    if (!Number.isFinite(video.duration) || video.duration <= 0) return;
+    for (const progress of [25, 50, 75] as const) {
+      if (playback.watchedSeconds / video.duration >= progress / 100) {
+        void trackPreviewEvent({ previewId, eventName: "video_progress", assetId: data.video.id, progress });
+      }
+    }
+  }
 
   async function copyShareLink() {
     try {
       await navigator.clipboard.writeText(window.location.href);
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1800);
+      if (isPrivatePreview) return;
       void trackProductEvent({
         eventName: "share_link_copied",
         source: "public_locker",
@@ -402,6 +430,7 @@ export default function VideoDetailView({ data, footer }: { data: VideoDetailDat
 
   return (
     <main className={styles.page} style={{ "--video-accent": data.accentColor } as React.CSSProperties}>
+      {isPrivatePreview && previewId && <><PreviewEventTracker previewId={previewId} eventName="film_view" /><PreviewEventTracker previewId={previewId} eventName="video_open" assetId={data.video.id} /></>}
       <div className={styles.roomHeader}>
         {isPrivatePreview ? (
           <PreviewRoomNav athleteName={data.athleteName} headshotUrl={data.athleteHeadshotUrl} lockerHref={data.lockerHref!} onSearch={() => setSearchOpen(true)} navigation={navigation} />
@@ -449,10 +478,21 @@ export default function VideoDetailView({ data, footer }: { data: VideoDetailDat
                   preload="metadata"
                   onClick={togglePlayback}
                   onLoadedMetadata={(event) => setVideoDuration(event.currentTarget.duration)}
-                  onTimeUpdate={(event) => setCurrentTime(event.currentTarget.currentTime)}
-                  onPlay={() => {
+                  onTimeUpdate={(event) => {
+                    setCurrentTime(event.currentTarget.currentTime);
+                    trackPreviewProgress(event.currentTarget);
+                  }}
+                  onSeeking={(event) => { previewPlayback(event.currentTarget).lastTime = event.currentTarget.currentTime; }}
+                  onSeeked={(event) => { previewPlayback(event.currentTarget).lastTime = event.currentTarget.currentTime; }}
+                  onPlay={(event) => {
                     setIsPlaying(true);
                     schedulePlayerControlsFade();
+                    if (isPrivatePreview && previewId) {
+                      const playback = previewPlayback(event.currentTarget);
+                      playback.started = document.visibilityState === "visible";
+                      playback.lastTime = event.currentTarget.currentTime;
+                      void trackPreviewEvent({ previewId, eventName: "video_play", assetId: data.video.id });
+                    }
                   }}
                   onPause={() => {
                     setIsPlaying(false);
@@ -461,6 +501,9 @@ export default function VideoDetailView({ data, footer }: { data: VideoDetailDat
                   onEnded={() => {
                     setIsPlaying(false);
                     keepPlayerControlsVisible();
+                    if (isPrivatePreview && previewId && previewPlaybackRef.current.started) {
+                      void trackPreviewEvent({ previewId, eventName: "video_complete", assetId: data.video.id });
+                    }
                   }}
                 />
               ) : data.video.thumbnailUrl ? (

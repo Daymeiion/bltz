@@ -2,6 +2,7 @@ import { Tinybird } from "@tinybirdco/sdk";
 import {
   bltzEventsDevelopment, bltzEventsDeduplicated, bltzEventsBatchReconciliation, bltzEventsSubjectCounts, bltzEventsFeatureEvents,
   bltzEventsProduction, bltzEventsProductionDeduplicated, bltzEventsProductionBatchReconciliation, bltzEventsProductionSubjectCounts, bltzEventsProductionFeatureEvents,
+  bltzPreviewSprintCounts, bltzPreviewSprintProductionCounts,
 } from "./analytics/delivery/tinybird-definitions";
 
 /**
@@ -17,11 +18,13 @@ import {
 export {
   bltzEventsDevelopment, bltzEventsDeduplicated, bltzEventsBatchReconciliation, bltzEventsSubjectCounts, bltzEventsFeatureEvents,
   bltzEventsProduction, bltzEventsProductionDeduplicated, bltzEventsProductionBatchReconciliation, bltzEventsProductionSubjectCounts, bltzEventsProductionFeatureEvents,
+  bltzPreviewSprintCounts, bltzPreviewSprintProductionCounts,
 } from "./analytics/delivery/tinybird-definitions";
 export const tinybird = new Tinybird({
   datasources: { bltzEventsDevelopment, bltzEventsProduction },
   pipes: {
     bltzEventsDeduplicated, bltzEventsBatchReconciliation, bltzEventsSubjectCounts, bltzEventsFeatureEvents,
     bltzEventsProductionDeduplicated, bltzEventsProductionBatchReconciliation, bltzEventsProductionSubjectCounts, bltzEventsProductionFeatureEvents,
+    bltzPreviewSprintCounts, bltzPreviewSprintProductionCounts,
   },
 });

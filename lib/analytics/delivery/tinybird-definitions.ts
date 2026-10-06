@@ -107,6 +107,36 @@ export const bltzEventsFeatureEvents = definePipe("bltz_events_feature_events_v1
   endpoint: true,
 });
 
+/** Private preview activity never contributes to public audience or athlete-value counts. */
+export const bltzPreviewSprintCounts = definePipe("bltz_preview_sprint_counts_v1", {
+  description: "One preview's event/media counts and tab sessions after logical deduplication; not people or verified claims.",
+  params: { preview_id: p.string(), window_start: p.string(), window_end: p.string() },
+  nodes: [node({ name: "logical_events", sql: DEDUPLICATED_EVENTS_SQL }), node({ name: "preview_counts", sql: `
+    SELECT JSONExtractString(envelope.14, 'preview_id') AS preview_id,
+      JSONExtractString(envelope.14, 'event_kind') AS event_kind,
+      JSONExtractString(envelope.14, 'media_id') AS media_id,
+      JSONExtractInt(envelope.14, 'progress') AS progress,
+      count() AS event_count,
+      uniqExactIf(envelope.8, isNotNull(envelope.8)) AS tab_session_count,
+      max(received_at) AS event_watermark
+    FROM logical_events
+    WHERE payload_revisions = 1 AND envelope.2 = 'preview-sprint-v1'
+      AND envelope.9 = 'preview_sprint' AND envelope.10 = 0 AND envelope.12 = 'preview'
+      AND envelope.17 != 'internal'
+      AND (envelope.17 != 'operational' OR (envelope.13 = 'server_workflow'
+        AND JSONExtractString(envelope.14, 'event_kind') IN ('sent', 'booking_confirmed', 'walkthrough_completed', 'referred_prepared')))
+      AND JSONExtractString(envelope.14, 'preview_id') = {{String(preview_id)}}
+      AND envelope.3 >= parseDateTime64BestEffort({{String(window_start)}})
+      AND envelope.3 < parseDateTime64BestEffort({{String(window_end)}})
+    GROUP BY preview_id, event_kind, media_id, progress
+    ORDER BY event_kind, media_id, progress
+    LIMIT 1001
+  ` })],
+  output: { preview_id: t.string(), event_kind: t.string(), media_id: t.string(), progress: t.int32(),
+    event_count: t.uint64(), tab_session_count: t.uint64(), event_watermark: t.dateTime64(3, "UTC") },
+  endpoint: true,
+});
+
 /** Production resources are physically separate; these definitions never provision or backfill. */
 function productionSql(sql: string): string {
   return sql.replaceAll("bltz_events_development_v1", "bltz_events_production_v1").replaceAll("'development'", "'production'");
@@ -138,4 +168,9 @@ export const bltzEventsProductionFeatureEvents = definePipe("bltz_events_product
   ...bltzEventsFeatureEvents.options,
   description: "Bounded production feature inputs, with the explicit 5001-row cap sentinel.",
   nodes: productionNodes(bltzEventsFeatureEvents.options.nodes),
+});
+export const bltzPreviewSprintProductionCounts = definePipe("bltz_preview_sprint_production_counts_v1", {
+  ...bltzPreviewSprintCounts.options,
+  description: "Production private-preview counts, logically deduplicated and excluded from commercial audience metrics.",
+  nodes: productionNodes(bltzPreviewSprintCounts.options.nodes),
 });

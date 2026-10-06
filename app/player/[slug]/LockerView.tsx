@@ -10,6 +10,7 @@ import { ChevronDown, ChevronUp, Mic } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { SearchResult } from "@/components/ui/search-modal";
 import { trackProductEvent } from "@/lib/analytics/client";
+import { trackPreviewEvent } from "@/lib/analytics/preview-client";
 import { VideoPreview } from "@/components/player/VideoPreview";
 import { StructuredStats } from "@/components/player/StructuredStats";
 import { SAMPLE_MERCH } from "@/lib/preview-lockers/sample-merch";
@@ -188,11 +189,13 @@ export default function LockerView({
   viewerMode = "public",
   presentation = "page",
   footer,
+  previewId,
 }: {
   data: LockerData;
   viewerMode?: LockerViewerMode;
   presentation?: LockerPresentation;
   footer?: React.ReactNode;
+  previewId?: string;
 }) {
   const [tab, setTab] = useState<"bio" | "media" | "stats">("bio");
   const [bioSort, setBioSort] = useState("all");
@@ -574,6 +577,7 @@ export default function LockerView({
 
   const selectTab = (t: "bio" | "media" | "stats") => {
     setTab(t);
+    if (t === "stats" && isPrivatePreview && previewId) void trackPreviewEvent({ previewId, eventName: "stats_view" });
     if (t === "stats") setTimeout(animateStats, 180);
   };
 

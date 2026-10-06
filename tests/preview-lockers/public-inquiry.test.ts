@@ -1,9 +1,10 @@
 // @vitest-environment node
 import { beforeEach, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ allowed: vi.fn(), from: vi.fn(), insert: vi.fn() }));
-vi.mock("@/lib/supabase/service", () => ({ createServiceClient: () => ({ from: mocks.from }) }));
-vi.mock("@/lib/preview-lockers/server", () => ({ isPublicPreview: mocks.allowed }));
+const mocks = vi.hoisted(() => ({ rpc: vi.fn(), actor: vi.fn() }));
+vi.mock("@/lib/supabase/service", () => ({ createServiceClient: () => ({ rpc: mocks.rpc }) }));
+vi.mock("@/lib/analytics/preview-event", () => ({ previewAnalyticsActor: mocks.actor }));
+vi.mock("@/lib/analytics/bltz-event", () => ({ getAnalyticsRuntimeEnvironment: () => "development" }));
 
 import { POST } from "@/app/api/preview-link-inquiries/route";
 
@@ -17,23 +18,35 @@ function request(origin = "https://bltz.vercel.app") {
 
 beforeEach(() => {
   vi.resetAllMocks();
-  mocks.from.mockReturnValue({ insert: mocks.insert });
-  mocks.insert.mockResolvedValue({ error: null });
+  mocks.rpc.mockReturnValue({ abortSignal: async () => ({ data: { saved: true }, error: null }) });
+  mocks.actor.mockResolvedValue({ userId: null, excluded: false });
 });
 
 it("rejects cross-origin and disabled-link submissions without writing", async () => {
   expect((await POST(request("https://other.example"))).status).toBe(403);
-  mocks.allowed.mockResolvedValue(false);
+  mocks.rpc.mockReturnValue({ abortSignal: async () => ({ error: { code: "42501" } }) });
   expect((await POST(request())).status).toBe(404);
-  expect(mocks.insert).not.toHaveBeenCalled();
+  expect(mocks.rpc).toHaveBeenCalledTimes(1);
 });
 
 it("saves only consented submissions for an enabled preview", async () => {
-  mocks.allowed.mockResolvedValue(true);
   const response = await POST(request());
   expect(response.status).toBe(200);
-  expect(mocks.insert).toHaveBeenCalledWith(expect.objectContaining({
-    preview_id: previewId, email: "player@example.com", feature_requests: "More career history",
-  }));
+  expect(mocks.rpc).toHaveBeenCalledWith("save_preview_link_inquiry", {
+    p_preview: previewId, p_email: "player@example.com", p_features: "More career history",
+    p_session: null, p_actor: null, p_environment: "development",
+  });
   expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+});
+
+it("saves excluded operational/internal inquiries without exporting them", async () => {
+  mocks.actor.mockResolvedValue({ userId: "80000000-0000-4000-8000-000000000001", excluded: true });
+  expect((await POST(request())).status).toBe(200);
+  expect(mocks.rpc.mock.calls[0][1]).toMatchObject({ p_environment: null });
+});
+
+it("does not report saved when the atomic inquiry and delivery transaction fails", async () => {
+  mocks.rpc.mockReturnValue({ abortSignal: async () => ({ error: { code: "XX000" } }) });
+  const response = await POST(request());
+  expect(response.status).toBe(503); expect(await response.json()).toEqual({ error: "unavailable" });
 });

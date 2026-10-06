@@ -15,7 +15,7 @@ import { loadMeasuredIntelligence, refreshMeasuredIntelligence } from "@/lib/int
 import { canonicalInputJson, measuredInputHash } from "@/lib/intelligence/measured-integrity";
 import { measuredInputSchema } from "@/lib/intelligence/measured-validation";
 import { featureSubjectKey, projectIntelligenceFeatures, type FeatureCoverage } from "@/lib/intelligence/features";
-import type { BLTZEvent } from "@/lib/analytics/bltz-event";
+import type { BLTZEvent, LegacyBLTZEvent } from "@/lib/analytics/bltz-event";
 
 // Canonical test identities never touch a live database or provider.
 const playerId = "10000000-0000-4000-8000-000000000001";
@@ -27,7 +27,7 @@ const now = "2026-10-05T12:00:00.000Z";
 const endpoint = "https://development.example/api/admin/intelligence/features";
 const instrumentation = ["locker_viewed", "film_room_opened", "photo_gallery_opened", "media_opened", "share_link_copied", "share_intent"];
 
-function event(patch: Partial<BLTZEvent> = {}): BLTZEvent {
+function event(patch: Partial<LegacyBLTZEvent> = {}): LegacyBLTZEvent {
   return { event_id: eventId, schema_version: 1, event_name: "locker_viewed", event_version: "legacy-v1",
     occurred_at: "2026-10-04T12:00:00.000Z", received_at: now, environment: "development", surface: "public_locker",
     producer: "bltz_collector", actor_kind: "anonymous", measurement_basis: "unverified_client", audience_eligible: true,
