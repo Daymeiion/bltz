@@ -3,7 +3,7 @@
   "branch": "codex/csv-import-production-2026-10-05",
   "baseline": "af0b7077a1228581ebeb13a18158080c07e3fe97",
   "selectedSource": "b02d015ae57b3df1195de8f5b62eb16677e750b5",
-  "status": "source-checkpoint-release-blocked-lookup-replan-hosted-gate-pending",
+  "status": "source-checkpoint-release-blocked-after-third-hosted-retry",
   "manifestExcludedFromOwnHashes": true,
   "scope": "Isolated private contact matching plus reviewed active-email index and three parameterized lookup replan substitutions; no analytics activation, auth, grant or timeout changes",
   "records": [
@@ -129,8 +129,8 @@
     },
     {
       "file": "docs/gtm/csv-import-production-candidate-2026-10-05.md",
-      "bytes": 19034,
-      "sha256": "b530b98f2317a1c3c7fc76dbb0ea4d06fcf586da9a6950075fb47d62345d8431"
+      "bytes": 20575,
+      "sha256": "a44457cc4e816d344f2bb89efc51a69b88ebabfe66aaf2a6b28834faccbff691"
     }
   ],
   "approvedIndexSource": "36b31278169768b567d45ac12821585050372330",
@@ -158,8 +158,20 @@
       "platformRoleAssignments": 7,
       "auditRows": 62
     },
-    "lookupReplanAppliedInStagingAttested": false,
-    "lookupReplanSuccessfulHostedBatchAttested": false
+    "lookupReplanAppliedInStagingAttested": true,
+    "lookupReplanSuccessfulHostedBatchAttested": false,
+    "thirdSameKeyRetryAfterLookupReplan": true,
+    "rpcElapsedMs": 10396,
+    "actionElapsedMs": 17132,
+    "receipt": "output/csv-import-production-2026-10-05/staging-runs/b5fee439/retry-1791257326175/receipt.json",
+    "receiptSha256": "7ecbdefb020d2cc4f2ddae582ba3503bc61f13e10d1e47c27ae621b3c8f8b363",
+    "requestId": "01a10f41-e6e7-799a-92d6-25209eda0041",
+    "runtimeCheckpoint": "8ac5768cf5da39d02476e2341e37d6761cce8819",
+    "finalJobStatus": "preview_ready",
+    "created": 0,
+    "updated": 0,
+    "qaSessionSignedOut": true,
+    "localServerStopped": true
   },
   "localQaLinkage": {
     "receipt": "output/csv-import-production-2026-10-05/replan-forward-qa/receipt.json",
@@ -201,5 +213,7 @@
     "typecheckAndBuildFailedOnFourTestResultTypes": true,
     "typedTestSource": "93e970c9c9fe150b08d989314c997e54e421e8bd",
     "migrationRuntimeSqlUnchanged": true
-  }
+  },
+  "sourceCheckpoint": "fceca2e2a8715f6681d9a64bc7f25250c4ccf87d",
+  "hostedFailureDocumentationCheckpointParent": "fceca2e2a8715f6681d9a64bc7f25250c4ccf87d"
 }

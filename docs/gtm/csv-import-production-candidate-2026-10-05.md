@@ -3,8 +3,11 @@
 ## Status and authority
 
 Prepared source-only lookup replanning checkpoint for the user-approved guarded
-contact-import release. The previous isolated email-index checkpoint is
-`f3b34bb4f8d3815f4b05c6dfe8137d220dc7fe9e`; it remains undeployed.
+contact-import release. The reviewed twenty-two-path source checkpoint
+`fceca2e2a8715f6681d9a64bc7f25250c4ccf87d` passed full isolated QA and remains
+undeployed. This separate documentation update preserves that commit and records
+the third failed hosted attempt. The previous isolated email-index checkpoint is
+`f3b34bb4f8d3815f4b05c6dfe8137d220dc7fe9e`; it also remains undeployed.
 The first isolated 18-path source checkpoint was committed and pushed as
 `8ac5768cf5da39d02476e2341e37d6761cce8819`; it was not deployed or promoted.
 Its full hosted staging batch failed with SQLSTATE `57014` under the unchanged
@@ -208,7 +211,22 @@ function/table owner. This corroborates the locally reproduced analyzed-empty
 cached-plan hypothesis; it does not prove nested timeout attribution or a
 successful hosted batch. The latest hosted attempt after the index still FAILED
 with `57014`; contacts and links remained zero, and the existing job/history
-were preserved. No successful retry with this new migration has been attested.
+were preserved. The coordinator applied the reviewed lookup-replanning migration
+in staging only, verified history version 58, normalized body
+`b2fd020687b8b21c268c1d40578d222e` and unchanged function attributes, permissions
+and authenticated eight-second limit, then retried the same existing synthetic
+job through the normal QA Admin session. That third hosted attempt also FAILED
+with SQLSTATE `57014`: RPC diagnostic 10,396 ms; full action 17,132 ms.
+
+The failed-run receipt is retained under ignored
+`output/csv-import-production-2026-10-05/staging-runs/b5fee439/retry-1791257326175/receipt.json`.
+It used the unchanged `8ac5768` matching runtime with the separately guarded
+database migration; this is not an attestation that the new source checkpoint
+was deployed. Read-only reconciliation retained zero contacts/links, three jobs,
+624 synthetic NFL rows, two canonical Players, seven platform role assignments
+and 62 audit rows; the job remained `preview_ready` with zero created/updated
+outcomes. The QA session was signed out and the local server stopped. Preserve
+these receipts and fixtures; no new batch or timeout/grant workaround is allowed.
 
 Independent focused review ran 45 tests across lookup-replanning, email-index,
 SQL-review and action-security suites, all passing. The disposable analyzed-empty
@@ -238,8 +256,11 @@ receipt is retained under ignored
 
 This final documentation-only result update follows QA. Runtime, tests, SQL,
 packages and configuration remain unchanged; the manifest binds the tested
-source hashes and identifies the documentation update. The hosted replanning
-canary remains unproven and production release/import remain blocked.
+source hashes and identifies the documentation updates. The actual hosted
+replanning canary FAILED again; production release/import remain blocked.
+Further native execution-cost diagnosis and local performance work are required
+before another reviewed hosted gate. No production deployment, migration,
+import or helper repinning occurred from this checkpoint task.
 
 ## Production and contact-batch gates
 
