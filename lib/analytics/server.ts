@@ -20,6 +20,9 @@ export interface TrustedAnalyticsEvent {
   source: AnalyticsSource;
   page?: string | null;
   properties?: Record<string, unknown>;
+  /** Server-derived operational/internal exclusion, never supplied by a browser. */
+  activityClass?: "internal" | "operational";
+  validatedContext?: { momentId?: string; assetId?: string; assetModel?: "legacy_media" | "legacy_video" };
 }
 
 /**

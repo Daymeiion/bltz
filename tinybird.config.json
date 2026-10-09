@@ -1,0 +1,8 @@
+{
+  "include": [
+    "lib/tinybird-preview-sprint.ts"
+  ],
+  "token": "${TINYBIRD_TOKEN}",
+  "baseUrl": "${TINYBIRD_URL}",
+  "devMode": "branch"
+}

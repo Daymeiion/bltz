@@ -1,0 +1,412 @@
+{
+  "baseline": "889df1ba2eb6eaecfb1376c6b0527a1b57789a2a",
+  "reviewed_source": "1cc0314f3d48a419c2d1949fc74a0bedb997a965",
+  "application_paths": [
+    {
+      "path": "app/api/internal/analytics/deliver/route.ts",
+      "sha256": "bc8ec65b2709f7598d73a7b5ab2e1015d2000faf9093dae572dafad041b61763"
+    },
+    {
+      "path": "app/api/internal/analytics/dispatch/route.ts",
+      "sha256": "c0864f1482d13b7ea8e7a8085a33b3e8013b4fcbdb5585608cfb8be8c5b8c1cc"
+    },
+    {
+      "path": "app/api/internal/analytics/reconcile/route.ts",
+      "sha256": "af6b5266a84eca4ebabd94244ec2340a6552d41ef235b0a3bdcbc2dbb7197192"
+    },
+    {
+      "path": "app/api/preview-analytics/events/route.ts",
+      "sha256": "c02d6da27ad3b8b9da5989fab4c838f54f4c22c7186098335750868653113931"
+    },
+    {
+      "path": "app/api/preview-link-inquiries/route.ts",
+      "sha256": "65d91f54375246d4a90cafe6008ccde02859ab7e5ed356a3cf45373b273ad5fd"
+    },
+    {
+      "path": "components/preview-lockers/PreviewEventTracker.tsx",
+      "sha256": "198b4cf2a171e1f5cc1b7f03cf1fe83c7965cb5bd003c6247ee512cff8c2e8b1"
+    },
+    {
+      "path": "components/preview-lockers/PublicPreviewClaim.tsx",
+      "sha256": "6d31bc2590cd55ba50a351e7d23024d8f262ddfbf86c25e9a96ab955fc7e0969"
+    },
+    {
+      "path": "lib/analytics/bltz-event.ts",
+      "sha256": "ad4c10ed5b58c78db74dc7166346d32b1c3efdf90f21282f1a72992d7673bbd8"
+    },
+    {
+      "path": "lib/analytics/preview-client.ts",
+      "sha256": "f491f6700605ba1ee2e096dd8e86fceca51b8b6f887980a9739f1c61e685079e"
+    },
+    {
+      "path": "lib/analytics/preview-event.ts",
+      "sha256": "50fe8a56112ddea59a4dae83d2f57c39f976353c6049b3e229e5b5cc34232202"
+    },
+    {
+      "path": "lib/analytics/preview-report.ts",
+      "sha256": "8edb28078221d4e2d37aeba13562a67d46ab0cf93151ab666c33338bb248a45a"
+    },
+    {
+      "path": "lib/analytics/delivery/authentication.ts",
+      "sha256": "5b9c7789f84d55deb3fe12016601d763a0f90af42c7b9d715a8afe9b82117cca"
+    },
+    {
+      "path": "lib/analytics/delivery/config.ts",
+      "sha256": "efd2c79451b7ad706908f20bebbbfa8a50f3c703deb26c5c2e68e3760e6eb737"
+    },
+    {
+      "path": "lib/analytics/delivery/contracts.ts",
+      "sha256": "d9b80e3899f4f4da9736e3cc7e9f9d08ae1a260610bd23583595a34e37261ec6"
+    },
+    {
+      "path": "lib/analytics/delivery/http.ts",
+      "sha256": "0191e5c1835dd2ac767ae10b388b4d55d1f472953e921994d6cce296d0fd06b9"
+    },
+    {
+      "path": "lib/analytics/delivery/pipeline.ts",
+      "sha256": "b317018b5417b2a5ab401870f7e6ddacc97a34229328876d44f67fa72f2b26fc"
+    },
+    {
+      "path": "lib/analytics/delivery/store.ts",
+      "sha256": "ff1a7fff8d295dd81359b87b2a124f41136a0f47ce5f4ac31a79f8cb11b364ba"
+    },
+    {
+      "path": "lib/analytics/delivery/tinybird.ts",
+      "sha256": "78effc568c4a076541c6ab685c7ac33c0a5c5c6c204acdfc6b6700a91fb9bc71"
+    },
+    {
+      "path": "lib/analytics/delivery/tinybird-definitions.ts",
+      "sha256": "ef3aa1fce0dd1f6c3362918d221f718768d19baa804f58381b3dafb4191276b7"
+    },
+    {
+      "path": "lib/tinybird-preview-sprint.ts",
+      "sha256": "27266f39030e6221c3062003bd4725119f36b052f678863acd7eb047b9a341a2"
+    },
+    {
+      "path": "app/player/[slug]/photos/PhotoRoomView.tsx",
+      "sha256": "0a908b41fe6472d61b71f666af44c990ce9c4b550c1f62ba14b03259fe718c22"
+    },
+    {
+      "path": "app/player/[slug]/videos/[videoId]/VideoDetailView.tsx",
+      "sha256": "52060704dc90c7c785de15ce7e2a8984f5366729811ba1ec9b28ef3e8ab525f2"
+    },
+    {
+      "path": "app/preview-lockers/[slug]/photos/page.tsx",
+      "sha256": "6e6c33816709b052ad12ec3cbbc4eae299f5f6399685131900209309fc22f59b"
+    },
+    {
+      "path": "app/preview-lockers/[slug]/videos/page.tsx",
+      "sha256": "f03e9ee34a31a6737c64d668fac5111bb384b1ec9e9f90d62437d05dd00b575d"
+    },
+    {
+      "path": "app/preview-lockers/[slug]/videos/[videoId]/page.tsx",
+      "sha256": "00608536c1dc9280169e3503cad159c614d0bbb2804a6f953b6a81c57ac31b54"
+    },
+    {
+      "path": "tests/analytics/preview-events-route.test.ts",
+      "sha256": "c013de554c9e3ae0784001aaae2b7199b9aa31f5aeb92530dcd947af16cca1d8"
+    },
+    {
+      "path": "tests/analytics/preview-report.test.ts",
+      "sha256": "560b212946b70a521da82d5d6b0c7e9fc89974eae2fb33c5430bc059c714f721"
+    },
+    {
+      "path": "tests/analytics/delivery.test.ts",
+      "sha256": "7dd8179a1b0bfbad441638e376308e1de4cfc8b189df5f8755997fd77fc33e08"
+    },
+    {
+      "path": "tests/analytics/delivery-routes.test.ts",
+      "sha256": "af8fb9bff715966c1ef3e364489b60cb9d1d223493667750b7225c1aacf53745"
+    },
+    {
+      "path": "tests/analytics/delivery-production.test.ts",
+      "sha256": "cd91df5891a4e6ba78c119554e117bbb57c7a0ae420745ff67f324cafbb692f6"
+    },
+    {
+      "path": "tests/preview-lockers/preview-event-client.test.ts",
+      "sha256": "189f81207da6f938a385fb0712c256bfbddfbcc954fb58421ea966d2357c7661"
+    },
+    {
+      "path": "tests/preview-lockers/preview-event-tracker.test.tsx",
+      "sha256": "5bd0c4185380a8a5af35c87471b0937d41f8bd93b5b7431dc4d7f92a216a74fb"
+    },
+    {
+      "path": "tests/preview-lockers/public-claim-acknowledgment.test.tsx",
+      "sha256": "176eeeeaebb67fb3ae00554b44a1f9fc39516737453f304adf6a26b4fb99bb76"
+    },
+    {
+      "path": "tests/preview-lockers/public-inquiry.test.ts",
+      "sha256": "45eb605412df2bd419ce8015b9a635605310d1d4cee5626ae459dacc9d627692"
+    },
+    {
+      "path": "app/player/[slug]/LockerView.tsx",
+      "sha256": "9ed05215db8e733ed6f0a7afee4e25ee32dd12a0918d320173c706ac2a7bfb73"
+    },
+    {
+      "path": "app/preview-lockers/[slug]/page.tsx",
+      "sha256": "aef83b9c78dfd3f6ff8c276ded33187d22872d7e1cc75cc1962b885693681d92"
+    },
+    {
+      "path": "lib/analytics/server.ts",
+      "sha256": "02396d27640dff76b400f6ed67230ab97d29525fd9efd40a28f9519249f5d227"
+    },
+    {
+      "path": "package.json",
+      "sha256": "f054634c086fa0a52920088b1f1ab0adf61f4813732956423f06e45b0b1377e4"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "b1cbc1e5c0857cdf1de495f2ff7690f133d3fbd4f0ad69ce09fe5b9d2ef11873"
+    },
+    {
+      "path": "vercel.json",
+      "sha256": "40fc5e2474695f5ad3dc546e78da6f654f13441e07f8455b0d8191df459651c2"
+    },
+    {
+      "path": "tinybird.config.json",
+      "sha256": "98796c7d12fbdb76efdaf86aca0da5f84b0301e21fcfee9be5a2ccdca18e9a03"
+    }
+  ],
+  "scoped_additions": [
+    {
+      "path": "scripts/generate-preview-delivery-types.mjs",
+      "sha256": "3be77b67bb9d4524f4708a520f2a2c9185cfce28b3c509112c4f43bc11f98904"
+    },
+    {
+      "path": "scripts/preview-delivery-catalog.sql",
+      "sha256": "d77aa6d35abf262d340982ce0384a0edb27e36b52c0938ecceecd74ecd658e73"
+    },
+    {
+      "path": "types/preview-delivery.generated.ts",
+      "sha256": "0198d3640da56e494c6ea3ee7016673cca2c1107583e11006e3d0805bc658581"
+    }
+  ],
+  "migrations": [
+    {
+      "path": "supabase/migrations/20261009003442_analytics_delivery_transport.sql",
+      "sha256": "278654d46c271ac1bbbd130455eb6afcbe6916d620dbfb0c5578fbfda24b1cf8",
+      "hosted_staging_source_md5": "4f7a584b6f6602a4516bb1ded95f314c",
+      "hosted_complete_source_verified": true,
+      "source_comparison": "Complete text equal after CRLF/LF normalization; SQL editor normalized mixed/LF source strings to CRLF. No history repair performed.",
+      "review_copy": "docs/preview-lockers/transport-release-candidate/20261009003442_analytics_delivery_transport.sql"
+    },
+    {
+      "path": "supabase/migrations/20261009003448_analytics_delivery_production_environment.sql",
+      "sha256": "d0cfc240f39aadbe523a5aa1b85d2491b837e880fda72607542762a4ec61d9ba",
+      "hosted_staging_source_md5": "535bfd5fdefb8618a7703fa8d950b5cb",
+      "hosted_complete_source_verified": true,
+      "source_comparison": "Complete text equal after CRLF/LF normalization; SQL editor normalized mixed/LF source strings to CRLF. No history repair performed.",
+      "review_copy": "docs/preview-lockers/transport-release-candidate/20261009003448_analytics_delivery_production_environment.sql"
+    },
+    {
+      "path": "supabase/migrations/20261009003454_preview_sprint_delivery_bridge.sql",
+      "sha256": "17bbcecd42637e862c7404ae3f3793724799fd47e6ae073186a39e39225c4d55",
+      "hosted_staging_source_md5": "642afa7460f14f9f7823b9b0af8a3274",
+      "hosted_complete_source_verified": true,
+      "source_comparison": "Complete text equal after CRLF/LF normalization; SQL editor normalized mixed/LF source strings to CRLF. No history repair performed.",
+      "review_copy": "docs/preview-lockers/transport-release-candidate/20261009003454_preview_sprint_delivery_bridge.sql"
+    },
+    {
+      "path": "supabase/migrations/20261009022458_preview_claim_browser_session.sql",
+      "sha256": "bf69c79c9f535e63a6596fdce2290e298b9ca7f35ea571e00fd3fc25aa9d4e46",
+      "hosted_staging_source_md5": "a96a8df440fd7d99ed8eb8f54773ef11",
+      "hosted_complete_source_verified": true,
+      "source_comparison": "Complete text equal after CRLF/LF normalization; SQL editor normalized mixed/LF source strings to CRLF. No history repair performed.",
+      "review_copy": "docs/preview-lockers/transport-release-candidate/20261009022458_preview_claim_browser_session.sql"
+    }
+  ],
+  "exclusions": [
+    "CSV/import/CRM/organization/intelligence features",
+    "awards/news/enrichment",
+    "app/api/analytics/events/route.ts changes",
+    "app/api/onboarding/claim/route.ts changes",
+    "lib/analytics/client.ts changes",
+    "general analytics writer export",
+    "lib/tinybird.ts broad infrastructure manifest",
+    "future migrations/backfill",
+    "production/management runtime tokens",
+    "all .env files from primary checkout"
+  ],
+  "dependency_lock_closure": [
+    "node_modules/@clack/core",
+    "node_modules/@clack/prompts",
+    "node_modules/@esbuild/aix-ppc64",
+    "node_modules/@esbuild/android-arm",
+    "node_modules/@esbuild/android-arm64",
+    "node_modules/@esbuild/android-x64",
+    "node_modules/@esbuild/darwin-arm64",
+    "node_modules/@esbuild/darwin-x64",
+    "node_modules/@esbuild/freebsd-arm64",
+    "node_modules/@esbuild/freebsd-x64",
+    "node_modules/@esbuild/linux-arm",
+    "node_modules/@esbuild/linux-arm64",
+    "node_modules/@esbuild/linux-ia32",
+    "node_modules/@esbuild/linux-loong64",
+    "node_modules/@esbuild/linux-mips64el",
+    "node_modules/@esbuild/linux-ppc64",
+    "node_modules/@esbuild/linux-riscv64",
+    "node_modules/@esbuild/linux-s390x",
+    "node_modules/@esbuild/linux-x64",
+    "node_modules/@esbuild/netbsd-arm64",
+    "node_modules/@esbuild/netbsd-x64",
+    "node_modules/@esbuild/openbsd-arm64",
+    "node_modules/@esbuild/openbsd-x64",
+    "node_modules/@esbuild/openharmony-arm64",
+    "node_modules/@esbuild/sunos-x64",
+    "node_modules/@esbuild/win32-arm64",
+    "node_modules/@esbuild/win32-ia32",
+    "node_modules/@esbuild/win32-x64",
+    "node_modules/@tinybirdco/sdk",
+    "node_modules/@tinybirdco/sdk/node_modules/chokidar",
+    "node_modules/@tinybirdco/sdk/node_modules/commander",
+    "node_modules/@tinybirdco/sdk/node_modules/dotenv",
+    "node_modules/@tinybirdco/sdk/node_modules/readdirp",
+    "node_modules/@tinybirdco/sdk/node_modules/zod",
+    "node_modules/@upstash/qstash",
+    "node_modules/@upstash/qstash/node_modules/jose",
+    "node_modules/esbuild",
+    "node_modules/fast-string-truncated-width",
+    "node_modules/fast-string-width",
+    "node_modules/fast-wrap-ansi",
+    "node_modules/neverthrow",
+    "node_modules/picocolors",
+    "node_modules/sisteransi",
+    "node_modules/uncrypto"
+  ],
+  "tests": {
+    "focused_cases_covered": 102,
+    "resolved_stale_mock": true,
+    "publisher_file_after_diagnostics": 31,
+    "source_sql_cases": 53,
+    "source_sql_files": 6,
+    "typescript": "passed",
+    "catalog_generation_check": "passed",
+    "offline_build": "Webpack passed",
+    "hosted_preview_build": "default Vercel build passed"
+  },
+  "production_analytics_enabled": false,
+  "production_deployed": false,
+  "production_database_changed": false,
+  "staging_project_ref": "yevihzsgqagvuulymqum",
+  "staging_migration_count": 62,
+  "staging_claim_body_md5": "cf93750c0d2bb0016c381f53fe7d6ffe",
+  "hosted_preview": "https://bltz-preview-sprint-2026-10-09.vercel.app",
+  "hosted_canary": {
+    "previewId": "b17a0000-2026-4009-8000-000000000001",
+    "sessionId": "b17a0000-2026-4009-8000-000000000002",
+    "viewId": "b17a0000-2026-4009-8000-000000000003",
+    "stageRef": "yevihzsgqagvuulymqum",
+    "eventKinds": [
+      "accepted",
+      "claim_submit",
+      "locker_view"
+    ],
+    "expectedEvents": 3,
+    "expectedSessions": 1,
+    "publishCalls": 1,
+    "production": false,
+    "realAthleteData": false,
+    "rawFormFieldsExported": false,
+    "execution": true,
+    "startedAt": "2026-10-09T20:03:23.289Z",
+    "stages": [
+      {
+        "stage": "persisted-and-replayed",
+        "eventIds": [
+          "1208fa80-666e-56e9-86f5-ef5d2f1c9715",
+          "12d96bd3-7f8f-5307-8fa8-59138d848b5f",
+          "b17a0000-2026-4009-8000-000000000003"
+        ],
+        "sessionId": "b17a0000-2026-4009-8000-000000000002",
+        "events": 3,
+        "rawFormFieldsExported": false
+      }
+    ],
+    "status": "failed",
+    "dispatchAttempted": true,
+    "dispatchAttemptedAt": "2026-10-09T20:03:30.510Z",
+    "blocker": "Hosted dispatch HTTP 503",
+    "failedAt": "2026-10-09T20:03:31.684Z"
+  },
+  "hosted_dispatch_diagnosis": {
+    "checkedAt": "2026-10-09T20:04:26.605Z",
+    "targetRef": "yevihzsgqagvuulymqum",
+    "canaryStatus": "failed",
+    "dispatchAttempted": true,
+    "readOnly": true,
+    "analytics_delivery_outbox": [
+      {
+        "event_id": "1208fa80-666e-56e9-86f5-ef5d2f1c9715",
+        "payload_hash": "adceb6778da762f63a3daec0ef9a877d",
+        "batch_id": "099363f6-e66c-4bb7-abfa-745ce8338f1f",
+        "environment": "development"
+      },
+      {
+        "event_id": "12d96bd3-7f8f-5307-8fa8-59138d848b5f",
+        "payload_hash": "4386c9191da6cfe7adbc67b18757c027",
+        "batch_id": "099363f6-e66c-4bb7-abfa-745ce8338f1f",
+        "environment": "development"
+      },
+      {
+        "event_id": "b17a0000-2026-4009-8000-000000000003",
+        "payload_hash": "9fbe581ea4007eb5d8411d123f500442",
+        "batch_id": "099363f6-e66c-4bb7-abfa-745ce8338f1f",
+        "environment": "development"
+      }
+    ],
+    "analytics_delivery_batches": [
+      {
+        "id": "099363f6-e66c-4bb7-abfa-745ce8338f1f",
+        "environment": "development",
+        "state": "retry",
+        "event_count": 3,
+        "publish_attempts": 1,
+        "worker_attempts": 0,
+        "message_id": null,
+        "last_error_code": "qstash_publish_unconfirmed",
+        "acknowledged_at": null,
+        "publish_lease_until": null,
+        "next_attempt_at": "2026-10-09T20:04:31.897195+00:00"
+      }
+    ]
+  },
+  "hosted_registered_retry": {
+    "started_at": "2026-10-09T20:14:50.969Z",
+    "batchId": "099363f6-e66c-4bb7-abfa-745ce8338f1f",
+    "event_ids": [
+      "1208fa80-666e-56e9-86f5-ef5d2f1c9715",
+      "12d96bd3-7f8f-5307-8fa8-59138d848b5f",
+      "b17a0000-2026-4009-8000-000000000003"
+    ],
+    "old_publish_attempts": 1,
+    "new_form_submitted": false,
+    "production": false,
+    "dispatch_attempted": true,
+    "checks": [],
+    "dispatch_http_status": 503,
+    "dispatch_result": {
+      "state": "retry",
+      "eventCount": 3
+    },
+    "status": "failed",
+    "registry": {
+      "id": "099363f6-e66c-4bb7-abfa-745ce8338f1f",
+      "environment": "development",
+      "state": "retry",
+      "event_count": 3,
+      "publish_attempts": 2,
+      "worker_attempts": 0,
+      "last_error_code": "qstash_publish_http_400",
+      "message_id": null
+    }
+  },
+  "hosted_deployment": {
+    "url": "https://bltz-6s2emwh8d-daymeiions-projects.vercel.app",
+    "id": "dpl_CgAMMCXU7whk9H2cpdd5RCjF35Uv",
+    "projectId": "prj_4XjBiHku6plWves1zXdbT8bXj3y6",
+    "stagingRef": "yevihzsgqagvuulymqum",
+    "target": "preview",
+    "enabled": true
+  },
+  "catalog_evidence": "docs/preview-lockers/evidence/preview-delivery-catalog-2026-10-09.json"
+}

@@ -8,6 +8,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 import { Play, Search, X } from "lucide-react";
 import type { SearchResult } from "@/components/ui/search-modal";
 import { trackProductEvent } from "@/lib/analytics/client";
+import { trackPreviewEvent } from "@/lib/analytics/preview-client";
 import styles from "./photo-room.module.css";
 
 export type PhotoRoomImage = {
@@ -53,7 +54,7 @@ function searchHref(result: SearchResult) {
   return `/player/${result.slug}`;
 }
 
-export default function PhotoRoomView({ data }: { data: PhotoRoomData }) {
+export default function PhotoRoomView({ data, previewId }: { data: PhotoRoomData; previewId?: string }) {
   const isPrivatePreview = data.lockerHref?.startsWith("/preview-lockers/") === true;
   const [images, setImages] = useState(data.images);
   const [photoRatios, setPhotoRatios] = useState<Record<string, number>>({});
@@ -210,6 +211,9 @@ export default function PhotoRoomView({ data }: { data: PhotoRoomData }) {
   }, [searchOpen]);
 
   function selectImage(id: string) {
+    if (isPrivatePreview && previewId && images.some(image => image.id === id)) {
+      void trackPreviewEvent({ previewId, eventName: "photo_open", assetId: id });
+    }
     if (!isPrivatePreview) {
       void trackProductEvent({
         eventName: "media_viewed",

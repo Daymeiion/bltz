@@ -1,0 +1,283 @@
+{
+  "status": "Active scoped source; all four complete migrations applied to intended staging with capture disabled. Production and hosted delivery pending.",
+  "generated_by": "Supabase CLI 2.114.0 migration new",
+  "release_order": [
+    {
+      "path": "supabase/migrations/20261009003442_analytics_delivery_transport.sql",
+      "sha256": "278654d46c271ac1bbbd130455eb6afcbe6916d620dbfb0c5578fbfda24b1cf8",
+      "hosted_staging_source_md5": "4f7a584b6f6602a4516bb1ded95f314c",
+      "hosted_complete_source_verified": true,
+      "source_comparison": "Complete text equal after CRLF/LF normalization; SQL editor normalized mixed/LF source strings to CRLF. No history repair performed.",
+      "review_copy": "docs/preview-lockers/transport-release-candidate/20261009003442_analytics_delivery_transport.sql"
+    },
+    {
+      "path": "supabase/migrations/20261009003448_analytics_delivery_production_environment.sql",
+      "sha256": "d0cfc240f39aadbe523a5aa1b85d2491b837e880fda72607542762a4ec61d9ba",
+      "hosted_staging_source_md5": "535bfd5fdefb8618a7703fa8d950b5cb",
+      "hosted_complete_source_verified": true,
+      "source_comparison": "Complete text equal after CRLF/LF normalization; SQL editor normalized mixed/LF source strings to CRLF. No history repair performed.",
+      "review_copy": "docs/preview-lockers/transport-release-candidate/20261009003448_analytics_delivery_production_environment.sql"
+    },
+    {
+      "path": "supabase/migrations/20261009003454_preview_sprint_delivery_bridge.sql",
+      "sha256": "17bbcecd42637e862c7404ae3f3793724799fd47e6ae073186a39e39225c4d55",
+      "hosted_staging_source_md5": "642afa7460f14f9f7823b9b0af8a3274",
+      "hosted_complete_source_verified": true,
+      "source_comparison": "Complete text equal after CRLF/LF normalization; SQL editor normalized mixed/LF source strings to CRLF. No history repair performed.",
+      "review_copy": "docs/preview-lockers/transport-release-candidate/20261009003454_preview_sprint_delivery_bridge.sql"
+    },
+    {
+      "path": "supabase/migrations/20261009022458_preview_claim_browser_session.sql",
+      "sha256": "bf69c79c9f535e63a6596fdce2290e298b9ca7f35ea571e00fd3fc25aa9d4e46",
+      "hosted_staging_source_md5": "a96a8df440fd7d99ed8eb8f54773ef11",
+      "hosted_complete_source_verified": true,
+      "source_comparison": "Complete text equal after CRLF/LF normalization; SQL editor normalized mixed/LF source strings to CRLF. No history repair performed.",
+      "review_copy": "docs/preview-lockers/transport-release-candidate/20261009022458_preview_claim_browser_session.sql"
+    }
+  ],
+  "transformations": [
+    "Transport extracted at the unique Immutable feature input/output runs boundary; engine tail excluded.",
+    "Production forward support copied without behavior changes.",
+    "Preview bridge outer BEGIN/COMMIT removed so all three DDL bodies and their complete history rows can share one bounded release transaction.",
+    "Removed trailing blank line from the new bridge candidate; original migration remains byte-identical.",
+    "The fourth claim-session candidate outer BEGIN/COMMIT is removed only from executable packet SQL; its complete original source remains the recorded history body."
+  ],
+  "activation": "capture remains disabled by migration default",
+  "cloud_applied": {
+    "staging": true,
+    "production": false
+  },
+  "originals_rewritten": true,
+  "full_primary_migration_run_safe": false,
+  "required_before_reconciliation": [
+    "Fresh staging and production complete migration history, latest version, ordered-version MD5 and database system identifier.",
+    "Prove old versions 20261005183837, 20261005231340 and 20261006040117 absent in targeted environments and confirm any other environments using this source.",
+    "Prove transport tables/functions and capture configuration absent, and existing preview/analytics prerequisites present.",
+    "Only after absence proof: retain old183837 engine-only tail; retire old231340 and old40117; update affected existing focused fixtures and generators."
+  ],
+  "focused_proof": {
+    "file": "tests/database/preview-transport-release.test.ts",
+    "tests": 8,
+    "result": "passed",
+    "scope": "Disposable PGlite; identity/history/provenance refusal and complete four-migration rollback; old history and private function owner/ACL/security/search_path preservation; disabled capture, no Intelligence engine schemas; atomic saved public form through queue/publisher/ingestion adapters, private claim browser-session persistence, privacy and immutable retries.",
+    "hosted_evidence": false
+  },
+  "packet_helper": "tests/helpers/transport-release-packet.ts",
+  "candidate_active": true,
+  "authoritative_migration_directory": "supabase/migrations",
+  "candidate_does_not_affect_active_migration_order": false,
+  "read_only_preflight": "docs/preview-lockers/transport-release-candidate/PREFLIGHT.sql",
+  "additional_forward_candidate": {
+    "path": "docs/preview-lockers/transport-release-candidate/20261009022458_preview_claim_browser_session.sql",
+    "version": "20261009022458",
+    "sha256": "bf69c79c9f535e63a6596fdce2290e298b9ca7f35ea571e00fd3fc25aa9d4e46",
+    "expected_normalized_function_body_md5": "8533cee03ddbd8819447939830d9983d",
+    "candidate_active": true,
+    "cloud_applied": {
+      "staging": true,
+      "production": false
+    },
+    "included_in_transport_packet": true,
+    "required_gate": "Fresh database identity/history and exact private claim function provenance; include complete version in reviewed scoped release.",
+    "function_hash_semantics": "Expected existing body before replacement, not the corrected body.",
+    "active_path": "supabase/migrations/20261009022458_preview_claim_browser_session.sql"
+  },
+  "private_claim_session_proof": {
+    "file": "tests/database/preview-claim-session.test.ts",
+    "tests": 4,
+    "result": "passed",
+    "hosted_evidence": false
+  },
+  "hosted_preflight": {
+    "checked_on": "2026-10-09",
+    "production": {
+      "project_ref": "drxtzxnwdtgxwueiqygf",
+      "system_identifier": "7537636994966709920",
+      "migration_count": 74,
+      "latest_version": "20261001035756",
+      "ordered_versions_md5": "3c14f6ad90f124633fa36d47cac4719d",
+      "fingerprint_input": "Comma-separated versions, ordered by version",
+      "complete_version_name_history_captured": true,
+      "old_and_candidate_transport_versions_absent": true,
+      "private_claim_original_version_present": true,
+      "private_claim_candidate_version_absent": true,
+      "private_claim_existing_body_md5": "8533cee03ddbd8819447939830d9983d",
+      "transport_objects_absent": true,
+      "preview_analytics_relations_present": true,
+      "new_six_argument_inquiry_rpc_present": false,
+      "source": "https://supabase.com/dashboard/project/drxtzxnwdtgxwueiqygf/sql/af7b5325-0884-4f40-bf00-f2cdf1f02586",
+      "release_ready": false
+    },
+    "staging": {
+      "project_ref": "yevihzsgqagvuulymqum",
+      "parent_project_ref": "drxtzxnwdtgxwueiqygf",
+      "system_identifier": "7666007964130682852",
+      "migration_count": 58,
+      "latest_version": "20261006043000",
+      "ordered_versions_md5": "13c8004548aea6b3fbe8a672bbe65c01",
+      "fingerprint_input": "Comma-separated versions, ordered by version",
+      "complete_version_name_history_captured": true,
+      "old_and_candidate_transport_versions_absent": true,
+      "private_claim_original_version_present": true,
+      "private_claim_candidate_version_absent": true,
+      "private_claim_existing_body_md5": "8533cee03ddbd8819447939830d9983d",
+      "transport_objects_absent": true,
+      "preview_analytics_relations_present": true,
+      "new_six_argument_inquiry_rpc_present": false,
+      "source": "https://supabase.com/dashboard/project/yevihzsgqagvuulymqum/sql/49142610-5498-48c8-8459-c0e676c25fbb",
+      "accessible": true,
+      "release_ready": false
+    },
+    "overall_gate": "Complete staging checkpoint verified. Hosted signed delivery canary and production release/resources remain pending; production capture disabled.",
+    "unrelated_staging_named_project": {
+      "project_ref": "mktmlqrfpefluoquntze",
+      "intended_release_target": false,
+      "migration_history_relation_present": false,
+      "note": "Different top-level project; do not use, restore or confuse with production child branch."
+    }
+  },
+  "staging_reconciliation_plan": "docs/preview-lockers/STAGING-RECONCILIATION-2026-10-09.md",
+  "source_reconciliation": {
+    "old_transport_versions_absent_in_intended_targets": true,
+    "intended_targets": [
+      "drxtzxnwdtgxwueiqygf",
+      "yevihzsgqagvuulymqum"
+    ],
+    "retained_engine_path": "supabase/migrations/20261005183837_intelligence_measured_delivery.sql",
+    "retained_engine_sha256": "643b9e52c939b108f1797c6c819404a91801550127502d9d4e6a352530fdf098",
+    "retired_unapplied_versions": [
+      "20261005231340",
+      "20261006040117"
+    ],
+    "historical_claim_unchanged_sha256": "ff454a5435c7393f164a3aa4e149bb08b32ef1786e7b1bdd2a3ece1af41b02f7",
+    "engine_has_no_forward_transport_dependency": true,
+    "source_sql_tests_passed": 53,
+    "test_files": 6,
+    "other_projects_not_release_targets": [
+      "mktmlqrfpefluoquntze"
+    ],
+    "repository_wide_push_authorized": false
+  },
+  "hosted_staging_release": {
+    "project_ref": "yevihzsgqagvuulymqum",
+    "checked_at": "2026-10-09T19:51:01.133Z",
+    "source": "https://supabase.com/dashboard/project/yevihzsgqagvuulymqum/sql/d871ec56-8643-4633-9a67-b73b9d502910",
+    "batch_rows": 0,
+    "outbox_rls": true,
+    "batches_rls": true,
+    "outbox_rows": 0,
+    "latest_version": "20261009022458",
+    "migration_count": 62,
+    "released_history": [
+      {
+        "name": "analytics_delivery_transport",
+        "version": "20261009003442",
+        "statement_count": 1,
+        "complete_source_md5": "4f7a584b6f6602a4516bb1ded95f314c"
+      },
+      {
+        "name": "analytics_delivery_production_environment",
+        "version": "20261009003448",
+        "statement_count": 1,
+        "complete_source_md5": "535bfd5fdefb8618a7703fa8d950b5cb"
+      },
+      {
+        "name": "preview_sprint_delivery_bridge",
+        "version": "20261009003454",
+        "statement_count": 1,
+        "complete_source_md5": "642afa7460f14f9f7823b9b0af8a3274"
+      },
+      {
+        "name": "preview_claim_browser_session",
+        "version": "20261009022458",
+        "statement_count": 1,
+        "complete_source_md5": "a96a8df440fd7d99ed8eb8f54773ef11"
+      }
+    ],
+    "system_identifier": "7666007964130682852",
+    "anon_outbox_access": false,
+    "capture_environment": null,
+    "ordered_versions_md5": "68ac42ff0579f9156f142a519d9d2f0e",
+    "private_claim_function": {
+      "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+      "owner": "postgres",
+      "config": [
+        "search_path=\"\""
+      ],
+      "body_md5": "cf93750c0d2bb0016c381f53fe7d6ffe",
+      "security_definer": true
+    },
+    "excluded_engine_present": false,
+    "authenticated_capture_execute": false,
+    "packet_sha256": "ac8ebc9df67df0f9b249571234befd600b3d233e1a664d910032c2e004e44149",
+    "capture_enabled": false,
+    "qstash_delivery_verified": false,
+    "production_changed": false
+  },
+  "application_candidate": {
+    "baseline": "889df1ba2eb6eaecfb1376c6b0527a1b57789a2a",
+    "ignored_manifest": "output/preview-sprint-events-2026-10-05/release-candidate-manifest.json",
+    "typescript_passed": true,
+    "focused_test_cases_passed": 94,
+    "production_build": "webpack passed",
+    "turbopack": "external node_modules junction rejected before application compilation",
+    "production_flags": "disabled",
+    "production_deployed": false,
+    "durable_manifest": "docs/preview-lockers/SCOPED-APPLICATION-MANIFEST-2026-10-09.json"
+  },
+  "historical_source_files": [
+    {
+      "path": "supabase/migrations/20261005183837_intelligence_measured_delivery.sql",
+      "sha256": "2ce69b0f2728f94e6df63ced9d93572bb7252b9b1244d3cc801d5f46f296338a"
+    },
+    {
+      "path": "supabase/migrations/20261005231340_production_delivery_environment.sql",
+      "sha256": "d0cfc240f39aadbe523a5aa1b85d2491b837e880fda72607542762a4ec61d9ba"
+    },
+    {
+      "path": "supabase/migrations/20261006040117_preview_sprint_event_bridge.sql",
+      "sha256": "85067af6607b32dd17a40de04f58a0aec2eb3de33de7dffd0d0272f5d0cd015c"
+    }
+  ],
+  "type_generation": {
+    "method": "Read-only hosted PostgreSQL catalog, not a fixture or full database replacement",
+    "generator": "scripts/generate-preview-delivery-types.mjs",
+    "query": "scripts/preview-delivery-catalog.sql",
+    "output": "types/preview-delivery.generated.ts",
+    "catalog_snapshot": "docs/preview-lockers/evidence/preview-delivery-catalog-2026-10-09.json",
+    "catalog_sha256": "f8b48d7f374999f33e763cee32811cca97c7a56d69937edce0b1c2864e649fae",
+    "tables": 3,
+    "columns": 32,
+    "foreign_keys": 4,
+    "rpcs": 10,
+    "typescript_passed": true,
+    "reproducibility_check_passed": true,
+    "cli_transport_error_preserved": true
+  },
+  "hosted_preview": {
+    "url": "https://bltz-preview-sprint-2026-10-09.vercel.app",
+    "ready": true,
+    "target": "preview",
+    "deployment_id": "dpl_CgAMMCXU7whk9H2cpdd5RCjF35Uv",
+    "staging_ref": "yevihzsgqagvuulymqum",
+    "production_opt_in": false,
+    "protection_preserved": true,
+    "real_player_data_used": false,
+    "automatic_schedule_created": false
+  },
+  "hosted_canary": {
+    "status": "failed",
+    "events_persisted": 3,
+    "browser_session_preserved": true,
+    "retry_ids_and_hashes_unchanged": true,
+    "private_fields_exported": false,
+    "batch_id": "099363f6-e66c-4bb7-abfa-745ce8338f1f",
+    "dispatch_attempts": 2,
+    "worker_attempts": 0,
+    "last_error_code": "qstash_publish_http_400",
+    "qstash_delivery_verified": false,
+    "tinybird_delivery_verified": false,
+    "new_capture_enabled": false,
+    "registered_retry_status": "failed"
+  }
+}
