@@ -11,7 +11,8 @@ try {
     create table public.analytics_events(id uuid primary key default gen_random_uuid(),client_event_id uuid unique not null,event_name text not null,
       user_id uuid,athlete_id uuid,session_id uuid,source text,page text,properties jsonb,occurred_at timestamptz);`);
   await db.exec(await fs.readFile('supabase/migrations/20261005183837_intelligence_measured_delivery.sql','utf8'));
-  await db.exec(await fs.readFile('supabase/migrations/20261005231340_production_delivery_environment.sql','utf8'));
+  await db.exec(await fs.readFile('supabase/migrations/20261009003442_analytics_delivery_transport.sql','utf8'));
+  await db.exec(await fs.readFile('supabase/migrations/20261009003448_analytics_delivery_production_environment.sql','utf8'));
   const {rows} = await db.query("select table_name,column_name,data_type,is_nullable,column_default from information_schema.columns where table_schema='public' order by table_name,ordinal_position");
   const functions = (await db.query(`select p.proname as name,p.proargnames as arg_names,oidvectortypes(p.proargtypes) as arg_types,format_type(p.prorettype,null) as return_type from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname not like 'guard_%' order by p.proname`)).rows;
   const typeFor=(type)=>type==='jsonb'?'MeasuredIntelligenceJson':['integer','bigint','smallint','numeric'].includes(type)?'number':type==='boolean'?'boolean':'string';

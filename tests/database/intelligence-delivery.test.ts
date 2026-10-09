@@ -22,6 +22,9 @@ beforeAll(async()=>{
       user_id uuid references auth.users,athlete_id uuid references players,session_id uuid,source text not null,page text,properties jsonb not null,occurred_at timestamptz not null,created_at timestamptz default now());
     grant select,insert on analytics_events to service_role;insert into players values('${player}');`);
   await db.exec(fs.readFileSync("supabase/migrations/20261005183837_intelligence_measured_delivery.sql","utf8"));
+  expect((await db.query("select to_regclass('public.intelligence_engine_runs') is not null engine, to_regclass('public.analytics_delivery_outbox') is null transport_absent")).rows[0])
+    .toEqual({ engine: true, transport_absent: true });
+  await db.exec(fs.readFileSync("supabase/migrations/20261009003442_analytics_delivery_transport.sql","utf8"));
 },30000);
 afterAll(async()=>db.close());
 describe("transactional development delivery SQL",()=>{

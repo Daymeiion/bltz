@@ -15,8 +15,8 @@ const retrySession = "70000000-0000-4000-8000-000000000002";
 const requestId = "60000000-0000-4000-8000-000000000001";
 const original = fs.readFileSync("supabase/migrations/20260914184728_preview_claim_requests_and_expiry.sql", "utf8");
 const originalFunction = original.match(/create or replace function private\.preview_conversion\(p_preview uuid,p_action text,p_request uuid,p_session uuid,p_data jsonb\)[\s\S]*?\$\$;/)![0];
-const candidate = fs.readFileSync("docs/preview-lockers/transport-release-candidate/20261009022458_preview_claim_browser_session.sql", "utf8");
-const held = "docs/preview-lockers/transport-release-candidate/";
+const candidate = fs.readFileSync("supabase/migrations/20261009022458_preview_claim_browser_session.sql", "utf8");
+const migrations = "supabase/migrations/";
 
 async function submit(actor: string | null = viewer, target = preview, sessionId = session, data: object = {}) {
   await db.query("select set_config('test.claim_actor',$1,false)", [actor ?? ""]);
@@ -64,15 +64,15 @@ beforeAll(async () => {
     grant execute on function public.preview_conversion(uuid,text,uuid,uuid,jsonb) to authenticated;
     insert into preview_conversion_campaigns(preview_id,contact_id,campaign,channel,relationship,source,is_test,created_by)
       values('${preview}','${preview}','sprint','email','warm','fixture',false,'${admin}'),('${testPreview}','${testPreview}','sprint','email','warm','fixture',true,'${admin}');`);
-  await db.exec(fs.readFileSync(`${held}20261009003442_analytics_delivery_transport.sql`, "utf8"));
-  await db.exec(fs.readFileSync(`${held}20261009003448_analytics_delivery_production_environment.sql`, "utf8"));
-  await db.exec(fs.readFileSync(`${held}20261009003454_preview_sprint_delivery_bridge.sql`, "utf8"));
+  await db.exec(fs.readFileSync(`${migrations}20261009003442_analytics_delivery_transport.sql`, "utf8"));
+  await db.exec(fs.readFileSync(`${migrations}20261009003448_analytics_delivery_production_environment.sql`, "utf8"));
+  await db.exec(fs.readFileSync(`${migrations}20261009003454_preview_sprint_delivery_bridge.sql`, "utf8"));
   await db.exec(candidate);
   await db.exec("select public.configure_preview_analytics_capture('development')");
 }, 30_000);
 afterAll(async () => db.close());
 
-describe("private claim browser-session forward candidate", () => {
+describe("private claim browser-session forward migration", () => {
   it("retains the submitted tab session across accepted, form submission and optional dashboard interest", async () => {
     expect(await submit()).toMatchObject({ saved: true });
     const ledger = (await db.query<{ kind: string; session_id: string }>("select kind,session_id from preview_conversion_events order by kind")).rows;

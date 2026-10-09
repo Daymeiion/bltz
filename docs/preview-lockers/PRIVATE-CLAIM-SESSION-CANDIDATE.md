@@ -1,6 +1,6 @@
 # Private claim session correction
 
-The held `transport-release-candidate/20261009022458_preview_claim_browser_session.sql` was generated with the installed Supabase CLI. It is not in the active migration directory and has not been applied remotely.
+Current status (2026-10-09): the exact candidate is promoted to `supabase/migrations` and applied to the intended staging branch as part of the guarded four-version transport packet. Production is unchanged. See [the current release checkpoint](STAGING-RECONCILIATION-2026-10-09.md) for hosted readback and remaining delivery gates. The review copy below is retained as provenance.
 
 The current private claim function changes accepted interest, claim submission and optional dashboard-interest session IDs to the preview UUID. The candidate preserves the browser's submitted session for those facts so they can join prior preview activity. It makes only three changes to the latest historical function. Staff milestones and referral attribution retain their existing identifiers. Existing response idempotency, viewer authorization, expiry, consent checks, rate limits, owner and grants are preserved. No tables, function signatures, rights claims or verified ownership are added.
 

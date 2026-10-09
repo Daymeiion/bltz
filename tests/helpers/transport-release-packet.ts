@@ -14,17 +14,29 @@ export function buildTransportReleasePacket(
   migrations: TransportReleaseMigration[],
   baseline: TransportReleaseBaseline,
 ): string {
-  if (migrations.length !== 3 || !Number.isInteger(baseline.count) || baseline.count < 1
+  if (![3, 4].includes(migrations.length) || !Number.isInteger(baseline.count) || baseline.count < 1
     || !/^\d{14}$/.test(baseline.latestVersion)
     || !/^[a-f0-9]{32}$/.test(baseline.versionsMd5)
     || !/^\d{1,20}$/.test(baseline.systemIdentifier)) throw new Error("Invalid release baseline");
+  const executableBodies: string[] = [];
   for (const [index, migration] of migrations.entries()) {
+    let body = migration.sql;
+    if (index === 3) {
+      // This reviewed forward candidate retains its own transaction in source.
+      // Remove only that wrapper for execution; its complete source is recorded.
+      const opening = body.match(/^((?:[ \t]*--[^\r\n]*(?:\r?\n|$)|\s)*)begin;[ \t]*(?:\r?\n)/i);
+      const closing = /\r?\ncommit;[ \t]*\s*$/i;
+      if (migration.version !== "20261009022458" || migration.name !== "preview_claim_browser_session"
+        || !opening || !closing.test(body)) throw new Error("Invalid or unscoped release migration");
+      body = body.replace(opening[0], opening[1]).replace(closing, "\n");
+    }
     if (!/^\d{14}$/.test(migration.version) || !/^[a-z_]+$/.test(migration.name)
       || !migration.sql.trim() || (index > 0 && migration.version <= migrations[index - 1].version)
-      || /^(?:begin|commit|rollback)\s*;\s*$/im.test(migration.sql)
+      || /^(?:begin|commit|rollback)\s*;\s*$/im.test(body)
       || /intelligence_engine_|intelligence_feature_snapshots|intelligence_review_opportunities/.test(migration.sql)) {
       throw new Error("Invalid or unscoped release migration");
     }
+    executableBodies.push(body);
   }
   const versions = migrations.map((migration) => quoted(migration.version)).join(",");
   const preflight = `do $preflight$
@@ -45,7 +57,7 @@ begin
     raise exception 'Delivery objects already exist; stop and review their provenance';
   end if;
 end $preflight$;`;
-  const bodies = migrations.map((migration) => `${migration.sql.trim()}\ninsert into supabase_migrations.schema_migrations(version,name,statements)
+  const bodies = migrations.map((migration, index) => `${executableBodies[index].trim()}\ninsert into supabase_migrations.schema_migrations(version,name,statements)
 values(${quoted(migration.version)},${quoted(migration.name)},array[${quoted(migration.sql)}]);`).join("\n\n");
   return `begin;
 set local lock_timeout = '5s';
@@ -56,7 +68,7 @@ ${bodies}
 do $postflight$
 begin
   if (select count(*) from supabase_migrations.schema_migrations) <> ${baseline.count + migrations.length}
-    or (select count(*) from supabase_migrations.schema_migrations where version in (${versions})) <> 3
+    or (select count(*) from supabase_migrations.schema_migrations where version in (${versions})) <> ${migrations.length}
     or (select environment from private.preview_analytics_capture_config where singleton) is not null
     or not (select relrowsecurity from pg_class where oid='public.analytics_delivery_outbox'::regclass)
     or not (select relrowsecurity from pg_class where oid='public.analytics_delivery_batches'::regclass)

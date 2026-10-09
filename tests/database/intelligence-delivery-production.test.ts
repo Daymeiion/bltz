@@ -32,8 +32,8 @@ beforeAll(async () => {
     create table analytics_events(id uuid primary key default gen_random_uuid(),client_event_id uuid unique not null,event_name text not null,
       user_id uuid references auth.users,athlete_id uuid references players,session_id uuid,source text not null,page text,properties jsonb not null,occurred_at timestamptz not null,created_at timestamptz default now());
     grant select,insert on analytics_events to service_role;insert into players values('${player}');`);
-  await db.exec(fs.readFileSync("supabase/migrations/20261005183837_intelligence_measured_delivery.sql", "utf8"));
-  await db.exec(fs.readFileSync("supabase/migrations/20261005231340_production_delivery_environment.sql", "utf8"));
+  await db.exec(fs.readFileSync("supabase/migrations/20261009003442_analytics_delivery_transport.sql", "utf8"));
+  await db.exec(fs.readFileSync("supabase/migrations/20261009003448_analytics_delivery_production_environment.sql", "utf8"));
 }, 30_000);
 afterAll(async () => db.close());
 

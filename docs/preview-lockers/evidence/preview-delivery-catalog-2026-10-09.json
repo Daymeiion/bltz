@@ -1,0 +1,744 @@
+{
+  "tables": [
+    {
+      "rls": true,
+      "name": "analytics_delivery_batches",
+      "schema": "public",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "ordinal": 1,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "has_default": true,
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "environment",
+          "type": "text",
+          "ordinal": 2,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "has_default": false,
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "state",
+          "type": "text",
+          "ordinal": 3,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "has_default": true,
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "event_count",
+          "type": "integer",
+          "ordinal": 4,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "has_default": false,
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "byte_count",
+          "type": "integer",
+          "ordinal": 5,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "has_default": false,
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "publish_attempts",
+          "type": "integer",
+          "ordinal": 6,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "has_default": true,
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "worker_attempts",
+          "type": "integer",
+          "ordinal": 7,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "has_default": true,
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "publish_lease_token",
+          "type": "uuid",
+          "ordinal": 8,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "has_default": false,
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "publish_lease_until",
+          "type": "timestamp with time zone",
+          "ordinal": 9,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "has_default": false,
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "worker_lease_token",
+          "type": "uuid",
+          "ordinal": 10,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "has_default": false,
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "worker_lease_until",
+          "type": "timestamp with time zone",
+          "ordinal": 11,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "has_default": false,
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "next_attempt_at",
+          "type": "timestamp with time zone",
+          "ordinal": 12,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "has_default": true,
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "message_id",
+          "type": "text",
+          "ordinal": 13,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "has_default": false,
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "last_error_code",
+          "type": "text",
+          "ordinal": 14,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "has_default": false,
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "ordinal": 15,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "has_default": true,
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "ordinal": 16,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "has_default": true,
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "acknowledged_at",
+          "type": "timestamp with time zone",
+          "ordinal": 17,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "has_default": false,
+          "type_schema": "pg_catalog"
+        }
+      ],
+      "present": true,
+      "relationships": []
+    },
+    {
+      "rls": true,
+      "name": "analytics_delivery_outbox",
+      "schema": "public",
+      "columns": [
+        {
+          "name": "environment",
+          "type": "text",
+          "ordinal": 1,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "has_default": false,
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "event_id",
+          "type": "uuid",
+          "ordinal": 2,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "has_default": false,
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "analytics_event_id",
+          "type": "uuid",
+          "ordinal": 3,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "has_default": false,
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "envelope",
+          "type": "jsonb",
+          "ordinal": 4,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "has_default": false,
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "payload_hash",
+          "type": "text",
+          "ordinal": 5,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "has_default": false,
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "batch_id",
+          "type": "uuid",
+          "ordinal": 6,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "has_default": false,
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "accepted_at",
+          "type": "timestamp with time zone",
+          "ordinal": 7,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "has_default": true,
+          "type_schema": "pg_catalog"
+        }
+      ],
+      "present": true,
+      "relationships": [
+        {
+          "columns": [
+            "analytics_event_id"
+          ],
+          "is_one_to_one": true,
+          "foreign_key_name": "analytics_delivery_outbox_analytics_event_id_fkey",
+          "referenced_schema": "public",
+          "referenced_columns": [
+            "id"
+          ],
+          "referenced_relation": "analytics_events"
+        },
+        {
+          "columns": [
+            "batch_id"
+          ],
+          "is_one_to_one": false,
+          "foreign_key_name": "analytics_delivery_outbox_batch_id_fkey",
+          "referenced_schema": "public",
+          "referenced_columns": [
+            "id"
+          ],
+          "referenced_relation": "analytics_delivery_batches"
+        },
+        {
+          "columns": [
+            "batch_id",
+            "environment"
+          ],
+          "is_one_to_one": false,
+          "foreign_key_name": "analytics_delivery_outbox_environment_batch",
+          "referenced_schema": "public",
+          "referenced_columns": [
+            "id",
+            "environment"
+          ],
+          "referenced_relation": "analytics_delivery_batches"
+        }
+      ]
+    },
+    {
+      "rls": true,
+      "name": "preview_link_inquiries",
+      "schema": "public",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "ordinal": 1,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "has_default": true,
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "preview_id",
+          "type": "uuid",
+          "ordinal": 2,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "has_default": false,
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "email",
+          "type": "text",
+          "ordinal": 3,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "has_default": false,
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "feature_requests",
+          "type": "text",
+          "ordinal": 4,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "has_default": false,
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "consent_at",
+          "type": "timestamp with time zone",
+          "ordinal": 5,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "has_default": true,
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "ordinal": 6,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "has_default": true,
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "analytics_session_id",
+          "type": "uuid",
+          "ordinal": 7,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "has_default": false,
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "analytics_environment",
+          "type": "text",
+          "ordinal": 8,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "has_default": false,
+          "type_schema": "pg_catalog"
+        }
+      ],
+      "present": true,
+      "relationships": [
+        {
+          "columns": [
+            "preview_id"
+          ],
+          "is_one_to_one": false,
+          "foreign_key_name": "preview_link_inquiries_preview_id_fkey",
+          "referenced_schema": "public",
+          "referenced_columns": [
+            "id"
+          ],
+          "referenced_relation": "preview_lockers"
+        }
+      ]
+    }
+  ],
+  "functions": [
+    {
+      "kind": "f",
+      "name": "accept_analytics_delivery_event",
+      "present": true,
+      "arguments": [
+        {
+          "name": "p_event",
+          "type": "jsonb",
+          "ordinal": 1,
+          "optional": false
+        },
+        {
+          "name": "p_envelope",
+          "type": "jsonb",
+          "ordinal": 2,
+          "optional": false
+        }
+      ],
+      "signature": "public.accept_analytics_delivery_event(jsonb,jsonb)",
+      "return_type": "jsonb",
+      "returns_set": false,
+      "default_count": 0,
+      "argument_count": 2,
+      "argument_modes": null
+    },
+    {
+      "kind": "f",
+      "name": "acquire_analytics_delivery_batch",
+      "present": true,
+      "arguments": [
+        {
+          "name": "p_batch_id",
+          "type": "uuid",
+          "ordinal": 1,
+          "optional": false
+        },
+        {
+          "name": "p_environment",
+          "type": "text",
+          "ordinal": 2,
+          "optional": false
+        },
+        {
+          "name": "p_lease_token",
+          "type": "uuid",
+          "ordinal": 3,
+          "optional": false
+        },
+        {
+          "name": "p_lease_seconds",
+          "type": "integer",
+          "ordinal": 4,
+          "optional": true
+        }
+      ],
+      "signature": "public.acquire_analytics_delivery_batch(uuid,text,uuid,integer)",
+      "return_type": "jsonb",
+      "returns_set": false,
+      "default_count": 1,
+      "argument_count": 4,
+      "argument_modes": null
+    },
+    {
+      "kind": "f",
+      "name": "configure_preview_analytics_capture",
+      "present": true,
+      "arguments": [
+        {
+          "name": "p_environment",
+          "type": "text",
+          "ordinal": 1,
+          "optional": false
+        }
+      ],
+      "signature": "public.configure_preview_analytics_capture(text)",
+      "return_type": "void",
+      "returns_set": false,
+      "default_count": 0,
+      "argument_count": 1,
+      "argument_modes": null
+    },
+    {
+      "kind": "f",
+      "name": "get_analytics_delivery_batch",
+      "present": true,
+      "arguments": [
+        {
+          "name": "p_batch_id",
+          "type": "uuid",
+          "ordinal": 1,
+          "optional": false
+        },
+        {
+          "name": "p_environment",
+          "type": "text",
+          "ordinal": 2,
+          "optional": false
+        }
+      ],
+      "signature": "public.get_analytics_delivery_batch(uuid,text)",
+      "return_type": "jsonb",
+      "returns_set": false,
+      "default_count": 0,
+      "argument_count": 2,
+      "argument_modes": null
+    },
+    {
+      "kind": "f",
+      "name": "lease_analytics_delivery_batch",
+      "present": true,
+      "arguments": [
+        {
+          "name": "p_environment",
+          "type": "text",
+          "ordinal": 1,
+          "optional": false
+        },
+        {
+          "name": "p_limit",
+          "type": "integer",
+          "ordinal": 2,
+          "optional": false
+        },
+        {
+          "name": "p_byte_cap",
+          "type": "integer",
+          "ordinal": 3,
+          "optional": false
+        },
+        {
+          "name": "p_lease_token",
+          "type": "uuid",
+          "ordinal": 4,
+          "optional": false
+        },
+        {
+          "name": "p_lease_seconds",
+          "type": "integer",
+          "ordinal": 5,
+          "optional": true
+        }
+      ],
+      "signature": "public.lease_analytics_delivery_batch(text,integer,integer,uuid,integer)",
+      "return_type": "jsonb",
+      "returns_set": false,
+      "default_count": 1,
+      "argument_count": 5,
+      "argument_modes": null
+    },
+    {
+      "kind": "f",
+      "name": "mark_analytics_delivery_published",
+      "present": true,
+      "arguments": [
+        {
+          "name": "p_batch_id",
+          "type": "uuid",
+          "ordinal": 1,
+          "optional": false
+        },
+        {
+          "name": "p_lease_token",
+          "type": "uuid",
+          "ordinal": 2,
+          "optional": false
+        },
+        {
+          "name": "p_message_id",
+          "type": "text",
+          "ordinal": 3,
+          "optional": false
+        }
+      ],
+      "signature": "public.mark_analytics_delivery_published(uuid,uuid,text)",
+      "return_type": "boolean",
+      "returns_set": false,
+      "default_count": 0,
+      "argument_count": 3,
+      "argument_modes": null
+    },
+    {
+      "kind": "f",
+      "name": "record_preview_analytics_event",
+      "present": true,
+      "arguments": [
+        {
+          "name": "p_input",
+          "type": "jsonb",
+          "ordinal": 1,
+          "optional": false
+        },
+        {
+          "name": "p_actor",
+          "type": "uuid",
+          "ordinal": 2,
+          "optional": false
+        },
+        {
+          "name": "p_environment",
+          "type": "text",
+          "ordinal": 3,
+          "optional": false
+        }
+      ],
+      "signature": "public.record_preview_analytics_event(jsonb,uuid,text)",
+      "return_type": "jsonb",
+      "returns_set": false,
+      "default_count": 0,
+      "argument_count": 3,
+      "argument_modes": null
+    },
+    {
+      "kind": "f",
+      "name": "release_analytics_delivery_publish",
+      "present": true,
+      "arguments": [
+        {
+          "name": "p_batch_id",
+          "type": "uuid",
+          "ordinal": 1,
+          "optional": false
+        },
+        {
+          "name": "p_lease_token",
+          "type": "uuid",
+          "ordinal": 2,
+          "optional": false
+        },
+        {
+          "name": "p_error_code",
+          "type": "text",
+          "ordinal": 3,
+          "optional": false
+        }
+      ],
+      "signature": "public.release_analytics_delivery_publish(uuid,uuid,text)",
+      "return_type": "boolean",
+      "returns_set": false,
+      "default_count": 0,
+      "argument_count": 3,
+      "argument_modes": null
+    },
+    {
+      "kind": "f",
+      "name": "save_preview_link_inquiry",
+      "present": true,
+      "arguments": [
+        {
+          "name": "p_preview",
+          "type": "uuid",
+          "ordinal": 1,
+          "optional": false
+        },
+        {
+          "name": "p_email",
+          "type": "text",
+          "ordinal": 2,
+          "optional": false
+        },
+        {
+          "name": "p_features",
+          "type": "text",
+          "ordinal": 3,
+          "optional": false
+        },
+        {
+          "name": "p_session",
+          "type": "uuid",
+          "ordinal": 4,
+          "optional": false
+        },
+        {
+          "name": "p_actor",
+          "type": "uuid",
+          "ordinal": 5,
+          "optional": false
+        },
+        {
+          "name": "p_environment",
+          "type": "text",
+          "ordinal": 6,
+          "optional": false
+        }
+      ],
+      "signature": "public.save_preview_link_inquiry(uuid,text,text,uuid,uuid,text)",
+      "return_type": "jsonb",
+      "returns_set": false,
+      "default_count": 0,
+      "argument_count": 6,
+      "argument_modes": null
+    },
+    {
+      "kind": "f",
+      "name": "settle_analytics_delivery_batch",
+      "present": true,
+      "arguments": [
+        {
+          "name": "p_batch_id",
+          "type": "uuid",
+          "ordinal": 1,
+          "optional": false
+        },
+        {
+          "name": "p_lease_token",
+          "type": "uuid",
+          "ordinal": 2,
+          "optional": false
+        },
+        {
+          "name": "p_outcome",
+          "type": "text",
+          "ordinal": 3,
+          "optional": false
+        },
+        {
+          "name": "p_error_code",
+          "type": "text",
+          "ordinal": 4,
+          "optional": true
+        }
+      ],
+      "signature": "public.settle_analytics_delivery_batch(uuid,uuid,text,text)",
+      "return_type": "boolean",
+      "returns_set": false,
+      "default_count": 1,
+      "argument_count": 4,
+      "argument_modes": null
+    }
+  ],
+  "read_only": true,
+  "captured_at": "2026-10-09T20:05:26.685956+00:00",
+  "project_ref": "yevihzsgqagvuulymqum",
+  "snapshot_kind": "bltz_preview_delivery_catalog_v1",
+  "release_versions": [
+    "20261009003442",
+    "20261009003448",
+    "20261009003454",
+    "20261009022458"
+  ],
+  "system_identifier": "7666007964130682852"
+}

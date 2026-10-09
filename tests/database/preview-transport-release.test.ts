@@ -19,22 +19,39 @@ const files = [
   "20261009003442_analytics_delivery_transport.sql",
   "20261009003448_analytics_delivery_production_environment.sql",
   "20261009003454_preview_sprint_delivery_bridge.sql",
+  "20261009022458_preview_claim_browser_session.sql",
 ];
 const migrations = files.map((filename) => ({
   version: filename.slice(0, 14),
   name: filename.slice(15, -4),
-  sql: fs.readFileSync(`docs/preview-lockers/transport-release-candidate/${filename}`, "utf8"),
+  sql: fs.readFileSync(`supabase/migrations/${filename}`, "utf8"),
 }));
 const db = new PGlite();
 const preview = "10000000-0000-4000-8000-000000000001";
 const session = "70000000-0000-4000-8000-000000000001";
 const event = "60000000-0000-4000-8000-000000000001";
+const viewer = "40000000-0000-4000-8000-000000000001";
+const admin = "40000000-0000-4000-8000-000000000003";
+const originalClaim = fs.readFileSync("supabase/migrations/20260914184728_preview_claim_requests_and_expiry.sql", "utf8");
+const originalClaimFunction = originalClaim.match(/create or replace function private\.preview_conversion\(p_preview uuid,p_action text,p_request uuid,p_session uuid,p_data jsonb\)[\s\S]*?\$\$;/)![0];
+type PrivateClaimState = { bodyMd5: string; owner: string; acl: string; definer: boolean; configuration: string[] };
+const readPrivateClaimState = async () => (await db.query<PrivateClaimState>(`select
+  md5(replace(prosrc,E'\\r\\n',E'\\n')) "bodyMd5",proowner::text owner,proacl::text acl,
+  prosecdef definer,proconfig configuration from pg_proc
+  where oid='private.preview_conversion(uuid,text,uuid,uuid,jsonb)'::regprocedure`)).rows[0];
+let originalPrivateClaimState: PrivateClaimState;
+let originalHistory: { version: string; name: string; statements: string[] }[];
 let baseline: TransportReleaseBaseline;
 let packet: string;
 
 beforeAll(async () => {
-  await db.exec(`create role anon; create role authenticated; create role service_role bypassrls;
-    create schema private; create schema supabase_migrations;
+  await db.exec(`create role anon; create role authenticated; create role service_role bypassrls; create role claim_owner bypassrls;
+    create schema auth; create schema private; create schema supabase_migrations;
+    create table auth.users(id uuid primary key,email text,email_confirmed_at timestamptz,deleted_at timestamptz);
+    create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('test.claim_actor',true),'')::uuid $$;
+    create function public.is_internal_admin() returns boolean language sql stable as $$ select auth.uid()='${admin}'::uuid $$;
+    create table gtm_contacts(id uuid primary key,archived boolean default false,player_master_gsis_id text);
+    create table audit_logs(id uuid primary key default gen_random_uuid(),actor_user_id uuid,action text,entity_type text,entity_id text,actor_role_scope text,risk_level text,new_values jsonb);
     create table supabase_migrations.schema_migrations(version text primary key,name text,statements text[]);
     insert into supabase_migrations.schema_migrations values('20261001035756','synthetic_baseline',array['-- local invariant proof']);
     create function private.has_active_platform_role(p_actor uuid,p_roles text[]) returns boolean language sql as $$ select false $$;
@@ -43,20 +60,43 @@ beforeAll(async () => {
     create table preview_lockers(id uuid primary key,photos jsonb not null default '[]',videos jsonb not null default '[]',headshot_url text,hero_video_url text);
     create table preview_locker_short_links(preview_id uuid primary key references preview_lockers,public_access_enabled boolean not null default false);
     create table preview_locker_viewer_grants(preview_locker_id uuid references preview_lockers,viewer_user_id uuid,assigned_at timestamptz not null);
-    create table preview_conversion_campaigns(preview_id uuid primary key references preview_lockers,is_test boolean not null default false);
-    create table preview_conversion_events(id uuid primary key default gen_random_uuid(),preview_id uuid,actor_id uuid,session_id uuid not null,request_id uuid not null default gen_random_uuid(),kind text not null,related_id uuid,utm jsonb not null default '{}',created_at timestamptz not null default clock_timestamp());
     create table preview_link_inquiries(id uuid primary key default gen_random_uuid(),preview_id uuid not null references preview_lockers,email text not null,feature_requests text,created_at timestamptz not null default clock_timestamp(),unique(preview_id,email));
-    revoke all on preview_conversion_events,preview_link_inquiries from public,anon,authenticated,service_role;
+    revoke all on preview_link_inquiries from public,anon,authenticated,service_role;
     grant select,insert on preview_link_inquiries to service_role;
     insert into preview_lockers(id,photos) values('${preview}','[{"id":"photo-1"}]');
-    insert into preview_locker_short_links values('${preview}',true);`);
+    insert into preview_locker_short_links values('${preview}',true);
+    insert into auth.users(id) values('${viewer}'),('${admin}');
+    insert into gtm_contacts(id) values('${preview}');
+    insert into preview_locker_viewer_grants values('${preview}','${viewer}',clock_timestamp());
+    grant usage on schema auth,private to authenticated;`);
+  const foundation = fs.readFileSync("supabase/migrations/20260911185101_preview_conversion_sprint.sql", "utf8");
+  await db.exec(foundation.slice(0, foundation.indexOf("-- One transaction entry point")).replace(/^begin;\s*/i, ""));
+  await db.exec(originalClaim.slice(originalClaim.indexOf("alter table public.preview_conversion_responses"), originalClaim.indexOf("create or replace function private.can_view_preview_locker")));
+  await db.exec(originalClaim.match(/create or replace function private\.can_view_preview_locker\([\s\S]*?\$\$;/)![0]);
+  await db.exec(originalClaimFunction);
+  await db.exec(`revoke all on function private.preview_conversion(uuid,text,uuid,uuid,jsonb) from public,anon,authenticated,service_role;
+    grant execute on function private.preview_conversion(uuid,text,uuid,uuid,jsonb) to authenticated;
+    grant usage on schema auth,private,public to claim_owner;
+    grant all on all tables in schema private,public to claim_owner;
+    alter function private.preview_conversion(uuid,text,uuid,uuid,jsonb) owner to claim_owner;
+    create function public.preview_conversion(p_preview uuid,p_action text,p_request uuid,p_session uuid,p_data jsonb)
+    returns jsonb language sql security invoker set search_path='' begin atomic;
+      select private.preview_conversion(p_preview,p_action,p_request,p_session,p_data);
+    end;
+    revoke all on function public.preview_conversion(uuid,text,uuid,uuid,jsonb) from public,anon,authenticated,service_role;
+    grant execute on function public.preview_conversion(uuid,text,uuid,uuid,jsonb) to authenticated;
+    insert into preview_conversion_campaigns(preview_id,contact_id,campaign,channel,relationship,source,is_test,created_by)
+      values('${preview}','${preview}','sprint','email','warm','fixture',false,'${admin}');`);
+  await db.query("insert into supabase_migrations.schema_migrations values($1,$2,$3)", ["20260914184728", "preview_claim_requests_and_expiry", [originalClaim]]);
+  originalPrivateClaimState = await readPrivateClaimState();
+  originalHistory = (await db.query<{ version: string; name: string; statements: string[] }>("select version,name,statements from supabase_migrations.schema_migrations order by version")).rows;
   const row = (await db.query<{ count: number; latestVersion: string; versionsMd5: string; systemIdentifier: string }>(`select count(*)::int "count",max(version) "latestVersion",md5(string_agg(version,',' order by version)) "versionsMd5",(select system_identifier::text from pg_control_system()) "systemIdentifier" from supabase_migrations.schema_migrations`)).rows[0];
   baseline = row;
   packet = buildTransportReleasePacket(migrations, baseline);
 }, 30_000);
 afterAll(async () => db.close());
 
-describe("transport-only migration release", () => {
+describe("scoped transport and claim-session migration release", () => {
   it("refuses a changed database or history before changing schema", async () => {
     await expect(db.exec(buildTransportReleasePacket(migrations, { ...baseline, systemIdentifier: "1" }))).rejects.toThrow("Database identity changed");
     await db.exec("rollback");
@@ -65,24 +105,56 @@ describe("transport-only migration release", () => {
     expect((await db.query<{ absent: boolean }>("select to_regclass('public.analytics_delivery_outbox') is null absent")).rows[0].absent).toBe(true);
   });
 
-  it("rolls back all three complete migrations and history on precommit failure", async () => {
+  it("keeps transaction and engine guards when including the fourth candidate", () => {
+    expect(() => buildTransportReleasePacket(migrations.slice(0, 3), baseline)).not.toThrow();
+    const replaceFourth = (changes: Partial<(typeof migrations)[number]>) => [...migrations.slice(0, 3), { ...migrations[3], ...changes }];
+    expect(() => buildTransportReleasePacket(replaceFourth({ name: "unreviewed_claim_change" }), baseline)).toThrow("Invalid or unscoped");
+    expect(() => buildTransportReleasePacket(replaceFourth({ sql: migrations[3].sql.replace("commit;", "commit;\ncommit;") }), baseline)).toThrow("Invalid or unscoped");
+    expect(() => buildTransportReleasePacket(replaceFourth({ sql: migrations[3].sql.replace("commit;", "create table intelligence_feature_snapshots(id uuid);\ncommit;") }), baseline)).toThrow("Invalid or unscoped");
+  });
+
+  it("rolls back transport DDL and history when private function provenance changes", async () => {
+    await db.exec(originalClaimFunction.replace(/declare\r?\n/, "declare\n  -- changed local provenance\n"));
+    const changed = await readPrivateClaimState();
+    expect(changed.bodyMd5).not.toBe(originalPrivateClaimState.bodyMd5);
+    try {
+      await expect(db.exec(packet)).rejects.toThrow("Private claim function changed");
+      await db.exec("rollback");
+      expect(await readPrivateClaimState()).toEqual(changed);
+      expect((await db.query<{ absent: boolean; count: number }>(`select
+        to_regclass('public.analytics_delivery_outbox') is null and to_regclass('private.preview_analytics_capture_config') is null absent,
+        (select count(*)::int from supabase_migrations.schema_migrations) count`)).rows[0]).toEqual({ absent: true, count: baseline.count });
+    } finally { await db.exec(originalClaimFunction); }
+  });
+
+  it("rolls back all four complete migrations, private function and history on precommit failure", async () => {
     const failure = packet.replace(/commit;\s*$/, "select 1/0;\ncommit;");
     await expect(db.exec(failure)).rejects.toThrow("division by zero");
     await db.exec("rollback");
     const row = (await db.query<{ count: number; md5: string; absent: boolean; inquiryColumns: number }>(`select (select count(*)::int from supabase_migrations.schema_migrations) count,(select md5(string_agg(version,',' order by version)) from supabase_migrations.schema_migrations) md5,to_regclass('public.analytics_delivery_outbox') is null and to_regclass('private.preview_analytics_capture_config') is null absent,(select count(*)::int from information_schema.columns where table_name='preview_link_inquiries' and column_name='analytics_environment') "inquiryColumns"`)).rows[0];
     expect(row).toEqual({ count: baseline.count, md5: baseline.versionsMd5, absent: true, inquiryColumns: 0 });
+    expect(await readPrivateClaimState()).toEqual(originalPrivateClaimState);
   });
 
   it("records only complete new migrations, preserves original history and adds no engine schemas", async () => {
     await db.exec(packet);
     const history = (await db.query<{ version: string; name: string; statements: string[] }>("select version,name,statements from supabase_migrations.schema_migrations order by version")).rows;
-    expect(history[0]).toEqual({ version: baseline.latestVersion, name: "synthetic_baseline", statements: ["-- local invariant proof"] });
-    expect(history.slice(1)).toEqual(migrations.map((migration) => ({ version: migration.version, name: migration.name, statements: [migration.sql] })));
+    expect(history.slice(0, baseline.count)).toEqual(originalHistory);
+    expect(history.slice(baseline.count)).toEqual(migrations.map((migration) => ({ version: migration.version, name: migration.name, statements: [migration.sql] })));
+    const privateState = await readPrivateClaimState();
+    expect(privateState.bodyMd5).not.toBe(originalPrivateClaimState.bodyMd5);
+    expect({ ...privateState, bodyMd5: originalPrivateClaimState.bodyMd5 }).toEqual(originalPrivateClaimState);
+    expect((await db.query<{ authenticated: boolean; anonymous: boolean; service: boolean }>(`select
+      has_function_privilege('authenticated','private.preview_conversion(uuid,text,uuid,uuid,jsonb)','execute') authenticated,
+      has_function_privilege('anon','private.preview_conversion(uuid,text,uuid,uuid,jsonb)','execute') anonymous,
+      has_function_privilege('service_role','private.preview_conversion(uuid,text,uuid,uuid,jsonb)','execute') service`)).rows[0])
+      .toEqual({ authenticated: true, anonymous: false, service: false });
     expect((await db.query<{ n: number }>("select count(*)::int n from pg_tables where schemaname='public' and tablename like 'intelligence_%'")).rows[0].n).toBe(0);
     expect((await db.query<{ environment: string | null }>("select environment from private.preview_analytics_capture_config")).rows[0].environment).toBeNull();
     await expect(db.exec(packet)).rejects.toThrow("Migration history changed");
     await db.exec("rollback");
-    expect((await db.query<{ n: number }>("select count(*)::int n from supabase_migrations.schema_migrations")).rows[0].n).toBe(baseline.count + 3);
+    expect((await db.query<{ n: number }>("select count(*)::int n from supabase_migrations.schema_migrations")).rows[0].n).toBe(baseline.count + 4);
+    expect((await db.query("select version,name,statements from supabase_migrations.schema_migrations order by version")).rows).toEqual(history);
   });
 
   it("accepts and deduplicates production preview events without a Player or Moment schema", async () => {
@@ -227,4 +299,39 @@ describe("transport-only migration release", () => {
       }
     } finally { await db.exec("reset role"); }
   }, 30_000);
+
+  it("preserves private claim form persistence and tab-session delivery across retries", async () => {
+    await db.exec("select public.configure_preview_analytics_capture('development')");
+    const submit = async (sessionId: string) => {
+      await db.query("select set_config('test.claim_actor',$1,false)", [viewer]);
+      await db.exec("set role authenticated");
+      try {
+        return (await db.query<{ result: { saved: boolean; state?: string } }>(
+          "select public.preview_conversion($1,'claim_submit',$2,$3,$4::jsonb) result",
+          [preview, randomUUID(), sessionId, JSON.stringify({ email: "private-claim@example.invalid", consent: true, feature_requests: "Private career feedback", dashboard_interest: true })],
+        )).rows[0].result;
+      } finally { await db.exec("reset role"); }
+    };
+    expect(await submit(session)).toMatchObject({ saved: true });
+    const response = (await db.query("select email,feature_requests,dashboard_interest from preview_conversion_responses where preview_id=$1", [preview])).rows;
+    expect(response).toEqual([{ email: "private-claim@example.invalid", feature_requests: "Private career feedback", dashboard_interest: true }]);
+    const readEvents = () => db.query("select kind,session_id from preview_conversion_events where preview_id=$1 order by kind", [preview]);
+    expect((await readEvents()).rows).toEqual(["accepted", "claim_submit", "dashboard_interest"].map(kind => ({ kind, session_id: session })));
+    const readDelivery = () => db.query<{ envelope: { session_id: string; properties: { event_kind: string }; measurement_basis: string }; payload_hash: string }>(
+      "select envelope,payload_hash from analytics_delivery_outbox where envelope->'properties'->>'preview_id'=$1 and environment='development' order by event_id", [preview],
+    );
+    const delivery = (await readDelivery()).rows;
+    expect(delivery).toHaveLength(3);
+    expect(delivery.map(row => row.envelope.properties.event_kind).sort()).toEqual(["accepted", "claim_submit", "dashboard_interest"]);
+    expect(delivery.every(row => row.envelope.session_id === session && row.envelope.measurement_basis === "server_workflow")).toBe(true);
+    expect(JSON.stringify(delivery)).not.toContain("private-claim@example.invalid");
+    expect(JSON.stringify(delivery)).not.toContain("Private career feedback");
+    expect(JSON.stringify(delivery)).not.toContain(viewer);
+    expect(await submit(session)).toEqual({ saved: true, state: "accepted" });
+    expect(await submit(randomUUID())).toEqual({ saved: true, state: "accepted" });
+    expect((await readDelivery()).rows).toEqual(delivery);
+    expect((await readEvents()).rows).toEqual(["accepted", "claim_submit", "dashboard_interest"].map(kind => ({ kind, session_id: session })));
+    expect((await db.query("select email,feature_requests,dashboard_interest from preview_conversion_responses where preview_id=$1", [preview])).rows).toEqual(response);
+    expect((await db.query("select count(*)::int n from audit_logs where action='preview.interest.submitted'")).rows[0]).toEqual({ n: 1 });
+  });
 });

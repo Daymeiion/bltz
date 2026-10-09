@@ -1,5 +1,3 @@
-begin;
-
 -- Prerequisite: the EXISTING analytics_events, analytics_delivery_outbox and
 -- accept_analytics_delivery_event(jsonb,jsonb) production-environment support.
 -- This migration does not install the unrelated Intelligence/feature schemas
@@ -192,5 +190,3 @@ begin
 end $$;
 revoke all on function public.save_preview_link_inquiry(uuid,text,text,uuid,uuid,text) from public,anon,authenticated,service_role;
 grant execute on function public.save_preview_link_inquiry(uuid,text,text,uuid,uuid,text) to service_role;
-
-commit;

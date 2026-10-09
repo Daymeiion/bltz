@@ -39,9 +39,9 @@ beforeAll(async () => {
     insert into preview_locker_short_links values('${preview}',true),('${testPreview}',true);
     insert into preview_locker_viewer_grants values('${privatePreview}','${viewer}',clock_timestamp()),('${privatePreview}','${expired}',clock_timestamp()-interval '49 hours');
     insert into preview_conversion_campaigns values('${preview}',false),('${testPreview}',true);`);
-  await db.exec(fs.readFileSync("supabase/migrations/20261005183837_intelligence_measured_delivery.sql","utf8"));
-  await db.exec(fs.readFileSync("supabase/migrations/20261005231340_production_delivery_environment.sql","utf8"));
-  await db.exec(fs.readFileSync("supabase/migrations/20261006040117_preview_sprint_event_bridge.sql","utf8"));
+  await db.exec(fs.readFileSync("supabase/migrations/20261009003442_analytics_delivery_transport.sql","utf8"));
+  await db.exec(fs.readFileSync("supabase/migrations/20261009003448_analytics_delivery_production_environment.sql","utf8"));
+  await db.exec(fs.readFileSync("supabase/migrations/20261009003454_preview_sprint_delivery_bridge.sql","utf8"));
 },30_000);
 afterAll(async () => db.close());
 

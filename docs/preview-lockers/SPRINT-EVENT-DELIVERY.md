@@ -1,5 +1,7 @@
 # Current focus: 90-day preview-locker event delivery
 
+Current checkpoint (2026-10-09): the four scoped forward migrations are now active source and applied to the intended staging branch, with capture disabled. Source reconciliation, a candidate based on the live application build, and isolated Tinybird development resources have passed their documented checks. Production and real-player collection remain unchanged. See [the current release checkpoint](STAGING-RECONCILIATION-2026-10-09.md); earlier findings below describe prior states.
+
 The user has removed CSV ingestion and future-import optimization from the active task. Preserve its checkpoints and data; do not continue its migrations, retries, release preparation or imports. The current objective is reliable event logging for the small Wizard of Oz preview-locker player dataset through QStash and Tinybird.
 
 ## Verified findings

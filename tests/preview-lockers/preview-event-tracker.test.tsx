@@ -102,6 +102,7 @@ it("records one claim click when the navigation opens the same public footer for
     email.dispatchEvent(new Event("input", { bubbles: true }));
     document.body.querySelector<HTMLInputElement>('input[type="checkbox"]')!.click();
   });
+  fetcher.mockResolvedValueOnce(Response.json({ saved: true }));
   await act(async () => document.body.querySelector<HTMLFormElement>('form')!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })));
   const [url, init] = fetcher.mock.calls[1];
   expect(url).toBe("/api/preview-link-inquiries");

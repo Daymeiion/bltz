@@ -96,6 +96,24 @@ describe("durable dispatcher and duplicate-safe worker", () => {
     expect(registry.releasePublish).toHaveBeenCalledWith(batchId, expect.any(String), "qstash_publish_unconfirmed");
     expect(registry.published).not.toHaveBeenCalled();
   });
+  it.each([
+    ["HTTP rejection", async () => new Response("synthetic private provider detail", { status: 401 }), "qstash_publish_http_401"],
+    ["non-JSON acknowledgment", async () => new Response("synthetic private provider detail"), "qstash_publish_ack_malformed"],
+    ["missing acknowledgment ID", async () => Response.json({ accepted: true }), "qstash_publish_ack_missing"],
+    ["invalid acknowledgment ID", async () => Response.json({ messageId: "" }), "qstash_publish_ack_invalid"],
+    ["DNS failure", async () => { throw new TypeError("synthetic private URL", { cause: { code: "ENOTFOUND", hostname: "private.example.com" } }); }, "qstash_publish_network_dns"],
+    ["TLS failure", async () => { throw new TypeError("synthetic private certificate", { cause: { code: "UNABLE_TO_VERIFY_LEAF_SIGNATURE" } }); }, "qstash_publish_network_tls"],
+    ["timeout", async () => { throw new DOMException("synthetic private URL", "TimeoutError"); }, "qstash_publish_network_timeout"],
+    ["unknown network cause", async () => { throw new TypeError("synthetic private token", { cause: { code: "synthetic_private_token" } }); }, "qstash_publish_network_unknown"],
+  ] as const)("persists only a safe code after %s, without retrying or marking published", async (_label, fail, code) => {
+    const registry = store();
+    const fetcher = vi.fn(fail);
+    expect(await dispatchAnalyticsDelivery(config, { store: registry, publisher: createAnalyticsDeliveryPublisher(config, fetcher) })).toEqual({ state: "retry", eventCount: 1 });
+    expect(registry.releasePublish).toHaveBeenCalledWith(batchId, expect.any(String), code);
+    expect(code).toMatch(/^[a-z0-9_]{1,80}$/);
+    expect(registry.published).not.toHaveBeenCalled();
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
   it("publishes a bounded reference to the immutable batch, with no event data", async () => {
     const registry = store(); const publisher = { publish: vi.fn(async () => "message-1") };
     expect(await dispatchAnalyticsDelivery(config, { store: registry, publisher })).toEqual({ state: "published", eventCount: 1 });
