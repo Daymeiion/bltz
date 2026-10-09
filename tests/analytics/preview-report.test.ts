@@ -25,11 +25,20 @@ describe("private preview sprint reporting", () => {
     expect(result).toMatchObject({ rows: [row], truncated: false, sessionMeasure: "tab_sessions_not_people" });
     const [url, options] = fetcher.mock.calls[0] as unknown as [URL, RequestInit];
     expect(url.pathname).toBe("/v0/pipes/bltz_preview_sprint_counts_v1.json");
+    expect(url.searchParams.get("window_start")).toBe("2026-10-05 00:00:00.000");
+    expect(url.searchParams.get("window_end")).toBe("2026-10-06 00:00:00.000");
     expect(url.href).not.toContain("synthetic-read");
     expect(options.headers).toEqual({ Authorization: "Bearer synthetic-read" });
     expect(options.redirect).toBe("error");
     await queryPreviewSprintCounts(id, start, end, { config: { ...config, environment: "production" }, fetcher });
     expect((fetcher.mock.calls[1] as unknown as [URL])[0].pathname).toBe("/v0/pipes/bltz_preview_sprint_production_counts_v1.json");
+  });
+  it("normalizes timezone offsets without losing fractional window boundaries", async () => {
+    const fetcher = vi.fn(async () => Response.json({ data: [] }));
+    await queryPreviewSprintCounts(id, "2026-10-04T17:00:00.123-07:00", "2026-10-05T17:00:00.456-07:00", { config, fetcher });
+    const [url] = fetcher.mock.calls[0] as unknown as [URL];
+    expect(url.searchParams.get("window_start")).toBe("2026-10-05 00:00:00.123");
+    expect(url.searchParams.get("window_end")).toBe("2026-10-06 00:00:00.456");
   });
   it("rejects invalid identity, unbounded windows and environment mismatch before a request", async () => {
     const fetcher = vi.fn();

@@ -27,7 +27,10 @@ export async function queryPreviewSprintCounts(
   const pipe = config.environment === "production" ? "bltz_preview_sprint_production_counts_v1" : "bltz_preview_sprint_counts_v1";
   const url = new URL(`/v0/pipes/${pipe}.json`, config.tinybirdUrl);
   url.searchParams.set("preview_id", previewId);
-  url.searchParams.set("window_start", windowStart); url.searchParams.set("window_end", windowEnd);
+  // Tinybird DateTime64 parameters require a UTC SQL timestamp. Preserve milliseconds
+  // and normalize caller offsets before applying the half-open report window.
+  url.searchParams.set("window_start", new Date(windowStart).toISOString().replace("T", " ").replace("Z", ""));
+  url.searchParams.set("window_end", new Date(windowEnd).toISOString().replace("T", " ").replace("Z", ""));
   const response = await (dependencies.fetcher ?? fetch)(url, {
     headers: { Authorization: `Bearer ${config.tinybirdQueryToken}` },
     redirect: "error", cache: "no-store", signal: AbortSignal.timeout(15_000),

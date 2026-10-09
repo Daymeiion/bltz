@@ -1,0 +1,60 @@
+{
+  "status": "non-active review candidate; authoritative supabase/migrations original source unchanged pending fresh hosted identity/history absence checks",
+  "generated_by": "Supabase CLI 2.114.0 migration new",
+  "source_files": [
+    {
+      "path": "supabase/migrations/20261005183837_intelligence_measured_delivery.sql",
+      "sha256": "2ce69b0f2728f94e6df63ced9d93572bb7252b9b1244d3cc801d5f46f296338a"
+    },
+    {
+      "path": "supabase/migrations/20261005231340_production_delivery_environment.sql",
+      "sha256": "d0cfc240f39aadbe523a5aa1b85d2491b837e880fda72607542762a4ec61d9ba"
+    },
+    {
+      "path": "supabase/migrations/20261006040117_preview_sprint_event_bridge.sql",
+      "sha256": "85067af6607b32dd17a40de04f58a0aec2eb3de33de7dffd0d0272f5d0cd015c"
+    }
+  ],
+  "release_order": [
+    {
+      "path": "docs/preview-lockers/transport-release-candidate/20261009003442_analytics_delivery_transport.sql",
+      "sha256": "278654d46c271ac1bbbd130455eb6afcbe6916d620dbfb0c5578fbfda24b1cf8"
+    },
+    {
+      "path": "docs/preview-lockers/transport-release-candidate/20261009003448_analytics_delivery_production_environment.sql",
+      "sha256": "d0cfc240f39aadbe523a5aa1b85d2491b837e880fda72607542762a4ec61d9ba"
+    },
+    {
+      "path": "docs/preview-lockers/transport-release-candidate/20261009003454_preview_sprint_delivery_bridge.sql",
+      "sha256": "17bbcecd42637e862c7404ae3f3793724799fd47e6ae073186a39e39225c4d55"
+    }
+  ],
+  "transformations": [
+    "Transport extracted at the unique Immutable feature input/output runs boundary; engine tail excluded.",
+    "Production forward support copied without behavior changes.",
+    "Preview bridge outer BEGIN/COMMIT removed so all three DDL bodies and their complete history rows can share one bounded release transaction.",
+    "Removed trailing blank line from the new bridge candidate; original migration remains byte-identical."
+  ],
+  "activation": "capture remains disabled by migration default",
+  "cloud_applied": false,
+  "originals_rewritten": false,
+  "full_primary_migration_run_safe": false,
+  "required_before_reconciliation": [
+    "Fresh staging and production complete migration history, latest version, ordered-version MD5 and database system identifier.",
+    "Prove old versions 20261005183837, 20261005231340 and 20261006040117 absent in targeted environments and confirm any other environments using this source.",
+    "Prove transport tables/functions and capture configuration absent, and existing preview/analytics prerequisites present.",
+    "Only after absence proof: retain old183837 engine-only tail; retire old231340 and old40117; update affected existing focused fixtures and generators."
+  ],
+  "focused_proof": {
+    "file": "tests/database/preview-transport-release.test.ts",
+    "tests": 4,
+    "result": "passed",
+    "scope": "Disposable PGlite; database identity/history refusal, deliberate precommit rollback, complete history/source preservation, no engine schemas, production idempotency and permission exclusions",
+    "hosted_evidence": false
+  },
+  "packet_helper": "tests/helpers/transport-release-packet.ts",
+  "candidate_active": false,
+  "authoritative_migration_directory": "supabase/migrations",
+  "candidate_does_not_affect_active_migration_order": true,
+  "read_only_preflight": "docs/preview-lockers/transport-release-candidate/PREFLIGHT.sql"
+}
