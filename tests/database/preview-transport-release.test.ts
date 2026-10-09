@@ -1,8 +1,19 @@
 // @vitest-environment node
 import { PGlite } from "@electric-sql/pglite";
 import fs from "node:fs";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { randomUUID } from "node:crypto";
+import { parse } from "dotenv";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { buildTransportReleasePacket, type TransportReleaseBaseline } from "../helpers/transport-release-packet";
+import { createAnalyticsDeliveryStore } from "@/lib/analytics/delivery/store";
+import { createAnalyticsDeliveryPublisher, dispatchAnalyticsDelivery, deliverAnalyticsJob } from "@/lib/analytics/delivery/pipeline";
+import { ingestAnalyticsBatch, reconcileAnalyticsBatch } from "@/lib/analytics/delivery/tinybird";
+import { analyticsDeliveryJobSchema, type AnalyticsDeliveryJob } from "@/lib/analytics/delivery/contracts";
+import type { AnalyticsDeliveryConfiguration } from "@/lib/analytics/delivery/config";
+import { queryPreviewSprintCounts } from "@/lib/analytics/preview-report";
+
+const service = vi.hoisted(() => ({ rpc: vi.fn() }));
+vi.mock("@/lib/supabase/service", () => ({ createServiceClient: () => service }));
 
 const files = [
   "20261009003442_analytics_delivery_transport.sql",
@@ -88,4 +99,132 @@ describe("transport-only migration release", () => {
     try { await expect(db.query("select * from preview_conversion_events")).rejects.toThrow("permission denied"); }
     finally { await db.exec("reset role"); }
   });
+
+  it("delivers a persisted form through real queue SQL and transport code without exporting form data or duplicating retries", async () => {
+    await db.exec("select public.configure_preview_analytics_capture('development')");
+    const claimPreview = randomUUID();
+    await db.query("insert into preview_lockers(id) values($1)", [claimPreview]);
+    await db.query("insert into preview_locker_short_links values($1,true)", [claimPreview]);
+    const save = () => db.query<{ result: { saved: boolean } }>(
+      "select public.save_preview_link_inquiry($1,$2,$3,$4,null,'development') result",
+      [claimPreview, "claim-canary@example.invalid", "Private claim feedback", session],
+    );
+    await db.exec("set role service_role");
+    try {
+      expect((await save()).rows[0].result).toEqual({ saved: true });
+      expect((await save()).rows[0].result).toEqual({ saved: true });
+      const outbox = (await db.query<{ envelope: { event_name: string; session_id: string }; event_id: string }>(
+        "select event_id,envelope from analytics_delivery_outbox where environment='development' order by event_id",
+      )).rows;
+      expect(outbox.map(row => row.envelope.event_name).sort()).toEqual(["preview_accepted", "preview_claim_submit"]);
+      expect(outbox.every(row => row.envelope.session_id === session)).toBe(true);
+      service.rpc.mockImplementation((name: string, args: Record<string, unknown>) => ({
+        abortSignal: async () => {
+          if (!/^(lease_analytics_delivery_batch|mark_analytics_delivery_published|release_analytics_delivery_publish|acquire_analytics_delivery_batch|settle_analytics_delivery_batch|get_analytics_delivery_batch)$/.test(name)) throw Error("unexpected_rpc");
+          const keys = Object.keys(args);
+          if (!keys.every(key => /^p_[a-z_]+$/.test(key))) throw Error("unexpected_argument");
+          const row = (await db.query<{ result: unknown }>(`select public.${name}(${keys.map((key, index) => `${key} => $${index + 1}`).join(",")}) result`, Object.values(args))).rows[0];
+          return { data: row.result, error: null };
+        },
+      }));
+      const config = { environment: "development", workerUrl: "https://preview.example.invalid/api/internal/analytics/deliver",
+        qstashUrl: "https://qstash-us-east-1.upstash.io", qstashToken: "synthetic-publish",
+        tinybirdUrl: "https://api.tinybird.co", tinybirdIngestToken: "synthetic-append", tinybirdQueryToken: "synthetic-query",
+      } as AnalyticsDeliveryConfiguration;
+      // Explicit opt-in only: send anonymous synthetic fixture events to the
+      // previously approved isolated development resources, never production.
+      const liveTinybird = process.env.BLTZ_CLAIM_TINYBIRD_CANARY === "true";
+      if (liveTinybird) {
+        const runtime = parse(fs.readFileSync("output/preview-sprint-events-2026-10-05/.env.tinybird-development.local", "utf8"));
+        if (runtime.BLTZ_ANALYTICS_ENVIRONMENT !== "development" || runtime.BLTZ_ANALYTICS_PIPELINE_ENABLED !== "false"
+          || runtime.BLTZ_ANALYTICS_PRODUCTION_ENABLED !== "false"
+          || !runtime.TINYBIRD_ANALYTICS_INGEST_TOKEN || !runtime.TINYBIRD_ANALYTICS_QUERY_TOKEN) throw Error("development_canary_configuration_invalid");
+        const host = new URL(runtime.TINYBIRD_ANALYTICS_URL);
+        if (host.protocol !== "https:" || !/^api(?:\.[a-z0-9-]+)*\.tinybird\.co$/.test(host.hostname) || host.pathname !== "/" || host.search || host.hash || host.username || host.password) throw Error("development_canary_host_invalid");
+        config.tinybirdUrl = host.origin;
+        config.tinybirdIngestToken = runtime.TINYBIRD_ANALYTICS_INGEST_TOKEN;
+        config.tinybirdQueryToken = runtime.TINYBIRD_ANALYTICS_QUERY_TOKEN;
+      }
+      const store = createAnalyticsDeliveryStore();
+      let job: AnalyticsDeliveryJob | undefined;
+      const queueFetch = vi.fn(async (url: URL | RequestInfo, options?: RequestInit) => {
+        expect(new URL(String(url)).hostname).toBe("qstash-us-east-1.upstash.io");
+        job = analyticsDeliveryJobSchema.parse(JSON.parse(String(options?.body)));
+        expect(Object.keys(job).sort()).toEqual(["batch_id", "environment", "job_version"]);
+        return Response.json({ messageId: "synthetic-form-message" });
+      });
+      expect(await dispatchAnalyticsDelivery(config, { store, publisher: createAnalyticsDeliveryPublisher(config, queueFetch) }))
+        .toEqual({ state: "published", eventCount: 2 });
+      expect(queueFetch).toHaveBeenCalledTimes(1);
+      const rows: { event_id: string; payload_hash: string; properties_json: string; session_id: string }[] = [];
+      let liveResponse: { status?: number; successfulRows?: number; quarantinedRows?: number; networkCode?: string } = {};
+      const ingestFetch = vi.fn(async (url: URL | RequestInfo, options?: RequestInit) => {
+        const target = new URL(String(url));
+        expect(target.pathname).toBe("/v0/events");
+        expect(target.searchParams.get("name")).toBe("bltz_events_development_v1");
+        const body = String(options?.body);
+        expect(body).not.toContain("claim-canary@example.invalid");
+        expect(body).not.toContain("Private claim feedback");
+        rows.push(...body.trim().split("\n").map(line => JSON.parse(line)));
+        if (!liveTinybird) return Response.json({ successful_rows: 2, quarantined_rows: 0 });
+        try {
+          const response = await fetch(url, options);
+          const ack = await response.clone().json().catch(() => null);
+          liveResponse = { status: response.status,
+            successfulRows: typeof ack?.successful_rows === "number" ? ack.successful_rows : undefined,
+            quarantinedRows: typeof ack?.quarantined_rows === "number" ? ack.quarantined_rows : undefined,
+          };
+          return response;
+        } catch (error) {
+          const code = (error as { cause?: { code?: string } })?.cause?.code;
+          liveResponse = { networkCode: typeof code === "string" && /^[A-Z0-9_]+$/.test(code) ? code : "UNAVAILABLE" };
+          throw error;
+        }
+      });
+      const ingest = (cfg: AnalyticsDeliveryConfiguration, batch: Parameters<typeof ingestAnalyticsBatch>[1]) => ingestAnalyticsBatch(cfg, batch, ingestFetch);
+      const delivered = await deliverAnalyticsJob(config, job!, { store, ingest });
+      if (liveTinybird) fs.writeFileSync("output/preview-sprint-events-2026-10-05/claim-tinybird-canary.json", JSON.stringify({
+        checkedAt: new Date().toISOString(), developmentOnly: true, syntheticPreviewId: claimPreview,
+        batchId: job!.batch_id, deliveryState: delivered.state, response: liveResponse,
+        expectedEventIds: rows.map(row => row.event_id), expectedPayloadHashes: rows.map(row => row.payload_hash),
+        exactIdReconciliation: "not_yet_verified", qstash: "transport_contract_test_only; hosted_worker_still_pending", productionEnabled: false,
+      }, null, 2) + "\n");
+      expect(delivered).toEqual({ state: "acknowledged", duplicate: false, eventCount: 2 });
+      expect(rows.map(row => JSON.parse(row.properties_json).event_kind).sort()).toEqual(["accepted", "claim_submit"]);
+      expect(rows.every(row => row.session_id === session)).toBe(true);
+      expect(await deliverAnalyticsJob(config, job!, { store, ingest })).toMatchObject({ state: "acknowledged", duplicate: true });
+      expect(ingestFetch).toHaveBeenCalledTimes(1);
+      const batch = (await store.readBatch(job!.batch_id, "development"))!;
+      let reconciled = liveTinybird ? await reconcileAnalyticsBatch(config, batch)
+        : await reconcileAnalyticsBatch(config, batch, async () => Response.json({ data: rows.map(row => ({ event_id: row.event_id, payload_hash: row.payload_hash, physical_rows: 1 })) }));
+      // Insertion acknowledgment and report visibility are separate checks.
+      // Re-read only; never replay an incomplete/ambiguous batch to find it.
+      for (let attempt = 0; liveTinybird && reconciled.state === "incomplete" && attempt < 3; attempt++) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        reconciled = await reconcileAnalyticsBatch(config, batch);
+      }
+      if (liveTinybird) {
+        const path = "output/preview-sprint-events-2026-10-05/claim-tinybird-canary.json";
+        const receipt = JSON.parse(fs.readFileSync(path, "utf8"));
+        fs.writeFileSync(path, JSON.stringify({ ...receipt, exactIdReconciliation: reconciled.state }, null, 2) + "\n");
+      }
+      expect(reconciled).toMatchObject({ state: "complete", expectedEvents: 2, matchedEvents: 2, missingEvents: 0 });
+      if (liveTinybird) {
+        // Replay identical metadata to prove the hosted report deduplicates
+        // physical re-delivery instead of inflating successful form counts.
+        expect(await ingestAnalyticsBatch(config, batch)).toEqual({ outcome: "acknowledged", errorCode: null });
+        const start = new Date(Date.parse(batch.envelopes[0].occurred_at) - 60_000).toISOString();
+        const end = new Date(Date.now() + 60_000).toISOString();
+        const report = await queryPreviewSprintCounts(claimPreview, start, end, { config, expectedEnvironment: "development" });
+        expect(report.rows.map(row => ({ kind: row.event_kind, events: row.event_count, sessions: row.tab_session_count })).sort((a, b) => a.kind.localeCompare(b.kind)))
+          .toEqual([{ kind: "accepted", events: 1, sessions: 1 }, { kind: "claim_submit", events: 1, sessions: 1 }]);
+        fs.writeFileSync("output/preview-sprint-events-2026-10-05/claim-tinybird-canary.json", JSON.stringify({
+          checkedAt: new Date().toISOString(), developmentOnly: true, syntheticPreviewId: claimPreview,
+          batchId: batch.batch_id, acknowledgedEvents: 2, exactIdReconciliation: reconciled.state,
+          replayLogicalCounts: { accepted: 1, claim_submit: 1 }, privateFormFieldsExported: false,
+          qstash: "transport_contract_test_only; hosted_worker_still_pending", productionEnabled: false,
+        }, null, 2) + "\n");
+      }
+    } finally { await db.exec("reset role"); }
+  }, 30_000);
 });

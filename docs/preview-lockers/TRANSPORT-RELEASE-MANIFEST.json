@@ -47,14 +47,30 @@
   ],
   "focused_proof": {
     "file": "tests/database/preview-transport-release.test.ts",
-    "tests": 4,
+    "tests": 5,
     "result": "passed",
-    "scope": "Disposable PGlite; database identity/history refusal, deliberate precommit rollback, complete history/source preservation, no engine schemas, production idempotency and permission exclusions",
+    "scope": "Disposable PGlite; database identity/history refusal, deliberate precommit rollback, complete history/source preservation, no engine schemas, production idempotency and permission exclusions; atomic saved public form through real queue SQL, batch-pointer publisher and ingest/reconciliation adapters, no private form fields, immutable retries",
     "hosted_evidence": false
   },
   "packet_helper": "tests/helpers/transport-release-packet.ts",
   "candidate_active": false,
   "authoritative_migration_directory": "supabase/migrations",
   "candidate_does_not_affect_active_migration_order": true,
-  "read_only_preflight": "docs/preview-lockers/transport-release-candidate/PREFLIGHT.sql"
+  "read_only_preflight": "docs/preview-lockers/transport-release-candidate/PREFLIGHT.sql",
+  "additional_forward_candidate": {
+    "path": "docs/preview-lockers/transport-release-candidate/20261009022458_preview_claim_browser_session.sql",
+    "version": "20261009022458",
+    "sha256": "bf69c79c9f535e63a6596fdce2290e298b9ca7f35ea571e00fd3fc25aa9d4e46",
+    "expected_normalized_function_body_md5": "8533cee03ddbd8819447939830d9983d",
+    "candidate_active": false,
+    "cloud_applied": false,
+    "included_in_transport_packet": false,
+    "required_gate": "Fresh database identity/history and exact private claim function provenance; include complete version in reviewed scoped release."
+  },
+  "private_claim_session_proof": {
+    "file": "tests/database/preview-claim-session.test.ts",
+    "tests": 4,
+    "result": "passed",
+    "hosted_evidence": false
+  }
 }

@@ -27,7 +27,7 @@ export async function POST(request: Request) {
   try {
     const environment = getAnalyticsRuntimeEnvironment();
     const actor = environment ? await previewAnalyticsActor(request) : { userId: null, excluded: true };
-    const { error } = await createServiceClient().rpc("save_preview_link_inquiry", {
+    const { data, error } = await createServiceClient().rpc("save_preview_link_inquiry", {
       p_preview: parsed.data.previewId,
       p_email: parsed.data.email.trim().toLowerCase(),
       p_features: parsed.data.featureRequests?.trim() || null,
@@ -36,6 +36,9 @@ export async function POST(request: Request) {
       p_environment: actor.excluded ? null : environment,
     }).abortSignal(AbortSignal.timeout(10_000));
     if (error) return Response.json({ error: error.code === "42501" ? "not_found" : "unavailable" }, { status: error.code === "42501" ? 404 : 503, headers });
+    if (!z.object({ saved: z.literal(true) }).safeParse(data).success) {
+      return Response.json({ error: "unavailable" }, { status: 503, headers });
+    }
   } catch {
     return Response.json({ error: "unavailable" }, { status: 503, headers });
   }

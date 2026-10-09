@@ -16,7 +16,8 @@ select jsonb_build_object(
       select 1 from supabase_migrations.schema_migrations where version = requested_version
     )) from unnest(array[
       '20261005183837', '20261005231340', '20261006040117',
-      '20261009003442', '20261009003448', '20261009003454'
+      '20261009003442', '20261009003448', '20261009003454',
+      '20260914184728', '20261009022458'
     ]) requested_version
   ),
   'relations_present', (
@@ -38,6 +39,7 @@ select jsonb_build_object(
     select jsonb_object_agg(signature, to_regprocedure(signature) is not null)
     from unnest(array[
       'private.has_active_platform_role(uuid,text[])',
+      'private.preview_conversion(uuid,text,uuid,uuid,jsonb)',
       'public.accept_analytics_delivery_event(jsonb,jsonb)',
       'public.get_analytics_delivery_batch(uuid,text)',
       'public.lease_analytics_delivery_batch(text,integer,integer,uuid,integer)',
@@ -46,6 +48,10 @@ select jsonb_build_object(
       'public.save_preview_link_inquiry(uuid,text,text,uuid,uuid,text)',
       'public.configure_preview_analytics_capture(text)'
     ]) signature
+  ),
+  'private_claim_function_body_md5', (
+    select md5(replace(prosrc,E'\r\n',E'\n')) from pg_proc
+    where oid=to_regprocedure('private.preview_conversion(uuid,text,uuid,uuid,jsonb)')
   )
 ) as transport_release_preflight;
 commit;

@@ -9,10 +9,10 @@ vi.mock("@/lib/analytics/bltz-event", () => ({ getAnalyticsRuntimeEnvironment: (
 import { POST } from "@/app/api/preview-link-inquiries/route";
 
 const previewId = "556ca192-d9b7-494f-93d6-a498af76ba5a";
-function request(origin = "https://bltz.vercel.app") {
+function request(origin = "https://bltz.vercel.app", sessionId?: string) {
   return new Request("https://bltz.vercel.app/api/preview-link-inquiries", {
     method: "POST", headers: { origin, "content-type": "application/json" },
-    body: JSON.stringify({ previewId, email: "Player@Example.com", featureRequests: "More career history", consent: true }),
+    body: JSON.stringify({ previewId, email: "Player@Example.com", featureRequests: "More career history", consent: true, ...(sessionId ? { sessionId } : {}) }),
   });
 }
 
@@ -49,4 +49,18 @@ it("does not report saved when the atomic inquiry and delivery transaction fails
   mocks.rpc.mockReturnValue({ abortSignal: async () => ({ error: { code: "XX000" } }) });
   const response = await POST(request());
   expect(response.status).toBe(503); expect(await response.json()).toEqual({ error: "unavailable" });
+});
+
+it.each([null, {}, { saved: false }])("requires an explicit saved acknowledgment from the inquiry transaction: %j", async (data) => {
+  mocks.rpc.mockReturnValue({ abortSignal: async () => ({ data, error: null }) });
+  const response = await POST(request());
+  expect(response.status).toBe(503);
+  expect(await response.json()).toEqual({ error: "unavailable" });
+});
+
+it("preserves the viewing session when persisting an accepted form", async () => {
+  const sessionId = "70000000-0000-4000-8000-000000000001";
+  const response = await POST(request("https://bltz.vercel.app", sessionId));
+  expect(await response.json()).toEqual({ saved: true });
+  expect(mocks.rpc.mock.calls[0][1]).toMatchObject({ p_session: sessionId, p_environment: "development" });
 });

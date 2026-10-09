@@ -22,7 +22,8 @@ export default function PublicPreviewClaim({ previewId }: { previewId: string })
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ previewId, email, featureRequests: feedback, consent, sessionId: previewAnalyticsSessionId() }),
       });
-      if (!response.ok) throw new Error("We could not save your request. Please try again.");
+      const result = response.ok ? await response.json().catch(() => null) : null;
+      if (result?.saved !== true) throw new Error("We could not save your request. Please try again.");
       setSaved(true);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Please try again.");
