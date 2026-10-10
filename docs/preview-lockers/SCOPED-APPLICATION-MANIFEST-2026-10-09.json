@@ -1,6 +1,8 @@
 {
   "baseline": "889df1ba2eb6eaecfb1376c6b0527a1b57789a2a",
   "reviewed_source": "1cc0314f3d48a419c2d1949fc74a0bedb997a965",
+  "runtime_fix_source": "4d224b6",
+  "release_application_commit": "84cbe275c43a970f2724bc389c99a80fdd8d8dcd",
   "application_paths": [
     {
       "path": "app/api/internal/analytics/deliver/route.ts",
@@ -64,7 +66,7 @@
     },
     {
       "path": "lib/analytics/delivery/pipeline.ts",
-      "sha256": "b317018b5417b2a5ab401870f7e6ddacc97a34229328876d44f67fa72f2b26fc"
+      "sha256": "49cb2088affd40940d6146fd5216629b272ca710476d66b884688ddf66e7d535"
     },
     {
       "path": "lib/analytics/delivery/store.ts",
@@ -112,7 +114,7 @@
     },
     {
       "path": "tests/analytics/delivery.test.ts",
-      "sha256": "7dd8179a1b0bfbad441638e376308e1de4cfc8b189df5f8755997fd77fc33e08"
+      "sha256": "a6236a23aaa470d897120f66252879e57cd891d9f8dc15b54c48683e9d92cccb"
     },
     {
       "path": "tests/analytics/delivery-routes.test.ts",
@@ -120,7 +122,7 @@
     },
     {
       "path": "tests/analytics/delivery-production.test.ts",
-      "sha256": "cd91df5891a4e6ba78c119554e117bbb57c7a0ae420745ff67f324cafbb692f6"
+      "sha256": "af3f6ec62666148008116d08cb0fffd068cd6a00238176825f2d5e0dd2cb6e6b"
     },
     {
       "path": "tests/preview-lockers/preview-event-client.test.ts",
@@ -160,7 +162,7 @@
     },
     {
       "path": "vercel.json",
-      "sha256": "40fc5e2474695f5ad3dc546e78da6f654f13441e07f8455b0d8191df459651c2"
+      "sha256": "490ee88dbb55d3bd0f28576a7da44fbeb458ae30fcf95da03b5b379387f8808b"
     },
     {
       "path": "tinybird.config.json",
@@ -275,6 +277,7 @@
   ],
   "tests": {
     "focused_cases_covered": 102,
+    "coordinator_legacy_writer_cases": 11,
     "resolved_stale_mock": true,
     "publisher_file_after_diagnostics": 31,
     "source_sql_cases": 53,
@@ -284,9 +287,301 @@
     "offline_build": "Webpack passed",
     "hosted_preview_build": "default Vercel build passed"
   },
-  "production_analytics_enabled": false,
-  "production_deployed": false,
-  "production_database_changed": false,
+  "production_analytics_enabled": true,
+  "production_deployed": true,
+  "production_capture_enabled": true,
+  "production_legacy_export_enabled": false,
+  "production_database_changed": true,
+  "production_migration_application": {
+    "started_at": "2026-10-10T02:50:50.916Z",
+    "project_ref": "drxtzxnwdtgxwueiqygf",
+    "packet_sha256": "95e917135616b0b54e19a10fe2f450078e135dad50aea87b8463dd82aa44c00b",
+    "execution_registered": true,
+    "capture_enabled": false,
+    "cli_exit_code": 0,
+    "postflight": {
+      "anon_outbox_access": false,
+      "authenticated_capture_execute": false,
+      "batch_rows": 0,
+      "batches_rls": true,
+      "capture_environment": null,
+      "excluded_engine_present": false,
+      "latest_version": "20261009022458",
+      "migration_count": 78,
+      "ordered_versions_md5": "e4aa705c56a186d21492a9a23b50f069",
+      "outbox_rls": true,
+      "outbox_rows": 0,
+      "private_claim_function": {
+        "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+        "body_md5": "cf93750c0d2bb0016c381f53fe7d6ffe",
+        "config": [
+          "search_path=\"\""
+        ],
+        "owner": "postgres",
+        "security_definer": true
+      },
+      "released_history": [
+        {
+          "complete_source_md5": "4f7a584b6f6602a4516bb1ded95f314c",
+          "name": "analytics_delivery_transport",
+          "statement_count": 1,
+          "version": "20261009003442"
+        },
+        {
+          "complete_source_md5": "535bfd5fdefb8618a7703fa8d950b5cb",
+          "name": "analytics_delivery_production_environment",
+          "statement_count": 1,
+          "version": "20261009003448"
+        },
+        {
+          "complete_source_md5": "2c2d7943d1b309f9e308f0c244aca59d",
+          "name": "preview_sprint_delivery_bridge",
+          "statement_count": 1,
+          "version": "20261009003454"
+        },
+        {
+          "complete_source_md5": "c4198c844d8c60717aaf6e2e1136f6a8",
+          "name": "preview_claim_browser_session",
+          "statement_count": 1,
+          "version": "20261009022458"
+        }
+      ],
+      "system_identifier": "7537636994966709920"
+    },
+    "status": "passed_capture_off",
+    "completed_at": "2026-10-10T02:50:59.649Z",
+    "history_and_catalog_verification": {
+      "checked_at": "2026-10-10T02:52:07.321Z",
+      "all_74_historical_rows_unchanged": true,
+      "all_4_complete_source_bodies_match": true,
+      "scoped_catalog_matches_generated_types": true
+    }
+  },
+  "production_tinybird": {
+    "checked_at": "2026-10-10T02:54:18.870Z",
+    "read_only_cloud": true,
+    "cloud_changed": false,
+    "workspace": {
+      "id": "3bc3924b-2d7a-47b7-870e-95735fe8a8d8",
+      "name": "BLTZ_Intelligence",
+      "main": null,
+      "host": "https://api.us-west-2.aws.tinybird.co"
+    },
+    "deployment": {
+      "id": "1",
+      "status": "data_ready",
+      "live": true
+    },
+    "resources": {
+      "datasource": "bltz_events_production_v1",
+      "pipes": [
+        "bltz_events_production_batch_reconciliation_v1",
+        "bltz_preview_sprint_production_counts_v1"
+      ],
+      "connections": 0
+    },
+    "tokens": [
+      {
+        "name": "preview_sprint_prod_ingest_v1",
+        "scopes": [
+          {
+            "type": "DATASOURCES:APPEND",
+            "resource": "bltz_events_production_v1"
+          }
+        ]
+      },
+      {
+        "name": "preview_sprint_prod_query_v1",
+        "scopes": [
+          {
+            "type": "PIPES:READ",
+            "resource": "bltz_events_production_batch_reconciliation_v1"
+          },
+          {
+            "type": "PIPES:READ",
+            "resource": "bltz_preview_sprint_production_counts_v1"
+          }
+        ]
+      }
+    ],
+    "credentials_saved": true,
+    "secret_values_printed": false,
+    "blocked_reason": null,
+    "credentials_file": "output/preview-sprint-events-2026-10-05/.env.tinybird-production.local"
+  },
+  "production_deployment": {
+    "started_at": "2026-10-10T03:00:44.273Z",
+    "status": "ready",
+    "source_commit": "84cbe275c43a970f2724bc389c99a80fdd8d8dcd",
+    "target": "production",
+    "project_id": "prj_4XjBiHku6plWves1zXdbT8bXj3y6",
+    "team_id": "team_iXFI2IkcooWynj9ne3Mp6PS5",
+    "worker_url": "https://bltz.vercel.app/api/internal/analytics/deliver",
+    "pipeline_enabled": true,
+    "production_enabled": true,
+    "legacy_export_enabled": false,
+    "capture_enabled": false,
+    "protection_mode": "prod_deployment_urls_and_all_previews",
+    "deployment_id": "dpl_9wwx7ouVgSf26fBo6iUEMhqbHZeq",
+    "deployment_url": "https://bltz-6pczvk6gl-daymeiions-projects.vercel.app",
+    "unauthorized_worker_status": 401,
+    "unauthorized_dispatch_status": 401,
+    "completed_at": "2026-10-10T03:04:02.914Z"
+  },
+  "production_transport_canary": {
+    "plan": false,
+    "execution": true,
+    "production": true,
+    "project_ref": "drxtzxnwdtgxwueiqygf",
+    "event_id": "b17a0000-2026-4009-8000-000000000101",
+    "expected_events": 1,
+    "acceptance_calls": 2,
+    "publish_calls": 1,
+    "final_idle_probe": 1,
+    "capture_enabled": false,
+    "real_athlete_activity": false,
+    "receipt_file": "output/preview-sprint-events-2026-10-05/production-transport-canary-2026-10-09.json",
+    "started_at": "2026-10-10T03:04:38.625Z",
+    "source_commit": "84cbe275c43a970f2724bc389c99a80fdd8d8dcd",
+    "deployment_id": "dpl_9wwx7ouVgSf26fBo6iUEMhqbHZeq",
+    "status": "passed_capture_off",
+    "mutations": [
+      {
+        "label": "accept_internal_canary",
+        "registered_at": "2026-10-10T03:04:43.432Z",
+        "status": "response_received",
+        "http_status": 200
+      },
+      {
+        "label": "accept_exact_duplicate",
+        "registered_at": "2026-10-10T03:04:44.492Z",
+        "status": "response_received",
+        "http_status": 200
+      },
+      {
+        "label": "dispatch_one_internal_canary",
+        "registered_at": "2026-10-10T03:04:47.557Z",
+        "status": "response_received",
+        "http_status": 200
+      },
+      {
+        "label": "dispatch_acknowledged_idle_probe",
+        "registered_at": "2026-10-10T03:04:57.477Z",
+        "status": "response_received",
+        "http_status": 200
+      }
+    ],
+    "checks": [
+      {
+        "checked_at": "2026-10-10T03:04:48.988Z",
+        "registry": {
+          "id": "0c1df6f1-d78c-462f-bfb2-a33cc8ac3629",
+          "environment": "production",
+          "state": "published",
+          "event_count": 1,
+          "publish_attempts": 1,
+          "worker_attempts": 0,
+          "last_error_code": null
+        },
+        "exact_ids_match": false,
+        "physical_rows": 0
+      },
+      {
+        "checked_at": "2026-10-10T03:04:57.328Z",
+        "registry": {
+          "id": "0c1df6f1-d78c-462f-bfb2-a33cc8ac3629",
+          "environment": "production",
+          "state": "acknowledged",
+          "event_count": 1,
+          "publish_attempts": 1,
+          "worker_attempts": 1,
+          "last_error_code": null
+        },
+        "exact_ids_match": true,
+        "physical_rows": 1
+      }
+    ],
+    "preflight": {
+      "capture_environment": null,
+      "migration_count": 78,
+      "history_fingerprint": "e4aa705c56a186d21492a9a23b50f069",
+      "outbox_rows": 0,
+      "batch_rows": 0
+    },
+    "schedule_counts": {
+      "total": 0,
+      "active": 0
+    },
+    "analytics_row_id": "84394fa9-e028-46fa-9e8b-8280ed61cb03",
+    "payload_hash": "f8a2d1f1254f2a45ddcc51799a88dc78",
+    "duplicate_acceptance": true,
+    "dispatch_result": {
+      "state": "published",
+      "eventCount": 1
+    },
+    "batch_id": "0c1df6f1-d78c-462f-bfb2-a33cc8ac3629",
+    "final_registry": {
+      "id": "0c1df6f1-d78c-462f-bfb2-a33cc8ac3629",
+      "environment": "production",
+      "state": "acknowledged",
+      "event_count": 1,
+      "publish_attempts": 1,
+      "worker_attempts": 1,
+      "last_error_code": null
+    },
+    "postflight": {
+      "capture_environment": null,
+      "migration_count": 78,
+      "history_fingerprint": "e4aa705c56a186d21492a9a23b50f069",
+      "outbox_rows": 1,
+      "batch_rows": 1
+    },
+    "duplicate_dispatch_idle": true,
+    "completed_at": "2026-10-10T03:05:01.726Z"
+  },
+  "production_preview_activation": {
+    "registered_at": "2026-10-10T03:05:37.956Z",
+    "status": "active",
+    "schedule_id": "bltz-preview-sprint-production-v1",
+    "destination": "https://bltz.vercel.app/api/internal/analytics/dispatch",
+    "cron": "*/5 * * * *",
+    "capture_environment": "production",
+    "general_legacy_export": false,
+    "real_form_submitted": false,
+    "source_commit": "84cbe275c43a970f2724bc389c99a80fdd8d8dcd",
+    "deployment_id": "dpl_9wwx7ouVgSf26fBo6iUEMhqbHZeq",
+    "mutations": [
+      {
+        "label": "create_production_dispatch_schedule",
+        "registered_at": "2026-10-10T03:05:42.485Z"
+      },
+      {
+        "label": "enable_production_preview_capture",
+        "registered_at": "2026-10-10T03:05:42.858Z"
+      }
+    ],
+    "schedule_created": true,
+    "schedule": {
+      "schedule_id": "bltz-preview-sprint-production-v1",
+      "cron": "*/5 * * * *",
+      "destination": "https://bltz.vercel.app/api/internal/analytics/dispatch",
+      "method": "POST",
+      "is_paused": false,
+      "retries": 2,
+      "authorization_forwarded": true,
+      "authorization_logs_redacted": true,
+      "next_schedule_time": 1791601800000
+    },
+    "capture_enabled": true,
+    "postflight": {
+      "capture_environment": "production",
+      "migration_count": 78,
+      "history_fingerprint": "e4aa705c56a186d21492a9a23b50f069",
+      "rls_preserved": true,
+      "claim_permissions_preserved": true
+    },
+    "completed_at": "2026-10-10T03:05:46.146Z"
+  },
   "staging_project_ref": "yevihzsgqagvuulymqum",
   "staging_migration_count": 62,
   "staging_claim_body_md5": "cf93750c0d2bb0016c381f53fe7d6ffe",
@@ -371,38 +666,108 @@
     ]
   },
   "hosted_registered_retry": {
-    "started_at": "2026-10-09T20:14:50.969Z",
+    "started_at": "2026-10-10T02:48:52.282Z",
     "batchId": "099363f6-e66c-4bb7-abfa-745ce8338f1f",
     "event_ids": [
       "1208fa80-666e-56e9-86f5-ef5d2f1c9715",
       "12d96bd3-7f8f-5307-8fa8-59138d848b5f",
       "b17a0000-2026-4009-8000-000000000003"
     ],
-    "old_publish_attempts": 1,
+    "old_publish_attempts": 3,
     "new_form_submitted": false,
     "production": false,
     "dispatch_attempted": true,
-    "checks": [],
-    "dispatch_http_status": 503,
+    "checks": [
+      {
+        "registry": {
+          "id": "099363f6-e66c-4bb7-abfa-745ce8338f1f",
+          "environment": "development",
+          "state": "published",
+          "event_count": 3,
+          "publish_attempts": 4,
+          "worker_attempts": 0,
+          "last_error_code": "qstash_publish_http_400",
+          "message_id": "msg_7YoJxFpwkEy5zBp3mXNZjF3GLnqMYTa2goXBKDof1nCiBYS6VG54z"
+        },
+        "exact_ids": [],
+        "physical_rows": 0,
+        "hashes_match": true
+      },
+      {
+        "registry": {
+          "id": "099363f6-e66c-4bb7-abfa-745ce8338f1f",
+          "environment": "development",
+          "state": "acknowledged",
+          "event_count": 3,
+          "publish_attempts": 4,
+          "worker_attempts": 1,
+          "last_error_code": null,
+          "message_id": "msg_7YoJxFpwkEy5zBp3mXNZjF3GLnqMYTa2goXBKDof1nCiBYS6VG54z"
+        },
+        "exact_ids": [
+          "1208fa80-666e-56e9-86f5-ef5d2f1c9715",
+          "12d96bd3-7f8f-5307-8fa8-59138d848b5f",
+          "b17a0000-2026-4009-8000-000000000003"
+        ],
+        "physical_rows": 3,
+        "hashes_match": true
+      }
+    ],
+    "dispatch_http_status": 200,
     "dispatch_result": {
-      "state": "retry",
+      "state": "published",
       "eventCount": 3
     },
-    "status": "failed",
-    "registry": {
+    "logical_counts": [
+      {
+        "preview_id": "b17a0000-2026-4009-8000-000000000001",
+        "event_kind": "accepted",
+        "media_id": "",
+        "progress": 0,
+        "event_count": 1,
+        "tab_session_count": 1,
+        "event_watermark": "2026-10-09 20:03:28.862"
+      },
+      {
+        "preview_id": "b17a0000-2026-4009-8000-000000000001",
+        "event_kind": "claim_submit",
+        "media_id": "",
+        "progress": 0,
+        "event_count": 1,
+        "tab_session_count": 1,
+        "event_watermark": "2026-10-09 20:03:28.863"
+      },
+      {
+        "preview_id": "b17a0000-2026-4009-8000-000000000001",
+        "event_kind": "locker_view",
+        "media_id": "",
+        "progress": 0,
+        "event_count": 1,
+        "tab_session_count": 1,
+        "event_watermark": "2026-10-09 20:03:28.521"
+      }
+    ],
+    "duplicate_dispatch_probe_registered": true,
+    "duplicate_dispatch_probe": {
+      "state": "idle",
+      "eventCount": 0
+    },
+    "final_registry": {
       "id": "099363f6-e66c-4bb7-abfa-745ce8338f1f",
       "environment": "development",
-      "state": "retry",
+      "state": "acknowledged",
       "event_count": 3,
-      "publish_attempts": 2,
-      "worker_attempts": 0,
-      "last_error_code": "qstash_publish_http_400",
-      "message_id": null
-    }
+      "publish_attempts": 4,
+      "worker_attempts": 1,
+      "last_error_code": null,
+      "message_id": "msg_7YoJxFpwkEy5zBp3mXNZjF3GLnqMYTa2goXBKDof1nCiBYS6VG54z"
+    },
+    "status": "passed",
+    "completed_at": "2026-10-10T02:49:03.503Z"
   },
   "hosted_deployment": {
-    "url": "https://bltz-6s2emwh8d-daymeiions-projects.vercel.app",
-    "id": "dpl_CgAMMCXU7whk9H2cpdd5RCjF35Uv",
+    "url": "https://bltz-di6jyuh8p-daymeiions-projects.vercel.app",
+    "id": "dpl_FujUvNjiwRoNtdBa3Kh7eihbs2MA",
     "projectId": "prj_4XjBiHku6plWves1zXdbT8bXj3y6",
     "stagingRef": "yevihzsgqagvuulymqum",
     "target": "preview",

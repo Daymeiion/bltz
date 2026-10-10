@@ -1,5 +1,5 @@
 {
-  "status": "Active scoped source; all four complete migrations applied to intended staging with capture disabled. Production and hosted delivery pending.",
+  "status": "Scoped production release active; signed staging and production delivery verified; preview-only production capture and QStash dispatch enabled.",
   "generated_by": "Supabase CLI 2.114.0 migration new",
   "release_order": [
     {
@@ -42,10 +42,10 @@
     "Removed trailing blank line from the new bridge candidate; original migration remains byte-identical.",
     "The fourth claim-session candidate outer BEGIN/COMMIT is removed only from executable packet SQL; its complete original source remains the recorded history body."
   ],
-  "activation": "capture remains disabled by migration default",
+  "activation": "Migrations default capture off; separate guarded activation followed exact signed delivery/idempotency proof.",
   "cloud_applied": {
     "staging": true,
-    "production": false
+    "production": true
   },
   "originals_rewritten": true,
   "full_primary_migration_run_safe": false,
@@ -218,12 +218,13 @@
     "baseline": "889df1ba2eb6eaecfb1376c6b0527a1b57789a2a",
     "ignored_manifest": "output/preview-sprint-events-2026-10-05/release-candidate-manifest.json",
     "typescript_passed": true,
-    "focused_test_cases_passed": 94,
-    "production_build": "webpack passed",
+    "focused_test_cases_passed": 102,
+    "production_build": "default hosted Vercel build passed",
     "turbopack": "external node_modules junction rejected before application compilation",
-    "production_flags": "disabled",
-    "production_deployed": false,
-    "durable_manifest": "docs/preview-lockers/SCOPED-APPLICATION-MANIFEST-2026-10-09.json"
+    "production_flags": "explicit production transport opt-in enabled; general legacy exports excluded",
+    "production_deployed": true,
+    "durable_manifest": "docs/preview-lockers/SCOPED-APPLICATION-MANIFEST-2026-10-09.json",
+    "release_application_commit": "84cbe275c43a970f2724bc389c99a80fdd8d8dcd"
   },
   "historical_source_files": [
     {
@@ -258,7 +259,7 @@
     "url": "https://bltz-preview-sprint-2026-10-09.vercel.app",
     "ready": true,
     "target": "preview",
-    "deployment_id": "dpl_CgAMMCXU7whk9H2cpdd5RCjF35Uv",
+    "deployment_id": "dpl_FujUvNjiwRoNtdBa3Kh7eihbs2MA",
     "staging_ref": "yevihzsgqagvuulymqum",
     "production_opt_in": false,
     "protection_preserved": true,
@@ -266,18 +267,347 @@
     "automatic_schedule_created": false
   },
   "hosted_canary": {
-    "status": "failed",
+    "status": "passed",
     "events_persisted": 3,
     "browser_session_preserved": true,
     "retry_ids_and_hashes_unchanged": true,
     "private_fields_exported": false,
     "batch_id": "099363f6-e66c-4bb7-abfa-745ce8338f1f",
-    "dispatch_attempts": 2,
-    "worker_attempts": 0,
-    "last_error_code": "qstash_publish_http_400",
-    "qstash_delivery_verified": false,
-    "tinybird_delivery_verified": false,
+    "dispatch_attempts": 4,
+    "worker_attempts": 1,
+    "last_error_code": null,
+    "qstash_delivery_verified": true,
+    "tinybird_delivery_verified": true,
+    "physical_rows": 3,
+    "logical_counts": [
+      {
+        "preview_id": "b17a0000-2026-4009-8000-000000000001",
+        "event_kind": "accepted",
+        "media_id": "",
+        "progress": 0,
+        "event_count": 1,
+        "tab_session_count": 1,
+        "event_watermark": "2026-10-09 20:03:28.862"
+      },
+      {
+        "preview_id": "b17a0000-2026-4009-8000-000000000001",
+        "event_kind": "claim_submit",
+        "media_id": "",
+        "progress": 0,
+        "event_count": 1,
+        "tab_session_count": 1,
+        "event_watermark": "2026-10-09 20:03:28.863"
+      },
+      {
+        "preview_id": "b17a0000-2026-4009-8000-000000000001",
+        "event_kind": "locker_view",
+        "media_id": "",
+        "progress": 0,
+        "event_count": 1,
+        "tab_session_count": 1,
+        "event_watermark": "2026-10-09 20:03:28.521"
+      }
+    ],
+    "duplicate_dispatch_probe": {
+      "state": "idle",
+      "eventCount": 0
+    },
     "new_capture_enabled": false,
-    "registered_retry_status": "failed"
+    "registered_retry_status": "passed"
+  },
+  "production_checkpoint": {
+    "database": {
+      "started_at": "2026-10-10T02:50:50.916Z",
+      "project_ref": "drxtzxnwdtgxwueiqygf",
+      "packet_sha256": "95e917135616b0b54e19a10fe2f450078e135dad50aea87b8463dd82aa44c00b",
+      "execution_registered": true,
+      "capture_enabled": false,
+      "cli_exit_code": 0,
+      "postflight": {
+        "anon_outbox_access": false,
+        "authenticated_capture_execute": false,
+        "batch_rows": 0,
+        "batches_rls": true,
+        "capture_environment": null,
+        "excluded_engine_present": false,
+        "latest_version": "20261009022458",
+        "migration_count": 78,
+        "ordered_versions_md5": "e4aa705c56a186d21492a9a23b50f069",
+        "outbox_rls": true,
+        "outbox_rows": 0,
+        "private_claim_function": {
+          "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+          "body_md5": "cf93750c0d2bb0016c381f53fe7d6ffe",
+          "config": [
+            "search_path=\"\""
+          ],
+          "owner": "postgres",
+          "security_definer": true
+        },
+        "released_history": [
+          {
+            "complete_source_md5": "4f7a584b6f6602a4516bb1ded95f314c",
+            "name": "analytics_delivery_transport",
+            "statement_count": 1,
+            "version": "20261009003442"
+          },
+          {
+            "complete_source_md5": "535bfd5fdefb8618a7703fa8d950b5cb",
+            "name": "analytics_delivery_production_environment",
+            "statement_count": 1,
+            "version": "20261009003448"
+          },
+          {
+            "complete_source_md5": "2c2d7943d1b309f9e308f0c244aca59d",
+            "name": "preview_sprint_delivery_bridge",
+            "statement_count": 1,
+            "version": "20261009003454"
+          },
+          {
+            "complete_source_md5": "c4198c844d8c60717aaf6e2e1136f6a8",
+            "name": "preview_claim_browser_session",
+            "statement_count": 1,
+            "version": "20261009022458"
+          }
+        ],
+        "system_identifier": "7537636994966709920"
+      },
+      "status": "passed_capture_off",
+      "completed_at": "2026-10-10T02:50:59.649Z",
+      "history_and_catalog_verification": {
+        "checked_at": "2026-10-10T02:52:07.321Z",
+        "all_74_historical_rows_unchanged": true,
+        "all_4_complete_source_bodies_match": true,
+        "scoped_catalog_matches_generated_types": true
+      }
+    },
+    "tinybird": {
+      "checked_at": "2026-10-10T02:54:18.870Z",
+      "read_only_cloud": true,
+      "cloud_changed": false,
+      "workspace": {
+        "id": "3bc3924b-2d7a-47b7-870e-95735fe8a8d8",
+        "name": "BLTZ_Intelligence",
+        "main": null,
+        "host": "https://api.us-west-2.aws.tinybird.co"
+      },
+      "deployment": {
+        "id": "1",
+        "status": "data_ready",
+        "live": true
+      },
+      "resources": {
+        "datasource": "bltz_events_production_v1",
+        "pipes": [
+          "bltz_events_production_batch_reconciliation_v1",
+          "bltz_preview_sprint_production_counts_v1"
+        ],
+        "connections": 0
+      },
+      "tokens": [
+        {
+          "name": "preview_sprint_prod_ingest_v1",
+          "scopes": [
+            {
+              "type": "DATASOURCES:APPEND",
+              "resource": "bltz_events_production_v1"
+            }
+          ]
+        },
+        {
+          "name": "preview_sprint_prod_query_v1",
+          "scopes": [
+            {
+              "type": "PIPES:READ",
+              "resource": "bltz_events_production_batch_reconciliation_v1"
+            },
+            {
+              "type": "PIPES:READ",
+              "resource": "bltz_preview_sprint_production_counts_v1"
+            }
+          ]
+        }
+      ],
+      "credentials_saved": true,
+      "secret_values_printed": false,
+      "blocked_reason": null,
+      "credentials_file": "output/preview-sprint-events-2026-10-05/.env.tinybird-production.local"
+    },
+    "deployment": {
+      "started_at": "2026-10-10T03:00:44.273Z",
+      "status": "ready",
+      "source_commit": "84cbe275c43a970f2724bc389c99a80fdd8d8dcd",
+      "target": "production",
+      "project_id": "prj_4XjBiHku6plWves1zXdbT8bXj3y6",
+      "team_id": "team_iXFI2IkcooWynj9ne3Mp6PS5",
+      "worker_url": "https://bltz.vercel.app/api/internal/analytics/deliver",
+      "pipeline_enabled": true,
+      "production_enabled": true,
+      "legacy_export_enabled": false,
+      "capture_enabled": false,
+      "protection_mode": "prod_deployment_urls_and_all_previews",
+      "deployment_id": "dpl_9wwx7ouVgSf26fBo6iUEMhqbHZeq",
+      "deployment_url": "https://bltz-6pczvk6gl-daymeiions-projects.vercel.app",
+      "unauthorized_worker_status": 401,
+      "unauthorized_dispatch_status": 401,
+      "completed_at": "2026-10-10T03:04:02.914Z"
+    },
+    "canary": {
+      "plan": false,
+      "execution": true,
+      "production": true,
+      "project_ref": "drxtzxnwdtgxwueiqygf",
+      "event_id": "b17a0000-2026-4009-8000-000000000101",
+      "expected_events": 1,
+      "acceptance_calls": 2,
+      "publish_calls": 1,
+      "final_idle_probe": 1,
+      "capture_enabled": false,
+      "real_athlete_activity": false,
+      "receipt_file": "output/preview-sprint-events-2026-10-05/production-transport-canary-2026-10-09.json",
+      "started_at": "2026-10-10T03:04:38.625Z",
+      "source_commit": "84cbe275c43a970f2724bc389c99a80fdd8d8dcd",
+      "deployment_id": "dpl_9wwx7ouVgSf26fBo6iUEMhqbHZeq",
+      "status": "passed_capture_off",
+      "mutations": [
+        {
+          "label": "accept_internal_canary",
+          "registered_at": "2026-10-10T03:04:43.432Z",
+          "status": "response_received",
+          "http_status": 200
+        },
+        {
+          "label": "accept_exact_duplicate",
+          "registered_at": "2026-10-10T03:04:44.492Z",
+          "status": "response_received",
+          "http_status": 200
+        },
+        {
+          "label": "dispatch_one_internal_canary",
+          "registered_at": "2026-10-10T03:04:47.557Z",
+          "status": "response_received",
+          "http_status": 200
+        },
+        {
+          "label": "dispatch_acknowledged_idle_probe",
+          "registered_at": "2026-10-10T03:04:57.477Z",
+          "status": "response_received",
+          "http_status": 200
+        }
+      ],
+      "checks": [
+        {
+          "checked_at": "2026-10-10T03:04:48.988Z",
+          "registry": {
+            "id": "0c1df6f1-d78c-462f-bfb2-a33cc8ac3629",
+            "environment": "production",
+            "state": "published",
+            "event_count": 1,
+            "publish_attempts": 1,
+            "worker_attempts": 0,
+            "last_error_code": null
+          },
+          "exact_ids_match": false,
+          "physical_rows": 0
+        },
+        {
+          "checked_at": "2026-10-10T03:04:57.328Z",
+          "registry": {
+            "id": "0c1df6f1-d78c-462f-bfb2-a33cc8ac3629",
+            "environment": "production",
+            "state": "acknowledged",
+            "event_count": 1,
+            "publish_attempts": 1,
+            "worker_attempts": 1,
+            "last_error_code": null
+          },
+          "exact_ids_match": true,
+          "physical_rows": 1
+        }
+      ],
+      "preflight": {
+        "capture_environment": null,
+        "migration_count": 78,
+        "history_fingerprint": "e4aa705c56a186d21492a9a23b50f069",
+        "outbox_rows": 0,
+        "batch_rows": 0
+      },
+      "schedule_counts": {
+        "total": 0,
+        "active": 0
+      },
+      "analytics_row_id": "84394fa9-e028-46fa-9e8b-8280ed61cb03",
+      "payload_hash": "f8a2d1f1254f2a45ddcc51799a88dc78",
+      "duplicate_acceptance": true,
+      "dispatch_result": {
+        "state": "published",
+        "eventCount": 1
+      },
+      "batch_id": "0c1df6f1-d78c-462f-bfb2-a33cc8ac3629",
+      "final_registry": {
+        "id": "0c1df6f1-d78c-462f-bfb2-a33cc8ac3629",
+        "environment": "production",
+        "state": "acknowledged",
+        "event_count": 1,
+        "publish_attempts": 1,
+        "worker_attempts": 1,
+        "last_error_code": null
+      },
+      "postflight": {
+        "capture_environment": null,
+        "migration_count": 78,
+        "history_fingerprint": "e4aa705c56a186d21492a9a23b50f069",
+        "outbox_rows": 1,
+        "batch_rows": 1
+      },
+      "duplicate_dispatch_idle": true,
+      "completed_at": "2026-10-10T03:05:01.726Z"
+    },
+    "activation": {
+      "registered_at": "2026-10-10T03:05:37.956Z",
+      "status": "active",
+      "schedule_id": "bltz-preview-sprint-production-v1",
+      "destination": "https://bltz.vercel.app/api/internal/analytics/dispatch",
+      "cron": "*/5 * * * *",
+      "capture_environment": "production",
+      "general_legacy_export": false,
+      "real_form_submitted": false,
+      "source_commit": "84cbe275c43a970f2724bc389c99a80fdd8d8dcd",
+      "deployment_id": "dpl_9wwx7ouVgSf26fBo6iUEMhqbHZeq",
+      "mutations": [
+        {
+          "label": "create_production_dispatch_schedule",
+          "registered_at": "2026-10-10T03:05:42.485Z"
+        },
+        {
+          "label": "enable_production_preview_capture",
+          "registered_at": "2026-10-10T03:05:42.858Z"
+        }
+      ],
+      "schedule_created": true,
+      "schedule": {
+        "schedule_id": "bltz-preview-sprint-production-v1",
+        "cron": "*/5 * * * *",
+        "destination": "https://bltz.vercel.app/api/internal/analytics/dispatch",
+        "method": "POST",
+        "is_paused": false,
+        "retries": 2,
+        "authorization_forwarded": true,
+        "authorization_logs_redacted": true,
+        "next_schedule_time": 1791601800000
+      },
+      "capture_enabled": true,
+      "postflight": {
+        "capture_environment": "production",
+        "migration_count": 78,
+        "history_fingerprint": "e4aa705c56a186d21492a9a23b50f069",
+        "rls_preserved": true,
+        "claim_permissions_preserved": true
+      },
+      "completed_at": "2026-10-10T03:05:46.146Z"
+    },
+    "capture_enabled": true,
+    "legacy_export_enabled": false,
+    "real_player_form_submitted": false
   }
 }
