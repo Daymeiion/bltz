@@ -608,6 +608,19 @@
     },
     "capture_enabled": true,
     "legacy_export_enabled": false,
-    "real_player_form_submitted": false
+    "real_player_form_submitted": false,
+    "scheduled_dispatch": {
+      "checked_at": "2026-10-10T03:10:53.619Z",
+      "schedule_id": "bltz-preview-sprint-production-v1",
+      "is_paused": false,
+      "destination": "https://bltz.vercel.app/api/internal/analytics/dispatch",
+      "cron": "*/5 * * * *",
+      "last_schedule_time": 1791601800994,
+      "next_schedule_time": 1791602100000,
+      "last_states": [
+        "SUCCESS"
+      ],
+      "secret_values_printed": false
+    }
   }
 }
