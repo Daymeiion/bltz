@@ -28,3 +28,17 @@
   white-space: normal;
   overflow-wrap: anywhere;
 }
+
+.folderTabs { display: grid; grid-template-columns: repeat(6,minmax(0,1fr)); align-items: end; gap: 5px; padding: 14px 12px 0; margin-bottom: 0 !important; isolation: isolate; }
+.folderTab { position: relative; min-width: 0; height: 44px !important; padding: 8px 4px; border: 1px solid var(--line,#d1d8de); border-bottom: 0; border-radius: 14px 14px 0 0; background: var(--canvas,#f4f5f4); color: var(--muted,#5c6879); font-size: 12px; font-weight: 600; }
+.folderTab[aria-selected='true'] { height: 51px !important; background: var(--panel,#fff); color: var(--ink,#172234); z-index: 3; margin-bottom: -1px; }
+.folderTab[aria-selected='true']::before,.folderTab[aria-selected='true']::after { content: ''; position: absolute; bottom: 0; width: 7px; height: 7px; background: var(--panel,#fff); }
+.folderTab[aria-selected='true']::before { right: 100%; clip-path: polygon(100% 0,100% 100%,0 100%); }
+.folderTab[aria-selected='true']::after { left: 100%; clip-path: polygon(0 0,100% 100%,0 100%); }
+.folderTab[aria-selected='true'] span::after { content: ''; position: absolute; bottom: 7px; left: calc(50% - 10px); width: 20px; height: 2px; background: #ffbb00; }
+.folderPanel { display: grid; gap: 24px; min-width: 0; padding: 22px; border: 1px solid var(--line,#d1d8de); border-radius: 12px; background: var(--panel,#fff); }
+.folderPanel[hidden] { display: none; }
+.folderHeading { font: 700 23px/1.1 'BLTZ Career Condensed',var(--font-oswald),sans-serif; letter-spacing: .02em; text-transform: uppercase; }
+.form > fieldset { margin-top: 0 !important; }
+.form > fieldset > :not(.folderPanel):not(legend) { margin-inline: 18px; }
+@media(max-width:600px) { .folderTabs { gap: 3px; padding-inline: 5px; } .folderTab { font-size: 11px; } .folderPanel { padding: 15px; } }
