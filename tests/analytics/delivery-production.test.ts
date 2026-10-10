@@ -63,7 +63,7 @@ describe("production transport fencing", () => {
     expect(await publisher.publish(job, 2)).toBe("synthetic-message");
     const [url, options] = fetcher.mock.calls[0];
     expect(String(url)).toBe(`https://qstash-us-east-1.upstash.io/v2/publish/${config.workerUrl}`);
-    expect(options?.headers).toMatchObject({ "Upstash-Deduplication-Id": `bltz-production-analytics:${batchId}:2`, "Upstash-Label": "bltz-production-analytics" });
+    expect(options?.headers).toMatchObject({ "Upstash-Deduplication-Id": `bltz-production-analytics-${batchId}-2`, "Upstash-Label": "bltz-production-analytics" });
     expect(JSON.parse(options?.body as string)).toEqual(job);
     await expect(publisher.publish({ ...job, environment: "development" }, 2)).rejects.toThrow("environment_mismatch");
     expect(fetcher).toHaveBeenCalledTimes(1);
