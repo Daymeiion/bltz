@@ -15,14 +15,33 @@ beforeEach(() => {
   vi.stubEnv("BLTZ_ANALYTICS_PIPELINE_ENABLED", "true");
   vi.stubEnv("BLTZ_ANALYTICS_ENVIRONMENT", "production");
   vi.stubEnv("BLTZ_ANALYTICS_PRODUCTION_ENABLED", "true");
+  vi.stubEnv("BLTZ_ANALYTICS_LEGACY_EXPORT_ENABLED", undefined);
   vi.stubEnv("VERCEL_ENV", "production");
 });
 afterEach(() => vi.unstubAllEnvs());
-it("writes a server-derived production envelope through atomic acceptance", async () => {
+it("writes a server-derived production envelope only with a separate legacy export opt-in", async () => {
+  vi.stubEnv("BLTZ_ANALYTICS_LEGACY_EXPORT_ENABLED", "true");
   await expect(recordTrustedAnalyticsEvent(event)).resolves.toEqual({ eventId: event.clientEventId, duplicate: false });
   expect(rpc).toHaveBeenCalledWith("accept_analytics_delivery_event", expect.objectContaining({
     p_envelope: expect.objectContaining({ environment: "production", event_id: event.clientEventId }),
   }));
+  expect(from).not.toHaveBeenCalled();
+});
+it.each([undefined, "false"])("keeps valid production pipeline legacy collection in Supabase when export opt-in is %s", async (legacyExport) => {
+  vi.stubEnv("BLTZ_ANALYTICS_LEGACY_EXPORT_ENABLED", legacyExport);
+  const single = vi.fn().mockResolvedValue({ data: { id: event.clientEventId }, error: null });
+  const select = vi.fn().mockReturnValue({ single });
+  const insert = vi.fn().mockReturnValue({ select });
+  from.mockReturnValue({ insert });
+  await expect(recordTrustedAnalyticsEvent(event)).resolves.toEqual({ eventId: event.clientEventId, duplicate: false });
+  expect(from).toHaveBeenCalledWith("analytics_events");
+  expect(insert).toHaveBeenCalledWith(expect.objectContaining({ client_event_id: event.clientEventId, event_name: event.eventName, athlete_id: event.athleteId, session_id: event.sessionId, source: event.source }));
+  expect(rpc).not.toHaveBeenCalled();
+});
+it("keeps development export enabled without a production legacy opt-in", async () => {
+  vi.stubEnv("BLTZ_ANALYTICS_ENVIRONMENT", "development"); vi.stubEnv("VERCEL_ENV", "preview");
+  await expect(recordTrustedAnalyticsEvent(event)).resolves.toEqual({ eventId: event.clientEventId, duplicate: false });
+  expect(rpc).toHaveBeenCalledWith("accept_analytics_delivery_event", expect.objectContaining({ p_envelope: expect.objectContaining({ environment: "development" }) }));
   expect(from).not.toHaveBeenCalled();
 });
 it.each([

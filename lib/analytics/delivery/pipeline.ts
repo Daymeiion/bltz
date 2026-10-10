@@ -44,7 +44,7 @@ export function createAnalyticsDeliveryPublisher(config: AnalyticsDeliveryConfig
           "Upstash-Retries": "4", "Upstash-Timeout": "30s",
           // Durable dispatch generations have distinct queue dedupe IDs; the
           // immutable batch/event IDs still survive all generations and retries.
-          "Upstash-Deduplication-Id": `bltz-${config.environment === "development" ? "dev" : "production"}-analytics:${job.batch_id}:${attempt}`,
+          "Upstash-Deduplication-Id": `bltz-${config.environment === "development" ? "dev" : "production"}-analytics-${job.batch_id}-${attempt}`,
           "Upstash-Label": `bltz-${config.environment}-analytics`,
           ...(config.vercelAutomationBypassSecret ? { "Upstash-Forward-x-vercel-protection-bypass": config.vercelAutomationBypassSecret } : {}),
         },

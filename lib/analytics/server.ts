@@ -46,7 +46,10 @@ export async function recordTrustedAnalyticsEvent(event: TrustedAnalyticsEvent):
     throw new Error("analytics_environment_not_authorized");
   }
   const supabase = createServiceClient();
-  if (process.env.BLTZ_ANALYTICS_PIPELINE_ENABLED === "true" && environment) {
+  // Production transport can verify preview events without exporting general
+  // legacy collection. Keep its Supabase write unless separately opted in.
+  const legacyExportEnabled = environment !== "production" || process.env.BLTZ_ANALYTICS_LEGACY_EXPORT_ENABLED === "true";
+  if (process.env.BLTZ_ANALYTICS_PIPELINE_ENABLED === "true" && environment && legacyExportEnabled) {
     const envelope = toBLTZEvent(event, undefined, environment);
     const { data: accepted, error: acceptanceError } = await supabase.rpc("accept_analytics_delivery_event", {
       p_event: {

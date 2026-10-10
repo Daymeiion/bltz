@@ -85,8 +85,12 @@ describe("durable dispatcher and duplicate-safe worker", () => {
     const [url, options] = fetcher.mock.calls[0] as unknown as [URL, RequestInit];
     expect(url.href).toBe(`https://qstash.upstash.io/v2/publish/${config.workerUrl}`);
     expect(options.redirect).toBe("error"); expect(options.signal).toBeDefined();
-    expect(options.headers).toMatchObject({ "Upstash-Retries": "4", "Upstash-Timeout": "30s", "Upstash-Deduplication-Id": `bltz-dev-analytics:${batchId}:1` });
-    expect((fetcher.mock.calls[1] as unknown as [URL, RequestInit])[1].headers).toMatchObject({ "Upstash-Deduplication-Id": `bltz-dev-analytics:${batchId}:2` });
+    expect(options.headers).toMatchObject({ "Upstash-Retries": "4", "Upstash-Timeout": "30s", "Upstash-Deduplication-Id": `bltz-dev-analytics-${batchId}-1` });
+    const firstDedupeId = new Headers(options.headers).get("Upstash-Deduplication-Id");
+    const secondDedupeId = new Headers((fetcher.mock.calls[1] as unknown as [URL, RequestInit])[1].headers).get("Upstash-Deduplication-Id");
+    expect(secondDedupeId).toBe(`bltz-dev-analytics-${batchId}-2`);
+    expect(firstDedupeId).toMatch(/^[A-Za-z0-9-]+$/); expect(secondDedupeId).toMatch(/^[A-Za-z0-9-]+$/);
+    expect(secondDedupeId).not.toBe(firstDedupeId);
     await expect(createAnalyticsDeliveryPublisher(config, async () => new Response("x".repeat(16385))).publish(job, 1)).rejects.toThrow();
   });
   it("retains an unpublished durable batch after queue failure", async () => {
