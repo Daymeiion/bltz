@@ -2,6 +2,9 @@ import { previewAdmin } from "@/lib/preview-lockers/server";
 import PreviewLockerForm from "../PreviewLockerForm";
 import { notFound } from "next/navigation";
 import { z } from "zod";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import PreviewBuilderWorkspace from "../PreviewBuilderWorkspace";
+import { readBuilderContext } from "../builder-workspace-data";
 export const dynamic = "force-dynamic";
 export default async function NewPreview({searchParams}:{searchParams:Promise<{intake?:string}>}) {
   const {client}=await previewAdmin();
@@ -24,5 +27,6 @@ export default async function NewPreview({searchParams}:{searchParams:Promise<{i
       if((result.data?.length??0)<1000)break;
     }
   }
-  return <section className="mx-auto max-w-4xl space-y-6 p-6 sm:p-10"><h1 className="text-3xl font-semibold">Create private preview</h1>{reservedId&&<p>This save consumes the referral’s reserved preview ID and links its GTM contact. Publish the reviewed invite link before outreach; recipients will not need to sign in.</p>}<PreviewLockerForm reservedId={reservedId} referralName={referralName} enrollmentEnabled={enrollmentEnabled} enrollmentContacts={contacts}/></section>;
+  const context = await readBuilderContext(client as unknown as SupabaseClient);
+  return <PreviewBuilderWorkspace context={context}>{reservedId&&<p>This save consumes the referral’s reserved preview ID and links its GTM contact. Publish the reviewed invite link before outreach; recipients will not need to sign in.</p>}<PreviewLockerForm reservedId={reservedId} referralName={referralName} enrollmentEnabled={enrollmentEnabled} enrollmentContacts={contacts}/></PreviewBuilderWorkspace>;
 }

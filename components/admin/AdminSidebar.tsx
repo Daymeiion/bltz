@@ -22,6 +22,7 @@ import {
 interface SidebarLink {
   label: string;
   href: string;
+  activeHref?: string;
   icon: React.ReactNode;
 }
 
@@ -76,7 +77,7 @@ export function AdminSidebar() {
       href: "/admin/settings",
       icon: <IconSettings className="h-5 w-5 flex-shrink-0" />,
     },
-    { label: "Preview Lockers", href: "/admin/preview-lockers", icon: <IconUsers className="h-5 w-5 flex-shrink-0" /> },
+    { label: "Preview Lockers", href: "/admin/preview-lockers/new", activeHref: "/admin/preview-lockers", icon: <IconUsers className="h-5 w-5 flex-shrink-0" /> },
   ];
 
   return (
@@ -122,10 +123,10 @@ export function AdminSidebar() {
               key={idx}
               href={link.href}
               aria-label={link.label}
-              aria-current={isAdminSidebarLinkActive(pathname, link.href) ? "page" : undefined}
+              aria-current={isAdminSidebarLinkActive(pathname, link.activeHref ?? link.href) ? "page" : undefined}
               className={cn(
                 "flex items-center gap-3 rounded-xl px-3 py-3 text-neutral-500 transition-all duration-200 hover:translate-x-0.5 hover:bg-neutral-200/70 hover:text-neutral-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ffbb00] dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-white",
-                isAdminSidebarLinkActive(pathname, link.href) && "bg-neutral-950 text-white shadow-sm hover:bg-neutral-950 hover:text-white dark:bg-white dark:text-neutral-950 dark:hover:bg-white dark:hover:text-neutral-950",
+                isAdminSidebarLinkActive(pathname, link.activeHref ?? link.href) && "bg-neutral-950 text-white shadow-sm hover:bg-neutral-950 hover:text-white dark:bg-white dark:text-neutral-950 dark:hover:bg-white dark:hover:text-neutral-950",
               )}
             >
               {link.icon}
@@ -190,10 +191,10 @@ export function AdminSidebar() {
                 key={idx}
                 href={link.href}
                 onClick={() => setMobileOpen(false)}
-                aria-current={isAdminSidebarLinkActive(pathname, link.href) ? "page" : undefined}
+                aria-current={isAdminSidebarLinkActive(pathname, link.activeHref ?? link.href) ? "page" : undefined}
                 className={cn(
                   "flex items-center gap-3 rounded-xl px-4 py-3 text-neutral-600 transition-all hover:bg-neutral-200 hover:text-neutral-950 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-white",
-                  isAdminSidebarLinkActive(pathname, link.href) && "bg-neutral-950 text-white dark:bg-white dark:text-neutral-950",
+                  isAdminSidebarLinkActive(pathname, link.activeHref ?? link.href) && "bg-neutral-950 text-white dark:bg-white dark:text-neutral-950",
                 )}
               >
                 {link.icon}
