@@ -59,3 +59,13 @@ Next activation sequence: confirm credentials without logging values; use a user
 ## Continuation safety
 
 Primary checkout C:/Users/Administrator/bltz contains unrelated work and was not staged/deployed. Implementation lives in managed worktree C:/Users/Administrator/.codex/worktrees/preview-tracking-release/bltz on codex/preview-invitation-email-2026-10-11. Preserve the latest production source2c175bdfac36b7a3a95636e90b646ba6b2d9ee0b. Do not repeat migration/deployment scripts blindly; inspect sanitized receipts under primary output/preview-invitation-email-2026-10-11 and fresh migration/deployment preflight first.
+
+## Released checkpoint
+
+- Implementation commit: d06a52d68d43e7a6c4d3f537e1e64087bed36c2f, pushed to origin/codex/preview-invitation-email-2026-10-11. Documentation-only follow-up may be the branch HEAD.
+- Production READY deployment: dpl_9mWWTXDSMzPwB8VGLDTBgFyddfNz, https://bltz.vercel.app (candidate https://bltz-7yn99oau6-daymeiions-projects.vercel.app). Previous deployment dpl_8HAGDHJ2ra1RySJzvjNhMzYDD7zB; no unrelated source changes promoted.
+- Production migration20261011213800 applied from exact staging-verified source;80migrations, all previous history unchanged. Capture remains production;0email attempts/0receipts;Keith intact. Both email flags are explicitly false on this deployment; project/mailbox credentials were not configured.
+- Candidate smoke: anonymous Admin redirect; unauthorized invitation send401; unsigned email worker401;Keith public locker200.
+- Authenticated live Admin verification: Keith selected, available zero email history, explicit disabled configuration/sending/bounce statuses and disabled recipient/confirmation/send controls. At390px, panel358px/scroll356px; no horizontal overflow. Temporary viewport override restored. Keith currently has no eligible linked GTM contact with an email; add/review one before a later player invitation.
+- Real QStash control job msg_7YoJxFpwkEy5zBp1xoPnifPrhVNtzJknvjUStuEQNT2eiBVR6wjox reached the worker withDELIVERED/HTTP200. Body{};mailbox checksOFF. This verifies scheduler-to-hosted-worker authorization, not SMTP/IMAP or recipient delivery. No schedule created.
+- SMTP/IMAP credentials, one reviewed controlled email recipient, actual DSN support, new email-state end-to-end Tinybird observations and15-minute check schedule are deferred until user configuration. Existing analytics pipeline/locker activity are unchanged.
