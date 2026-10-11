@@ -4,7 +4,13 @@
 
 Add activity and analytics delivery status to the existing Admin funnel for Keith Rivers and future shared preview lockers. Verify the currently implemented preview-to-interest workflow through a controlled hosted staging test. No real-player invitation, form submission, account claim, payment, or contact was made.
 
-The isolated release branch is `codex/preview-funnel-workflow-2026-10-11`, based on the latest production release `7a50949093127f7da3ca978f6e6769326f6fa960`. That baseline preserves the newer production UI and reviewed PFR structured-stats work. The primary dirty checkout and pitch-deck files were not staged, reset, or deployed. Production deployment is pending at this checkpoint; the final release readback will be added here after promotion.
+The isolated release branch is `codex/preview-funnel-workflow-2026-10-11`, based on the latest production release `7a50949093127f7da3ca978f6e6769326f6fa960`. That baseline preserves the newer production UI and reviewed PFR structured-stats work. The primary dirty checkout and pitch-deck files were not staged, reset, or deployed.
+
+**Released:** implementation commit `2c175bdfac36b7a3a95636e90b646ba6b2d9ee0b` was committed, pushed, built successfully with production configuration, checked before domain assignment, and promoted to `https://bltz.vercel.app` on 2026-10-11 at 21:15 UTC. READY deployment: `dpl_8HAGDHJ2ra1RySJzvjNhMzYDD7zB` (`bltz-7ojxudmew-daymeiions-projects.vercel.app`). The source metadata and alias match the committed release. A subsequent documentation-only commit records this final readback; it changes no deployed runtime code. The release branch is pushed; the divergent `main` branch was not overwritten or force-pushed.
+
+Live read-only checks passed: Keith's public locker returns 200; anonymous Admin access redirects to sign-in; unsigned worker and unauthorized dispatch return 401. The existing authenticated browser displayed the new panel with Keith selected, the working production report connection, accurate empty eligible-player activity, and available delivery states. Selecting an unshared draft displayed "This preview is not shared" and withheld its activity totals; returning to Keith restored the report. At 390px width, the new panel fits without internal horizontal overflow; the temporary viewport override was reset. Production database identity matches the approved project, capture remains `production`, and its 79-migration history ends at `20261011170240`; this release applied no migrations.
+
+Keith currently has no eligible production events in this report. Admin, bot and test visits are excluded; the 15 synthetic events belong only to isolated staging. No old activity was fabricated or retroactively backfilled.
 
 ## Summary and files changed
 
@@ -36,7 +42,7 @@ The isolated release branch is `codex/preview-funnel-workflow-2026-10-11`, based
 - TypeScript: `tsc --noEmit --incremental false` passed.
 - Scoped ESLint: zero errors; one pre-existing, untouched `set-state-in-effect` warning in video search.
 - Independent focused review, including Vercel React Best Practices: no blocking findings.
-- Local Webpack production build failed in the existing Next Google-font loader (`Cannot read properties of null (reading '1')`). It is not represented as a successful build. Hosted Vercel staging compilation succeeded; the production build is checked before promotion.
+- Local Webpack production build failed in the existing Next Google-font loader (`Cannot read properties of null (reading '1')`). It is not represented as a successful build. Both hosted Vercel staging and production builds succeeded; production was checked before promotion.
 
 ## Controlled hosted end-to-end test
 
