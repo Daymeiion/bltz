@@ -42,12 +42,15 @@ export const previewSprintEventSchema = z.object({
     preview_id: z.string().uuid(), event_kind: z.enum([
       "locker_view", "photos_view", "film_view", "photo_open", "video_open", "video_play", "video_progress", "video_complete", "stats_view", "claim_click", "referral_link_copied",
       "sent", "accepted", "declined", "claim_submit", "dashboard_interest", "booking_click", "booking_confirmed", "walkthrough_completed", "referral_created", "referral_copied", "referral_submit", "referred_prepared", "referred_claimed",
+      "email_smtp_accepted", "email_delivery_delayed", "email_delivery_reported", "email_bounced", "email_send_failed", "email_send_uncertain",
     ]),
     media_id: z.string().min(1).max(128).regex(/^[A-Za-z0-9_-]+$/).optional(),
     progress: z.union([z.literal(25), z.literal(50), z.literal(75)]).optional(),
   }).strict(),
 }).strict().superRefine((event, ctx) => {
   if (event.event_name !== `preview_${event.properties.event_kind}`) ctx.addIssue({ code: "custom", message: "preview definition mismatch" });
+  const emailEvent = event.properties.event_kind.startsWith("email_");
+  if (emailEvent && (event.actor_kind !== "operational" || event.measurement_basis !== "server_workflow" || event.session_id !== null)) ctx.addIssue({ code: "custom", message: "email transport events require server workflow" });
   const mediaEvent = ["photo_open", "video_open", "video_play", "video_progress", "video_complete"].includes(event.properties.event_kind);
   if (mediaEvent !== !!event.properties.media_id || (event.properties.event_kind === "video_progress") !== (event.properties.progress !== undefined)) {
     ctx.addIssue({ code: "custom", message: "invalid preview media context" });

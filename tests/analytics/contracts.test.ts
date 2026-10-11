@@ -8,6 +8,8 @@ import {
   type AnalyticsSource,
 } from "@/lib/analytics/events";
 
+import { previewEventInputSchema } from "@/lib/analytics/preview-event";
+
 const IMPLEMENTED_EVENT_CONTEXTS = [
   ["locker_viewed", "/player/test-athlete", "public_locker"],
   ["film_room_opened", "/player/test-athlete/videos", "public_locker"],
@@ -78,6 +80,16 @@ describe("implemented analytics event contracts", () => {
     }
 
     const coveredNames = new Set(IMPLEMENTED_EVENT_CONTEXTS.map(([eventName]) => eventName));
-    expect([...emittedNames].sort()).toEqual([...coveredNames].sort());
+    // Preview engagement has a separate permission/capture contract from canonical Player analytics.
+    // Validate it there instead of requiring preview names in the canonical event registry.
+    const previewNames = new Set<string>(previewEventInputSchema.shape.eventName.options);
+    const legacyEmitted = [...emittedNames].filter(name => !previewNames.has(name));
+    expect(legacyEmitted.sort()).toEqual([...coveredNames].sort());
+    for (const eventName of [...emittedNames].filter(name => previewNames.has(name))) {
+      const media = ["photo_open", "video_open", "video_play", "video_progress", "video_complete"].includes(eventName);
+      expect(previewEventInputSchema.safeParse({ previewId: "8bb12ac1-5181-4df4-8c37-70643339f32b",
+        eventId: "8bb12ac1-5181-4df4-8c37-70643339f32b", sessionId: "c682bce7-76ac-4c02-9132-8fc6705bf163", eventName,
+        ...(media ? {assetId:"synthetic-video"} : {}), ...(eventName === "video_progress" ? {progress:25} : {}) }).success).toBe(true);
+    }
   });
 });

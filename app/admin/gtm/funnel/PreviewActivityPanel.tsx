@@ -16,6 +16,9 @@ const labels: Record<string, string> = {
   referral_link_copied: "Preview link copied", referral_created: "Referral link created",
   referral_copied: "Referral link copied", referral_submit: "Referral intake saved",
   referred_prepared: "Referred preview prepared", referred_claimed: "Referred claim interest",
+  email_smtp_accepted: "Invitation accepted by SMTP", email_delivery_delayed: "Invitation delivery delayed",
+  email_delivery_reported: "Invitation delivery reported", email_bounced: "Invitation bounced",
+  email_send_failed: "Invitation send failed", email_send_uncertain: "Invitation send outcome uncertain",
 };
 const headlineKinds = ["locker_view", "photos_view", "film_view", "photo_open", "video_open", "video_play", "stats_view", "claim_click", "accepted", "claim_submit"];
 const states: [keyof Report["delivery"]["eventCountsByState"], string, string][] = [
@@ -88,7 +91,7 @@ export function PreviewActivityPanel({ report, query }: { report: Report; query:
           <p className={`mt-3 text-xs leading-5 ${muted}`}>The latest acknowledgment is a timestamp, not a guarantee that all earlier events were delivered. Check pending, retry and failure states for gaps.</p>
         </>}
       </section>
-      <p className={`border-t border-neutral-200 pt-4 text-xs leading-5 dark:border-slate-800 ${muted}`}>Email delivery and bounces, verified ownership, and provider-confirmed appointments are not connected to this report. Protected invitation bookings and referrals remain in the cohort below. External video opens do not prove YouTube playback.</p>
+      <p className={`border-t border-neutral-200 pt-4 text-xs leading-5 dark:border-slate-800 ${muted}`}>Invitation email and bounce evidence appears separately below. Verified ownership and provider-confirmed appointments are not connected to this activity report. Protected invitation bookings and referrals remain in the cohort below. External video opens do not prove YouTube playback.</p>
     </div>}
   </section>;
 }
