@@ -6,6 +6,7 @@ import type { PreviewLockerRow } from "./types";
 import { previewVideoSource, previewVideoLevel } from "./video";
 import { previewTeamBranding } from "./branding";
 import { combineCfbImports } from "./cfb-csv";
+import { combinePfrImports } from "./pfr-csv";
 import { previewStatLabels, type PreviewRecord, type ResolvedPreviewRecord } from "./validation";
 
 export function previewHeadshot(row: { headshot_url: string | null; photos?: Array<{ isHeadshot?: boolean; url?: string | null }> }) {
@@ -35,7 +36,7 @@ export function previewLockerData(row: PreviewRecord | ResolvedPreviewRecord, pu
   } : null;
   return {
     athleteId: null, slug: row.slug, lockerHref: `/preview-lockers/${encodeURIComponent(row.slug)}`, fullName: row.full_name,
-    structuredStats: combineCfbImports(row.cfb_stats ?? []),
+    structuredStats: [...combinePfrImports(row.pfr_stats ?? []), ...combineCfbImports(row.cfb_stats ?? [])],
     hometown: row.hometown || "", position: row.position || "", jersey: row.jersey || "",
     levelLabel: row.level || "Athlete", headshotUrl: previewHeadshot(row),
     // Only direct playback sources enter the hero; provider pages stay in the Film Room.

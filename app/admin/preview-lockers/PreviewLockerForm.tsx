@@ -16,6 +16,7 @@ import styles from "./preview-form.module.css";
 import AwardsSection from "./AwardsSection";
 import SocialSection from "./SocialSection";
 import CfbCsvImport from "./CfbCsvImport";
+import StatsCsvImport from "./StatsCsvImport";
 import { BuilderSection } from "./BuilderSection";
 import { previewVideoCategories, previewVideoLevel } from "@/lib/preview-lockers/video";
 import { MediaSection, MediaItem } from "./MediaDisclosure";
@@ -23,7 +24,7 @@ import { createClient } from "@/lib/supabase/client";
 import { parseYouTubeBatch } from "@/lib/preview-lockers/youtube-bulk";
 
 const initial = () => previewContent.parse({ slug: "private-preview", full_name: "".padEnd(2, "_") });
-type Scalar = Exclude<keyof PreviewContent, "schools" | "pro_teams" | "awards" | "social" | "career_stats" | "cfb_stats" | "videos" | "photos">;
+type Scalar = Exclude<keyof PreviewContent, "schools" | "pro_teams" | "awards" | "social" | "career_stats" | "cfb_stats" | "pfr_stats" | "videos" | "photos">;
 
 export default function PreviewLockerForm({
   record,
@@ -286,14 +287,15 @@ export default function PreviewLockerForm({
       <section id="locker-panel-stats" role="tabpanel" aria-labelledby="locker-tab-stats" tabIndex={0} hidden={activeFolder !== "stats"} className={styles.folderPanel}>
       <h2 className={styles.folderHeading}>Statistics & imports</h2>
       <CfbCsvImport athleteName={draft.full_name} value={draft.cfb_stats} onChange={cfb_stats => change({ cfb_stats })} />
+      <StatsCsvImport league="nfl" athleteName={draft.full_name} value={draft.pfr_stats} onChange={pfr_stats => change({ pfr_stats })} disabled={busy !== null || statsNeedReload} />
       <section className="space-y-3" aria-label="Stats-only update">
         <Button type="button" variant="outline" disabled={!saved || statsNeedReload} aria-expanded={showStats} aria-controls="preview-sportradar-panel" onClick={() => setShowStats(value => !value)}>Pull Sportradar stats only</Button>
-        <p className="text-sm">Fetch and review NFL statistics without running the web scraper. Photos, videos, biography, awards, and manual career totals are preserved. Imported season statistics appear separately in the Locker.</p>
+        <p className="text-sm">The Sportradar subscription has expired. Use the NFL CSV import above for the sprint. Previously saved provider statistics remain available; fetching new data requires a working subscription. Reviewed CSV tables take precedence over saved NFL provider data.</p>
         {!saved && <p className="text-sm">Save this preview as a draft first to enable stats import.</p>}
         {statsNeedReload && <p role="status" className="text-sm">Preview identity or statistics updated. <a className="underline" href={`/admin/preview-lockers/${saved!.id}/edit`} data-draft-discard="true">Reload the saved version before editing</a>.</p>}
         {saved && showStats && <div id="preview-sportradar-panel"><SportradarPanel previewId={saved.id} athleteName={draft.full_name} importDisabled={dirty || statsNeedReload} onBusyChange={value => { pending.current = value; setBusy(value ? "stats" : null); }} onImported={() => { setStatsNeedReload(true); setCompleted(false); }} /></div>}
       </section>
-      <BuilderSection title="Career statistics — manual fallback" count={draft.career_stats.length} description="Use when Sportradar data is unavailable. Expand to enter sourced career totals."><p className="text-sm text-muted-foreground">Try Sportradar first. Enter these totals manually only when provider data cannot be located. Blank statistics stay pending. Manual entry does not use API quota.</p><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{previewStatKeys.map(key => { const stat = draft.career_stats.find(item => item.key === key); return <label className="grid gap-2 text-sm" key={key}>{previewStatLabels[key]}<Input aria-label={previewStatLabels[key]} type="number" min="0" max="1000000" step={key === "sacks" ? "0.5" : "1"} value={stat?.value ?? ""} onChange={event => { const value = event.target.value; change({ career_stats: value === "" ? draft.career_stats.filter(item => item.key !== key) : [...draft.career_stats.filter(item => item.key !== key), { key, value: Number(value) }] }); }} /></label>; })}</div></BuilderSection>
+      <BuilderSection title="Career statistics — manual fallback" count={draft.career_stats.length} description="Expand to enter sourced career totals when a CSV is unavailable."><p className="text-sm text-muted-foreground">Use reviewed NFL CSV tables for season history. Enter these separate career totals manually when a CSV is unavailable. Blank statistics stay pending. Manual entry does not use API quota.</p><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{previewStatKeys.map(key => { const stat = draft.career_stats.find(item => item.key === key); return <label className="grid gap-2 text-sm" key={key}>{previewStatLabels[key]}<Input aria-label={previewStatLabels[key]} type="number" min="0" max="1000000" step={key === "sacks" ? "0.5" : "1"} value={stat?.value ?? ""} onChange={event => { const value = event.target.value; change({ career_stats: value === "" ? draft.career_stats.filter(item => item.key !== key) : [...draft.career_stats.filter(item => item.key !== key), { key, value: Number(value) }] }); }} /></label>; })}</div></BuilderSection>
       </section>
       <section id="locker-panel-videos" role="tabpanel" aria-labelledby="locker-tab-videos" tabIndex={0} hidden={activeFolder !== "videos"} className={styles.folderPanel}>
       <h2 className={styles.folderHeading}>Film Room & hero videos</h2>

@@ -2,6 +2,7 @@ import { beforeEach, expect, it, vi } from "vitest";
 import Page from "@/app/preview-lockers/[slug]/page";
 import { previewContent } from "@/lib/preview-lockers/validation";
 import { inspectCsv, reviewCsv } from "@/lib/preview-lockers/cfb-csv";
+import { inspectPfrCsv, reviewPfrCsv } from "@/lib/preview-lockers/pfr-csv";
 const mocks = vi.hoisted(() => ({ read: vi.fn(), stats: vi.fn() }));
 vi.mock("@/lib/preview-lockers/server", () => ({ readPrivatePreview: mocks.read }));
 vi.mock("@/lib/player/structured-stats", () => ({ readPreviewStructuredStats: mocks.stats }));
@@ -9,6 +10,21 @@ vi.mock("next/navigation", () => ({ notFound: () => { throw new Error("NOT_FOUND
 vi.mock("@/app/player/[slug]/LockerView", () => ({ default: () => null }));
 vi.mock("@/components/preview-lockers/ConversionSurface", () => ({ default: () => null }));
 beforeEach(() => vi.resetAllMocks());
+it("prefers reviewed NFL CSV over provider data and restores provider data when removed", async () => {
+  const table = inspectPfrCsv("Season,Team,G,Sk\n2024,AAA,17,2.5", "defense");
+  const imported = reviewPfrCsv(table, table.mapping, "defense", "https://www.pro-football-reference.com/players/F/FixtPl00.htm").imported;
+  const content = previewContent.parse({ slug: "fixture", full_name: "Fixture", pfr_stats: [imported] });
+  mocks.read.mockResolvedValue({ ...content, id: "fixture" });
+  mocks.stats.mockResolvedValue([{ league: "nfl", source: "Sportradar", seasons: [], syncedAt: "2026-09-16" }, { league: "ncaafb", source: "Sportradar", seasons: [], syncedAt: "2026-09-16" }]);
+  const result = await Page({ params: Promise.resolve({ slug: "fixture" }) });
+  expect(result.props.data.structuredStats).toHaveLength(2);
+  expect(result.props.data.structuredStats[0]).toMatchObject({ league: "nfl", sourceUrls: [imported.sourceUrl] });
+  expect(result.props.data.structuredStats[0].seasons[0].statistics.sacks).toBe(2.5);
+  expect(result.props.data.structuredStats[1].league).toBe("ncaafb");
+  mocks.read.mockResolvedValue({ ...content, id: "fixture", pfr_stats: [] });
+  const removed = await Page({ params: Promise.resolve({ slug: "fixture" }) });
+  expect(removed.props.data.structuredStats[0].source).toBe("Sportradar");
+});
 it("does not read or render statistics before private preview authorization", async () => {
   mocks.read.mockResolvedValue(null);
   await expect(Page({ params: Promise.resolve({ slug: "fixture" }) })).rejects.toThrow("NOT_FOUND");

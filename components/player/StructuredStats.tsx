@@ -38,7 +38,8 @@ function LeagueStats({ title, label, record, fallback }: { title: string; label:
 function StatsRecord({ record }: { record: StoredStats }) {
   return <div className="min-w-0 space-y-3">
       <h2 className="text-lg font-bold">{record.league === "nfl" ? "NFL" : "NCAA Football"} statistics</h2>
-      <p className="text-sm text-slate-300">Source: {record.source} · {record.source.startsWith("Sports Reference") ? "Imported" : "Synced"} {record.syncedAt.slice(0, 10)}. Totals cover available seasons only.</p>
+      <p className="text-sm text-slate-300">Source: {record.source} · {record.source.includes("manually imported") ? "Imported" : "Synced"} {record.syncedAt.slice(0, 10)}. Totals cover available seasons only.</p>
+      {record.sourceUrls?.map(url => <a key={url} href={url} target="_blank" rel="noopener noreferrer" className="block text-sm text-slate-300 underline">View source player page</a>)}
       {(["REG", "PST", "PRE"] as const).map(phase => {
         const seasons = record.seasons.filter(s => s.seasonType === phase).sort((a, b) => b.year - a.year);
         if (!seasons.length) return null;

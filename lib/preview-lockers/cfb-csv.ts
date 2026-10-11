@@ -60,7 +60,7 @@ export function csvRows(input: string): string[][] {
 const clean = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, "");
 const aliases: Record<string, Record<string, string>> = {
   passing: { cmp: "completions", completions: "completions", att: "passingAttempts", yds: "passingYards", td: "passingTouchdowns", int: "passingInterceptions", rate: "passerRating", rating: "passerRating" },
-  rushing: { att: "rushingAttempts", yds: "rushingYards", td: "rushingTouchdowns" },
+  rushing: { att: "rushingAttempts", rush: "rushingAttempts", yds: "rushingYards", td: "rushingTouchdowns" },
   receiving: { rec: "receptions", yds: "receivingYards", td: "receivingTouchdowns" },
   defense: { solo: "soloTackles", ast: "assists", tot: "tackles", tkl: "tackles", tfl: "tacklesForLoss", loss: "tacklesForLoss", sk: "sacks", sacks: "sacks", int: "interceptions", pd: "passesDefended", ff: "forcedFumbles", fr: "fumbleRecoveries" },
   returns: { kr: "kickReturns", pr: "puntReturns" },
@@ -78,25 +78,33 @@ export function inspectCsv(input: string, category: CfbCategory): CsvTable {
   let group = "";
   const headers = header.map((label, i) => {
     if (groups.length === header.length && groups[i]) group = groups[i];
-    return group && !["year", "season", "school", "team", "conf", "class", "pos", "g", "gs"].includes(clean(label)) ? `${group}: ${label}` : label;
+    return group && !["year", "season", "school", "team", "tm", "age", "lg", "conf", "class", "pos", "g", "gs"].includes(clean(label)) ? `${group}: ${label}` : label;
   });
   const mapping = header.map((label, i) => {
     const key = clean(label);
-    const base: Record<string, string> = { year: "year", season: "year", school: "team", team: "team", g: "gamesPlayed", gp: "gamesPlayed", gs: "gamesStarted" };
+    const base: Record<string, string> = { year: "year", season: "year", school: "team", team: "team", tm: "team", g: "gamesPlayed", gp: "gamesPlayed", gs: "gamesStarted" };
     if (base[key]) return base[key];
     const parts = headers[i].split(":"); const context = parts.length > 1 ? clean(parts[0]) : category;
     const groupAliases: Record<string, Record<string, string>> = {
       tackles: { ...aliases.defense, comb: "tackles" },
       definterceptions: { int: "interceptions", pd: "passesDefended" },
       fumbles: { fr: "fumbleRecoveries", ff: "forcedFumbles" },
+      kickret: aliases.kickreturns,
+      puntret: aliases.puntreturns,
     };
-    return Object.keys(STAT_FIELDS).find(field => clean(field) === key) ?? groupAliases[context]?.[key] ?? aliases[context]?.[key] ?? (key === "comb" && category === "defense" ? "tackles" : "");
+    return Object.keys(STAT_FIELDS).find(field => clean(field) === key) ?? groupAliases[context]?.[key] ?? aliases[context]?.[key] ?? (key === "comb" && category === "defense" ? "tackles" : !["yds", "td", "att", "int", "ret", "no"].includes(key) ? aliases[category]?.[key] ?? "" : "");
   });
   // Ambiguous duplicate abbreviations require explicit operator mapping.
   return { headers, rows: rows.slice(index + 1), mapping: mapping.map(key => key && mapping.filter(other => other === key).length > 1 ? "" : key) };
 }
 export function reviewCsv(table: CsvTable, mapping: string[], category: CfbCategory, sourceUrl: string): { imported: CfbImport; warnings: string[] } {
+  const { seasons, warnings } = readCsvSeasons(table, mapping);
+  return { imported: cfbImport.parse({ category, sourceUrl, importedAt: new Date().toISOString(), seasons }), warnings };
+}
+
+export function readCsvSeasons(table: CsvTable, mapping: string[], college = true) {
   const selected = mapping.filter(Boolean);
+  if (mapping.length !== table.headers.length) throw new Error("Map each CSV column before reviewing.");
   if (!selected.includes("year") || !selected.includes("team")) throw new Error("Map Season and School / team before reviewing.");
   if (new Set(selected).size !== selected.length) throw new Error("Each statistic may only be mapped once.");
   if (selected.some(key => !Object.hasOwn(columnOptions, key))) throw new Error("Unknown statistic mapping.");
@@ -104,7 +112,7 @@ export function reviewCsv(table: CsvTable, mapping: string[], category: CfbCateg
   const seasons: z.infer<typeof cfbSeason>[] = [];
   for (const cells of table.rows) {
     const sourceYear = cells[mapping.indexOf("year")] ?? "";
-    const year = sourceYear.replace(/\*$/, "");
+    const year = sourceYear.replace(college ? /\*$/ : /[*+]$/, "");
     if (/^(career|total|totals|year|season)$/i.test(year.trim()) || !cells.some(Boolean)) { warnings.push(`Skipped summary/header row: ${year}`); continue; }
     if (!/^\d{4}$/.test(year)) { if (cells.filter(Boolean).length <= 1) { warnings.push("Skipped a source note."); continue; } throw new Error(`Unrecognized season '${year}'. Only season totals are supported; game logs are separate.`); }
     if (cells.length !== table.headers.length) throw new Error(`Season ${year} has a different number of columns than the header.`);
@@ -117,12 +125,16 @@ export function reviewCsv(table: CsvTable, mapping: string[], category: CfbCateg
       values[key] = Number(value.replace(/,/g, ""));
     });
     const { gamesPlayed = null, gamesStarted = null, ...statistics } = values;
-    seasons.push(cfbSeason.parse({ year: Number(year), team: cells[mapping.indexOf("team")], gamesPlayed, gamesStarted, statistics, ...(sourceYear.endsWith("*") ? { sourceNote: "Includes bowl statistics" } : {}) }));
+    seasons.push(cfbSeason.parse({ year: Number(year), team: cells[mapping.indexOf("team")], gamesPlayed, gamesStarted, statistics, ...(college && sourceYear.endsWith("*") ? { sourceNote: "Includes bowl statistics" } : {}) }));
   }
-  return { imported: cfbImport.parse({ category, sourceUrl, importedAt: new Date().toISOString(), seasons }), warnings };
+  return { seasons, warnings };
 }
 
 export function combineCfbImports(imports: CfbImport[]): StoredStats[] {
+  return combineSeasonImports(imports, "ncaafb", "Sports Reference · manually imported for private preview");
+}
+
+export function combineSeasonImports(imports: CfbImport[], league: StoredStats["league"], source: string): StoredStats[] {
   if (!imports.length) return [];
   const rows = new Map<string, StoredStats["seasons"][number]>();
   for (const batch of imports) for (const season of batch.seasons) {
@@ -136,5 +148,5 @@ export function combineCfbImports(imports: CfbImport[]): StoredStats[] {
       gamesPlayed: season.gamesPlayed ?? previous?.gamesPlayed ?? null, gamesStarted: season.gamesStarted ?? previous?.gamesStarted ?? null,
       statistics: { ...previous?.statistics, ...season.statistics } });
   }
-  return [{ league: "ncaafb", source: "Sports Reference · manually imported for private preview", syncedAt: imports.map(item => item.importedAt).sort().at(-1)!, seasons: [...rows.values()] }];
+  return [{ league, source, syncedAt: imports.map(item => item.importedAt).sort().at(-1)!, seasons: [...rows.values()] }];
 }

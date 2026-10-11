@@ -9,6 +9,6 @@ export default async function PreviewLocker({ params }: { params: Promise<{ slug
   const row = await readPrivatePreview((await params).slug); if (!row) notFound();
   const data = previewLockerData(row, row.publicLink);
   const storedStats = await readPreviewStructuredStats(row.id);
-  data.structuredStats = [...(data.structuredStats ?? []), ...storedStats.filter(record => record.league !== "ncaafb" || !row.cfb_stats.length)];
+  data.structuredStats = [...(data.structuredStats ?? []), ...storedStats.filter(record => record.league === "nfl" ? !row.pfr_stats?.length : !row.cfb_stats.length)];
   return <LockerView data={data} previewId={row.id} footer={<><PreviewEventTracker previewId={row.id} eventName="locker_view"/><ConversionSurface previewId={row.id}/></>} />;
 }
