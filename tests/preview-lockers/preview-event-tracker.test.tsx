@@ -157,3 +157,35 @@ it("does not credit native playback time while the tab is hidden", async () => {
   video.currentTime = 4; await dispatch(video, "timeupdate");
   expect(events().filter(event => event.eventName === "video_progress").map(event => event.progress)).toEqual([25]);
 });
+
+
+it("records successful preview video link copying without claiming referral acquisition or public locker sharing", async () => {
+  const clipboard = vi.spyOn(navigator.clipboard, "writeText").mockResolvedValue(undefined);
+  await act(async () => root.render(<VideoDetailView data={detail} previewId={previewId} />));
+  fetcher.mockClear();
+  await act(async () => host.querySelector<HTMLButtonElement>('button[aria-label="Copy video share link"]')!.click());
+  expect(clipboard).toHaveBeenCalledWith(window.location.href);
+  expect(events()).toMatchObject([{ previewId, eventName: "referral_link_copied" }]);
+  expect(events()).toHaveLength(1);
+  expect(JSON.stringify(events())).not.toContain(window.location.href);
+  expect(events().some(event => event.eventName === "referral_submit")).toBe(false);
+  expect(publicAnalytics).not.toHaveBeenCalled();
+});
+
+it("does not record a copy intent or public event when preview clipboard access fails", async () => {
+  vi.spyOn(navigator.clipboard, "writeText").mockRejectedValue(new Error("clipboard_permission_denied"));
+  await act(async () => root.render(<VideoDetailView data={detail} previewId={previewId} />));
+  fetcher.mockClear();
+  await act(async () => host.querySelector<HTMLButtonElement>('button[aria-label="Copy video share link"]')!.click());
+  expect(events()).toEqual([]);
+  expect(publicAnalytics).not.toHaveBeenCalled();
+});
+
+it("preserves canonical public video sharing without emitting a preview copy event", async () => {
+  vi.spyOn(navigator.clipboard, "writeText").mockResolvedValue(undefined);
+  await act(async () => root.render(<VideoDetailView data={{ ...detail, lockerHref: "/player/preview-player", playerId: "10000000-0000-4000-8000-000000000001" }} />));
+  publicAnalytics.mockClear();
+  await act(async () => host.querySelector<HTMLButtonElement>('button[aria-label="Copy video share link"]')!.click());
+  expect(events()).toEqual([]);
+  expect(publicAnalytics.mock.calls.map(([event]) => event.eventName)).toEqual(["share_link_copied", "locker_shared"]);
+});

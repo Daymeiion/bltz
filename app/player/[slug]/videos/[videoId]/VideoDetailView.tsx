@@ -245,7 +245,10 @@ export default function VideoDetailView({ data, footer, previewId }: { data: Vid
       await navigator.clipboard.writeText(window.location.href);
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1800);
-      if (isPrivatePreview) return;
+      if (isPrivatePreview) {
+        if (previewId) void trackPreviewEvent({ previewId, eventName: "referral_link_copied" });
+        return;
+      }
       void trackProductEvent({
         eventName: "share_link_copied",
         source: "public_locker",

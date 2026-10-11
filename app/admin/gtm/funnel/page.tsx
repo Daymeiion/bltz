@@ -2,10 +2,15 @@ import { GtmNavigation } from "@/components/admin/gtm/GtmNavigation";
 import { previewAdmin } from "@/lib/preview-lockers/server";
 import { attributionCode, funnelMetrics } from "@/lib/preview-lockers/conversion";
 import { FunnelWorkspace } from "./FunnelWorkspace";
+import { PreviewActivityPanel } from "./PreviewActivityPanel";
+import { loadPreviewFunnelReport } from "@/lib/analytics/preview-funnel";
 import { collectActivityPages, type Activity, type Response, type PreviewRow } from "@/lib/preview-lockers/funnel-workspace";
 export const dynamic="force-dynamic";
-export default async function Funnel({searchParams}:{searchParams:Promise<Record<string,string|undefined>>}) {
-  const {client}=await previewAdmin(); const query=await searchParams;
+export default async function Funnel({searchParams}:{searchParams:Promise<Record<string,string|string[]|undefined>>}) {
+  const {client}=await previewAdmin();
+  const supplied=await searchParams;
+  const query:Record<string,string|undefined>=Object.fromEntries(Object.entries(supplied).map(([key,value])=>[key,typeof value === "string" ? value : undefined]));
+  const previewActivity=await loadPreviewFunnelReport({previewId:query.activity_preview});
   let cohort=client.from("preview_conversion_campaigns").select("*").eq("is_test",false).order("created_at",{ascending:false}).limit(1000);
   for(const key of ["campaign","channel","source"]){if(query[key]&&attributionCode.safeParse(query[key]).success)cohort=cohort.eq(key,query[key]);}
   for(const [key,op] of [["since","gte"],["until","lte"]] as const){if(query[key]&&/^\d{4}-\d{2}-\d{2}$/.test(query[key]!))cohort=cohort[op]("created_at",`${query[key]}T${key==="since"?"00:00:00":"23:59:59.999"}Z`);}
@@ -38,6 +43,7 @@ export default async function Funnel({searchParams}:{searchParams:Promise<Record
   const workspaceRows: PreviewRow[]=rows.map(c=>({...c,name:display(c.preview_id),slug:lookup(c.preview_id)?.slug??null,response:replies.find(r=>r.preview_id===c.preview_id)??null,activity:activity.filter(e=>e.preview_id===c.preview_id)}));
   return <main className="mx-auto max-w-[1500px] space-y-6 px-4 py-6 sm:px-8">
     <header className="flex flex-wrap items-end justify-between gap-5 border-b border-neutral-200 pb-6 dark:border-slate-800"><div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-500">90-day conversion experiment</p><h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">Preview conversion</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-500">Follow athlete interest, plan the next conversation, and grow the referral network.</p></div><GtmNavigation/></header>
+    <PreviewActivityPanel report={previewActivity} query={query}/>
     <FunnelWorkspace rows={workspaceRows} referrals={filteredReferrals} metrics={metrics} truncated={truncated} contacts={contactOptions} previews={(previews.data??[]).map(p=>({id:p.id,label:p.full_name}))} query={query} listsTruncated={[previews,contacts,referrals].some(r=>(r.data?.length??0)>=1000)}/>
     <p className="text-xs leading-5 text-neutral-500">Private experiment · An authorized visible-page visit counts as viewed, never an email open. Admin and test activity is excluded. Athlete interest does not verify Locker ownership.</p>
   </main>;
