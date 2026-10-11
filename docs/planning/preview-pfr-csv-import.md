@@ -1,5 +1,7 @@
 # Preview Locker NFL CSV import
 
+> Production rollout completed October 11, 2026. This document records the original workspace implementation and its initial validation. The deployment was built from the exact previous production commit, preserving its existing college importer and excluding unrelated unpublished workspace features. See `preview-pfr-csv-release.md` for the authoritative deployed file list, hosted migration receipt, production checks, and limitations; its rollout status supersedes the pending statements below.
+
 ## Objective and product reference
 
 The October 11, 2026 user request authorizes manually importing Pro Football Reference CSV tables into preview Lockers for the 90-day sprint after the Sportradar subscription expired. This is a bounded exception to the existing reference-only source policy for this specific manual preview workflow. Automated fetch/scrape permissions and college CSV retention policy remain unchanged.
