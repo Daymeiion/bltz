@@ -3,10 +3,11 @@ import { createClient } from "@/lib/supabase/server";
 import { previewRecord, previewSlug, type PreviewContent, type PreviewRecord, type ResolvedPreviewRecord } from "./validation";
 import { enrichPreviewSchoolBranding } from "./school-branding";
 import { createServiceClient } from "@/lib/supabase/service";
+import { previewIdentityKey, readPreviewEnrichment } from "./enrichment";
 
 export const PRIVATE_HEADERS = { "Cache-Control": "private, no-store", "Referrer-Policy": "no-referrer", "X-Robots-Tag": "noindex, nofollow, noarchive, noimageindex" };
 export const PREVIEW_MEDIA_BUCKETS = { photo: "preview-locker-photos", video: "preview-locker-videos" } as const;
-export const PREVIEW_COLUMNS = "id,slug,full_name,position,level,school,hometown,jersey,height_in,weight_lbs,games_played,headshot_url,hero_video_url,photo_room_banner_url,photo_room_banner_link,photo_room_banner_storage_path,bio,athlete_quote,athlete_quote_author,schools,pro_teams,awards,social,career_stats,cfb_stats,videos,photos,revision,created_at,updated_at";
+export const PREVIEW_COLUMNS = "id,slug,full_name,position,level,school,hometown,jersey,height_in,weight_lbs,games_played,headshot_url,hero_video_url,photo_room_banner_url,photo_room_banner_link,photo_room_banner_storage_path,bio,athlete_quote,athlete_quote_author,schools,pro_teams,awards,social,career_stats,cfb_stats,pfr_stats,videos,photos,revision,created_at,updated_at";
 export class PreviewError extends Error {
   constructor(public code: string, public status: number) { super(code); }
 }
@@ -114,7 +115,7 @@ export async function readPrivatePreview(slug: string): Promise<(ResolvedPreview
     if (error) throw new PreviewError("preview_unavailable", 503);
     if (data) {
       const resolved = await resolvePrivateMedia(client, previewRecord.parse(data));
-      return { ...await enrichPreviewSchoolBranding(client, resolved), publicLink: false };
+      return resolvePreviewEnrichment(client, resolved, false);
     }
   }
   const service = createServiceClient();
@@ -124,7 +125,17 @@ export async function readPrivatePreview(slug: string): Promise<(ResolvedPreview
   if (!preview) return null;
   if (!await isPublicPreview(service, preview.id)) return null;
   const resolved = await resolvePrivateMedia(service, previewRecord.parse(preview), true);
-  return { ...await enrichPreviewSchoolBranding(service, resolved), publicLink: true };
+  return resolvePreviewEnrichment(service, resolved, true);
+}
+
+/** Supplemental data is read only after the preview's existing access gate. */
+async function resolvePreviewEnrichment(client: Awaited<ReturnType<typeof createClient>>, row: ResolvedPreviewRecord, publicLink: boolean) {
+  // Display branding can change school labels; match the saved discovery identity first.
+  const identityKey = previewIdentityKey(row);
+  let enrichment: NonNullable<ResolvedPreviewRecord["enrichment"]> = { awards: row.awards, articles: [] };
+  try { enrichment = await readPreviewEnrichment(client, row.id, row, row.revision, identityKey); }
+  catch { /* Optional enrichment must not prevent an authorized base preview from loading. */ }
+  return { ...await enrichPreviewSchoolBranding(client, row), enrichment_identity_key: identityKey, enrichment, publicLink };
 }
 
 export async function isPublicPreview(client: ReturnType<typeof createServiceClient>, previewId: string): Promise<boolean> {

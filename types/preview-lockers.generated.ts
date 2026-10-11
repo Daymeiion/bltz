@@ -1,4 +1,4 @@
-// Preview table regenerated from isolated PostgreSQL information_schema by scripts/verify-preview-cfb-csv.mjs; remaining declarations retain their Supabase CLI provenance.
+// Preview table regenerated from isolated PostgreSQL information_schema by scripts/verify-preview-pfr-csv.mjs; remaining declarations retain their Supabase CLI provenance.
 // Scoped additive extract; released database.generated.ts remains unchanged.
 // Short-link and inquiry declarations are derived from migrations pending live schema regeneration.
 import type { Json } from "./database.generated";
@@ -17,13 +17,14 @@ export type PreviewDatabase = { public: { Tables: { preview_lockers: {
           headshot_url: string | null
           height_in: number | null
           hero_video_url: string | null
-          photo_room_banner_url: string | null
-          photo_room_banner_link: string | null
-          photo_room_banner_storage_path: string | null
           hometown: string | null
           id: string
           jersey: string | null
           level: string | null
+          pfr_stats: Json
+          photo_room_banner_link: string | null
+          photo_room_banner_storage_path: string | null
+          photo_room_banner_url: string | null
           photos: Json
           position: string | null
           pro_teams: Json
@@ -50,13 +51,14 @@ export type PreviewDatabase = { public: { Tables: { preview_lockers: {
           headshot_url?: string | null
           height_in?: number | null
           hero_video_url?: string | null
-          photo_room_banner_url?: string | null
-          photo_room_banner_link?: string | null
-          photo_room_banner_storage_path?: string | null
           hometown?: string | null
           id?: string
           jersey?: string | null
           level?: string | null
+          pfr_stats?: Json
+          photo_room_banner_link?: string | null
+          photo_room_banner_storage_path?: string | null
+          photo_room_banner_url?: string | null
           photos?: Json
           position?: string | null
           pro_teams?: Json
@@ -83,13 +85,14 @@ export type PreviewDatabase = { public: { Tables: { preview_lockers: {
           headshot_url?: string | null
           height_in?: number | null
           hero_video_url?: string | null
-          photo_room_banner_url?: string | null
-          photo_room_banner_link?: string | null
-          photo_room_banner_storage_path?: string | null
           hometown?: string | null
           id?: string
           jersey?: string | null
           level?: string | null
+          pfr_stats?: Json
+          photo_room_banner_link?: string | null
+          photo_room_banner_storage_path?: string | null
+          photo_room_banner_url?: string | null
           photos?: Json
           position?: string | null
           pro_teams?: Json

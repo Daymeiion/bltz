@@ -6,6 +6,7 @@ import type { PreviewLockerRow } from "./types";
 import { previewVideoSource, previewVideoLevel } from "./video";
 import { previewTeamBranding } from "./branding";
 import { combineCfbImports } from "./cfb-csv";
+import { combinePfrImports } from "./pfr-csv";
 import { previewStatLabels, type PreviewRecord, type ResolvedPreviewRecord } from "./validation";
 
 export function previewHeadshot(row: { headshot_url: string | null; photos?: Array<{ isHeadshot?: boolean; url?: string | null }> }) {
@@ -13,7 +14,7 @@ export function previewHeadshot(row: { headshot_url: string | null; photos?: Arr
 }
 
 function previewAwards(row: { awards: import("./types").PreviewAward[]; photos: Array<{ id: string; url?: string | null }> }) {
-  return row.awards.map(award => ({ ...award, imageUrl: row.photos.find(photo => photo.id === award.photoId)?.url || award.imageUrl || null }));
+  return row.awards.map(award => ({ ...award, evidenceStatus: "unverified" as const, imageUrl: row.photos.find(photo => photo.id === award.photoId)?.url || award.imageUrl || null }));
 }
 function previewSocialItems(row: { social?: import("./social").PreviewSocial[]; photos: Array<{ id: string; url?: string | null }>; videos: Array<{ id: string; url?: string | null }> }) {
   return (row.social ?? []).map(item => ({ ...item, imageUrl: row.photos.find(photo => photo.id === item.photoId)?.url || null, videoUrl: previewVideoSource(row.videos.find(video => video.id === item.videoId)?.url ?? null).playbackUrl }));
@@ -35,7 +36,7 @@ export function previewLockerData(row: PreviewRecord | ResolvedPreviewRecord, pu
   } : null;
   return {
     athleteId: null, slug: row.slug, lockerHref: `/preview-lockers/${encodeURIComponent(row.slug)}`, fullName: row.full_name,
-    structuredStats: combineCfbImports(row.cfb_stats ?? []),
+    structuredStats: [...combinePfrImports(row.pfr_stats ?? []), ...combineCfbImports(row.cfb_stats ?? [])],
     hometown: row.hometown || "", position: row.position || "", jersey: row.jersey || "",
     levelLabel: row.level || "Athlete", headshotUrl: previewHeadshot(row),
     // Only direct playback sources enter the hero; provider pages stay in the Film Room.

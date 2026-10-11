@@ -2,6 +2,7 @@ import { normalizeYouTubeUrl } from "@/lib/player/youtube";
 import { z } from "zod";
 import { socialPlatforms, socialPlatformMatches } from "./social";
 import { cfbImports, combineCfbImports } from "./cfb-csv";
+import { pfrImports, combinePfrImports } from "./pfr-csv";
 
 // Display references only; the preview server never downloads these URLs.
 export function isPreviewUrl(value: string): boolean {
@@ -74,10 +75,11 @@ export const previewContent = z.object({
   photo_room_banner_url: asset, photo_room_banner_link: asset,
   photo_room_banner_storage_path: storagePath.nullable().default(null),
   bio: text(4000).default(""), athlete_quote: nullableText(600), athlete_quote_author: nullableText(160),
-  schools: z.array(team).max(12).default([]), pro_teams: z.array(team).max(12).default([]),
+  schools: z.array(team).max(32).default([]), pro_teams: z.array(team).max(32).default([]),
   awards: z.array(award).max(40).default([]),
   social: z.array(previewSocial).max(40).refine(uniqueIds, "Social IDs must be unique.").default([]),
   cfb_stats: cfbImports.refine(items => { try { combineCfbImports(items); return true; } catch { return false; } }, "College tables contain conflicting season values.").default([]),
+  pfr_stats: pfrImports.refine(items => { try { combinePfrImports(items); return true; } catch { return false; } }, "NFL tables contain conflicting season values.").default([]),
   career_stats: z.array(careerStat).max(previewStatKeys.length).refine(items => new Set(items.map(item => item.key)).size === items.length, "Statistic keys must be unique.").default([]),
   videos: z.array(previewVideo).max(24).refine(uniqueIds, "Video IDs must be unique.").refine(items => ["mobile", "desktop"].every(device => items.filter(item => item.heroDevice === device).length <= 1), "Choose only one hero video for each device.").default([]),
   photos: z.array(previewPhoto).max(40).refine(uniqueIds, "Photo IDs must be unique.").refine(items => items.filter(photo => photo.isHeadshot).length <= 1, "Choose only one headshot.").default([]),
@@ -90,6 +92,11 @@ export type PreviewContent = z.infer<typeof previewContent>;
 export type PreviewRecord = z.infer<typeof previewRecord>;
 export type ResolvedPreviewRecord = Omit<PreviewRecord, "videos" | "photos"> & {
   photo_room_banner_resolved_url?: string | null;
+  enrichment_identity_key?: string;
+  enrichment?: {
+    awards: import("./types").PreviewAward[];
+    articles: import("@/lib/enrichment/news").PlayerArticle[];
+  };
   videos: Array<z.infer<typeof previewVideo> & { url: string }>;
   photos: Array<z.infer<typeof previewPhoto> & { url: string }>;
 };
