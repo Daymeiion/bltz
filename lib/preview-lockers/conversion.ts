@@ -1,9 +1,14 @@
 import { z } from "zod";
 
 export const attributionCode = z.string().regex(/^[a-zA-Z0-9_-]{1,80}$/);
+export const outreachChannels = ["email", "instagram", "facebook", "linkedin", "sms", "in_person", "referral", "other"] as const;
+export const outreachChannelLabels: Record<typeof outreachChannels[number], string> = {
+  email: "Email", instagram: "Instagram", facebook: "Facebook", linkedin: "LinkedIn", sms: "Text / SMS",
+  in_person: "In person", referral: "Referral", other: "Other",
+};
 export const previewEnrollment = z.object({
   contact_id: z.uuid(), campaign: attributionCode, source: attributionCode,
-  channel: z.enum(["email", "linkedin", "sms", "in_person", "referral", "other"]),
+  channel: z.enum(outreachChannels),
   relationship: z.enum(["warm", "cold"]), is_test: z.boolean().default(false),
 }).strict();
 export const referralCandidate = z.object({

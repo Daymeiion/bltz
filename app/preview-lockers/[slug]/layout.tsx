@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { previewPendingOrNotFound } from "@/components/preview-lockers/preview-pending";
 import { readPrivatePreview } from "@/lib/preview-lockers/server";
 
 // Every preview page and nested room passes this exact-slug authorization.
@@ -12,6 +12,6 @@ export default async function PreviewLockerAccessLayout({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  if (!await readPrivatePreview(slug)) notFound();
+  if (!await readPrivatePreview(slug)) return previewPendingOrNotFound(slug);
   return <>{children}</>;
 }

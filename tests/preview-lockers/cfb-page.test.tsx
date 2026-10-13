@@ -4,7 +4,7 @@ import { previewContent } from "@/lib/preview-lockers/validation";
 import { inspectCsv, reviewCsv } from "@/lib/preview-lockers/cfb-csv";
 import { inspectPfrCsv, reviewPfrCsv } from "@/lib/preview-lockers/pfr-csv";
 const mocks = vi.hoisted(() => ({ read: vi.fn(), stats: vi.fn() }));
-vi.mock("@/lib/preview-lockers/server", () => ({ readPrivatePreview: mocks.read }));
+vi.mock("@/lib/preview-lockers/server", () => ({ readPrivatePreview: mocks.read, readPreviewPendingState: async () => null }));
 vi.mock("@/lib/player/structured-stats", () => ({ readPreviewStructuredStats: mocks.stats }));
 vi.mock("next/navigation", () => ({ notFound: () => { throw new Error("NOT_FOUND"); } }));
 vi.mock("@/app/player/[slug]/LockerView", () => ({ default: () => null }));

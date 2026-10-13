@@ -43,6 +43,25 @@ describe("platform assignment authorization", () => {
       }
 
       expect(route).not.toContain("getCurrentUserProfile");
+      const isAccessExtension = file.endsWith(join("preview-lockers", "[id]", "access-extension", "route.ts"));
+      const isInvitationEmail = file.endsWith(join("preview-lockers", "[id]", "invitation-email", "route.ts"));
+      if (isAccessExtension || isInvitationEmail) {
+        // These endpoints use the existing preview Admin gate, whose effective
+        // capability is resolved by the same database assignment predicate.
+        expect(route).toContain("await previewAdmin()");
+        const mutation = isAccessExtension ? 'client.rpc("extend_preview_link_access"' : "await sendPreviewInvitationEmail(";
+        expect(route.indexOf(mutation)).toBeGreaterThanOrEqual(0);
+        expect(route.indexOf("await previewAdmin()")).toBeLessThan(route.indexOf(mutation));
+        const helper = source("lib/preview-lockers/server.ts");
+        const user = helper.slice(helper.indexOf("export async function previewUser"), helper.indexOf("export async function previewAccess"));
+        const access = helper.slice(helper.indexOf("export async function previewAccess"), helper.indexOf("export async function previewAdmin"));
+        const admin = helper.slice(helper.indexOf("export async function previewAdmin"), helper.indexOf("export function json"));
+        expect(user).toContain("client.auth.getUser()");
+        expect(access).toContain('client.rpc("is_internal_admin")');
+        expect(access).toContain("isAdmin: role.data === true");
+        expect(admin).toContain('if (!access.isAdmin) throw new PreviewError("forbidden", 403)');
+        continue;
+      }
       if (file.endsWith(join("intelligence", "route.ts"))) {
         // Intelligence delegates to its existing server-only assignment gate.
         // Check the whole boundary rather than only the route's helper name.

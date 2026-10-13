@@ -1,4 +1,5 @@
 import { createServiceClient } from "@/lib/supabase/service";
+import { readPublicPreviewWindow } from "@/lib/preview-lockers/server";
 import { validShortLinkAlias } from "@/lib/preview-lockers/short-link";
 
 export const dynamic = "force-dynamic";
@@ -16,6 +17,10 @@ export async function GET(_request: Request, context: { params: Promise<{ shortL
     .select("preview_id").eq("alias", shortLink).eq("public_access_enabled", true).maybeSingle();
   if (linkError) return new Response(null, { status: 503, headers });
   if (!link) return new Response(null, { status: 404, headers });
+  try {
+    const state = await readPublicPreviewWindow(db, link.preview_id);
+    if (state.state !== "pending" && state.state !== "active") return new Response(null, { status: 404, headers });
+  } catch { return new Response(null, { status: 503, headers }); }
   const { data: preview, error: previewError } = await db.from("preview_lockers")
     .select("slug").eq("id", link.preview_id).maybeSingle();
   if (previewError) return new Response(null, { status: 503, headers });

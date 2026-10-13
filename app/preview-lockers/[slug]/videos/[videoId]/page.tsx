@@ -1,4 +1,5 @@
 import ConversionSurface from "@/components/preview-lockers/ConversionSurface";
+import { previewPendingOrNotFound } from "@/components/preview-lockers/preview-pending";
 import { notFound } from "next/navigation";
 import { readPrivatePreview } from "@/lib/preview-lockers/server";
 import { toFilmRoomData } from "@/lib/preview-lockers/mapper";
@@ -7,7 +8,7 @@ import VideoDetailView from "@/app/player/[slug]/videos/[videoId]/VideoDetailVie
 export default async function PreviewVideoPage({ params }: { params: Promise<{ slug: string; videoId: string }> }) {
   const { slug, videoId } = await params;
   const data = await readPrivatePreview(slug);
-  if (!data) return notFound();
+  if (!data) return previewPendingOrNotFound(slug);
   const film = toFilmRoomData(data);
   const video = film.videos.find((item) => item.id === videoId);
   if (!video) return notFound();

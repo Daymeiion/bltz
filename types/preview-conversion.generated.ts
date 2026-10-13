@@ -13,6 +13,7 @@ preview_conversion_campaigns: {
           referral_token: string | null
           relationship: string
           sent_at: string | null
+          sent_channel: string | null
           source: string
           updated_at: string
         }
@@ -27,6 +28,7 @@ preview_conversion_campaigns: {
           referral_token?: string | null
           relationship: string
           sent_at?: string | null
+          sent_channel?: string | null
           source: string
           updated_at?: string
         }
@@ -41,6 +43,7 @@ preview_conversion_campaigns: {
           referral_token?: string | null
           relationship?: string
           sent_at?: string | null
+          sent_channel?: string | null
           source?: string
           updated_at?: string
         }

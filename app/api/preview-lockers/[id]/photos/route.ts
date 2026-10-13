@@ -3,9 +3,10 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { PREVIEW_PHOTO_PAGE_SIZE, resolvePreviewPhotos } from "@/lib/preview-lockers/photos";
 import type { PreviewPhoto } from "@/lib/preview-lockers/types";
-import { isPublicPreview } from "@/lib/preview-lockers/server";
+import { PRIVATE_HEADERS, PreviewError, readPublicPreviewWindow } from "@/lib/preview-lockers/server";
 
 export const runtime = "nodejs";
+const response = (data: unknown, status = 200) => NextResponse.json(data, { status, headers: PRIVATE_HEADERS });
 
 export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
   const session = await createClient();
@@ -13,7 +14,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
   const { data: isAdmin, error: authError } = user
     ? await session.rpc("is_internal_admin")
     : { data: false, error: null };
-  if (authError) return NextResponse.json({ error: "not_found" }, { status: 404 });
+  if (authError) return response({ error: "not_found" }, 404);
 
   const { id: slug } = await context.params;
   const offsetParam = new URL(request.url).searchParams.get("offset");
@@ -25,18 +26,22 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     .eq("slug", slug)
     .maybeSingle();
 
-  if (error) return NextResponse.json({ error: "could_not_load" }, { status: 500 });
-  if (!data) return NextResponse.json({ error: "not_found" }, { status: 404 });
-  const publicLink = await isPublicPreview(supabase, data.id);
-  if (isAdmin !== true && !publicLink)
-    return NextResponse.json({ error: "not_found" }, { status: 404 });
+  if (error) return response({ error: "could_not_load" }, 503);
+  if (!data) return response({ error: "not_found" }, 404);
 
   try {
+    const publicLink = isAdmin !== true;
+    if (publicLink && (await readPublicPreviewWindow(supabase, data.id)).state !== "active") return response({ error: "not_found" }, 404);
     const page = await resolvePreviewPhotos(supabase, data.photos as PreviewPhoto[], {
       offset,
       limit: PREVIEW_PHOTO_PAGE_SIZE,
+      signedUrlTtl: publicLink ? async () => {
+        const state = await readPublicPreviewWindow(supabase, data.id);
+        if (state.state !== "active" || state.remaining_seconds < 1) throw new PreviewError("preview_expired", 404);
+        return state.remaining_seconds;
+      } : undefined,
     });
-    return NextResponse.json({
+    return response({
       ...page,
       photos: page.photos.map((photo) => ({
         id: photo.id,
@@ -51,8 +56,10 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
         height: null,
       })),
     });
-  } catch {
-    return NextResponse.json({ error: "could_not_prepare_photos" }, { status: 500 });
+  } catch (error) {
+    return error instanceof PreviewError && error.code === "preview_expired"
+      ? response({ error: "not_found" }, 404)
+      : response({ error: "could_not_prepare_photos" }, 503);
   }
 }
 

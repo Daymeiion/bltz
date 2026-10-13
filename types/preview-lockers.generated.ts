@@ -1,6 +1,6 @@
 // Preview table regenerated from isolated PostgreSQL information_schema by scripts/verify-preview-pfr-csv.mjs; remaining declarations retain their Supabase CLI provenance.
 // Scoped additive extract; released database.generated.ts remains unchanged.
-// Short-link and inquiry declarations are derived from migrations pending live schema regeneration.
+// Short-link/inquiry fields regenerated from disposable PostgreSQL by verify-preview-access-window.mjs; hosted schema regeneration remains a release check.
 import type { Json } from "./database.generated";
 export type PreviewDatabase = { public: { Tables: { preview_lockers: {
         Row: {
@@ -109,6 +109,9 @@ export type PreviewDatabase = { public: { Tables: { preview_lockers: {
       }
       preview_locker_short_links: {
         Row: {
+          access_expires_at: string | null
+          access_extended_at: string | null
+          access_started_at: string | null
           alias: string
           created_at: string
           created_by: string
@@ -117,6 +120,9 @@ export type PreviewDatabase = { public: { Tables: { preview_lockers: {
           updated_at: string
         }
         Insert: {
+          access_expires_at?: string | null
+          access_extended_at?: string | null
+          access_started_at?: string | null
           alias: string
           created_at?: string
           created_by?: string
@@ -125,6 +131,9 @@ export type PreviewDatabase = { public: { Tables: { preview_lockers: {
           updated_at?: string
         }
         Update: {
+          access_expires_at?: string | null
+          access_extended_at?: string | null
+          access_started_at?: string | null
           alias?: string
           created_at?: string
           created_by?: string
@@ -142,34 +151,55 @@ export type PreviewDatabase = { public: { Tables: { preview_lockers: {
       }
       preview_link_inquiries: {
         Row: {
+          analytics_environment: string | null
+          analytics_session_id: string | null
           consent_at: string
           created_at: string
           email: string
           feature_requests: string | null
           id: string
           preview_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          reviewed_contact_id: string | null
         }
         Insert: {
+          analytics_environment?: string | null
+          analytics_session_id?: string | null
           consent_at?: string
           created_at?: string
           email: string
           feature_requests?: string | null
           id?: string
           preview_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewed_contact_id?: string | null
         }
         Update: {
+          analytics_environment?: string | null
+          analytics_session_id?: string | null
           consent_at?: string
           created_at?: string
           email?: string
           feature_requests?: string | null
           id?: string
           preview_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewed_contact_id?: string | null
         }
         Relationships: [{
           foreignKeyName: "preview_link_inquiries_preview_id_fkey"
           columns: ["preview_id"]
           isOneToOne: false
           referencedRelation: "preview_lockers"
+          referencedColumns: ["id"]
+        }, {
+          foreignKeyName: "preview_link_inquiries_reviewed_contact_id_fkey"
+          columns: ["reviewed_contact_id"]
+          isOneToOne: false
+          referencedRelation: "gtm_contacts"
           referencedColumns: ["id"]
         }]
       }
@@ -250,6 +280,10 @@ export type PreviewDatabase = { public: { Tables: { preview_lockers: {
       }
     }
     Functions: {
+      preview_public_link_status: { Args: { p_preview: string }; Returns: Json }
+      start_preview_link_access: { Args: { p_preview: string; p_actor?: string | null }; Returns: Json }
+      extend_preview_link_access: { Args: { p_preview: string; p_reason: string; p_request?: string }; Returns: Json }
+      accept_preview_inquiry_email: { Args: { p_inquiry: string; p_contact: string; p_reason: string }; Returns: Json }
       admit_preview_discovery: { Args: { p_identity_hash: string }; Returns: string }
       finalize_preview_discovery: { Args: { p_request_id: string; p_succeeded: boolean }; Returns: boolean }
       assign_preview_locker_viewer: { Args: { p_email: string; p_preview_locker_id: string }; Returns: string }

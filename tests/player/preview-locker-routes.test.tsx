@@ -2,14 +2,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import PreviewFilmsPage from "@/app/preview-lockers/[slug]/videos/page";
 import PreviewVideoPage from "@/app/preview-lockers/[slug]/videos/[videoId]/page";
 
-const mocks = vi.hoisted(() => ({ maybeSingle: vi.fn() }));
+const mocks = vi.hoisted(() => ({ maybeSingle: vi.fn(), pending: vi.fn() }));
 vi.mock("next/navigation", () => ({ notFound: () => { throw new Error("NOT_FOUND"); } }));
 vi.mock("@/lib/preview-lockers/read", () => ({ readPrivatePreview: async () => {
   const result = await mocks.maybeSingle();
   if (result.error || !result.data) throw new Error("NOT_FOUND");
   return { data: result.data };
 } }));
-vi.mock("@/lib/preview-lockers/server", () => ({ readPrivatePreview: async () => {
+vi.mock("@/lib/preview-lockers/server", () => ({ readPreviewPendingState: mocks.pending, readPrivatePreview: async () => {
   const result = await mocks.maybeSingle();
   return result.error ? null : result.data;
 } }));
@@ -19,7 +19,7 @@ vi.mock("@/app/player/[slug]/videos/[videoId]/VideoDetailView", () => ({ default
 const params = Promise.resolve({ slug: "preview", videoId: "film" });
 
 describe("preview media route boundaries", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => { vi.clearAllMocks(); mocks.pending.mockResolvedValue(null); });
 
   it.each([{ data: null, error: null }, { data: null, error: { message: "access denied" } }])("does not render missing or inaccessible records", async (result) => {
     mocks.maybeSingle.mockResolvedValue(result);
@@ -30,6 +30,15 @@ describe("preview media route boundaries", () => {
   it("rejects video IDs that do not belong to the selected preview", async () => {
     mocks.maybeSingle.mockResolvedValue({ data: { slug: "preview", full_name: "Athlete", videos: [] }, error: null });
     await expect(PreviewVideoPage({ params })).rejects.toThrow("NOT_FOUND");
+  });
+
+  it("returns only admission UI for pending direct rooms and video details", async () => {
+    mocks.maybeSingle.mockResolvedValue({ data: null, error: null });
+    mocks.pending.mockResolvedValue({ previewId: "pending-id" });
+    const room = await PreviewFilmsPage({ params });
+    const detail = await PreviewVideoPage({ params });
+    expect(room.props).toEqual({ previewId: "pending-id" });
+    expect(detail.props).toEqual({ previewId: "pending-id" });
   });
 
   it("renders an existing preview video with preview navigation and no canonical write target", async () => {

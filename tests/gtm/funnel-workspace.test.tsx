@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import { collectActivityPages, filterPreviews, pageOf, type PreviewRow } from "@/lib/preview-lockers/funnel-workspace";
+import { collectActivityPages, filterPreviews, inQueue, pageOf, type PreviewRow } from "@/lib/preview-lockers/funnel-workspace";
 import { funnelMetrics } from "@/lib/preview-lockers/conversion";
 vi.mock("@/app/admin/gtm/funnel/actions", () => ({ conversionAdminAction: vi.fn() }));
 import { FunnelWorkspace } from "@/app/admin/gtm/funnel/FunnelWorkspace";
@@ -8,7 +8,7 @@ import { FunnelWorkspace } from "@/app/admin/gtm/funnel/FunnelWorkspace";
 const rows: PreviewRow[] = Array.from({ length: 100 }, (_, i) => ({
   preview_id: `preview-${i}`, contact_id: `contact-${i}`, name: `Athlete ${String(i).padStart(3, "0")}`,
   slug: `athlete-${i}`, campaign: "spring", channel: "email", source: "alumni", relationship: "warm",
-  is_test: false, sent_at: i < 50 ? "2026-09-01T12:00:00Z" : null, created_at: "2026-09-01T12:00:00Z",
+  is_test: false, sent_at: i < 50 ? "2026-09-01T12:00:00Z" : null, sent_channel: null, created_at: "2026-09-01T12:00:00Z",
   updated_at: "2026-09-01T12:00:00Z", created_by: "admin", referral_token: null,
   response: i === 99 ? { preview_id: `preview-${i}`, actor_id: "user", state: "declined", email: null, decline_reason: null, dashboard_interest: false, updates_permission: false, created_at: "2026-09-02T12:00:00Z", updated_at: "2026-09-02T12:00:00Z" } : null,
   activity: [],
@@ -48,5 +48,15 @@ describe("Preview funnel at 100 athletes", () => {
     const html = renderToStaticMarkup(<FunnelWorkspace rows={rows} referrals={[]} metrics={funnelMetrics(rows, [])} truncated listsTruncated={false} contacts={[]} previews={[]} query={{}} />);
     expect(html).toContain("Totals are withheld");
     expect(html).not.toContain('aria-label="Conversion overview"');
+  });
+  it("moves visitor submissions out of awaiting response without inventing account response or ownership", () => {
+    const inquiry = { id: "inquiry-1", preview_id: rows[0].preview_id, email: "visitor@example.test", feature_requests: "More college seasons", created_at: "2026-10-13T12:00:00Z", reviewed_at: null, reviewed_contact_id: null };
+    const interested = { ...rows[0], inquiry };
+    expect(inQueue(interested, "awaiting")).toBe(false); expect(inQueue(interested, "interest")).toBe(true);
+    expect(filterPreviews([interested], inquiry.email, "interest", "latest")).toHaveLength(1);
+    const html = renderToStaticMarkup(<FunnelWorkspace rows={[interested]} referrals={[]} metrics={funnelMetrics([interested], [])} truncated={false} listsTruncated={false} contacts={[]} previews={[]} query={{}}/>);
+    expect(html).toContain("Unverified interest received"); expect(html).toContain("Unverified visitor interest");
+    expect(html).toContain("Unverified public interest: 1 previews"); expect(html).not.toContain("Claim interest submitted</span>");
+    expect(interested.response).toBeNull();
   });
 });

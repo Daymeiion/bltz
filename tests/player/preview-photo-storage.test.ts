@@ -36,7 +36,7 @@ describe("private preview photo resolution", () => {
     ]);
 
     expect(from).toHaveBeenCalledWith(PREVIEW_PHOTO_BUCKET);
-    expect(createSignedUrls).toHaveBeenCalledWith(["locker/photos/a.jpg"], 3600);
+    expect(createSignedUrls).toHaveBeenCalledWith(["locker/photos/a.jpg"], 900);
     expect(result.photos.map((item) => item.url)).toEqual([
       "https://images.example/photo.jpg",
       "https://storage.example/a.jpg",

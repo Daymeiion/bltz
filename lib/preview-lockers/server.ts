@@ -1,4 +1,6 @@
 import "server-only";
+import { cache } from "react";
+import { previewWindowSchema, type PreviewWindow } from "./access-window";
 import { createClient } from "@/lib/supabase/server";
 import { previewRecord, previewSlug, type PreviewContent, type PreviewRecord, type ResolvedPreviewRecord } from "./validation";
 import { enrichPreviewSchoolBranding } from "./school-branding";
@@ -57,7 +59,7 @@ export async function readBody(req: Request, limit = 128 * 1024): Promise<unknow
   } catch (error) { if (error instanceof PreviewError) throw error; throw new PreviewError("invalid_input", 400); }
   finally { reader.releaseLock(); }
 }
-async function resolvePrivateMedia(client: Awaited<ReturnType<typeof createClient>>, row: PreviewRecord, publicLink = false): Promise<ResolvedPreviewRecord> {
+async function resolvePrivateMedia(client: Awaited<ReturnType<typeof createClient>>, row: PreviewRecord, publicLink = false, signer = client): Promise<ResolvedPreviewRecord> {
   const groups = [
     { bucket: PREVIEW_MEDIA_BUCKETS.photo, items: [...row.photos.filter((item): item is typeof item & { storagePath: string } => "storagePath" in item), ...(row.photo_room_banner_storage_path ? [{ storagePath: row.photo_room_banner_storage_path }] : [])] },
     { bucket: PREVIEW_MEDIA_BUCKETS.video, items: row.videos.filter((item): item is typeof item & { storagePath: string } => "storagePath" in item) },
@@ -65,17 +67,23 @@ async function resolvePrivateMedia(client: Awaited<ReturnType<typeof createClien
   const urls = new Map<string, string>();
   let ttl = 900;
   if (groups.some(group => group.items.length)) {
-    const result = publicLink ? null : await client.rpc("preview_media_ttl", { p_preview: row.id });
+    const result = publicLink ? await client.rpc("preview_public_link_status", { p_preview: row.id }) : await client.rpc("preview_media_ttl", { p_preview: row.id });
     if (result?.error) {
       // Staff can inspect drafts while the migration rolls out; viewer access must fail closed.
       const role = result.error.code === "PGRST202" ? await client.rpc("is_internal_admin") : null;
       if (role?.error || role?.data !== true) throw new PreviewError("preview_media_unavailable", 503);
-    } else if (result) ttl = Number(result.data);
+    } else if (result) {
+      if (publicLink) {
+        const state = previewWindowSchema.safeParse(result.data);
+        if (!state.success) throw new PreviewError("preview_unavailable", 503);
+        ttl = state.data.state === "active" ? Math.min(900, state.data.remaining_seconds) : 0;
+      } else ttl = Number(result.data);
+    }
     if (!Number.isFinite(ttl) || ttl < 1) throw new PreviewError("preview_expired", 403);
   }
   for (const group of groups) {
     if (!group.items.length) continue;
-    const { data, error } = await client.storage.from(group.bucket).createSignedUrls(group.items.map(item => item.storagePath), ttl);
+    const { data, error } = await signer.storage.from(group.bucket).createSignedUrls(group.items.map(item => item.storagePath), ttl);
     if (error || !data || data.some(item => !item.signedUrl)) throw new PreviewError("preview_media_unavailable", 503);
     group.items.forEach((item, index) => urls.set(item.storagePath, data[index].signedUrl!));
   }
@@ -102,34 +110,69 @@ export async function assertPreviewMediaExists(client: Awaited<ReturnType<typeof
     if (missing.size) throw new PreviewError("invalid_media_path", 400);
   }
 }
-export async function readPrivatePreview(slug: string): Promise<(ResolvedPreviewRecord & { publicLink: boolean }) | null> {
+export async function previewLinkActor() {
+  const client = await createClient();
+  const { data: { user }, error } = await client.auth.getUser();
+  if (error && error.name !== "AuthSessionMissingError" && error.status !== 400 && error.status !== 401) throw new PreviewError("preview_unavailable", 503);
+  if (!user) return { userId: null, isAdmin: false };
+  const role = await client.rpc("is_internal_admin");
+  if (role.error) throw new PreviewError("preview_unavailable", 503);
+  return { userId: user.id, isAdmin: role.data === true };
+}
+
+export async function readPublicPreviewWindow(client: ReturnType<typeof createServiceClient>, previewId: string): Promise<PreviewWindow> {
+  const { data, error } = await client.rpc("preview_public_link_status", { p_preview: previewId });
+  const state = previewWindowSchema.safeParse(data);
+  if (error || !state.success) throw new PreviewError("preview_unavailable", 503);
+  return state.data;
+}
+
+export const readPreviewPendingState = cache(async (slug: string) => {
+  if (!previewSlug.safeParse(slug).success) return null;
+  const service = createServiceClient();
+  const { data, error } = await service.from("preview_lockers").select("id").eq("slug", slug).maybeSingle();
+  if (error) throw new PreviewError("preview_unavailable", 503);
+  if (!data) return null;
+  const state = await readPublicPreviewWindow(service, data.id);
+  return state.state === "pending" ? { previewId: data.id } : null;
+});
+
+export const readPrivatePreview = cache(async (slug: string): Promise<(ResolvedPreviewRecord & { publicLink: boolean }) | null> => {
   if (!previewSlug.safeParse(slug).success) return null;
   const authorization = await previewUser().catch(error => {
     if (error instanceof PreviewError && error.status === 401) return null;
     throw error;
   });
   if (authorization) {
-    const { client } = authorization;
-    const { data, error } = await client.from("preview_lockers").select(PREVIEW_COLUMNS).eq("slug", slug).maybeSingle();
-    if (error) throw new PreviewError("preview_unavailable", 503);
-    if (data) {
-      const resolved = await resolvePrivateMedia(client, previewRecord.parse(data));
-      return { ...await enrichPreviewSchoolBranding(client, resolved), publicLink: false };
+    const role = await authorization.client.rpc("is_internal_admin");
+    if (role.error) throw new PreviewError("preview_unavailable", 503);
+    if (role.data === true) {
+      const { data, error } = await authorization.client.from("preview_lockers").select(PREVIEW_COLUMNS).eq("slug", slug).maybeSingle();
+      if (error) throw new PreviewError("preview_unavailable", 503);
+      if (!data) return null;
+      const resolved = await resolvePrivateMedia(authorization.client, previewRecord.parse(data));
+      return { ...await enrichPreviewSchoolBranding(authorization.client, resolved), publicLink: false };
     }
   }
+  // Load only an identifier before admission; pending content never reaches RSC.
   const service = createServiceClient();
-  const { data: preview, error: previewError } = await service.from("preview_lockers")
-    .select(PREVIEW_COLUMNS).eq("slug", slug).maybeSingle();
-  if (previewError) throw new PreviewError("preview_unavailable", 503);
-  if (!preview) return null;
-  if (!await isPublicPreview(service, preview.id)) return null;
-  const resolved = await resolvePrivateMedia(service, previewRecord.parse(preview), true);
-  return { ...await enrichPreviewSchoolBranding(service, resolved), publicLink: true };
-}
+  const { data: identity, error: identityError } = await service.from("preview_lockers").select("id").eq("slug", slug).maybeSingle();
+  if (identityError) throw new PreviewError("preview_unavailable", 503);
+  if (!identity) return null;
+  const state = await readPublicPreviewWindow(service, identity.id);
+  if (state.state === "pending" || state.state === "expired") return null;
+  const publicLink = state.state === "active";
+  if (!publicLink && !authorization) return null;
+  const client = publicLink ? service : authorization!.client;
+  const { data, error } = await client.from("preview_lockers").select(PREVIEW_COLUMNS).eq("slug", slug).maybeSingle();
+  if (error) throw new PreviewError("preview_unavailable", 503);
+  if (!data) return null;
+  // Nonstaff content has already passed RLS or the public window predicate.
+  // Viewers cannot sign directly in Storage with an arbitrary longer lifetime.
+  const resolved = await resolvePrivateMedia(client, previewRecord.parse(data), publicLink, service);
+  return { ...await enrichPreviewSchoolBranding(client, resolved), publicLink };
+});
 
 export async function isPublicPreview(client: ReturnType<typeof createServiceClient>, previewId: string): Promise<boolean> {
-  const { data, error } = await client.from("preview_locker_short_links")
-    .select("public_access_enabled").eq("preview_id", previewId).maybeSingle();
-  if (error) throw new PreviewError("preview_unavailable", 503);
-  return data?.public_access_enabled === true;
+  return (await readPublicPreviewWindow(client, previewId)).state === "active";
 }

@@ -1,6 +1,6 @@
 import { beforeEach, expect, it, vi } from "vitest";
 
-const query = vi.hoisted(() => ({ from: vi.fn() }));
+const query = vi.hoisted(() => ({ from: vi.fn(), rpc: vi.fn() }));
 vi.mock("@/lib/supabase/service", () => ({ createServiceClient: () => query }));
 
 import { GET } from "@/app/[shortLink]/route";
@@ -8,7 +8,10 @@ import { validShortLinkAlias } from "@/lib/preview-lockers/short-link";
 
 const context = (shortLink: string) => ({ params: Promise.resolve({ shortLink }) });
 
-beforeEach(() => query.from.mockReset());
+beforeEach(() => {
+  query.from.mockReset();
+  query.rpc.mockResolvedValue({ data: { state: "pending", remaining_seconds: 0 }, error: null });
+});
 
 it("redirects a published name to the Vercel Locker without caching or sign-in", async () => {
   query.from.mockImplementation((table: string) => table === "preview_locker_short_links"
@@ -41,4 +44,12 @@ it("rejects names that overlap application routes", () => {
   expect(validShortLinkAlias("player")).toBe(false);
   expect(validShortLinkAlias("preview-lockers")).toBe(false);
   expect(validShortLinkAlias("keith-rivers")).toBe(true);
+});
+
+it("blocks an expired alias without looking up its content slug or activating it", async () => {
+  query.from.mockReturnValue({ select: () => ({ eq: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { preview_id: "expired" }, error: null }) }) }) }) });
+  query.rpc.mockResolvedValue({ data: { state: "expired", remaining_seconds: 0 }, error: null });
+  expect((await GET(new Request("https://bltz.me/expired-player"), context("expired-player"))).status).toBe(404);
+  expect(query.from).toHaveBeenCalledTimes(1);
+  expect(query.rpc).toHaveBeenCalledWith("preview_public_link_status", { p_preview: "expired" });
 });
