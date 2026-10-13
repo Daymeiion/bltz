@@ -55,3 +55,9 @@ Anonymous link possession and an interest form do not verify athlete identity or
 ## Product direction and deferred work
 
 This improves the existing Locker distribution, intended-contact relationship, and follow-up loop while preserving the separation between career identity and user accounts. It remains useful for former athletes. No Moment or Value Graph relationship is introduced, and no mature media-management workflow is duplicated. Automated outreach, claims/identity verification, and future-phase graph work remain deferred.
+
+## Production build correction
+
+The documentation checkpoint `507e250` did not replace the live functional `7ec12ac` deployment. Its first deployment failed with a transient registry404 for an unchanged pinned HeroUI tarball; the one exact-source retry installed successfully but failed in Turbopack's `next/font/google` import mapping. The supported production script now explicitly runs `next build --webpack`, matching the successful release validation. Development still uses Turbopack. No dependencies, lockfile entries, credentials, migrations, application behavior or sending flags change. The 84 pre-existing HeroUI lock entries missing resolved/integrity metadata remain deferred reproducibility debt, not a demonstrated cause of the font failure. Verify the new Git deployment is READY on both aliases before claiming this correction is live; retain the sanitized receipt in ignored output.
+
+The actual corrected `npm run build` completed locally with exit0 and98 generated pages, using public Supabase configuration only, trusted TLS, and email sending disabled. The correction changes only this production script and this handoff; the620 regression-test and48 disposable PostgreSQL assertion evidence belongs to the unchanged functional code checkpoint above.
