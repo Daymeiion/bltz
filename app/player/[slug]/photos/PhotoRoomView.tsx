@@ -277,7 +277,7 @@ export default function PhotoRoomView({ data, previewId }: { data: PhotoRoomData
         </header>}
 
         <section ref={heroRef} className={styles.featured} aria-label="Featured photo slideshow">
-          <div className={`${styles.featuredMedia} ${isPrivatePreview && hasAnyImages ? styles.featuredRelated : ""} ${!hasAnyImages ? styles.featuredMediaEmpty : ""}`}>
+          <div className={`${styles.featuredMedia} ${!hasAnyImages ? styles.featuredMediaEmpty : ""}`}>
             {isPrivatePreview && slideshowImages[activeIndex] && <img
               src={slideshowImages[activeIndex].url}
               alt=""
@@ -319,7 +319,6 @@ export default function PhotoRoomView({ data, previewId }: { data: PhotoRoomData
                 <Play aria-hidden="true" fill="currentColor" />
               </button>
             ) : null}
-            {isPrivatePreview && hasAnyImages && <RelatedMediaStrip images={images} athleteName={data.athleteName} athleteSlug={data.slug} activeImageId={slideshowImages[activeIndex]?.id} onSelect={photo => selectImage(photo.id)} onResume={!autoplayEnabled ? resumeSlideshow : undefined} />}
           </div>
         </section>
 
@@ -415,6 +414,7 @@ export default function PhotoRoomView({ data, previewId }: { data: PhotoRoomData
                 {loadMoreError ? <span role="alert">Photos could not load. Try again.</span> : null}
               </div>
             ) : null}
+            {isPrivatePreview && hasAnyImages && <RelatedMediaStrip images={images} athleteName={data.athleteName} athleteSlug={data.slug} activeImageId={slideshowImages[activeIndex]?.id} onSelect={photo => selectImage(photo.id)} onResume={!autoplayEnabled ? resumeSlideshow : undefined} />}
             <div className={styles.returnRow}>
               <Link className={styles.returnButton} href={data.lockerHref ?? `/player/${data.slug}`}>Return to Locker</Link>
             </div>

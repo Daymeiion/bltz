@@ -1,6 +1,6 @@
 .page {
   --film-accent: #ffbb00;
-  --film-surface: #05070e;
+  --film-surface: #0b0e1a;
   min-height: 100vh;
   background: var(--film-surface);
   color: #fff;
@@ -12,7 +12,6 @@
   min-height: 100vh;
   margin: 0 auto;
   padding: 0 18px 48px;
-  background: linear-gradient(180deg, #070a45 0, #05070e 110px, #05070e 100%);
 }
 
 .header {
@@ -422,7 +421,7 @@
 .searchMessage { padding: 22px 4px 8px; color: rgba(255,255,255,.52); font-family: "JetBrains Mono", monospace; font-size: 10px; text-align: center; }
 
 @media (min-width: 720px) {
-  .shell { padding-inline: 28px; background: linear-gradient(180deg, #070a45 0, #05070e 140px, #05070e 100%); }
+  .shell { padding-inline: 28px; }
   .header { height: 78px; }
   .featuredMedia {
     height: auto;
