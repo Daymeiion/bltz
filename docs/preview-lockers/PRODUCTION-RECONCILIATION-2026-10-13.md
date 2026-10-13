@@ -1,5 +1,17 @@
 # Production source reconciliation — 2026-10-13
 
+## Completed release checkpoint (supersedes preparation notes below)
+
+The user approved reconciliation, commit and production deployment. Reviewed combined tree `f8cfe57` was consolidated with live main ancestry in `e42a0d26b6033ad33ddc4feaaf0abefe01ab77fb` and pushed using an ordinary fast-forward. Production deployment `dpl_7jVxWGDLMXDnN3GC7yEn46FcfNNr` restored the workers and preserved the newer builder/history UI. No rollback of those changes or force push occurred.
+
+The exact one approved IONOS bounce test passed after release: SMTP acceptance, genuine failed DSN, one matched receipt stable after two signed QStash rescans, and exactly one physical Tinybird row each for SMTP/bounce events with matching hashes. The authorization is consumed; do not send the test again. No player was contacted. Live player email remains OFF and bounce monitoring ON, verified in source, non-secret Production Config, live Admin, and signed worker200.
+
+Subsequent approved access-window code checkpoint `7ec12accbb3d5b4a0cb574371d2902810818c912` is READY on both live aliases as `dpl_HwYBd9YpdJTjit68utAX3Bvk9udP`. The guarded migration `20261013161640` applied atomically; canonical production has81 migrations. The team validator now accepts32 and rejects33. First-open timing, extension controls, manual-channel evidence and reviewed unverified inquiry handling are no longer deferred. See `MANUAL-PREVIEW-ADMIN-HANDOFF-2026-10-13.md` for scope, validation, controls, and remaining verification limits.
+
+The dirty primary checkout, unrelated files, pitch deck and old local snapshots were not overwritten or used for deployment. Continue from the consolidated main checkpoint or its attached access-window worktree; never deploy an older divergent checkout. No new credential or broad workflow activation was introduced.
+
+## Earlier candidate preparation (historical only)
+
 Local reversible candidate only. Branch: `codex/preview-release-reconcile-2026-10-13`. Base: reviewed release `45577ed`. Current production reported by root: `167de565c86114334309c3281c65f8e3e094f5e2`, deployment `dpl_6wEGT4uzQjxFZzrYfTMHrX6gXBvx`. Their common ancestor is `6b74fb662aa0783abbfbd272222adb7a6a192add`.
 
 ## Objective and scope
