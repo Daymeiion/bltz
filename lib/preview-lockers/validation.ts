@@ -74,7 +74,7 @@ export const previewContent = z.object({
   photo_room_banner_url: asset, photo_room_banner_link: asset,
   photo_room_banner_storage_path: storagePath.nullable().default(null),
   bio: text(4000).default(""), athlete_quote: nullableText(600), athlete_quote_author: nullableText(160),
-  schools: z.array(team).max(12).default([]), pro_teams: z.array(team).max(12).default([]),
+  schools: z.array(team).max(32).default([]), pro_teams: z.array(team).max(32).default([]),
   awards: z.array(award).max(40).default([]),
   social: z.array(previewSocial).max(40).refine(uniqueIds, "Social IDs must be unique.").default([]),
   cfb_stats: cfbImports.refine(items => { try { combineCfbImports(items); return true; } catch { return false; } }, "College tables contain conflicting season values.").default([]),
