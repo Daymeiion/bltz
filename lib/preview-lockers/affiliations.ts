@@ -35,7 +35,7 @@ export function suggestPreviewAffiliations(
     if (seen.has(key)) continue;
     seen.add(key);
     pro_teams.push({ label, color: code ? nflTeamColor(code) : "#1A3DCC", logo: code ? nflLogo(code) : null });
-    if (pro_teams.length >= 12) break;
+    if (pro_teams.length >= 32) break;
   }
-  return { ...record, school, schools: schools.slice(0, 12), pro_teams };
+  return { ...record, school, schools: schools.slice(0, 32), pro_teams };
 }

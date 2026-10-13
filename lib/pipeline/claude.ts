@@ -15,7 +15,7 @@
  * mode at any given moment.
  */
 
-import type { PipelineDraft, PlayerIdentityInput, ScraperResult, ScraperSource } from "./types";
+import type { PipelineDraft, PlayerIdentityInput, ScrapedAffiliation, ScraperResult, ScraperSource } from "./types";
 import { canonicalizeTeams } from "./teams";
 
 /**
@@ -39,7 +39,7 @@ function pickFacts(
   results: ScraperResult[],
 ): Pick<
   PipelineDraft,
-  "dob" | "height_in" | "weight_lbs" | "games_played" | "position" | "school" | "hometown" | "pro_teams" | "awards" | "youtube_urls" | "photos" | "gsis_id"
+  "dob" | "height_in" | "weight_lbs" | "games_played" | "position" | "school" | "schools" | "hometown" | "pro_teams" | "awards" | "youtube_urls" | "photos" | "gsis_id"
 > & { _origin: FieldOrigin } {
   // First-non-null wins per field — high-trust structured sources (nflverse)
   // are registered first in SCRAPERS, so their values seed the facts before
@@ -50,6 +50,8 @@ function pickFacts(
   let games_played: number | undefined;
   let position: string | undefined = identity.position ?? undefined;
   let school: string | undefined = identity.school ?? undefined;
+  const structuredSchools: ScrapedAffiliation[] = [];
+  const fallbackSchools: ScrapedAffiliation[] = [];
   let hometown: string | undefined;
   let pro_teams: string[] = [];
   let gsis_id: string | undefined;
@@ -65,6 +67,8 @@ function pickFacts(
     if (r.facts.games_played && !games_played) { games_played = r.facts.games_played; origin.games_played = r.source; }
     if (r.facts.position && !position) { position = r.facts.position; origin.position = r.source; }
     if (r.facts.school && !school) { school = r.facts.school; origin.school = r.source; }
+    if (r.facts.schools?.length) structuredSchools.push(...r.facts.schools);
+    else if (r.facts.school) fallbackSchools.push({ label: r.facts.school });
     if (r.facts.hometown && !hometown) { hometown = r.facts.hometown; origin.hometown = r.source; }
     // pro_teams ordering is intentionally Wikipedia-first so that
     // chronological career history wins. nflverse only reports
@@ -93,18 +97,41 @@ function pickFacts(
     games_played: games_played ?? null,
     position: position ?? null,
     school: school ?? null,
+    schools: dedupeAffiliations([
+      ...structuredSchools,
+      ...fallbackSchools,
+      ...(identity.school ? [{ label: identity.school }] : []),
+    ]).slice(0, 32),
     hometown: hometown ?? null,
     // Canonicalize before dedupe — different scrapers report the same
     // team in different shapes (nflverse "SF" vs Wikipedia "San
     // Francisco 49ers"). canonicalizeTeams folds short codes into full
     // names and dedupes in one pass, preserving the first-seen order.
-    pro_teams: canonicalizeTeams(pro_teams).slice(0, 8),
+    pro_teams: canonicalizeTeams(pro_teams).slice(0, 32),
     awards: dedupeAwards(awards),
     youtube_urls: Array.from(new Set(youtube_urls)).slice(0, 8),
     photos: photos.slice(0, 12),
     gsis_id: gsis_id ?? null,
     _origin: origin,
   };
+}
+
+function dedupeAffiliations(affiliations: ScrapedAffiliation[]): ScrapedAffiliation[] {
+  const out: ScrapedAffiliation[] = [];
+  for (const affiliation of affiliations) {
+    const label = affiliation.label.trim();
+    if (!label) continue;
+    const names = [label, affiliation.name].filter((value): value is string => Boolean(value?.trim())).map(value => value.trim().toLocaleLowerCase("en-US"));
+    const existing = out.findIndex(item => [item.label, item.name].some(value => value && names.includes(value.trim().toLocaleLowerCase("en-US"))));
+    if (existing < 0) out.push({ ...affiliation, label });
+    else out[existing] = {
+      ...affiliation,
+      ...out[existing],
+      color: out[existing].color || affiliation.color,
+      logo: out[existing].logo || affiliation.logo,
+    };
+  }
+  return out;
 }
 
 function dedupeAwards(awards: PipelineDraft["awards"]): PipelineDraft["awards"] {
@@ -234,6 +261,7 @@ export async function synthesize(opts: SynthesizeOptions): Promise<PipelineDraft
     position: factual.position,
     level: identity.level ?? null,
     school: factual.school,
+    schools: factual.schools,
     hometown: factual.hometown,
     pro_teams: factual.pro_teams,
     awards: factual.awards,
@@ -251,7 +279,9 @@ export async function synthesize(opts: SynthesizeOptions): Promise<PipelineDraft
     confirmed: { bio: Boolean(wikiBio), dob: false, height_in: false, weight_lbs: false, games_played: false },
     sources: results
       .filter((r) => r.ok && r.urls?.length)
-      .flatMap((r) => r.urls!.map((u) => ({ url: u, source: r.source }))),
+      .flatMap((r) => r.urls!.map((u) => ({ url: u, source: r.source,
+        ...(r.provenance?.find(p => p.source_url === u) ? { provenance: r.provenance.find(p => p.source_url === u) } : {}),
+      }))),
   };
 
   return gate(draft, factual);
