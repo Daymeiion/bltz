@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { Eye, ExternalLink, KeyRound, X } from "lucide-react";
+import { Eye, ExternalLink, KeyRound, Play, X } from "lucide-react";
 import { Dialog, DialogClose, DialogDescription, DialogPortal, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import styles from "./related-media-strip.module.css";
 
@@ -22,11 +22,9 @@ export function RelatedMediaStrip({ images, athleteName, athleteSlug, activeImag
   const searchName = athleteName.trim().toLowerCase().replace(/\s+/g, "-");
   const gettySearchUrl = `https://www.gettyimages.com/photos/${encodeURIComponent(searchName)}`;
   return <section className={styles.strip} aria-label="Related media" data-athlete-slug={athleteSlug} data-media-source="preview_upload" data-demo="true" data-context-image-id={activeImageId}>
-    <p className={styles.powered}>Powered by Getty Images</p>
-    <div className={styles.heading}>
-      <h2>Related Media</h2>
-      <span>Demo · uploaded photos</span>
-      {onResume && <button type="button" onClick={onResume}>Resume slideshow</button>}
+    <div className={styles.stripHeader}>
+      <p className={styles.powered}>Powered by Getty Images</p>
+      {onResume && <button type="button" className={styles.resume} onClick={onResume} aria-label="Resume slideshow" title="Resume slideshow"><Play aria-hidden="true" fill="currentColor" /></button>}
     </div>
     <div className={styles.row} tabIndex={0} aria-label={`Related photos of ${athleteName}`}>
       {available.map(image => (

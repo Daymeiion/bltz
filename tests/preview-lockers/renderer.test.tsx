@@ -33,7 +33,13 @@ it("selects related preview images in Photo Room and keeps uploaded provenance",
   await act(async () => button.click());
   expect(button.getAttribute("aria-pressed")).toBe("true");
   expect(host.querySelector('section[aria-label="Related media"]')?.getAttribute("data-context-image-id")).toBe("second");
-  expect(host.textContent).toContain("Resume slideshow");
+  const resume = host.querySelector<HTMLButtonElement>('button[aria-label="Resume slideshow"]')!;
+  expect(resume).not.toBeNull();
+  expect(resume.textContent).toBe("");
+  expect(host.querySelector('section[aria-label="Related media"] h2')).toBeNull();
+  expect(host.textContent).not.toContain("Demo · uploaded photos");
+  await act(async () => resume.click());
+  expect(host.querySelector('button[aria-label="Resume slideshow"]')).toBeNull();
   expect(analytics).not.toHaveBeenCalled();
   expect(fetcher).not.toHaveBeenCalled();
 });
