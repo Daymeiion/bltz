@@ -5,9 +5,35 @@
 .heading button { margin-left: auto; padding: 3px 6px; border: 1px solid #ffbb00; background: transparent; color: #ffbb00; font-size: 10px; cursor: pointer; }
 .row { display: flex; gap: 12px; height: 184px; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scrollbar-width: thin; scrollbar-color: #47516b transparent; }
 .row p { margin: auto; font-size: 12px; color: #a2aabb; }
-.image { flex: 0 0 280px; height: 172px; padding: 0; overflow: hidden; border: 1px solid #3a435a; border-radius: 4px; background: #151a29; cursor: pointer; }
-.image img { display: block; width: 100%; height: 100%; object-fit: cover; }
-.image:hover, .image[aria-pressed='true'] { border-color: #ffbb00; }
-.image:focus-visible, .row:focus-visible, .heading button:focus-visible { outline: 2px solid #ffbb00; outline-offset: -3px; }
-.powered { margin: 10px 0 0; color: #c1c8d6; text-align: center; font-size: 18px; font-weight: 600; line-height: 1.4; }
+.image { position: relative; flex: 0 0 280px; height: 172px; overflow: hidden; border: 1px solid #3a435a; border-radius: 4px; background: #151a29; cursor: pointer; }
+.imageSelect { display: block; width: 100%; height: 100%; padding: 0; border: 0; background: transparent; cursor: pointer; }
+.imageSelect img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.image:hover, .imageActive { border-color: #ffbb00; }
+.imageSelect:focus-visible, .imageAction:focus-visible, .row:focus-visible, .heading button:focus-visible { outline: 2px solid #ffbb00; outline-offset: -3px; }
+.powered { margin: 0 0 14px; color: #c1c8d6; text-align: center; font-size: 18px; font-weight: 600; line-height: 1.4; }
+.imageAction { position: absolute; bottom: 8px; z-index: 1; display: flex; align-items: center; justify-content: center; gap: 7px; height: 44px; padding: 0 9px; border: 1px solid rgba(255,255,255,.5); border-radius: 4px; background: rgba(5,7,15,.9); color: #fff; cursor: pointer; opacity: 0; transform: translateY(4px); pointer-events: none; transition: opacity 160ms ease, transform 160ms ease, border-color 160ms ease; }
+.imageAction svg { width: 17px; height: 17px; flex: none; }
+.viewAction { left: 8px; width: 44px; padding: 0; }
+.licenseAction { right: 8px; }
+.gettyLogo { display: block; width: 76px; height: 17px; object-fit: contain; filter: brightness(0) invert(1); }
+.image:hover .imageAction, .image:focus-within .imageAction { opacity: 1; transform: none; pointer-events: auto; }
+.imageAction:hover { border-color: #ffbb00; }
+.licenseBackdrop { position: fixed; inset: 0; z-index: 80; background: rgba(0,0,0,.82); }
+.licenseModal { position: fixed; top: 50%; left: 50%; z-index: 81; display: flex; flex-direction: column; gap: 14px; width: min(420px, calc(100vw - 32px)); max-height: calc(100dvh - 48px); overflow-y: auto; box-sizing: border-box; transform: translate(-50%, -50%); padding: 24px; border: 1px solid #30374c; border-radius: 12px; background: #0b0e1a; color: #fff; font-family: "Barlow", sans-serif; box-shadow: 0 24px 80px rgba(0,0,0,.5); }
+.modalClose { position: absolute; top: 10px; right: 10px; display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 4px; background: transparent; color: #c1c8d6; cursor: pointer; }
+.modalClose svg { width: 20px; height: 20px; }
+.modalBrand { display: flex; flex-direction: column; gap: 7px; padding-right: 28px; }
+.modalBrand img { width: 112px; height: 22px; object-fit: contain; object-position: left center; filter: brightness(0) invert(1); }
+.modalBrand span { color: #a2aabb; font-family: "JetBrains Mono", monospace; font-size: 10px; letter-spacing: .08em; }
+.modalPhoto { display: block; width: 100%; height: 170px; object-fit: contain; border-radius: 4px; background: #05070f; }
+.modalTitle { margin: 0; font-size: 24px; font-weight: 800; line-height: 1.1; }
+.modalDescription { margin: 0; color: #c1c8d6; font-size: 16px; line-height: 1.45; }
+.gettyLink { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 10px 12px; border: 1px solid #ffbb00; border-radius: 4px; background: #ffbb00; color: #111; font-size: 16px; font-weight: 700; line-height: 1.3; text-align: center; text-decoration: none; cursor: pointer; }
+.gettyLink svg { width: 17px; height: 17px; flex: none; }
+.gettyLink:hover { background: #ffd15c; }
+.modalClose:focus-visible, .gettyLink:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+.modalNote { margin: 0; color: #a2aabb; font-size: 12px; line-height: 1.4; }
+.srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@media (hover: none), (pointer: coarse) { .imageAction { opacity: 1; transform: none; pointer-events: auto; } }
+@media (prefers-reduced-motion: reduce) { .imageAction { transition: none; } }
 @media (max-width: 599px) { .strip { padding-right: 12px; padding-left: 12px; } .heading { gap: 7px; flex-wrap: wrap; } .heading span { font-size: 9px; } .heading h2 { font-size: 13px; } .heading button { font-size: 9px; } .row { height: 160px; } .image { flex-basis: 240px; height: 148px; } .powered { font-size: 16px; } }
