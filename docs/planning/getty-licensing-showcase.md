@@ -40,3 +40,19 @@ Final independent review is clear after increasing the eye/license actions and m
 The release contains only the two related-media UI files, official logo asset, focused interaction tests, and this report. No schema, migration, hosted environment, permission, rights, or transaction changes are included. The clean baseline's successful full-suite verification supersedes historical primary-checkout test limitations for this release.
 
 Publication uses the existing main-branch Git/Vercel integration. Live deployment identity, smoke checks, and browser verification are recorded separately in the production release evidence after publication.
+
+## Related-row cleanup release preflight — October 14, 2026
+
+1. **Summary:** Removed the Related Media heading and uploaded-photo subtitle. Replaced the visible Resume slideshow text with a Play icon in a 44 × 44px button, retaining its accessible name, title, focus indicator, callback, and paused-slideshow eligibility. Getty credit remains above the thumbnails. No hero-blur edit was needed; the user confirmed the effect returned.
+2. **Files changed:** `components/player/RelatedMediaStrip.tsx`, `components/player/related-media-strip.module.css`, `tests/preview-lockers/renderer.test.tsx`, and this report. Code commit `f286bde` is prepared on `codex/photo-room-row-cleanup` from production/main `7a2ac46`; unrelated primary-checkout work is preserved.
+3. **Routes changed:** Presentation on existing `/preview-lockers/[slug]/photos` only. No route definitions added or changed.
+4. **Database changes:** None.
+5. **Migrations:** None.
+6. **Environment variables:** None added or changed; validation retains existing local tooling workarounds.
+7. **Permission changes:** None. Existing image eligibility, provenance, Getty handoff, and dialog behavior remain.
+8. **Tests run:** Fresh clean release validation passed: 170 test files passed, two skipped; 1,337 tests passed, 24 skipped. The production Webpack build including TypeScript passed; full ESLint passed with zero errors and 290 warnings. Independent review found no introduced issues. The updated renderer test checks the absent labels, accessible icon button, and successful slideshow resume.
+9. **Manual verification:** Local desktop and mobile browser checks confirmed the labels are removed, the Play control appears when paused, and activating it resumes the slideshow. Production smoke and browser checks are pending publication.
+10. **Known limitations:** This report records preflight evidence, not completed production verification. Existing provider-demo and physical-touch-device limitations above remain. GitHub CLI is unauthenticated; publication follows the established main-branch Git/Vercel integration.
+11. **Deferred work:** Authorized production publication and live verification remain with the release coordinator. No requested UI behavior is deferred; exact-asset matching and provider integration remain separately scoped.
+
+No Career, Moment, or Value Graph relationships changed. Athlete-connected media remains useful across affiliations; no mature third-party workflow was duplicated and no generalized media-management scope was added. Core documentation requires no change for this cosmetic cleanup.
