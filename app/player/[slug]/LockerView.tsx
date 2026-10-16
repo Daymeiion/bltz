@@ -1924,7 +1924,7 @@ export default function LockerView({
                   value={searchQuery}
                   onChange={handleSearchInput}
                   placeholder="Search players, schools, teams"
-                  style={{ width: "100%", height: 46, borderRadius: 14, border: "1px solid #1E2640", background: "#0B0E1A", color: "#fff", outline: "none", padding: "0 14px 0 42px", fontFamily: body, fontWeight: 700, fontSize: 14 }}
+                  style={{ width: "100%", height: 46, borderRadius: 14, border: "1px solid #1E2640", background: "#0B0E1A", color: "#fff", outline: "none", padding: "0 14px 0 42px", fontFamily: body, fontWeight: 700, fontSize: 16 }}
                 />
               </div>
               <button type="button" onClick={closeSiteSearch} aria-label="Close search" style={{ width: 42, height: 42, borderRadius: 9999, border: "1px solid #1E2640", background: "rgba(255,255,255,.06)", color: "#fff", fontFamily: disp, fontSize: 24, lineHeight: 1, cursor: "pointer" }}>×</button>

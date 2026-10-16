@@ -43,10 +43,10 @@ export default function PublicPreviewClaim({ previewId }: { previewId: string })
         {saved ? <p role="status" className="rounded-lg border border-[#ffbb00]/40 p-4">Your request is saved. BLTZ will follow up by email.</p> :
           <form onSubmit={submit} className="grid gap-4">
             <label className="grid gap-2 text-sm">Email
-              <input type="email" required maxLength={254} autoComplete="email" value={email} onChange={event => setEmail(event.target.value)} className="min-h-11 rounded-lg border border-white/25 bg-white/10 px-3 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#ffbb00]" />
+              <input type="email" required maxLength={254} autoComplete="email" value={email} onChange={event => setEmail(event.target.value)} className="preview-claim-input min-h-11 rounded-lg border border-white/25 bg-white/10 px-3 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#ffbb00]" />
             </label>
             <label className="grid gap-2 text-sm">What would make this Locker feel complete? (optional)
-              <textarea maxLength={2000} rows={3} value={feedback} onChange={event => setFeedback(event.target.value)} className="rounded-lg border border-white/25 bg-white/10 p-3 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#ffbb00]" />
+              <textarea maxLength={2000} rows={3} value={feedback} onChange={event => setFeedback(event.target.value)} className="preview-claim-input rounded-lg border border-white/25 bg-white/10 p-3 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#ffbb00]" />
             </label>
             <label className="flex items-start gap-3 text-sm text-white/80">
               <input type="checkbox" required checked={consent} onChange={event => setConsent(event.target.checked)} className="mt-1 size-5 accent-[#ffbb00]" />

@@ -347,6 +347,11 @@
   border-radius: 999px;
 }
 @media (max-width: 767px) {
+  .preview-claim-scroll input:not([type="checkbox"]),
+  .preview-claim-scroll textarea,
+  .preview-claim-input {
+    font-size: 16px;
+  }
   .preview-claim-scroll {
     scrollbar-color: transparent transparent;
   }

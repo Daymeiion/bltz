@@ -303,6 +303,10 @@
   .sidebar { grid-template-columns: 1fr; margin-top: 12px; padding-inline: 18px; }
   .additionalVideos { grid-row: auto; }
   .playerTools { top: 10px; right: 10px; left: 10px; }
+  .playerControls { gap: 4px; }
+  .playerControls button { width: 44px; height: 44px; flex-basis: 44px; }
+  .playerProgress { height: 44px; margin: 0; }
+  .playerTools button { width: 44px; height: 44px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
