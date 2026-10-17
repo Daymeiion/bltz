@@ -5,6 +5,7 @@ import { isIP } from "node:net";
 import { isPreviewUrl } from "@/lib/preview-lockers/validation";
 import { requireSourceAction } from "@/lib/source-policy/policy";
 import { extractArticleMetadata } from "./article-metadata";
+import { extractProductMetadata } from "./product-metadata";
 
 /** Deliberately restrict outbound metadata fetches to globally routable IPv4. */
 export function isPublicAddress(address: string): boolean {
@@ -69,4 +70,9 @@ async function fetchArticleHtml(input: string, parentSignal: AbortSignal): Promi
 export async function fetchArticleMetadata(url: string, signal: AbortSignal) {
   const page = await fetchArticleHtml(url, signal);
   return extractArticleMetadata(page.html, page.url);
+}
+/** Products use the same pinned-DNS, redirect, size, timeout and policy checks. */
+export async function fetchProductMetadata(url: string, signal: AbortSignal) {
+  const page = await fetchArticleHtml(url, signal);
+  return extractProductMetadata(page.html, page.url);
 }

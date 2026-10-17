@@ -1,0 +1,104 @@
+import { articleRelevance, identitySearchTerms, normalizeArticleUrl, type NewsIdentity, type SearchProvider } from "./news";
+import { SearchProviderError } from "@/lib/search/errors";
+import { evaluateSource, remoteAssetReference } from "@/lib/source-policy/policy";
+import { canonicalizeTeam, NFL_FULL_NAMES } from "@/lib/pipeline/teams";
+import { mentionsSchool } from "@/lib/player/school-identity";
+import { previewMerchandise, previewUrl } from "@/lib/preview-lockers/validation";
+import { z } from "zod";
+
+export const merchandiseCandidateSchema = previewMerchandise.omit({ id: true, visible: true }).extend({
+  canonicalUrl: previewUrl, description: z.string().max(600), matchedAffiliations: z.array(z.string().max(160)).min(1).max(12),
+  availability: z.enum(["in_stock", "out_of_stock", "unknown"]),
+}).strict();
+export const merchandiseResultSchema = z.object({
+  items: z.array(merchandiseCandidateSchema).max(12), status: z.enum(["complete", "partial", "unavailable"]),
+  candidates: z.number().int().nonnegative(), rejected: z.number().int().nonnegative(), errors: z.array(z.string().max(80)).max(20),
+}).strict();
+export type MerchandiseCandidate = z.infer<typeof merchandiseCandidateSchema>;
+export type ProductMetadata = Omit<MerchandiseCandidate, "matchedAffiliations">;
+export interface MerchandiseResult {
+  items: MerchandiseCandidate[]; status: "complete" | "partial" | "unavailable";
+  candidates: number; rejected: number; errors: string[];
+}
+export function isProductUrl(value: string): boolean {
+  const url = normalizeArticleUrl(value);
+  if (!url) return false;
+  const parsed = new URL(url);
+  return parsed.pathname !== "/" && !/(?:^|\/)(?:search|sch|s|collections?|categor(?:y|ies)|blogs?|news|articles?|players?|athletes?|rosters?)(?:\/|$)/i.test(parsed.pathname)
+    && !["q", "query", "search", "_nkw", "searchTerm"].some(key => parsed.searchParams.has(key));
+}
+export function merchandiseQueries(identity: NewsIdentity): string[] {
+  // Alternate college and team context, with a dedicated query for each product
+  // kind so plentiful trading cards cannot consume the jersey search budget.
+  return identitySearchTerms(identity).slice(0, 6).flatMap(term => [`${term} trading cards`, `${term} jersey`]);
+}
+const words = (s: string) => ` ${s.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()} `;
+export function productAffiliations(product: ProductMetadata, identity: NewsIdentity): string[] {
+  const text = `${product.title} ${product.description}`;
+  const normalized = words(text);
+  const teams = identity.teams.filter(team => {
+    const full = canonicalizeTeam(team);
+    return normalized.includes(words(full)) || (NFL_FULL_NAMES.includes(full) && normalized.includes(words(full.split(" ").at(-1)!)));
+  });
+  return [...new Set([...identity.schools.filter(school => mentionsSchool(text, school)), ...teams])].slice(0, 12);
+}
+export function productMatchesIdentity(product: ProductMetadata, identity: NewsIdentity): boolean {
+  const text = `${product.title} ${product.description}`;
+  // A full known NFL franchise is football evidence; a nickname alone is not.
+  const fullNflTeam = NFL_FULL_NAMES.some(team => words(text).includes(words(team)));
+  return articleRelevance({ headline: product.title, summary: `${product.description}${fullNflTeam ? " football" : ""}` }, identity) >= 0.8;
+}
+/** Suggestions only. This function cannot write a preview or publish a product. */
+export async function discoverMerchandise(identity: NewsIdentity, provider: SearchProvider | null,
+  extract: (url: string, signal: AbortSignal) => Promise<ProductMetadata | null>, signal: AbortSignal): Promise<MerchandiseResult> {
+  const result: MerchandiseResult = { items: [], status: "complete", candidates: 0, rejected: 0, errors: [] };
+  if (!provider) return { ...result, status: "unavailable", errors: ["search_not_configured"] };
+  const queries = merchandiseQueries(identity);
+  if (!queries.length) return { ...result, status: "unavailable", errors: ["merchandise_identity_incomplete"] };
+  const groups: string[][] = [], seen = new Set<string>();
+  const searchSignal = AbortSignal.any([signal, AbortSignal.timeout(30_000)]);
+  for (let i = 0; i < queries.length && !searchSignal.aborted; i += 4) {
+    const searches = await Promise.allSettled(queries.slice(i, i + 4).map(query => provider.search(query, searchSignal)));
+    for (const search of searches) {
+      if (search.status === "rejected") {
+        result.errors.push(search.reason instanceof SearchProviderError ? search.reason.code : "search_failed");
+        continue;
+      }
+      const group: string[] = [];
+      for (const item of search.value.slice(0, 6)) {
+        result.candidates++;
+        const url = normalizeArticleUrl(item.url);
+        if (!url || !isProductUrl(url) || !evaluateSource(url).allowed_actions.includes("EXTRACT_METADATA") || !evaluateSource(url).allowed_actions.includes("PERSIST_METADATA")) { result.rejected++; continue; }
+        if (!seen.has(url)) { seen.add(url); group.push(url); }
+      }
+      groups.push(group);
+    }
+    if (result.errors.length) break;
+  }
+  if (searchSignal.aborted) result.errors.push("search_timeout");
+  const candidates: string[] = [];
+  for (let rank = 0; rank < 6 && candidates.length < 16; rank++) for (const group of groups) {
+    if (group[rank] && candidates.length < 16) candidates.push(group[rank]);
+  }
+  const accepted = new Set<string>();
+  for (let i = 0; i < candidates.length && !signal.aborted; i += 4) {
+    const batch = await Promise.all(candidates.slice(i, i + 4).map(async url => {
+      try {
+        const product = await extract(url, signal);
+        if (!product || !isProductUrl(product.productUrl) || !isProductUrl(product.canonicalUrl)
+          || ![product.productUrl, product.canonicalUrl].every(value => evaluateSource(value).allowed_actions.includes("PERSIST_METADATA"))
+          || !productMatchesIdentity(product, identity)) { result.rejected++; return null; }
+        const parsed = merchandiseCandidateSchema.safeParse({ ...product, imageUrl: remoteAssetReference(product.imageUrl), matchedAffiliations: productAffiliations(product, identity) });
+        if (!parsed.success) { result.rejected++; return null; }
+        return parsed.data;
+      } catch { result.rejected++; result.errors.push("merchandise_metadata_unavailable"); return null; }
+    }));
+    for (const product of batch) if (product && !accepted.has(normalizeArticleUrl(product.canonicalUrl)!)) {
+      accepted.add(normalizeArticleUrl(product.canonicalUrl)!); result.items.push(product);
+    }
+  }
+  if (signal.aborted) result.errors.push("search_timeout");
+  result.items = result.items.slice(0, 12); result.errors = [...new Set(result.errors)];
+  result.status = result.errors.length ? (result.items.length || groups.length ? "partial" : "unavailable") : "complete";
+  return result;
+}

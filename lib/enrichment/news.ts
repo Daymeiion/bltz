@@ -54,6 +54,10 @@ export function dedupeArticles<T extends ArticleMetadata>(articles: T[]): T[] {
   });
 }
 export function identityQueries(identity: NewsIdentity): string[] {
+  return identitySearchTerms(identity).map(term => `${term} news interviews`);
+}
+/** Shared, bounded college/team queries; never permits a name-only search. */
+export function identitySearchTerms(identity: NewsIdentity): string[] {
   const clean = (value: string) => value.replace(/["\\\u0000-\u001f]/g, " ").replace(/\s+/g, " ").trim();
   const name = clean(identity.fullName);
   if (words(name).split(" ").filter(Boolean).length < 2) return [];
@@ -70,9 +74,9 @@ export function identityQueries(identity: NewsIdentity): string[] {
     if (teams[i]) context.push(teams[i]);
   }
   // No name-only searches: saved affiliations are necessary to disambiguate.
-  return [...new Set(context)].slice(0, 8).map(term => `"${name}" ${clean(identity.sport)} ${term} news interviews`);
+  return [...new Set(context)].slice(0, 8).map(term => `"${name}" ${clean(identity.sport)} ${term}`);
 }
-export function articleRelevance(article: ArticleMetadata, identity: NewsIdentity): number {
+export function articleRelevance(article: Pick<ArticleMetadata, "headline" | "summary">, identity: NewsIdentity): number {
   const text = ` ${words(`${article.headline} ${article.summary}`)} `;
   const has = (value: string) => value.trim().length >= 2 && text.includes(` ${words(value)} `);
   if (![identity.fullName, ...(identity.aliases ?? [])].some(has)) return 0;

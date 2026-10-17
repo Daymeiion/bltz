@@ -4,8 +4,8 @@ import { normalizeArticleUrl, type ArticleMetadata } from "./news";
 import { requireSourceAction, remoteAssetReference, sourceProvenance } from "@/lib/source-policy/policy";
 
 type ObjectValue = Record<string, unknown>;
-const object = (v: unknown): ObjectValue => v && typeof v === "object" && !Array.isArray(v) ? v as ObjectValue : {};
-const clean = (v: unknown, max = 500): string => typeof v === "string" ? decodeHTML(v.replace(/<[^>]*>/g, " ")).replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, max) : "";
+export const object = (v: unknown): ObjectValue => v && typeof v === "object" && !Array.isArray(v) ? v as ObjectValue : {};
+export const clean = (v: unknown, max = 500): string => typeof v === "string" ? decodeHTML(v.replace(/<[^>]*>/g, " ")).replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, max) : "";
 function attrs(tag: string): Record<string, string> {
   const out: Record<string, string> = {};
   for (const match of tag.matchAll(/([\w:-]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/g)) out[match[1].toLowerCase()] = decodeHTML(match[2] ?? match[3] ?? match[4]);
@@ -17,12 +17,12 @@ function nodes(value: unknown, depth = 0): ObjectValue[] {
   const item = object(value);
   return Object.keys(item).length ? [item, ...nodes(item["@graph"], depth + 1), ...nodes(item.mainEntity, depth + 1)] : [];
 }
-function imageValue(value: unknown): string {
+export function imageValue(value: unknown): string {
   if (Array.isArray(value)) return value.map(imageValue).find(Boolean) ?? "";
   return typeof value === "string" ? value : clean(object(value).url || object(value).contentUrl, 2048);
 }
 // CDN signatures and transforms depend on the exact path and query order.
-function imageUrl(value: string | undefined, base: string): string | null {
+export function imageUrl(value: string | undefined, base: string): string | null {
   if (!value) return null;
   try { const url = new URL(value, base); return isPreviewUrl(url.href) ? url.href : null; } catch { return null; }
 }
@@ -31,11 +31,9 @@ function nameValue(value: unknown): string {
   return typeof value === "string" ? clean(value, 200) : clean(object(value).name, 200);
 }
 
-/** Reads metadata only. Article body fields and HTML are never returned or persisted. */
-export function extractArticleMetadata(html: string, articleUrl: string): ArticleMetadata | null {
-  const url = normalizeArticleUrl(articleUrl); if (!url) return null;
-  requireSourceAction(url, "EXTRACT_METADATA");
-  requireSourceAction(url, "PERSIST_METADATA");
+export const ofType = (node: ObjectValue, type: string) => [node["@type"]].flat().some(t => typeof t === "string" && t.replace(/^https?:\/\/schema.org\//, "") === type);
+/** Internal metadata parser shared by article and product adapters. */
+export function readPageMetadata(html: string) {
   const meta: Record<string, string> = {}; const structured: ObjectValue[] = [];
   let canonical = "";
   const document = html.replace(/<!--[\s\S]*?-->/g, "");
@@ -52,7 +50,15 @@ export function extractArticleMetadata(html: string, articleUrl: string): Articl
       if (key && a.content && !meta[key]) meta[key] = a.content;
     } else if (a.rel?.toLowerCase().split(/\s+/).includes("canonical")) canonical ||= a.href || "";
   }
-  const ofType = (node: ObjectValue, type: string) => [node["@type"]].flat().some(t => typeof t === "string" && t.replace(/^https?:\/\/schema.org\//, "") === type);
+  return { meta, structured, canonical, tags };
+}
+
+/** Reads metadata only. Article body fields and HTML are never returned or persisted. */
+export function extractArticleMetadata(html: string, articleUrl: string): ArticleMetadata | null {
+  const url = normalizeArticleUrl(articleUrl); if (!url) return null;
+  requireSourceAction(url, "EXTRACT_METADATA");
+  requireSourceAction(url, "PERSIST_METADATA");
+  const { meta, structured, canonical, tags } = readPageMetadata(html);
   const news = structured.find(n => ofType(n, "NewsArticle"));
   const article = structured.find(n => ofType(n, "Article"));
   const pick = (key: string) => news?.[key] || article?.[key];

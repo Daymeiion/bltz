@@ -20,7 +20,7 @@ export function previewIdentityKey(content: Pick<PreviewContent, "full_name" | "
   return createHash("sha256").update(JSON.stringify(previewNewsIdentity(content))).digest("hex");
 }
 
-async function withSchoolAliases(client: SupabaseClient, identity: NewsIdentity): Promise<NewsIdentity> {
+export async function withSchoolAliases(client: SupabaseClient, identity: NewsIdentity): Promise<NewsIdentity> {
   // Keep original affiliations for searches; aliases are matching context only.
   identity.searchSchools = [...identity.schools];
   try {

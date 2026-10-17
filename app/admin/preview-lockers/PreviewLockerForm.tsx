@@ -17,6 +17,7 @@ import AwardsSection from "./AwardsSection";
 import SocialSection from "./SocialSection";
 import ArticlesSection from "./ArticlesSection";
 import MerchandiseSection from "./MerchandiseSection";
+import { merchandiseResultSchema, type MerchandiseResult } from "@/lib/enrichment/merchandise";
 import type { PlayerArticle } from "@/lib/enrichment/news";
 import { searchErrorMessage } from "@/lib/search/errors";
 import CfbCsvImport from "./CfbCsvImport";
@@ -28,6 +29,7 @@ import { createClient } from "@/lib/supabase/client";
 import { parseYouTubeBatch } from "@/lib/preview-lockers/youtube-bulk";
 
 const initial = () => previewContent.parse({ slug: "private-preview", full_name: "".padEnd(2, "_") });
+const merchandiseIdentity = (content: PreviewContent) => JSON.stringify([content.full_name, content.school, content.position, content.schools.map(item => item.label), content.pro_teams.map(item => item.label)]);
 type Scalar = Exclude<keyof PreviewContent, "schools" | "pro_teams" | "awards" | "social" | "article_edits" | "merchandise" | "career_stats" | "cfb_stats" | "pfr_stats" | "videos" | "photos">;
 
 export default function PreviewLockerForm({
@@ -55,7 +57,9 @@ export default function PreviewLockerForm({
   const [enroll, setEnroll] = useState(enrollmentEnabled && !record && !reservedId);
   const [enrollment, setEnrollment] = useState({contact_id:"",campaign:"",source:"",channel:"email",relationship:"warm",is_test:false});
   const [draft, setDraft] = useState<PreviewContent>(() => record ? previewContent.parse(Object.fromEntries(Object.keys(previewContent.shape).map(k => [k, record[k as keyof PreviewRecord]]))) : { ...initial(), full_name: referralName ?? "", slug: "" });
-  const [busy, setBusy] = useState<"discovery" | "upload" | "save" | "complete" | "stats" | "news" | null>(null);
+  const [busy, setBusy] = useState<"discovery" | "upload" | "save" | "complete" | "stats" | "news" | "merchandise" | null>(null);
+  const [merchandiseSearch, setMerchandiseSearch] = useState<{ result: MerchandiseResult; identity: string; key: string } | null>(null);
+  const [merchandiseError, setMerchandiseError] = useState("");
   const [newsArticles, setNewsArticles] = useState(initialArticles);
   const [showStats, setShowStats] = useState(false);
   const [statsNeedReload, setStatsNeedReload] = useState(false);
@@ -209,6 +213,23 @@ export default function PreviewLockerForm({
       setMessage(`Loaded ${body.articles.length} saved matching articles. Your manual additions, edits and hidden choices are unchanged.`);
       if (refreshError) setError(refreshError);
     } catch (cause) { setError(cause instanceof Error ? cause.message : "News could not be loaded. Your draft is retained."); }
+    finally { pending.current = false; setBusy(null); }
+  }
+  async function searchMerchandise() {
+    if (pending.current || !saved || dirty) return;
+    pending.current = true; setBusy("merchandise"); setMerchandiseError("");
+    const explain = (codes: string[]) => codes.map(code => searchErrorMessage(code)?.replace(/\bnews\b/gi, "merchandise")).filter(Boolean).join(" ");
+    try {
+      const response = await fetch(`/api/preview-lockers/${saved.id}/merchandise`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ revision: revision.current }) });
+      const body = await response.json();
+      if (response.status === 409 || (response.ok && body.revision !== revision.current)) setMerchandiseSearch(current => current ? { ...current, identity: "" } : null);
+      if (!response.ok) throw new Error(response.status === 409 ? "This preview changed. Reload the saved version before searching merchandise. Your draft is retained." : response.status === 401 || response.status === 403 ? "Your Admin session is no longer authorized to search merchandise." : explain([...(Array.isArray(body.result?.errors) ? body.result.errors : []), body.error]) || "Merchandise search is unavailable. Previous results and your draft are retained.");
+      if (body.revision !== revision.current) throw new Error("This preview changed. Reload the saved version before adding search results.");
+      const parsed = merchandiseResultSchema.safeParse(body.result);
+      if (!parsed.success) throw new Error("The merchandise search response was invalid. Previous results and your draft are retained.");
+      setMerchandiseSearch({ result: parsed.data, identity: merchandiseIdentity(draft), key: crypto.randomUUID() });
+      setMerchandiseError(explain(parsed.data.errors));
+    } catch (cause) { setMerchandiseError(cause instanceof Error ? cause.message : "Merchandise search is unavailable. Your draft is retained."); }
     finally { pending.current = false; setBusy(null); }
   }
   async function uploadFiles(kind: "photo" | "video", files: FileList | null, asHeadshot = false, placement?: { award?: number; social?: string }) {
@@ -365,7 +386,7 @@ export default function PreviewLockerForm({
       <section id="locker-panel-media" role="tabpanel" aria-labelledby="locker-tab-media" tabIndex={0} hidden={activeFolder !== "media"} className={styles.folderPanel}>
       <h2 className={styles.folderHeading}>Media & merchandise</h2>
       <ArticlesSection articles={newsArticles} edits={draft.article_edits} onChange={article_edits => change({ article_edits })} saved={!!saved} dirty={dirty} canLoad={!!saved && !dirty && !busy} onReload={() => { void loadNews(); }} onRefresh={() => { void loadNews(true); }} />
-      <MerchandiseSection items={draft.merchandise} onChange={merchandise => change({ merchandise })} />
+      <MerchandiseSection items={draft.merchandise} onChange={merchandise => change({ merchandise })} onSearch={() => { void searchMerchandise(); }} canSearch={!!saved && !dirty && !busy} searching={busy === "merchandise"} result={merchandiseSearch?.result ?? null} resultKey={merchandiseSearch?.key ?? ""} searchError={merchandiseError} playerName={draft.full_name} identityCurrent={merchandiseSearch?.identity === merchandiseIdentity(draft)} onDismiss={url => setMerchandiseSearch(current => current ? { ...current, result: { ...current.result, items: current.result.items.filter(item => item.productUrl !== url) } } : null)} />
       <SocialSection items={draft.social} photos={draft.photos} videos={draft.videos} saved={!!saved} onChange={social => change({ social })} onUpload={(kind, files, social) => { void uploadFiles(kind, files, false, { social }); }} />
       </section>
       <label className="flex items-start gap-3"><input type="checkbox" checked={reviewed} onChange={e => setReviewed(e.target.checked)} className="mt-1 h-5 w-5" />I reviewed this draft for private demo use. This is not public publication or rights verification.</label>
