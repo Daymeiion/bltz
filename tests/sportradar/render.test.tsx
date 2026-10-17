@@ -22,10 +22,12 @@ describe("stored statistics rendering", () => {
   it("renders shared NFL/NCAA tables without import metadata or grouped header rows", () => {
     const seasons = [{ year: 2023, seasonType: "REG" as const, team: "Test Team", providerTeamId: "team", position: "DE", gamesPlayed: 17, gamesStarted: 16, statistics: { sacks: 7.5 } }];
     const html = renderToStaticMarkup(<StructuredStats records={[{ league: "nfl", source: "Sportradar", syncedAt: "2026-09-10", seasons }, { league: "ncaafb", source: "Sportradar", syncedAt: "2026-09-10", seasons }]} />);
-    expect(html).toContain("NCAA Football"); expect(html).toContain("NFL"); expect(html).toContain("7.5");
+    expect(html).toContain("College Football"); expect(html).toContain("NFL"); expect(html).toContain("7.5");
     expect(html).not.toContain("Source: Sportradar"); expect(html).not.toContain("Passing yards");
     const host = document.createElement("div");
     host.innerHTML = html;
+    expect(host.querySelector("h2")).toBeNull();
+    expect(host.textContent).not.toContain("available coverage");
     expect(host.querySelectorAll("table")).toHaveLength(2);
     for (const table of host.querySelectorAll("table")) {
       expect(table.querySelectorAll("thead tr")).toHaveLength(1);

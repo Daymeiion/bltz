@@ -38,7 +38,6 @@ function LeagueStats({ title, label, record, fallback }: { title: string; label:
 
 function StatsRecord({ record }: { record: StoredStats }) {
   return <div className="min-w-0 space-y-3">
-      <h2 className="text-lg font-bold">{record.league === "nfl" ? "NFL" : "NCAA Football"} statistics</h2>
       {(["REG", "PST", "PRE"] as const).map(phase => {
         const seasons = record.seasons.filter(s => s.seasonType === phase).sort((a, b) => b.year - a.year);
         if (!seasons.length) return null;
@@ -49,7 +48,6 @@ function StatsRecord({ record }: { record: StoredStats }) {
         const gamesTotal = (key: "gamesPlayed" | "gamesStarted") => seasons.every(season => season[key] !== null) ? seasons.reduce((total, season) => total + (season[key] ?? 0), 0).toLocaleString("en-US") : "—";
         const label = phase === "REG" ? (record.league === "ncaafb" ? "Season totals" : "Regular season") : phase === "PST" ? "Postseason" : "Preseason";
         const content = <>
-          <p className="text-xs text-slate-300">{Math.min(...seasons.map(s => s.year))}–{Math.max(...seasons.map(s => s.year))} available coverage · — means unreported or incomplete.</p>
           <div className="max-w-full overflow-x-auto rounded border border-slate-700" role="region" aria-label={`${record.league} ${phase} season statistics`} tabIndex={0}>
             <table className="w-full whitespace-nowrap text-left text-xs [&_td]:px-2 [&_td]:py-2.5 [&_th]:px-2 [&_th]:py-2.5">
               <caption className="sr-only">Season statistics by team and category, with source-reported career totals when available. Rates are never summed. Longest returns use the maximum.</caption>
