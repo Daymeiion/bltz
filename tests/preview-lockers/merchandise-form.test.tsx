@@ -6,7 +6,7 @@ import { previewContent } from "@/lib/preview-lockers/validation";
 import type { MerchandiseCandidate } from "@/lib/enrichment/merchandise";
 const record = { ...previewContent.parse({ slug: "fixture-player", full_name: "Fixture Player", school: "Arizona" }), id: "00000000-0000-4000-8000-000000000001", revision: 3, created_at: "", updated_at: "" };
 const candidate: MerchandiseCandidate = { title: "Fixture Player Arizona football trading card", category: "trading_card", productUrl: "https://shop.example.com/products/card", canonicalUrl: "https://shop.example.com/products/card", imageUrl: null, retailer: "Card Shop", priceLabel: "USD 12.99", availability: "unknown", description: "Football card", matchedAffiliations: ["Arizona"] };
-const result = (items = [candidate]) => { const data = { items, status: "complete" as const, candidates: items.length, rejected: 0, errors: [] }; return { revision: 3, result: data, review: { result: data, version: 1, searched_at: "2026-10-17T00:00:00Z", identity_key: "a".repeat(64), dismissed_urls: [] as string[] } }; };
+const result = (items = [candidate]) => { const data = { items, status: "complete" as const, candidates: items.length, rejected: 0, errors: [] }; return { revision: 3, result: data, review: { result: data, version: 1, searched_at: "2026-10-17T00:00:00Z", identity_key: "a".repeat(64), dismissed_items: [], dismissed_urls: [] as string[] } }; };
 let host: HTMLDivElement; let root: Root; let fetcher: ReturnType<typeof vi.fn>;
 beforeEach(() => { host = document.createElement("div"); document.body.append(host); root = createRoot(host); fetcher = vi.fn(); vi.stubGlobal("fetch", fetcher); });
 afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.unstubAllGlobals(); });

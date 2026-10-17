@@ -19,7 +19,7 @@ import SocialSection from "./SocialSection";
 import ArticlesSection from "./ArticlesSection";
 import MerchandiseSection from "./MerchandiseSection";
 import type { MerchandiseResult } from "@/lib/enrichment/merchandise";
-import { merchandiseQueueResultSchema, merchandiseReviewSchema, visibleMerchandiseReview, type MerchandiseReview } from "@/lib/preview-lockers/merchandise-review";
+import { merchandiseQueueResultSchema, merchandiseReviewSchema, visibleMerchandiseReview, dismissedMerchandiseItems, type MerchandiseReview } from "@/lib/preview-lockers/merchandise-review";
 import type { PlayerArticle } from "@/lib/enrichment/news";
 import { newsReviewSchema, newsReviewArticleSchema, type NewsReview } from "@/lib/preview-lockers/news-review";
 import { searchErrorMessage } from "@/lib/search/errors";
@@ -212,7 +212,7 @@ export default function PreviewLockerForm({
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Completion could not be saved. The preview remains draft / incomplete."); }
     finally { pending.current = false; setBusy(null); }
   }
-  async function loadNews(refresh = false) {
+  async function loadNews(refresh = false, dismissedOffset = 0) {
     if (pending.current || !saved || dirty) return;
     pending.current = true; setBusy("news"); setError(""); setNewsError(""); setMessage("");
     try {
@@ -223,7 +223,7 @@ export default function PreviewLockerForm({
         if (response.status === 409) { setNewsReview(current => current ? { ...current, identity: "" } : null); throw new Error("This preview changed. Reload the saved version before searching news. Your draft is retained."); }
         if (!response.ok) refreshError = [...(body.report?.errors ?? []), body.error].map((code: string) => searchErrorMessage(code)).filter(Boolean).join(" ") || "News refresh is unavailable. Previously saved articles are retained.";
       }
-      const response = await fetch(`/api/preview-lockers/${saved.id}/news`, { cache: "no-store" });
+      const response = await fetch(`/api/preview-lockers/${saved.id}/news${dismissedOffset ? `?dismissedOffset=${dismissedOffset}` : ""}`, { cache: "no-store" });
       if (!response.ok) throw new Error(response.status === 401 || response.status === 403 ? "Your Admin session is no longer authorized to load articles." : "Saved articles could not be loaded. Your draft is retained.");
       const body = await response.json();
       if (body.revision !== revision.current) { setNewsReview(current => current ? { ...current, identity: "" } : null); throw new Error("This preview changed. Reload the saved version before refreshing articles. Your draft is retained."); }
@@ -236,14 +236,15 @@ export default function PreviewLockerForm({
     } catch (cause) { setNewsError(cause instanceof Error ? cause.message : "News could not be loaded. Your draft is retained."); }
     finally { pending.current = false; setBusy(null); }
   }
-  async function dismissNews(url: string | string[]): Promise<boolean> {
+  async function dismissNews(url: string | string[], restore = false): Promise<boolean> {
     if (pending.current || !saved || !newsReview) return false;
     pending.current = true; setBusy("news"); setNewsError("");
     try {
-      const response = await fetch("/api/preview-lockers/" + saved.id + "/news", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ revision: revision.current, version: newsReview.review.version, ...(Array.isArray(url) ? { urls: url } : { url }) }) });
+      const response = await fetch("/api/preview-lockers/" + saved.id + "/news", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ revision: revision.current, version: newsReview.review.version, ...(restore ? { action: "restore" } : {}), ...(Array.isArray(url) ? { urls: url } : { url }) }) });
       const body = await response.json(), review = newsReviewSchema.safeParse(body.review);
-      if (!response.ok || !review.success || body.revision !== revision.current) throw new Error(response.status === 409 ? "The saved news review queue changed. Reopen this preview before dismissing an article. Your draft is retained." : "The article dismissal could not be saved. Your saved article and draft are retained.");
+      if (!response.ok || !review.success || body.revision !== revision.current) throw new Error(response.status === 409 ? "The saved news review queue changed. Reopen this preview before reviewing an article. Your draft is retained." : response.status === 422 ? "The news review queue is full. Dismiss other suggestions before restoring this article." : "The article review change could not be saved. Your saved article and draft are retained.");
       setNewsReview(current => current ? { ...current, review: review.data, key: crypto.randomUUID() } : null);
+      setMessage(restore ? "Article restored to the saved review queue. Review it before adding it to the Locker." : "Article dismissal saved.");
       return true;
     } catch (cause) { setNewsError(cause instanceof Error ? cause.message : "The article dismissal could not be saved."); return false; }
     finally { pending.current = false; setBusy(null); }
@@ -267,14 +268,15 @@ export default function PreviewLockerForm({
     } catch (cause) { setMerchandiseError(cause instanceof Error ? cause.message : "Merchandise search is unavailable. Your draft is retained."); }
     finally { pending.current = false; setBusy(null); }
   }
-  async function dismissMerchandise(url: string | string[]): Promise<boolean> {
+  async function dismissMerchandise(url: string | string[], restore = false): Promise<boolean> {
     if (pending.current || !saved || !merchandiseSearch?.review) return false;
     pending.current = true; setBusy("merchandise"); setDismissingMerchandise(true); setMerchandiseError("");
     try {
-      const response = await fetch(`/api/preview-lockers/${saved.id}/merchandise`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ revision: revision.current, version: merchandiseSearch.review.version, ...(Array.isArray(url) ? { urls: url } : { url }) }) });
+      const response = await fetch(`/api/preview-lockers/${saved.id}/merchandise`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ revision: revision.current, version: merchandiseSearch.review.version, ...(restore ? { action: "restore" } : {}), ...(Array.isArray(url) ? { urls: url } : { url }) }) });
       const body = await response.json(); const review = merchandiseReviewSchema.safeParse(body.review);
-      if (!response.ok || !review.success || body.revision !== revision.current) throw new Error(response.status === 409 ? "The saved review queue changed. Reopen this preview before dismissing a listing. Your draft is retained." : "The dismissal could not be saved. The listing and your draft are retained.");
+      if (!response.ok || !review.success || body.revision !== revision.current) throw new Error(response.status === 409 ? "The saved review queue changed. Reopen this preview before reviewing a listing. Your draft is retained." : response.status === 422 ? "The merchandise review queue is full. Dismiss other suggestions before restoring this listing." : "The review change could not be saved. The listing and your draft are retained.");
       setMerchandiseSearch(current => current ? { ...current, result: visibleMerchandiseReview(review.data), review: review.data, key: crypto.randomUUID() } : null);
+      setMessage(restore ? "Listing restored to the saved review queue. Review it before adding it to the Locker." : "Listing dismissal saved.");
       return true;
     } catch (cause) { setMerchandiseError(cause instanceof Error ? cause.message : "The dismissal could not be saved."); return false; }
     finally { pending.current = false; setBusy(null); setDismissingMerchandise(false); }
@@ -432,8 +434,8 @@ export default function PreviewLockerForm({
       </section>
       <section id="locker-panel-media" role="tabpanel" aria-labelledby="locker-tab-media" tabIndex={0} hidden={activeFolder !== "media"} className={styles.folderPanel}>
       <h2 className={styles.folderHeading}>Media & merchandise</h2>
-      <ArticlesSection articles={newsArticles} edits={draft.article_edits} onChange={article_edits => change({ article_edits })} saved={!!saved} dirty={dirty} canLoad={!!saved && !dirty && !busy} onReload={() => { void loadNews(); }} onRefresh={() => { void loadNews(true); }} review={newsReview?.review ?? null} reviewKey={newsReview?.key ?? ""} identityCurrent={!!saved && newsReview?.identity === merchandiseIdentity(draft)} playerName={draft.full_name} onDismiss={url => { void dismissNews(url); }} onDismissSelected={dismissNews} busy={!!busy} reviewError={newsError} />
-      <MerchandiseSection items={draft.merchandise} onChange={merchandise => change({ merchandise })} onSearch={() => { void searchMerchandise(); }} canSearch={!!saved && !dirty && !busy} searching={busy === "merchandise" && !dismissingMerchandise} savingReview={dismissingMerchandise} searchedAt={merchandiseSearch?.review?.searched_at} result={merchandiseSearch?.result ?? null} resultKey={merchandiseSearch?.key ?? ""} searchError={merchandiseError} playerName={draft.full_name} identityCurrent={merchandiseSearch?.identity === merchandiseIdentity(draft)} onDismiss={url => { void dismissMerchandise(url); }} onDismissSelected={dismissMerchandise} busy={!!busy} />
+      <ArticlesSection articles={newsArticles} edits={draft.article_edits} onChange={article_edits => change({ article_edits })} saved={!!saved} dirty={dirty} canLoad={!!saved && !dirty && !busy} onReload={() => { void loadNews(); }} onRefresh={() => { void loadNews(true); }} review={newsReview?.review ?? null} reviewKey={newsReview?.key ?? ""} identityCurrent={!!saved && newsReview?.identity === merchandiseIdentity(draft)} playerName={draft.full_name} onDismiss={url => { void dismissNews(url); }} onDismissSelected={dismissNews} onRestore={url => { void dismissNews(url, true); }} onDismissedPage={offset => { void loadNews(false, offset); }} busy={!!busy} reviewError={newsError} />
+      <MerchandiseSection items={draft.merchandise} onChange={merchandise => change({ merchandise })} onSearch={() => { void searchMerchandise(); }} canSearch={!!saved && !dirty && !busy} searching={busy === "merchandise" && !dismissingMerchandise} savingReview={dismissingMerchandise} searchedAt={merchandiseSearch?.review?.searched_at} result={merchandiseSearch?.result ?? null} resultKey={merchandiseSearch?.key ?? ""} searchError={merchandiseError} playerName={draft.full_name} identityCurrent={merchandiseSearch?.identity === merchandiseIdentity(draft)} onDismiss={url => { void dismissMerchandise(url); }} onDismissSelected={dismissMerchandise} onRestore={url => { void dismissMerchandise(url, true); }} dismissedItems={merchandiseSearch?.review ? dismissedMerchandiseItems(merchandiseSearch.review) : []} busy={!!busy} />
       <SocialSection items={draft.social} photos={draft.photos} videos={draft.videos} saved={!!saved} onChange={social => change({ social })} onUpload={(kind, files, social) => { void uploadFiles(kind, files, false, { social }); }} />
       </section>
       <label className="flex items-start gap-3"><input type="checkbox" checked={reviewed} onChange={e => setReviewed(e.target.checked)} className="mt-1 h-5 w-5" />I reviewed this draft for private demo use. This is not public publication or rights verification.</label>

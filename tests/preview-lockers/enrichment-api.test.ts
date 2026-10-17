@@ -4,7 +4,7 @@ const mock = vi.hoisted(() => ({ auth: vi.fn(), rpc: vi.fn(), from: vi.fn(), ins
 const queue = vi.hoisted(() => ({ read: vi.fn() }));
 vi.mock("@/lib/preview-lockers/news-review-server", () => ({ readNewsReview: queue.read }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: async () => ({ auth: { getUser: mock.auth }, rpc: mock.rpc, from: mock.from }) }));
-vi.mock("@/lib/preview-lockers/enrichment", () => ({ tryEnrichSavedPreview: mock.enrich, readPreviewNewsCandidates: mock.candidates, readPreviewEnrichment: mock.read }));
+vi.mock("@/lib/preview-lockers/enrichment", () => ({ previewIdentityKey: () => "a".repeat(64), tryEnrichSavedPreview: mock.enrich, readPreviewNewsCandidates: mock.candidates, readPreviewEnrichment: mock.read }));
 vi.mock("@/lib/supabase/service", () => ({ createServiceClient: mock.service }));
 import { POST as create } from "@/app/api/preview-lockers/route";
 import { GET as readNews, POST as refresh, PATCH as dismiss } from "@/app/api/preview-lockers/[id]/news/route";
@@ -105,4 +105,12 @@ it("validates bulk news selection and dismisses through one RPC", async () => {
   expect(mock.enrich).not.toHaveBeenCalled();
   mock.rpc.mockImplementation(async name=>name==="dismiss_preview_news_articles"?{error:{code:"PT409"}}:{data:true});
   expect((await dismiss(request({revision:1,version:1,urls}),params)).status).toBe(409);
+});
+
+it("restores only a single article using server-derived identity and bounded pagination",async()=>{
+ expect((await dismiss(request({revision:1,version:1,action:"restore",url:"https://press.example.com/one"}),params)).status).toBe(200);
+ expect(mock.rpc).toHaveBeenCalledWith("restore_preview_news_article",{p_preview_id:id,p_revision:1,p_version:1,p_identity_key:"a".repeat(64),p_url:"https://press.example.com/one"});
+ expect((await readNews(new Request("http://localhost/news?dismissedOffset=200"),params)).status).toBe(200);expect(queue.read).toHaveBeenLastCalledWith(expect.anything(),id,row,200);
+ expect((await readNews(new Request("http://localhost/news?dismissedOffset=-1"),params)).status).toBe(400);
+ expect((await dismiss(request({revision:1,version:1,action:"restore",urls:["https://press.example.com/one"]}),params)).status).toBe(400);
 });

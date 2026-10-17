@@ -93,3 +93,10 @@ it("validates the complete bulk dismissal and delegates one atomic RPC", async (
   m.rpc.mockImplementation(async name=>name==="dismiss_preview_merchandise_results"?{error:{code:"PT409"}}:{data:true});
   expect((await PATCH(request({revision:3,version:1,urls}),params)).status).toBe(409);
 });
+
+it("restores only a single saved listing using server-derived identity",async()=>{
+ m.rpc.mockImplementation(async(name:string)=>({data:name==="restore_preview_merchandise_result"?{result:{items:[],status:"complete",candidates:0,rejected:0,errors:[]},version:2,searched_at:"2026-10-17T00:00:00Z",identity_key:"a".repeat(64),dismissed_urls:[]}:true}));
+ expect((await PATCH(request({revision:3,version:1,action:"restore",url:"https://shop.example.com/card"}),params)).status).toBe(200);
+ expect(m.rpc).toHaveBeenCalledWith("restore_preview_merchandise_result",{p_preview_id:id,p_revision:3,p_version:1,p_identity_key:"identity",p_url:"https://shop.example.com/card"});
+ expect(m.discover).not.toHaveBeenCalled();
+});

@@ -13,7 +13,8 @@ export const newsReviewArticleSchema = z.object({
   review_keys: z.array(z.string().max(2100)).max(64).optional(),
 });
 export const newsReviewSchema = z.object({
-  articles: z.array(newsReviewArticleSchema).max(200), version: z.number().int().positive(),
+  articles: z.array(newsReviewArticleSchema).max(200), dismissed_articles: z.array(newsReviewArticleSchema).max(200).default([]),
+  dismissed_offset: z.number().int().nonnegative().default(0), dismissed_has_more: z.boolean().default(false), version: z.number().int().positive(),
   searched_at: z.string().datetime({ offset: true }).nullable(), identity_key: z.string().regex(/^[a-f0-9]{64}$/),
 });
 export type NewsReview = z.infer<typeof newsReviewSchema>;

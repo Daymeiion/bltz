@@ -65,7 +65,15 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (!z.uuid().safeParse(id).success || !input.success) throw new PreviewError("invalid_input", 400);
     const db = client as SupabaseClient<MerchandiseReviewDatabase>;
     const args = { p_preview_id: id, p_revision: input.data.revision, p_version: input.data.version };
-    const stored = "urls" in input.data ? await db.rpc("dismiss_preview_merchandise_results", { ...args, p_urls: input.data.urls })
+    let restoreIdentity: string | undefined;
+    if ("action" in input.data) {
+      const target = await client.from("preview_lockers").select(PREVIEW_COLUMNS).eq("id", id).maybeSingle();
+      if (target.error) throw new PreviewError("preview_unavailable", 503);
+      if (!target.data) throw new PreviewError("preview_not_found", 404);
+      restoreIdentity = previewIdentityKey(previewRecord.parse(target.data));
+    }
+    const stored = "action" in input.data ? await db.rpc("restore_preview_merchandise_result", { ...args, p_url: input.data.url, p_identity_key: restoreIdentity! })
+      : "urls" in input.data ? await db.rpc("dismiss_preview_merchandise_results", { ...args, p_urls: input.data.urls })
       : await db.rpc("dismiss_preview_merchandise_result", { ...args, p_url: input.data.url });
     if (stored.error) throw reviewError(stored.error.code);
     const review = merchandiseReviewSchema.safeParse(stored.data);

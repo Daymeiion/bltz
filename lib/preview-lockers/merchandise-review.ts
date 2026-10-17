@@ -5,11 +5,16 @@ export const merchandiseQueueResultSchema = merchandiseResultSchema.extend({ ite
 /** Admin review state only. Never included in PreviewContent or Locker rendering. */
 export const merchandiseReviewSchema = z.object({
   result: merchandiseQueueResultSchema, version: z.number().int().positive(), searched_at: z.string().datetime({ offset: true }),
-  identity_key: z.string().regex(/^[a-f0-9]{64}$/), dismissed_urls: z.array(z.string()).max(200),
+  dismissed_items: z.array(merchandiseQueueResultSchema.shape.items.element).max(2000).default([]),
+  identity_key: z.string().regex(/^[a-f0-9]{64}$/), dismissed_urls: z.array(z.string()).max(2000),
 });
 export type MerchandiseReview = z.infer<typeof merchandiseReviewSchema>;
 export function visibleMerchandiseReview(review: MerchandiseReview) {
   return { ...review.result, items: review.result.items.filter(item => !review.dismissed_urls.includes(item.productUrl)) };
+}
+export function dismissedMerchandiseItems(review: MerchandiseReview) {
+  const seen = new Set<string>();
+  return [...review.dismissed_items, ...review.result.items.filter(item => review.dismissed_urls.includes(item.productUrl))].filter(item => { if (seen.has(item.productUrl)) return false; seen.add(item.productUrl); return true; });
 }
 /** Mirrors the database key function. Product IDs do not cross seller domains. */
 export function merchandiseListingKeys(item: { productUrl: string; canonicalUrl?: string; listingKeys?: string[] }): string[] {
