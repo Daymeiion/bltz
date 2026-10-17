@@ -23,7 +23,7 @@ it("searches saved identity only and requires per-listing review before adding a
   expect(host.querySelector('[aria-label="Merchandise 1 title"]')).toBeNull();
   const card = host.querySelector<HTMLElement>('section[aria-label="Merchandise search results"] article')!;
   expect(card.textContent).toContain("Matched college/team: Arizona"); expect(button("Add to draft", card).disabled).toBe(true);
-  await act(async () => card.querySelector<HTMLInputElement>('input[type="checkbox"]')!.click());
+  await act(async () => card.querySelector<HTMLInputElement>('input[aria-label^="I reviewed this"]')!.click());
   await click("Add to draft", card);
   expect(host.querySelector<HTMLInputElement>('[aria-label="Merchandise 1 title"]')?.value).toBe(candidate.title);
   expect(button("In draft", card).disabled).toBe(true); expect(button("Search merchandise").disabled).toBe(true);
@@ -40,7 +40,7 @@ it("allows selecting multiple candidates before saving, prevents duplicates and 
   await act(async () => root.render(<PreviewLockerForm record={record} />));
   fetcher.mockResolvedValueOnce(Response.json(result([candidate, jersey]))); await click("Search merchandise");
   const cards = [...host.querySelectorAll<HTMLElement>('section[aria-label="Merchandise search results"] article')];
-  for (const card of cards) { await act(async () => card.querySelector<HTMLInputElement>('input[type="checkbox"]')!.click()); await click("Add to draft", card); }
+  for (const card of cards) { await act(async () => card.querySelector<HTMLInputElement>('input[aria-label^="I reviewed this"]')!.click()); await click("Add to draft", card); }
   expect(host.querySelectorAll('[aria-label^="Merchandise "][aria-label$=" title"]')).toHaveLength(2);
   const dismissed = result([candidate, jersey]); dismissed.review.dismissed_urls = [candidate.productUrl]; dismissed.review.version = 2;
   fetcher.mockResolvedValueOnce(Response.json(dismissed));
@@ -74,7 +74,7 @@ it("labels search-only suggestions as unverified and requires review before addi
   expect(card.textContent).toContain("Search title mentions: Arizona");
   expect(button("Add to draft", card).disabled).toBe(true);
   expect(fetcher).toHaveBeenCalledTimes(1);
-  await act(async () => card.querySelector<HTMLInputElement>('input[type="checkbox"]')!.click());
+  await act(async () => card.querySelector<HTMLInputElement>('input[aria-label^="I reviewed this"]')!.click());
   await click("Add to draft", card);
   expect(host.querySelector<HTMLInputElement>('[aria-label="Merchandise 1 title"]')?.value).toBe(candidate.title);
   expect(fetcher).toHaveBeenCalledTimes(1);

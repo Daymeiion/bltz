@@ -10,7 +10,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { MerchandiseReviewDatabase } from "@/types/merchandise-review.generated";
 import { merchandiseResultSchema } from "@/lib/enrichment/merchandise";
 import { merchandiseReviewSchema, visibleMerchandiseReview } from "@/lib/preview-lockers/merchandise-review";
-import { previewUrl } from "@/lib/preview-lockers/validation";
+import { reviewDismissalSchema } from "@/lib/preview-lockers/review-dismissal";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -61,9 +61,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { client } = await previewAdmin(); const { id } = await params;
-    const input = z.object({ revision: z.number().int().positive(), version: z.number().int().positive(), url: previewUrl }).strict().safeParse(await readBody(req, 4096));
+    const input = reviewDismissalSchema.safeParse(await readBody(req, 450_000));
     if (!z.uuid().safeParse(id).success || !input.success) throw new PreviewError("invalid_input", 400);
-    const stored = await (client as SupabaseClient<MerchandiseReviewDatabase>).rpc("dismiss_preview_merchandise_result", { p_preview_id: id, p_revision: input.data.revision, p_version: input.data.version, p_url: input.data.url });
+    const db = client as SupabaseClient<MerchandiseReviewDatabase>;
+    const args = { p_preview_id: id, p_revision: input.data.revision, p_version: input.data.version };
+    const stored = "urls" in input.data ? await db.rpc("dismiss_preview_merchandise_results", { ...args, p_urls: input.data.urls })
+      : await db.rpc("dismiss_preview_merchandise_result", { ...args, p_url: input.data.url });
     if (stored.error) throw reviewError(stored.error.code);
     const review = merchandiseReviewSchema.safeParse(stored.data);
     if (!review.success) throw new PreviewError("merchandise_review_unavailable", 503);

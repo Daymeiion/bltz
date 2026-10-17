@@ -3,15 +3,17 @@ import { useId, useState } from "react";
 import { Button } from "@/components/ui/button";
 import type { MerchandiseCandidate } from "@/lib/enrichment/merchandise";
 
-export default function MerchandiseResultCard({ item, playerName, inDraft, canAdd, onAdd, onDismiss, dismissDisabled = false }: {
+export default function MerchandiseResultCard({ item, playerName, inDraft, canAdd, onAdd, onDismiss, dismissDisabled = false, selected, onSelect, selectionDisabled }: {
   item: MerchandiseCandidate; playerName: string; inDraft: boolean; canAdd: boolean;
   onAdd: () => void; onDismiss: () => void;
   dismissDisabled?: boolean;
+  selected: boolean; onSelect: () => void; selectionDisabled: boolean;
 }) {
   const [reviewed, setReviewed] = useState(false);
   const [failedImage, setFailedImage] = useState(false);
   const reviewId = useId();
   return <article className="min-w-0 space-y-3 rounded-lg border p-4">
+    <label className="flex min-h-11 items-center gap-3 text-sm"><input type="checkbox" aria-label={`Select listing: ${item.title}`} checked={selected} disabled={selectionDisabled} onChange={onSelect} />Select listing</label>
     {item.imageUrl && !failedImage && <img className="h-36 max-w-full object-contain" src={item.imageUrl} alt={item.title} loading="lazy" referrerPolicy="no-referrer" onError={() => setFailedImage(true)} />}
     <h4 className="break-words font-semibold">{item.title}</h4>
     <p className="text-sm text-muted-foreground">{item.retailer} · {item.category.replace(/_/g, " ")}</p>
@@ -20,7 +22,7 @@ export default function MerchandiseResultCard({ item, playerName, inDraft, canAd
     {item.description && <p className="break-words text-sm text-muted-foreground">{item.description}</p>}
     <p className="text-sm">{item.priceLabel ? `Seller-reported price: ${item.priceLabel}` : "Price not provided by seller metadata."} {item.availability === "out_of_stock" ? "Seller reports out of stock." : item.availability === "in_stock" ? "Seller reports in stock." : "Availability unknown."}</p>
     <a className="block break-all text-sm underline" href={item.productUrl} target="_blank" rel="noopener noreferrer">Review seller listing ↗</a>
-    <label htmlFor={reviewId} className="flex min-h-11 items-start gap-3 text-sm"><input id={reviewId} className="mt-1" type="checkbox" checked={reviewed} disabled={inDraft || !canAdd} onChange={event => setReviewed(event.target.checked)} />I reviewed this listing for {playerName}.</label>
+    <label htmlFor={reviewId} className="flex min-h-11 items-start gap-3 text-sm"><input id={reviewId} aria-label={`I reviewed this listing for ${playerName}.`} className="mt-1" type="checkbox" checked={reviewed} disabled={inDraft || !canAdd} onChange={event => setReviewed(event.target.checked)} />I reviewed this listing for {playerName}.</label>
     <div className="flex flex-wrap gap-3"><Button type="button" disabled={!reviewed || inDraft || !canAdd} onClick={onAdd}>{inDraft ? "In draft" : "Add to draft"}</Button><Button type="button" variant="outline" disabled={dismissDisabled} onClick={onDismiss}>Dismiss listing</Button></div>
   </article>;
 }

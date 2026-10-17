@@ -82,3 +82,14 @@ it("reports full queues without claiming a save or exposing database details", a
   expect(m.rpc).toHaveBeenCalledWith("finalize_preview_discovery", { p_request_id: true, p_succeeded: false });
   expect((await PATCH(request({ revision: 3, version: 1, url: "https://shop.example.com/card" }), params)).status).toBe(422);
 });
+it("validates the complete bulk dismissal and delegates one atomic RPC", async () => {
+  const urls=["https://shop.example.com/card","https://shop.example.com/jersey"];
+  for(const bad of [[],[urls[0],urls[0]],Array(201).fill(urls[0]),["javascript:alert(1)"]])expect((await PATCH(request({revision:3,version:1,urls:bad}),params)).status).toBe(400);
+  expect((await PATCH(request({revision:3,version:1,url:urls[0],urls}),params)).status).toBe(400);
+  m.rpc.mockImplementation(async name=>name==="dismiss_preview_merchandise_results"?{data:{result:{items:[],status:"complete",candidates:0,rejected:0,errors:[]},version:2,searched_at:"2026-10-17T00:00:00Z",identity_key:"a".repeat(64),dismissed_urls:urls}}:{data:true});
+  expect((await PATCH(request({revision:3,version:1,urls}),params)).status).toBe(200);
+  expect(m.rpc).toHaveBeenCalledWith("dismiss_preview_merchandise_results",{p_preview_id:id,p_revision:3,p_version:1,p_urls:urls});
+  expect(m.discover).not.toHaveBeenCalled();
+  m.rpc.mockImplementation(async name=>name==="dismiss_preview_merchandise_results"?{error:{code:"PT409"}}:{data:true});
+  expect((await PATCH(request({revision:3,version:1,urls}),params)).status).toBe(409);
+});

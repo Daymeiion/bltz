@@ -2,17 +2,19 @@
 import { useId, useState } from "react";
 import { Button } from "@/components/ui/button";
 import type { PlayerArticle } from "@/lib/enrichment/news";
-export default function NewsResultCard({ article, playerName, inDraft, canAdd, dismissDisabled, onAdd, onDismiss }: {
+export default function NewsResultCard({ article, playerName, inDraft, canAdd, dismissDisabled, onAdd, onDismiss, selected, onSelect, selectionDisabled }: {
   article: PlayerArticle; playerName: string; inDraft: boolean; canAdd: boolean; dismissDisabled: boolean;
   onAdd: () => void; onDismiss: () => void;
+  selected: boolean; onSelect: () => void; selectionDisabled: boolean;
 }) {
   const [reviewed, setReviewed] = useState(false); const reviewId = useId();
   return <article className="min-w-0 space-y-3 rounded-lg border p-4">
+    <label className="flex min-h-11 items-center gap-3 text-sm"><input type="checkbox" aria-label={`Select article: ${article.headline}`} checked={selected} disabled={selectionDisabled} onChange={onSelect} />Select article</label>
     <h4 className="break-words font-semibold">{article.headline}</h4>
     <p className="break-words text-sm text-muted-foreground">{article.publisher}{article.published_at ? ` · ${article.published_at.slice(0, 10)}` : ""}</p>
     {!!article.summary && <p className="break-words text-sm">{article.summary}</p>}
     <a className="block break-all text-sm underline" href={article.article_url} target="_blank" rel="noopener noreferrer">Review publisher article ↗</a>
-    <label htmlFor={reviewId} className="flex min-h-11 items-start gap-3 text-sm"><input id={reviewId} className="mt-1" type="checkbox" checked={reviewed} disabled={inDraft || !canAdd} onChange={event => setReviewed(event.target.checked)} />I reviewed this article for {playerName}.</label>
+    <label htmlFor={reviewId} className="flex min-h-11 items-start gap-3 text-sm"><input id={reviewId} aria-label={`I reviewed this article for ${playerName}.`} className="mt-1" type="checkbox" checked={reviewed} disabled={inDraft || !canAdd} onChange={event => setReviewed(event.target.checked)} />I reviewed this article for {playerName}.</label>
     <div className="flex flex-wrap gap-3"><Button type="button" disabled={!reviewed || inDraft || !canAdd} onClick={onAdd}>{inDraft ? "In draft" : "Add to draft"}</Button><Button type="button" variant="outline" disabled={dismissDisabled} onClick={onDismiss}>Dismiss article</Button></div>
   </article>;
 }

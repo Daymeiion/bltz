@@ -7,12 +7,14 @@ import { editScrapedArticle, type ArticleEdit } from "@/lib/preview-lockers/medi
 import type { PlayerArticle } from "@/lib/enrichment/news";
 import { newsArticleKeys, type NewsReview } from "@/lib/preview-lockers/news-review";
 import NewsResultCard from "./NewsResults";
+import BulkReviewControls from "./BulkReviewControls";
 
-export default function ArticlesSection({ articles, edits, onChange, onReload, onRefresh, canLoad, dirty, saved, review, reviewKey, identityCurrent = true, playerName, onDismiss, busy = false, reviewError = "" }: {
+export default function ArticlesSection({ articles, edits, onChange, onReload, onRefresh, canLoad, dirty, saved, review, reviewKey, identityCurrent = true, playerName, onDismiss, onDismissSelected, busy = false, reviewError = "" }: {
   articles: PlayerArticle[]; edits: ArticleEdit[]; onChange: (items: ArticleEdit[]) => void;
   onReload: () => void; onRefresh: () => void; canLoad: boolean; dirty: boolean; saved: boolean;
   review: NewsReview | null; reviewKey: string; identityCurrent?: boolean; playerName: string;
   onDismiss: (url: string) => void; busy?: boolean; reviewError?: string;
+  onDismissSelected: (urls: string[]) => Promise<boolean>;
 }) {
   const update = (id: string, patch: Partial<ArticleEdit>) => onChange(edits.map(item => item.id === id ? { ...item, ...patch } : item));
   const fields = (item: ArticleEdit, label: string) => <div className="mt-4 grid gap-4 sm:grid-cols-2">
@@ -27,6 +29,17 @@ export default function ArticlesSection({ articles, edits, onChange, onReload, o
   const existingSources = new Set(articles.map(article => article.article_url));
   const additional = edits.filter(item => !item.sourceUrl || !existingSources.has(item.sourceUrl));
   const draftKeys = new Set([...articles.flatMap(newsArticleKeys), ...edits.flatMap(item => newsArticleKeys({ article_url: item.articleUrl, canonical_url: item.sourceUrl ?? undefined, headline: item.headline }))]);
+  const inDraft = (article: PlayerArticle) => newsArticleKeys(article).some(key => draftKeys.has(key));
+  const add = (urls: string[]) => {
+    if (!identityCurrent || busy) return;
+    const requested = new Set(urls), seen = new Set(draftKeys);
+    const additions = (review?.articles ?? []).filter(article => {
+      if (!requested.has(article.article_url)) return false;
+      const keys = newsArticleKeys(article); if (keys.some(key => seen.has(key))) return false;
+      keys.forEach(key => seen.add(key)); return true;
+    }).map(article => editScrapedArticle(article, crypto.randomUUID()));
+    if (additions.length && edits.length + additions.length <= 40) onChange([...edits, ...additions]);
+  };
   return <BuilderSection title="News articles" count={articles.length + (review?.articles.length ?? 0) + edits.filter(item => !item.sourceUrl).length} description="Review saved news suggestions and manage Locker article cards">
     <div className="flex flex-wrap gap-3"><Button type="button" variant="outline" disabled={!canLoad} onClick={onReload}>Reload saved articles</Button><Button type="button" variant="outline" disabled={!canLoad} onClick={onRefresh}>Refresh scraped news</Button></div>
     {!saved ? <p className="text-sm text-muted-foreground">Save this preview before loading scraped articles. You can add articles manually now.</p> : dirty ? <p className="text-sm text-muted-foreground">Save your draft before reloading or refreshing scraped news.</p> : <p className="text-sm text-muted-foreground">Search uses the saved player name, college and team history. New searches add unique articles and keep your pending reviews; dismissed articles stay dismissed. Results are saved separately from Locker articles. Review each article, add it to the draft, then save to show it in the Locker.</p>}
@@ -37,9 +50,13 @@ export default function ArticlesSection({ articles, edits, onChange, onReload, o
       {review?.searched_at && <p className="text-sm text-muted-foreground">Last search · <time dateTime={review.searched_at}>{new Date(review.searched_at).toISOString().replace("T", " ").slice(0, 16)} UTC</time>. Saved articles may be older. Dismissals are saved.</p>}
       {!identityCurrent && <p role="status" className="text-sm">The player identity changed or the saved version is stale. Save and search again before adding these articles.</p>}
       {!review?.articles.length && <p className="text-sm text-muted-foreground">No saved matching articles awaiting review. Search for more coverage or add a reviewed article manually below.</p>}
-      {review?.articles.map(article => <NewsResultCard key={`${reviewKey}:${article.article_url}`} article={article} playerName={playerName}
-        inDraft={newsArticleKeys(article).some(key => draftKeys.has(key))} canAdd={identityCurrent && !busy && edits.length < 40} dismissDisabled={busy}
-        onAdd={() => onChange([...edits, editScrapedArticle(article, crypto.randomUUID())])} onDismiss={() => onDismiss(article.article_url)} />)}
+      {!!review?.articles.length && <BulkReviewControls key={`${reviewKey}:${identityCurrent}`} items={review.articles.map(article => ({ url: article.article_url, inDraft: inDraft(article) }))}
+        kind="articles" playerName={playerName} capacity={40 - edits.length} canAdd={identityCurrent} busy={busy} onAdd={add} onDismiss={onDismissSelected}>
+        {selection => review.articles.map(article => <NewsResultCard key={article.article_url} article={article} playerName={playerName}
+          selected={selection.selected.has(article.article_url)} onSelect={() => selection.toggle(article.article_url)} selectionDisabled={selection.disabled}
+          inDraft={inDraft(article)} canAdd={identityCurrent && !busy && edits.length < 40} dismissDisabled={busy}
+          onAdd={() => add([article.article_url])} onDismiss={() => onDismiss(article.article_url)} />)}
+      </BulkReviewControls>}
     </section>
     <h3 className="font-semibold">Locker articles</h3>
     {!articles.length && <p className="text-sm text-muted-foreground">No saved matching articles loaded.</p>}

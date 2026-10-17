@@ -1,4 +1,4 @@
-// Generated from Supabase production schema after migration 20261017065704.
+// Generated from Supabase production schema after migration 20261017071708.
 // Scoped projection of official `supabase gen types --schema public` output.
 import type { Json } from "./database.generated";
 export type NewsReviewDatabase = { public: { Tables: {
@@ -155,6 +155,15 @@ dismiss_preview_news_article: {
           p_preview_id: string
           p_revision: number
           p_url: string
+          p_version: number
+        }
+        Returns: Json
+      }
+dismiss_preview_news_articles: {
+        Args: {
+          p_preview_id: string
+          p_revision: number
+          p_urls: string[]
           p_version: number
         }
         Returns: Json

@@ -17,14 +17,14 @@ it("reopens saved pending articles without searching and requires review, Add an
  await act(async()=>root.render(<PreviewLockerForm record={record} initialNewsReview={review} />));
  expect(fetcher).not.toHaveBeenCalled();expect(queue().textContent).toContain(article.headline);expect(queue().textContent).toContain("Last search");
  expect(button("Add to draft",queue()).disabled).toBe(true);expect(host.querySelector('[aria-label="Added article 1 headline"]')).toBeNull();
- await act(async()=>queue().querySelector<HTMLInputElement>('input[type="checkbox"]')!.click());await click("Add to draft",queue());
+ await act(async()=>queue().querySelector<HTMLInputElement>('input[aria-label^="I reviewed this"]')!.click());await click("Add to draft",queue());
  expect(button("In draft",queue()).disabled).toBe(true);expect(host.querySelector<HTMLInputElement>('[aria-label="Added article 1 headline"]')?.value).toBe(article.headline);
  expect(fetcher).not.toHaveBeenCalled();
  fetcher.mockResolvedValueOnce(Response.json({id:record.id,slug:record.slug,revision:4}));await click("Save draft");
  const payload=JSON.parse(fetcher.mock.calls[0][1].body);expect(payload.content.article_edits).toEqual([expect.objectContaining({articleUrl:article.article_url,sourceUrl:article.article_url,visible:true})]);
  expect(payload.content.merchandise).toEqual([]);expect(payload.content.pfr_stats).toEqual(record.pfr_stats);
  await act(async()=>root.render(<PreviewLockerForm key="reopened" record={record} initialNewsReview={review} />));
- expect(queue().querySelector<HTMLInputElement>('input[type="checkbox"]')?.checked).toBe(false);
+ expect(queue().querySelector<HTMLInputElement>('input[aria-label^="I reviewed this"]')?.checked).toBe(false);
 });
 it("accepts accumulated search results above twelve without adding them to the Locker",async()=>{
  await act(async()=>root.render(<PreviewLockerForm record={record} initialNewsReview={review} />));

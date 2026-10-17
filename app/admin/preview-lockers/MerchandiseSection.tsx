@@ -6,15 +6,29 @@ import { merchandiseCategories, type PreviewContent } from "@/lib/preview-locker
 import type { MerchandiseResult } from "@/lib/enrichment/merchandise";
 import { merchandiseListingKeys } from "@/lib/preview-lockers/merchandise-review";
 import MerchandiseResultCard from "./MerchandiseResults";
+import BulkReviewControls from "./BulkReviewControls";
 
-export default function MerchandiseSection({ items, onChange, onSearch, canSearch, searching, result, resultKey, searchError, identityCurrent, playerName, onDismiss, searchedAt, savingReview = false }: {
+export default function MerchandiseSection({ items, onChange, onSearch, canSearch, searching, result, resultKey, searchError, identityCurrent, playerName, onDismiss, onDismissSelected, searchedAt, savingReview = false, busy = false }: {
   items: PreviewContent["merchandise"]; onChange: (items: PreviewContent["merchandise"]) => void;
   onSearch: () => void; canSearch: boolean; searching: boolean; result: MerchandiseResult | null; resultKey: string;
   searchError: string; identityCurrent: boolean; playerName: string; onDismiss: (url: string) => void;
   searchedAt?: string; savingReview?: boolean;
+  onDismissSelected: (urls: string[]) => Promise<boolean>; busy?: boolean;
 }) {
   const update = (id: string, patch: Partial<typeof items[number]>) => onChange(items.map(item => item.id === id ? { ...item, ...patch } : item));
   const draftKeys = new Set(items.flatMap(merchandiseListingKeys));
+  const inDraft = (item: NonNullable<typeof result>["items"][number]) => merchandiseListingKeys(item).some(key => draftKeys.has(key));
+  const queueBusy = busy || searching || savingReview;
+  const add = (urls: string[]) => {
+    if (!identityCurrent || queueBusy) return;
+    const requested = new Set(urls), seen = new Set(draftKeys);
+    const additions = (result?.items ?? []).filter(item => {
+      if (!requested.has(item.productUrl)) return false;
+      const keys = merchandiseListingKeys(item); if (keys.some(key => seen.has(key))) return false;
+      keys.forEach(key => seen.add(key)); return true;
+    }).map(item => ({ id: crypto.randomUUID(), title: item.title, category: item.category, productUrl: item.productUrl, imageUrl: item.imageUrl, retailer: item.retailer, priceLabel: item.priceLabel, visible: true }));
+    if (additions.length && items.length + additions.length <= 40) onChange([...items, ...additions]);
+  };
   return <BuilderSection title="Merchandise" count={items.length} description="Add trading cards, jerseys and other products to the Locker Merchandise tab">
     <Button type="button" variant="outline" disabled={!canSearch} onClick={onSearch}>{searching ? "Searching merchandise…" : "Search merchandise"}</Button>
     <p className="text-sm text-muted-foreground">Searches the saved player name with college and team history for trading cards and jerseys. Save your changes before searching. Results are saved here for later review, separately from Locker merchandise. New searches add unique listings and keep your pending reviews; dismissed listings stay dismissed. Review each seller listing before adding it to the draft, then save to show it in the Locker.</p>
@@ -27,11 +41,13 @@ export default function MerchandiseSection({ items, onChange, onSearch, canSearc
       {!identityCurrent && <p role="status" className="text-sm">The player identity changed or the saved version is stale. Reload or save, then search again before adding these listings.</p>}
       <p className="text-sm text-muted-foreground">Search suggestions are not added to the Locker automatically. Check the player, team, seller, current price and availability. Listings do not establish authenticity, endorsement or licensing rights.</p>
       {!result.items.length && <p className="text-sm">{result.status === "complete" ? "No matching merchandise listings available to review. You can add a reviewed product manually below." : "No matching listings could be verified from this search. Try again later or add a reviewed product manually."}</p>}
-      {result.items.map(item => <MerchandiseResultCard key={`${resultKey}:${item.productUrl}`} item={item} playerName={playerName}
-        inDraft={merchandiseListingKeys(item).some(key => draftKeys.has(key))}
-        canAdd={identityCurrent && !searching && !savingReview && items.length < 40} dismissDisabled={searching || savingReview}
-        onAdd={() => onChange([...items, { id: crypto.randomUUID(), title: item.title, category: item.category, productUrl: item.productUrl, imageUrl: item.imageUrl, retailer: item.retailer, priceLabel: item.priceLabel, visible: true }])}
-        onDismiss={() => onDismiss(item.productUrl)} />)}
+      {!!result.items.length && <BulkReviewControls key={`${resultKey}:${identityCurrent}`} items={result.items.map(item => ({ url: item.productUrl, inDraft: inDraft(item) }))}
+        kind="listings" playerName={playerName} capacity={40 - items.length} canAdd={identityCurrent} busy={queueBusy} onAdd={add} onDismiss={onDismissSelected}>
+        {selection => result.items.map(item => <MerchandiseResultCard key={item.productUrl} item={item} playerName={playerName}
+          selected={selection.selected.has(item.productUrl)} onSelect={() => selection.toggle(item.productUrl)} selectionDisabled={selection.disabled}
+          inDraft={inDraft(item)} canAdd={identityCurrent && !queueBusy && items.length < 40} dismissDisabled={queueBusy}
+          onAdd={() => add([item.productUrl])} onDismiss={() => onDismiss(item.productUrl)} />)}
+      </BulkReviewControls>}
     </section>}
     <h3 className="font-semibold">Locker merchandise</h3>
     <p className="text-sm text-muted-foreground">Add products you found for this player. Links open the seller website. Price labels are optional and entered manually.</p>

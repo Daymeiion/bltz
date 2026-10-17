@@ -96,3 +96,13 @@ it("protects dismissals, validates input and never writes curated articles", asy
   mock.rpc.mockImplementation(async name => name === "dismiss_preview_news_article" ? { error: { code: "PT409" } } : { data: true });
   expect((await dismiss(request(body), params)).status).toBe(409);
 });
+it("validates bulk news selection and dismisses through one RPC", async () => {
+  const urls=["https://press.example.com/1","https://press.example.com/2"];
+  for(const bad of [[],[urls[0],urls[0]],Array(201).fill(urls[0]),["javascript:alert(1)"]])expect((await dismiss(request({revision:1,version:1,urls:bad}),params)).status).toBe(400);
+  expect((await dismiss(request({revision:1,version:1,url:urls[0],urls}),params)).status).toBe(400);
+  const response=await dismiss(request({revision:1,version:1,urls}),params);expect(response.status).toBe(200);
+  expect(mock.rpc).toHaveBeenCalledWith("dismiss_preview_news_articles",{p_preview_id:id,p_revision:1,p_version:1,p_urls:urls});
+  expect(mock.enrich).not.toHaveBeenCalled();
+  mock.rpc.mockImplementation(async name=>name==="dismiss_preview_news_articles"?{error:{code:"PT409"}}:{data:true});
+  expect((await dismiss(request({revision:1,version:1,urls}),params)).status).toBe(409);
+});
