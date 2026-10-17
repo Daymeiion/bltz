@@ -1,4 +1,4 @@
-// Scoped official production schema after migration 20261017073440; includes pending migration 20261017075740.
+// Generated from Supabase production schema after migration 20261017075740.
 // Scoped projection of official `supabase gen types --schema public` output.
 import type { Json } from "./database.generated";
 export type MerchandiseReviewDatabase = { public: { Tables: {
@@ -53,8 +53,6 @@ preview_merchandise_searches: {
         ]
       }
 }; Views: Record<string, never>; Functions: {
-restore_preview_merchandise_results: { Args: { p_preview_id: string; p_revision: number; p_version: number; p_identity_key: string; p_urls: string[] }; Returns: Json }
-
 save_preview_merchandise_search: {
         Args: {
           p_identity_key: string
@@ -93,6 +91,16 @@ restore_preview_merchandise_result: {
           p_preview_id: string
           p_revision: number
           p_url: string
+          p_version: number
+        }
+        Returns: Json
+      }
+restore_preview_merchandise_results: {
+        Args: {
+          p_identity_key: string
+          p_preview_id: string
+          p_revision: number
+          p_urls: string[]
           p_version: number
         }
         Returns: Json
