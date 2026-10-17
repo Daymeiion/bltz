@@ -1,4 +1,6 @@
 import { act } from "react";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { createRoot, type Root } from "react-dom/client";
 import { beforeEach, afterEach, expect, it, vi } from "vitest";
 import PreviewLockerForm from "@/app/admin/preview-lockers/PreviewLockerForm";
@@ -66,7 +68,23 @@ it("reads a CSV file locally on the new builder and rejects invalid or oversized
   expect(fetcher).not.toHaveBeenCalled();
   Object.defineProperty(node, "files", { configurable: true, value: [new File(["x".repeat(100001)], "nfl.csv")] });
   await act(async () => node.dispatchEvent(new Event("change", { bubbles: true })));
-  expect(section().textContent).toContain("100 KB or smaller");
+  expect(section().textContent).toContain("100 KB (100,000 bytes)");
+});
+it("reads the actual 27 KB Sports Reference Excel export through the NFL file picker", async () => {
+  await act(async () => root.render(<PreviewLockerForm />));
+  const node = host.querySelector<HTMLInputElement>('[aria-label="Upload NFL CSV"]')!;
+  const html = readFileSync(path.resolve("tests/preview-lockers/antoine-cason-defense.xls"), "utf8");
+  const file = new File([html], "sportsref_download (2).xls", { type: "application/vnd.ms-excel" });
+  expect(file.size).toBe(27063);
+  Object.defineProperty(node, "files", { configurable: true, value: [file] });
+  await act(async () => { node.dispatchEvent(new Event("change", { bubbles: true })); });
+  await vi.waitFor(async () => { await act(async () => {}); expect(host.querySelector<HTMLTextAreaElement>('[aria-label="NFL statistics CSV"]')!.value).toContain("Season,Age,Team"); });
+  await click("Read CSV columns");
+  await fill("NFL player source URL", "https://www.pro-football-reference.com/players/C/CasoAn99.htm");
+  await click("Review NFL statistics");
+  expect(section().textContent).toContain("8 season/team rows");
+  expect(section().textContent).toContain("PFR career totals included");
+  expect(fetcher).not.toHaveBeenCalled();
 });
 it("invalidates review when the source changes and keeps invalid statistics out of the draft", async () => {
   await act(async () => root.render(<PreviewLockerForm record={record()} />));

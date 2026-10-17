@@ -10,6 +10,7 @@ import { StructuredStats } from "@/components/player/StructuredStats";
 import { CSV_LIMIT, cfbCategories, columnOptions, combineCfbImports, inspectCsv, reviewCsv, type CfbCategory, type CfbImport, type CsvTable } from "@/lib/preview-lockers/cfb-csv";
 import { canSaveStatsImports } from "@/lib/source-policy/preview-stats";
 import { combinePfrImports, inspectPfrCsv, reviewPfrCsv, type PfrImport } from "@/lib/preview-lockers/pfr-csv";
+import { readStatsFile } from "@/lib/preview-lockers/stats-file";
 
 type StatsCsvTable = CfbImport & Pick<PfrImport, "careerTotals">;
 export default function StatsCsvImport({ athleteName, value, onChange, league = "college", disabled = false }: { athleteName: string; value: StatsCsvTable[]; onChange: (value: StatsCsvTable[]) => void; league?: "college" | "nfl"; disabled?: boolean }) {
@@ -36,13 +37,13 @@ export default function StatsCsvImport({ athleteName, value, onChange, league = 
     <div><p className="text-sm text-muted-foreground">{pro ? <>Import regular-season totals for {athleteName || "this player"} from their Pro Football Reference player page. Use Export Data → Get table as CSV, then upload or paste one table at a time. Include the career summary to display PFR’s reported totals separately from season sums. Team summaries and average rows are skipped; game logs and postseason tables are outside this import.</> : <>College CSV import is paused for new data for {athleteName || "this player"}. Sports Reference is link-only: previously saved tables are preserved and can be removed. Existing manual statistics fields remain available. A reviewed CSV source is required before enabling new imports.</>}</p></div>
     <label className="grid gap-2 text-sm font-medium">{sourceLabel}<Input aria-label={sourceLabel} type="url" maxLength={2048} value={source} onChange={e => { setSource(e.target.value); setReview(null); setApproved(false); }} placeholder={pro ? "https://www.pro-football-reference.com/players/B/BradTo00.htm" : "https://www.sports-reference.com/cfb/players/player-name-1.html"} /></label>
     <label className="grid gap-2 text-sm font-medium">Table category<select aria-label={pro ? "NFL table category" : "Table category"} className="rounded border bg-background p-2" value={category} onChange={e => { setCategory(e.target.value as CfbCategory); reset(); }}>{cfbCategories.map(item => <option key={item} value={item}>{item}</option>)}</select></label>
-    <label className="grid gap-2 text-sm font-medium">Upload CSV<Input aria-label={`Upload ${label} CSV`} type="file" accept=".csv,text/csv" disabled={reading} onChange={async e => {
+    <label className="grid gap-2 text-sm font-medium">{pro ? "Upload CSV or Sports Reference Excel export" : "Upload CSV"}<Input aria-label={`Upload ${label} CSV`} type="file" accept={pro ? ".csv,text/csv,.xls,application/vnd.ms-excel" : ".csv,text/csv"} disabled={reading} onChange={async e => {
       const file = e.target.files?.[0]; e.target.value = ""; if (!file) return;
       reset();
-      if (!/\.csv$/i.test(file.name) || file.size > CSV_LIMIT) { setError("Choose a .csv file of 100 KB or smaller."); return; }
       setReading(true);
-      try { setCsv(await file.text()); } catch (cause) { fail(cause); } finally { setReading(false); }
+      try { setCsv(await readStatsFile(file, pro)); setMessage(`Loaded ${file.name} (${(file.size / 1000).toFixed(1)} KB).${/\.xls$/i.test(file.name.trim()) ? " Converted locally to CSV." : ""} Read CSV columns to continue.`); } catch (cause) { fail(cause); } finally { setReading(false); }
     }} /></label>
+    {pro && <p className="text-xs text-muted-foreground">Accepts CSV and Sports Reference’s .xls table downloads, up to 100 KB. Excel table exports are converted locally to CSV for the same column-mapping and review steps. Other Excel workbooks must be exported as CSV first.</p>}
     <label className="grid gap-2 text-sm font-medium">Or paste CSV<Textarea aria-label={pro ? "NFL statistics CSV" : "College statistics CSV"} rows={6} value={csv} maxLength={CSV_LIMIT} disabled={reading} onChange={e => { setCsv(e.target.value); reset(); }} placeholder={pro ? "Season,Team,G,GS,Sk,Comb,Solo,Ast" : "Year,School,G,Solo,Ast,Tot,Sk"} /></label>
     <Button type="button" variant="outline" disabled={reading || !csv.trim()} onClick={() => { reset(); try { const result = inspect(csv, category); setTable(result); setMapping(result.mapping); } catch (cause) { fail(cause); } }}>Read CSV columns</Button>
     {table && <div className="space-y-3"><p className="text-sm">Confirm what each column means. Unmapped columns are skipped. Map repeated headers such as Yds or TD to their correct category.</p>
