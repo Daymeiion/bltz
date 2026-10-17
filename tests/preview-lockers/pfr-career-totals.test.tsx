@@ -43,13 +43,15 @@ describe("PFR source-provided career summaries", () => {
     const host = render("Season,Team,G,Sk,PD,FF\n2024,AAA,17,2,,3\nCareer,,17,2,8,");
     const headings = [...host.querySelectorAll("thead tr:last-child th")];
     const rows = host.querySelectorAll("tfoot tr");
-    const pd = 3 + headings.findIndex(cell => cell.getAttribute("aria-label") === "Passes defended");
-    const ff = 3 + headings.findIndex(cell => cell.getAttribute("aria-label") === "Forced fumbles");
+    const pd = headings.findIndex(cell => cell.getAttribute("aria-label") === "Passes defended");
+    const ff = headings.findIndex(cell => cell.getAttribute("aria-label") === "Forced fumbles");
+    expect(pd).toBeGreaterThanOrEqual(3);
+    expect(ff).toBeGreaterThanOrEqual(3);
     expect(rows[0].children[pd].textContent).toBe("8");
     expect(rows[1].children[pd].textContent).toBe("—");
     expect(rows[0].children[ff].textContent).toBe("—");
     expect(rows[1].children[ff].textContent).toBe("3");
-    expect(host.textContent).toContain("missing season values remain unknown");
+    expect(host.textContent).not.toContain("missing season values remain unknown");
   });
 
   it("does not add average rows or team summaries to career values", () => {

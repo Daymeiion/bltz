@@ -19,11 +19,22 @@ describe("stored statistics rendering", () => {
     expect(html).toContain("College football season statistics have not been added yet.");
     expect(html).toContain("NFL season statistics");
   });
-  it("renders one shared NFL/NCAA view with provenance and separate phases", () => {
+  it("renders shared NFL/NCAA tables without import metadata or grouped header rows", () => {
     const seasons = [{ year: 2023, seasonType: "REG" as const, team: "Test Team", providerTeamId: "team", position: "DE", gamesPlayed: 17, gamesStarted: 16, statistics: { sacks: 7.5 } }];
     const html = renderToStaticMarkup(<StructuredStats records={[{ league: "nfl", source: "Sportradar", syncedAt: "2026-09-10", seasons }, { league: "ncaafb", source: "Sportradar", syncedAt: "2026-09-10", seasons }]} />);
     expect(html).toContain("NCAA Football"); expect(html).toContain("NFL"); expect(html).toContain("7.5");
-    expect(html).toContain("Source: Sportradar"); expect(html).not.toContain("Passing yards");
+    expect(html).not.toContain("Source: Sportradar"); expect(html).not.toContain("Passing yards");
+    const host = document.createElement("div");
+    host.innerHTML = html;
+    expect(host.querySelectorAll("table")).toHaveLength(2);
+    for (const table of host.querySelectorAll("table")) {
+      expect(table.querySelectorAll("thead tr")).toHaveLength(1);
+      expect(table.querySelector('th[scope="colgroup"], th[rowspan]')).toBeNull();
+      const headings = [...table.querySelectorAll("thead th")];
+      expect(headings.map(cell => cell.textContent)).toEqual(["Year / team", "GP", "GS", "Sk"]);
+      for (const row of table.querySelectorAll("tbody tr, tfoot tr")) expect(row.children).toHaveLength(headings.length);
+    }
+    expect(host.textContent).not.toMatch(/Column headings use abbreviations|Totals require a reported value/);
   });
   it("returns empty stats on storage failure without an external request", async () => {
     const fetch = vi.spyOn(globalThis, "fetch");

@@ -44,13 +44,13 @@ describe("Antoine Cason's pasted defense CSV", () => {
     expect(() => review(",,,Def Interceptions,Def Interceptions\nSeason,Team,G,Int,Lng\n2014,2TM,14,2,90\n2014,CAR,12,2,80\n2014,BAL,2,0,0")).toThrow("maximum");
   });
 
-  it("shows categories and games totals, with linked PFR attribution after the table", () => {
+  it("aligns a single header row with season and career totals, retaining linked PFR attribution", () => {
     const [record] = combinePfrImports([review().imported]);
     const host = document.createElement("div");
     host.innerHTML = renderToStaticMarkup(<StructuredStats records={[record]} />);
     const table = host.querySelector("table")!;
-    expect([...table.querySelectorAll('th[scope="colgroup"]')].map(cell => cell.textContent)).toEqual(["INT / PD", "FUM", "TKL / SK", "AV"]);
-    expect([...table.querySelectorAll('th[scope="colgroup"]')].map(cell => cell.getAttribute("aria-label"))).toEqual(["Interceptions", "Fumbles", "Tackles & pressure", "PFR metric"]);
+    expect(table.querySelectorAll("thead tr")).toHaveLength(1);
+    expect(table.querySelector('th[scope="colgroup"], th[rowspan]')).toBeNull();
     expect(table.querySelector('th[aria-label="Longest interception return"]')?.textContent).toBe("Lng");
     expect(table.querySelector('th[aria-label="Interception return yards"]')?.getAttribute("title")).toBe("Interception return yards");
     const totals = table.querySelector("tfoot tr")!;
@@ -60,7 +60,8 @@ describe("Antoine Cason's pasted defense CSV", () => {
     expect(seasonTotals.firstElementChild?.textContent).toBe("Season sum");
     const headings = [...table.querySelectorAll("thead tr:last-child th")];
     for (const [label, reported] of [["Combined tackles", "381"], ["Passes defended", "63"]]) {
-      const index = 3 + headings.findIndex(cell => cell.getAttribute("aria-label") === label);
+      const index = headings.findIndex(cell => cell.getAttribute("aria-label") === label);
+      expect(index).toBeGreaterThanOrEqual(3);
       expect(totals.children[index].textContent).toBe(reported);
       expect(seasonTotals.children[index].textContent).toBe("—");
     }
@@ -68,8 +69,10 @@ describe("Antoine Cason's pasted defense CSV", () => {
     expect(sourceLink.textContent).toBe("Pro-Football-Reference.com");
     expect(sourceLink.parentElement?.textContent).toContain("Statistics courtesy of");
     expect(table.compareDocumentPosition(sourceLink) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(host.textContent).toContain("Longest returns use the maximum");
-    expect(host.textContent).toContain("Approximate Value (AV)");
+    for (const row of table.querySelectorAll("tbody tr, tfoot tr")) expect(row.children).toHaveLength(headings.length);
+    const visibleParagraphs = [...host.querySelectorAll("p")].map(paragraph => paragraph.textContent).join(" ");
+    expect(visibleParagraphs).not.toMatch(/Source:|Imported|Column headings use abbreviations|PFR career uses|Longest returns use|Approximate Value/);
+    expect(table.querySelector('th[aria-label="Approximate Value (AV)"]')?.textContent).toBe("AV");
   });
 
   it("does not invent provider attribution, games totals, or negative non-yard counts", () => {
