@@ -1,11 +1,11 @@
 import { CSV_LIMIT, csvRows } from "./cfb-csv";
 
 /** Read locally; only the reviewed statistics, never the uploaded file, can be saved. */
-export async function readStatsFile(file: File, allowPfrExcel = false): Promise<string> {
+export async function readStatsFile(file: File, allowSportsReferenceExcel = false): Promise<string> {
   const name = file.name.trim();
   const csv = /\.csv$/i.test(name);
-  const pfrExcel = allowPfrExcel && /\.xls$/i.test(name);
-  if (!csv && !pfrExcel) throw new Error(allowPfrExcel
+  const referenceExcel = allowSportsReferenceExcel && /\.xls$/i.test(name);
+  if (!csv && !referenceExcel) throw new Error(allowSportsReferenceExcel
     ? "Choose a .csv file or a Sports Reference .xls table export. For other Excel files, export as CSV first."
     : "Choose a .csv file. For Excel files, export as CSV first.");
   if (file.size > CSV_LIMIT) throw new Error(`The selected file is ${(file.size / 1000).toFixed(1)} KB. The limit is 100 KB (100,000 bytes).`);

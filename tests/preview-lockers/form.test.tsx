@@ -44,6 +44,31 @@ it("loads a local CSV file without uploading it to an external service", async (
   await click("Read CSV columns");
   expect(host.querySelector('[aria-label="Map column 4: Sk"]')).not.toBeNull();
 });
+it("converts a college Sports Reference XLS export locally before mapping and review", async () => {
+  await act(async () => root.render(<PreviewLockerForm />));
+  const input = host.querySelector<HTMLInputElement>('[aria-label="Upload college CSV"]')!;
+  expect(input.accept).toContain(".xls");
+  const html = '<html><body><table><tr><th>Year</th><th>School</th><th>G</th><th>Solo</th><th>Ast</th><th>Tot</th><th>Sk</th></tr><tr><td>2006</td><td>Fixture &amp; State</td><td>12</td><td>20</td><td>10</td><td>30</td><td>2.5</td></tr><tr><td>2007</td><td>Fixture &amp; State</td><td>11</td><td>22</td><td>12</td><td>34</td><td>3</td></tr></table></body></html>';
+  Object.defineProperty(input, "files", { configurable: true, value: [new File([html], "sportsref_download.xls", { type: "application/vnd.ms-excel" })] });
+  await act(async () => input.dispatchEvent(new Event("change", { bubbles: true })));
+  await vi.waitFor(async () => { await act(async () => {}); expect(host.querySelector<HTMLTextAreaElement>('[aria-label="College statistics CSV"]')!.value).toContain("Fixture & State"); });
+  expect(host.textContent).toContain("Converted locally to CSV");
+  await fill("Player source URL", "https://www.sports-reference.com/cfb/players/fixture-player-1.html");
+  await click("Read CSV columns"); await click("Review college statistics");
+  expect(host.textContent).toContain("2 season/team rows");
+  expect([...host.querySelectorAll<HTMLButtonElement>("button")].find(button => button.textContent === "Add reviewed statistics to draft")!.disabled).toBe(true);
+  expect(fetcher).not.toHaveBeenCalled();
+});
+it("distinguishes unsupported college file formats from oversized XLS exports", async () => {
+  await act(async () => root.render(<PreviewLockerForm />));
+  const input = host.querySelector<HTMLInputElement>('[aria-label="Upload college CSV"]')!;
+  for (const [file, message] of [[new File(["binary workbook"], "college.xls"), "not a Sports Reference table export"], [new File(["x".repeat(100001)], "college.xls"), "100 KB (100,000 bytes)"], [new File(["workbook"], "college.xlsx"), "export as CSV first"]] as const) {
+    Object.defineProperty(input, "files", { configurable: true, value: [file] });
+    await act(async () => input.dispatchEvent(new Event("change", { bubbles: true })));
+    expect(host.textContent).toContain(message);
+  }
+  expect(fetcher).not.toHaveBeenCalled();
+});
 it("retains manually entered biography and photo when discovery returns manual fallback", async () => {
   await act(async () => root.render(<PreviewLockerForm />));
   await fill("Full name", "Synthetic Preview"); await fill("Biography", "Manual biography"); await click("Add photo"); await fill("Photo 1 title", "Manual photo"); await fill("Photo 1 url", "https://example.com/manual.jpg");

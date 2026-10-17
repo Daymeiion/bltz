@@ -27,7 +27,7 @@ it("does not accept binary workbooks, multiple tables or excessive table dimensi
   await expect(readStatsFile(new File([`<table>${"<tr><td>x</td></tr>".repeat(1001)}</table>`], "nfl.xls"), true)).rejects.toThrow("Too many statistics rows");
   await expect(readStatsFile(new File([`<table><tr>${"<td>x</td>".repeat(101)}</tr></table>`], "nfl.xls"), true)).rejects.toThrow("exceeds 100 columns");
 });
-it("keeps the paused college importer CSV-only and does not read or fetch rejected files", async () => {
+it("keeps CSV-only callers opt-in and does not read or fetch rejected files", async () => {
   const file = new File(["<table></table>"], "college.xls");
   const read = vi.spyOn(file, "text");
   await expect(readStatsFile(file)).rejects.toThrow("Choose a .csv file");
