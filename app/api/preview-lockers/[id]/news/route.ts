@@ -44,7 +44,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   } catch (error) { return failure(error); }
 }
 
-/** Dismissal only affects the private saved review queue. */
+/** Review changes only affect the private saved review queue. */
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { client } = await previewAdmin(); const { id } = await params;
@@ -57,7 +57,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (row.revision !== input.data.revision) throw new PreviewError("preview_conflict", 409);
     const db = client as SupabaseClient<NewsReviewDatabase>;
     const args = { p_preview_id: id, p_revision: row.revision, p_version: input.data.version };
-    const stored = "action" in input.data ? await db.rpc("restore_preview_news_article", { ...args, p_url: input.data.url, p_identity_key: previewIdentityKey(row) })
+    const stored = "action" in input.data ? ("urls" in input.data
+      ? await db.rpc("restore_preview_news_articles", { ...args, p_urls: input.data.urls, p_identity_key: previewIdentityKey(row) })
+      : await db.rpc("restore_preview_news_article", { ...args, p_url: input.data.url, p_identity_key: previewIdentityKey(row) }))
       : "urls" in input.data ? await db.rpc("dismiss_preview_news_articles", { ...args, p_urls: input.data.urls })
       : await db.rpc("dismiss_preview_news_article", { ...args, p_url: input.data.url });
     if (stored.error) throw new PreviewError(stored.error.code === "PT422" ? "news_review_full" : stored.error.code === "PT409" ? "preview_conflict" : "news_review_unavailable", stored.error.code === "PT422" ? 422 : stored.error.code === "PT409" ? 409 : 503);

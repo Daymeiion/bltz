@@ -107,10 +107,21 @@ it("validates bulk news selection and dismisses through one RPC", async () => {
   expect((await dismiss(request({revision:1,version:1,urls}),params)).status).toBe(409);
 });
 
-it("restores only a single article using server-derived identity and bounded pagination",async()=>{
+it("restores articles using server-derived identity and bounded pagination",async()=>{
  expect((await dismiss(request({revision:1,version:1,action:"restore",url:"https://press.example.com/one"}),params)).status).toBe(200);
  expect(mock.rpc).toHaveBeenCalledWith("restore_preview_news_article",{p_preview_id:id,p_revision:1,p_version:1,p_identity_key:"a".repeat(64),p_url:"https://press.example.com/one"});
  expect((await readNews(new Request("http://localhost/news?dismissedOffset=200"),params)).status).toBe(200);expect(queue.read).toHaveBeenLastCalledWith(expect.anything(),id,row,200);
  expect((await readNews(new Request("http://localhost/news?dismissedOffset=-1"),params)).status).toBe(400);
- expect((await dismiss(request({revision:1,version:1,action:"restore",urls:["https://press.example.com/one"]}),params)).status).toBe(400);
+ expect((await dismiss(request({revision:1,version:1,action:"restore",urls:[]}),params)).status).toBe(400);
+});
+
+it("routes a unique restore batch to one RPC with the saved identity and reports atomic capacity/conflict failures",async()=>{
+ const urls=["https://press.example.com/one","https://press.example.com/two"];
+ expect((await dismiss(request({revision:1,version:1,action:"restore",urls}),params)).status).toBe(200);
+ expect(mock.rpc).toHaveBeenCalledWith("restore_preview_news_articles",{p_preview_id:id,p_revision:1,p_version:1,p_identity_key:"a".repeat(64),p_urls:urls});
+ for(const values of [[],[urls[0],urls[0]],[null],Array.from({length:201},(_,n)=>`https://press.example.com/${n}`)])expect((await dismiss(request({revision:1,version:1,action:"restore",urls:values}),params)).status).toBe(400);
+ mock.rpc.mockImplementation(async(name:string)=>name==="is_internal_admin"?{data:true}:{error:{code:"PT422"}});
+ expect((await dismiss(request({revision:1,version:1,action:"restore",urls}),params)).status).toBe(422);
+ mock.rpc.mockImplementation(async(name:string)=>name==="is_internal_admin"?{data:true}:{error:{code:"PT409"}});
+ expect((await dismiss(request({revision:1,version:1,action:"restore",urls}),params)).status).toBe(409);
 });

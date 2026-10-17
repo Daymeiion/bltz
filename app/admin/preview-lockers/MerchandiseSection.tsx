@@ -9,12 +9,12 @@ import MerchandiseResultCard from "./MerchandiseResults";
 import DismissedReviewList from "./DismissedReviewList";
 import BulkReviewControls from "./BulkReviewControls";
 
-export default function MerchandiseSection({ items, onChange, onSearch, canSearch, searching, result, resultKey, searchError, identityCurrent, playerName, onDismiss, onDismissSelected, onRestore, dismissedItems = [], searchedAt, savingReview = false, busy = false }: {
+export default function MerchandiseSection({ items, onChange, onSearch, canSearch, searching, result, resultKey, searchError, identityCurrent, playerName, onDismiss, onDismissSelected, onRestore, onRestoreSelected, dismissedItems = [], searchedAt, savingReview = false, busy = false }: {
   items: PreviewContent["merchandise"]; onChange: (items: PreviewContent["merchandise"]) => void;
   onSearch: () => void; canSearch: boolean; searching: boolean; result: MerchandiseResult | null; resultKey: string;
   searchError: string; identityCurrent: boolean; playerName: string; onDismiss: (url: string) => void;
   searchedAt?: string; savingReview?: boolean;
-  onRestore?: (url: string) => void; dismissedItems?: MerchandiseResult["items"];
+  onRestoreSelected?: (urls: string[]) => Promise<boolean>; onRestore?: (url: string) => void; dismissedItems?: MerchandiseResult["items"];
   onDismissSelected: (urls: string[]) => Promise<boolean>; busy?: boolean;
 }) {
   const update = (id: string, patch: Partial<typeof items[number]>) => onChange(items.map(item => item.id === id ? { ...item, ...patch } : item));
@@ -51,7 +51,7 @@ export default function MerchandiseSection({ items, onChange, onSearch, canSearc
           onAdd={() => add([item.productUrl])} onDismiss={() => onDismiss(item.productUrl)} />)}
       </BulkReviewControls>}
     </section>}
-    <DismissedReviewList kind="listings" items={dismissedItems.map(item => ({ url: item.productUrl, title: item.title, source: item.retailer }))} busy={queueBusy} canRestore={identityCurrent && !!onRestore} onRestore={url => onRestore?.(url)} />
+    <DismissedReviewList reviewKey={resultKey} onRestoreSelected={onRestoreSelected} kind="listings" items={dismissedItems.map(item => ({ url: item.productUrl, title: item.title, source: item.retailer }))} busy={queueBusy} canRestore={identityCurrent && !!onRestore} onRestore={url => onRestore?.(url)} />
     <h3 className="font-semibold">Locker merchandise</h3>
     <p className="text-sm text-muted-foreground">Add products you found for this player. Links open the seller website. Price labels are optional and entered manually.</p>
     {items.map((item, index) => <details key={item.id} open className="rounded-lg border p-4">

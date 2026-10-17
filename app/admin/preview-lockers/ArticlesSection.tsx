@@ -10,12 +10,12 @@ import NewsResultCard from "./NewsResults";
 import DismissedReviewList from "./DismissedReviewList";
 import BulkReviewControls from "./BulkReviewControls";
 
-export default function ArticlesSection({ articles, edits, onChange, onReload, onRefresh, canLoad, dirty, saved, review, reviewKey, identityCurrent = true, playerName, onDismiss, onDismissSelected, onRestore, onDismissedPage, busy = false, reviewError = "" }: {
+export default function ArticlesSection({ articles, edits, onChange, onReload, onRefresh, canLoad, dirty, saved, review, reviewKey, identityCurrent = true, playerName, onDismiss, onDismissSelected, onRestore, onRestoreSelected, onDismissedPage, busy = false, reviewError = "" }: {
   articles: PlayerArticle[]; edits: ArticleEdit[]; onChange: (items: ArticleEdit[]) => void;
   onReload: () => void; onRefresh: () => void; canLoad: boolean; dirty: boolean; saved: boolean;
   review: NewsReview | null; reviewKey: string; identityCurrent?: boolean; playerName: string;
   onDismiss: (url: string) => void; busy?: boolean; reviewError?: string;
-  onRestore?: (url: string) => void; onDismissedPage?: (offset: number) => void;
+  onRestoreSelected?: (urls: string[]) => Promise<boolean>; onRestore?: (url: string) => void; onDismissedPage?: (offset: number) => void;
   onDismissSelected: (urls: string[]) => Promise<boolean>;
 }) {
   const update = (id: string, patch: Partial<ArticleEdit>) => onChange(edits.map(item => item.id === id ? { ...item, ...patch } : item));
@@ -60,7 +60,7 @@ export default function ArticlesSection({ articles, edits, onChange, onReload, o
           onAdd={() => add([article.article_url])} onDismiss={() => onDismiss(article.article_url)} />)}
       </BulkReviewControls>}
     </section>
-    <DismissedReviewList kind="articles" items={(review?.dismissed_articles ?? []).map(article => ({ url: article.article_url, title: article.headline, source: article.publisher }))} busy={busy} canRestore={identityCurrent && !!onRestore} onRestore={url => onRestore?.(url)} offset={review?.dismissed_offset} hasMore={review?.dismissed_has_more} onPage={onDismissedPage} canPage={canLoad} />
+    <DismissedReviewList reviewKey={reviewKey} onRestoreSelected={onRestoreSelected} kind="articles" items={(review?.dismissed_articles ?? []).map(article => ({ url: article.article_url, title: article.headline, source: article.publisher }))} busy={busy} canRestore={identityCurrent && !!onRestore} onRestore={url => onRestore?.(url)} offset={review?.dismissed_offset} hasMore={review?.dismissed_has_more} onPage={onDismissedPage} canPage={canLoad} />
     <h3 className="font-semibold">Locker articles</h3>
     {!articles.length && <p className="text-sm text-muted-foreground">No saved matching articles loaded.</p>}
     {articles.map((article, index) => {

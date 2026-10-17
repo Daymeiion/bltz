@@ -57,7 +57,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   } catch (error) { return failure(error); }
 }
 
-/** A dismissal changes only the saved Admin review queue. */
+/** Review changes affect only the saved Admin review queue. */
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { client } = await previewAdmin(); const { id } = await params;
@@ -72,7 +72,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       if (!target.data) throw new PreviewError("preview_not_found", 404);
       restoreIdentity = previewIdentityKey(previewRecord.parse(target.data));
     }
-    const stored = "action" in input.data ? await db.rpc("restore_preview_merchandise_result", { ...args, p_url: input.data.url, p_identity_key: restoreIdentity! })
+    const stored = "action" in input.data ? ("urls" in input.data
+      ? await db.rpc("restore_preview_merchandise_results", { ...args, p_urls: input.data.urls, p_identity_key: restoreIdentity! })
+      : await db.rpc("restore_preview_merchandise_result", { ...args, p_url: input.data.url, p_identity_key: restoreIdentity! }))
       : "urls" in input.data ? await db.rpc("dismiss_preview_merchandise_results", { ...args, p_urls: input.data.urls })
       : await db.rpc("dismiss_preview_merchandise_result", { ...args, p_url: input.data.url });
     if (stored.error) throw reviewError(stored.error.code);

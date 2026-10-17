@@ -100,3 +100,12 @@ it("restores only a single saved listing using server-derived identity",async()=
  expect(m.rpc).toHaveBeenCalledWith("restore_preview_merchandise_result",{p_preview_id:id,p_revision:3,p_version:1,p_identity_key:"identity",p_url:"https://shop.example.com/card"});
  expect(m.discover).not.toHaveBeenCalled();
 });
+
+it("routes a unique restore batch to one RPC without discovery or caller identity overrides",async()=>{
+ const urls=["https://shop.example.com/one","https://shop.example.com/two"];
+ m.rpc.mockImplementation(async(name:string)=>({data:name==="restore_preview_merchandise_results"?{result:{items:[],status:"complete",candidates:0,rejected:0,errors:[]},version:2,searched_at:"2026-10-17T00:00:00Z",identity_key:"a".repeat(64),dismissed_urls:[]}:true}));
+ expect((await PATCH(request({revision:3,version:1,action:"restore",urls}),params)).status).toBe(200);
+ expect(m.rpc).toHaveBeenCalledWith("restore_preview_merchandise_results",{p_preview_id:id,p_revision:3,p_version:1,p_identity_key:"identity",p_urls:urls});
+ for(const values of [[],[urls[0],urls[0]],[null],Array.from({length:201},(_,n)=>`https://shop.example.com/${n}`)])expect((await PATCH(request({revision:3,version:1,action:"restore",urls:values}),params)).status).toBe(400);
+ expect((await PATCH(request({revision:3,version:1,action:"restore",urls,identity_key:"caller"}),params)).status).toBe(400);expect(m.discover).not.toHaveBeenCalled();
+});
