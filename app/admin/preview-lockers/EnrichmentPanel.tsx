@@ -27,7 +27,7 @@ export default function EnrichmentPanel({ id, initialReport, stale }: { id: stri
     <div role="status" aria-live="polite" className="space-y-2 text-sm text-white/70">
       {report ? <><p>Status: {report.status}{isStale ? " · preview edited since last enrichment" : ""}</p>
         <p>Latest attempt — Awards: {report.awards_normalized}/{report.awards_discovered} mapped. News: {report.news_status ?? report.status}.</p>
-        {report.last_news_success ? <p>Last successful news discovery ({report.last_news_success.updated_at}): {report.last_news_success.article_candidates} candidates, {report.last_news_success.articles_accepted} accepted, {report.last_news_success.articles_rejected} rejected, {report.last_news_success.article_duplicates} duplicates.</p> : <p>No successful news discovery saved yet.</p>}
+        {report.last_news_success ? <p>Last successful news discovery ({report.last_news_success.updated_at}): {report.last_news_success.article_candidates} candidates, {report.last_news_success.articles_accepted} matched, {report.last_news_success.articles_rejected} rejected, {report.last_news_success.article_duplicates} duplicates.</p> : <p>No successful news discovery saved yet.</p>}
         {(report.news_status === "unavailable" || report.news_status === "skipped") && <p>Previous matching articles are retained.</p>}
         {!!report.unmapped_awards.length && <p>Unmapped awards: {report.unmapped_awards.join("; ")}</p>}
         <p>Last attempt: <time dateTime={report.updated_at}>{report.updated_at}</time></p>
@@ -35,6 +35,6 @@ export default function EnrichmentPanel({ id, initialReport, stale }: { id: stri
       {report?.errors.map(code => searchErrorMessage(code)).filter(Boolean).map(message => <p key={message}>{message}</p>)}
       {error && <p role="alert">{error}</p>}
     </div>
-    <p className="text-xs text-white/50">Save builder edits before refreshing. Discovered awards remain unverified. News links open the publisher; article text and images are not copied.</p>
+    <p className="text-xs text-white/50">Save builder edits before refreshing. New news articles are saved for review in Media; reload saved articles there to review and add them to the draft. Discovered awards remain unverified. News links open the publisher; article text and images are not copied.</p>
   </section>;
 }

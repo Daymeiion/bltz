@@ -1,11 +1,13 @@
 // @vitest-environment node
 import { beforeEach, expect, it, vi } from "vitest";
 const mock = vi.hoisted(() => ({ auth: vi.fn(), rpc: vi.fn(), from: vi.fn(), insert: vi.fn(), eq: vi.fn(), select: vi.fn(), single: vi.fn(), maybeSingle: vi.fn(), enrich: vi.fn(), candidates: vi.fn(), service: vi.fn(), read: vi.fn() }));
+const queue = vi.hoisted(() => ({ read: vi.fn() }));
+vi.mock("@/lib/preview-lockers/news-review-server", () => ({ readNewsReview: queue.read }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: async () => ({ auth: { getUser: mock.auth }, rpc: mock.rpc, from: mock.from }) }));
 vi.mock("@/lib/preview-lockers/enrichment", () => ({ tryEnrichSavedPreview: mock.enrich, readPreviewNewsCandidates: mock.candidates, readPreviewEnrichment: mock.read }));
 vi.mock("@/lib/supabase/service", () => ({ createServiceClient: mock.service }));
 import { POST as create } from "@/app/api/preview-lockers/route";
-import { GET as readNews, POST as refresh } from "@/app/api/preview-lockers/[id]/news/route";
+import { GET as readNews, POST as refresh, PATCH as dismiss } from "@/app/api/preview-lockers/[id]/news/route";
 import { previewContent } from "@/lib/preview-lockers/validation";
 const id = "00000000-0000-4000-8000-000000000001";
 const content = previewContent.parse({ slug: "fixture-athlete", full_name: "Fixture Athlete" });
@@ -20,12 +22,13 @@ beforeEach(() => {
   mock.single.mockResolvedValue({ data: row }); mock.maybeSingle.mockResolvedValue({ data: row });
   mock.enrich.mockResolvedValue({ status: "complete", errors: [] });
   mock.read.mockResolvedValue({ articles: [{ headline: "Saved matching article" }] });
+  queue.read.mockResolvedValue({ articles: [], version: 1, searched_at: null, identity_key: "a".repeat(64) });
 });
 
 it("returns this saved preview's source articles to an authorized admin without discovery", async () => {
   const response = await readNews(new Request("http://localhost/api/preview-lockers/news"), params);
   expect(response.status).toBe(200);
-  expect(await response.json()).toEqual({ articles: [{ headline: "Saved matching article" }], revision: 1 });
+  expect(await response.json()).toEqual({ articles: [{ headline: "Saved matching article" }], revision: 1, review: { articles: [], version: 1, searched_at: null, identity_key: "a".repeat(64) } });
   expect(mock.read).toHaveBeenCalledWith(expect.anything(), id, row, 1);
   expect(mock.enrich).not.toHaveBeenCalled(); expect(mock.service).not.toHaveBeenCalled();
   expect(response.headers.get("Cache-Control")).toBe("private, no-store");
@@ -69,4 +72,27 @@ it("preserves saved news when historical candidate retrieval fails", async () =>
   mock.candidates.mockRejectedValue(new Error("saved_news_unavailable"));
   expect((await refresh(request({}), params)).status).toBe(503);
   expect(mock.enrich).not.toHaveBeenCalled();
+});
+it("requires the supplied saved revision before spending discovery budget", async () => {
+  expect((await refresh(request({ revision: 2 }), params)).status).toBe(409);
+  expect(mock.enrich).not.toHaveBeenCalled(); expect(mock.candidates).not.toHaveBeenCalled();
+});
+it("returns safe full-queue and stale-search statuses without claiming a save", async () => {
+  mock.enrich.mockResolvedValue({ status: "unavailable", errors: ["news_review_full"] });
+  expect((await refresh(request({ revision: 1 }), params)).status).toBe(422);
+  mock.enrich.mockResolvedValue({ status: "unavailable", errors: ["preview_changed"] });
+  expect((await refresh(request({ revision: 1 }), params)).status).toBe(409);
+});
+it("protects dismissals, validates input and never writes curated articles", async () => {
+  const body = { revision: 1, version: 1, url: "https://press.example.com/story" };
+  mock.auth.mockResolvedValue({ data: { user: null } }); expect((await dismiss(request(body), params)).status).toBe(401);
+  mock.auth.mockResolvedValue({ data: { user: { id: "admin" } } });
+  expect((await dismiss(request({ ...body, url: "javascript:alert(1)" }), params)).status).toBe(400);
+  expect((await dismiss(request({ ...body, articles: [] }), params)).status).toBe(400);
+  expect((await dismiss(request(body, "https://other.example.com"), params)).status).toBe(403);
+  const response = await dismiss(request(body), params); expect(response.status).toBe(200);
+  expect(mock.rpc).toHaveBeenCalledWith("dismiss_preview_news_article", { p_preview_id: id, p_revision: 1, p_version: 1, p_url: body.url });
+  expect(mock.enrich).not.toHaveBeenCalled(); expect(response.headers.get("cache-control")).toBe("private, no-store");
+  mock.rpc.mockImplementation(async name => name === "dismiss_preview_news_article" ? { error: { code: "PT409" } } : { data: true });
+  expect((await dismiss(request(body), params)).status).toBe(409);
 });

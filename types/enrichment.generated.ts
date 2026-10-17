@@ -178,6 +178,7 @@ export type EnrichmentDatabase = { public: { Tables: {
       metadata: Json
       created_at: string
       updated_at: string
+      review_keys: string[]
     }
     Insert: {
       id?: string
@@ -204,6 +205,7 @@ export type EnrichmentDatabase = { public: { Tables: {
       metadata?: Json
       created_at?: string
       updated_at?: string
+      review_keys?: string[]
     }
     Update: {
       id?: string
@@ -230,6 +232,7 @@ export type EnrichmentDatabase = { public: { Tables: {
       metadata?: Json
       created_at?: string
       updated_at?: string
+      review_keys?: string[]
     }
     Relationships: [
   {
@@ -265,6 +268,8 @@ export type EnrichmentDatabase = { public: { Tables: {
       updated_at: string
       report: Json
       request_fingerprint: string
+      news_review_version: number
+      news_searched_at: string | null
     }
     Insert: {
       preview_id: string
@@ -274,6 +279,8 @@ export type EnrichmentDatabase = { public: { Tables: {
       updated_at?: string
       report?: Json
       request_fingerprint: string
+      news_review_version?: number
+      news_searched_at?: string | null
     }
     Update: {
       preview_id?: string
@@ -283,6 +290,8 @@ export type EnrichmentDatabase = { public: { Tables: {
       updated_at?: string
       report?: Json
       request_fingerprint?: string
+      news_review_version?: number
+      news_searched_at?: string | null
     }
     Relationships: [
   {

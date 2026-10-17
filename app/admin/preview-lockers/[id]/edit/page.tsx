@@ -10,6 +10,7 @@ import EnrichmentPanel from "../../EnrichmentPanel";
 import { readPreviewEnrichment, type EnrichmentReport } from "@/lib/preview-lockers/enrichment";
 import PreviewBuilderWorkspace from "../../PreviewBuilderWorkspace";
 import { readBuilderContext } from "../../builder-workspace-data";
+import { readNewsReview } from "@/lib/preview-lockers/news-review-server";
 import { readMerchandiseReview } from "@/lib/preview-lockers/merchandise-review-server";
 import { previewIdentityKey } from "@/lib/preview-lockers/enrichment";
 export const dynamic = "force-dynamic";
@@ -43,10 +44,11 @@ export default async function EditPreview({ params }: { params: Promise<{ id: st
   record = suggestPreviewAffiliations(record, { college, latestTeam: master.data?.latest_team, seasons }, schoolDirectory.data ?? []);
   const completedRevision = relationship.data?.completed_revision == null ? null : Number(relationship.data.completed_revision);
   const enrichment = await previewClient.from("preview_enrichments").select("report,source_revision").eq("preview_id", id).maybeSingle();
-  const [context, savedNews, merchandise] = await Promise.all([
+  const [context, savedNews, merchandise, newsReview] = await Promise.all([
     readBuilderContext(previewClient, id),
     readPreviewEnrichment(previewClient, id, savedRecord, savedRecord.revision).catch(() => ({ articles: [] })),
     readMerchandiseReview(previewClient, id).then(review => ({ review, error: "" })).catch(() => ({ review: null, error: "Saved merchandise results could not be loaded. Your Locker merchandise is retained. Reopen this preview to try again." })),
+    readNewsReview(previewClient, id, savedRecord).then(review => ({ review, error: "" })).catch(() => ({ review: null, error: "Saved news reviews could not be loaded. Your Locker articles are retained. Reopen this preview to try again." })),
   ]);
-  return <PreviewBuilderWorkspace context={context} selectedId={id} athleteName={record.full_name}><details className="mb-5 rounded-xl border p-4"><summary className="min-h-8 cursor-pointer text-sm font-semibold">Awards & news enrichment</summary><div className="mt-3"><EnrichmentPanel key={id} id={id} initialReport={enrichment.error ? null : (enrichment.data?.report as EnrichmentReport | undefined) ?? null} stale={enrichment.data?.source_revision !== record.revision} /></div></details><PreviewLockerForm key={id} record={record} initialArticles={savedNews.articles} initialMerchandiseReview={merchandise.review} merchandiseReviewCurrent={!merchandise.review || merchandise.review.identity_key === previewIdentityKey(record)} merchandiseReviewError={merchandise.error} viewerAssigned={viewer.data === true} gtmLinked={Boolean(relationship.data)} gtmCompleted={completedRevision === record.revision} /></PreviewBuilderWorkspace>;
+  return <PreviewBuilderWorkspace context={context} selectedId={id} athleteName={record.full_name}><details className="mb-5 rounded-xl border p-4"><summary className="min-h-8 cursor-pointer text-sm font-semibold">Awards & news enrichment</summary><div className="mt-3"><EnrichmentPanel key={id} id={id} initialReport={enrichment.error ? null : (enrichment.data?.report as EnrichmentReport | undefined) ?? null} stale={enrichment.data?.source_revision !== record.revision} /></div></details><PreviewLockerForm key={id} record={record} initialArticles={savedNews.articles} initialNewsReview={newsReview.review} newsReviewCurrent={!newsReview.review || newsReview.review.identity_key === previewIdentityKey(record)} newsReviewError={newsReview.error} initialMerchandiseReview={merchandise.review} merchandiseReviewCurrent={!merchandise.review || merchandise.review.identity_key === previewIdentityKey(record)} merchandiseReviewError={merchandise.error} viewerAssigned={viewer.data === true} gtmLinked={Boolean(relationship.data)} gtmCompleted={completedRevision === record.revision} /></PreviewBuilderWorkspace>;
 }

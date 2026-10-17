@@ -126,6 +126,9 @@ assert.equal((await db.query('select report from preview_enrichments')).rows[0].
 await db.exec('reset role');
 
 if(process.argv.includes('--generate-types') || process.argv.includes('--check-types')) {
+  // Historical replacement regressions above cover their original migration.
+  // Generated types describe the current additive review schema.
+  await db.exec(fs.readFileSync('supabase/migrations/20261017065704_preview_news_review_queue.sql','utf8'));
   const tables=['award_catalog','preview_award_links','player_articles','preview_enrichments','player_awards'];
   const typeFor=(type)=>type==='jsonb'?'Json':type==='boolean'?'boolean':['integer','numeric','bigint'].includes(type)?'number':type==='ARRAY'?'string[]':'string';
   let output="// Generated from the applied preview-enrichment migration by scripts/verify-preview-enrichment.mjs.\nimport type { Json } from './database.generated';\nexport type EnrichmentDatabase = { public: { Tables: {\n";

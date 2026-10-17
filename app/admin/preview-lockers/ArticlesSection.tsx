@@ -5,10 +5,14 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { editScrapedArticle, type ArticleEdit } from "@/lib/preview-lockers/media";
 import type { PlayerArticle } from "@/lib/enrichment/news";
+import { newsArticleKeys, type NewsReview } from "@/lib/preview-lockers/news-review";
+import NewsResultCard from "./NewsResults";
 
-export default function ArticlesSection({ articles, edits, onChange, onReload, onRefresh, canLoad, dirty, saved }: {
+export default function ArticlesSection({ articles, edits, onChange, onReload, onRefresh, canLoad, dirty, saved, review, reviewKey, identityCurrent = true, playerName, onDismiss, busy = false, reviewError = "" }: {
   articles: PlayerArticle[]; edits: ArticleEdit[]; onChange: (items: ArticleEdit[]) => void;
   onReload: () => void; onRefresh: () => void; canLoad: boolean; dirty: boolean; saved: boolean;
+  review: NewsReview | null; reviewKey: string; identityCurrent?: boolean; playerName: string;
+  onDismiss: (url: string) => void; busy?: boolean; reviewError?: string;
 }) {
   const update = (id: string, patch: Partial<ArticleEdit>) => onChange(edits.map(item => item.id === id ? { ...item, ...patch } : item));
   const fields = (item: ArticleEdit, label: string) => <div className="mt-4 grid gap-4 sm:grid-cols-2">
@@ -22,10 +26,22 @@ export default function ArticlesSection({ articles, edits, onChange, onReload, o
   </div>;
   const existingSources = new Set(articles.map(article => article.article_url));
   const additional = edits.filter(item => !item.sourceUrl || !existingSources.has(item.sourceUrl));
-  return <BuilderSection title="News articles" count={articles.length + edits.filter(item => !item.sourceUrl).length} description="Review scraped coverage and add or edit Locker article cards">
+  const draftKeys = new Set([...articles.flatMap(newsArticleKeys), ...edits.flatMap(item => newsArticleKeys({ article_url: item.articleUrl, canonical_url: item.sourceUrl ?? undefined, headline: item.headline }))]);
+  return <BuilderSection title="News articles" count={articles.length + (review?.articles.length ?? 0) + edits.filter(item => !item.sourceUrl).length} description="Review saved news suggestions and manage Locker article cards">
     <div className="flex flex-wrap gap-3"><Button type="button" variant="outline" disabled={!canLoad} onClick={onReload}>Reload saved articles</Button><Button type="button" variant="outline" disabled={!canLoad} onClick={onRefresh}>Refresh scraped news</Button></div>
-    {!saved ? <p className="text-sm text-muted-foreground">Save this preview before loading scraped articles. You can add articles manually now.</p> : dirty ? <p className="text-sm text-muted-foreground">Save your draft before reloading or refreshing scraped news.</p> : <p className="text-sm text-muted-foreground">Search uses the saved player name, college and team history. Your article edits and hidden choices are retained when news is refreshed.</p>}
-    <h3 className="font-semibold">Scraped news</h3>
+    {!saved ? <p className="text-sm text-muted-foreground">Save this preview before loading scraped articles. You can add articles manually now.</p> : dirty ? <p className="text-sm text-muted-foreground">Save your draft before reloading or refreshing scraped news.</p> : <p className="text-sm text-muted-foreground">Search uses the saved player name, college and team history. New searches add unique articles and keep your pending reviews; dismissed articles stay dismissed. Results are saved separately from Locker articles. Review each article, add it to the draft, then save to show it in the Locker.</p>}
+    {reviewError && <p role="alert" className="break-words text-sm text-red-400">{reviewError}</p>}
+    {busy && <p role="status" className="text-sm">Updating saved news reviews…</p>}
+    <section aria-label="News articles for review" className="space-y-4">
+      <h3 className="font-semibold" aria-live="polite">Articles for review · {review?.articles.length ?? 0}</h3>
+      {review?.searched_at && <p className="text-sm text-muted-foreground">Last search · <time dateTime={review.searched_at}>{new Date(review.searched_at).toISOString().replace("T", " ").slice(0, 16)} UTC</time>. Saved articles may be older. Dismissals are saved.</p>}
+      {!identityCurrent && <p role="status" className="text-sm">The player identity changed or the saved version is stale. Save and search again before adding these articles.</p>}
+      {!review?.articles.length && <p className="text-sm text-muted-foreground">No saved matching articles awaiting review. Search for more coverage or add a reviewed article manually below.</p>}
+      {review?.articles.map(article => <NewsResultCard key={`${reviewKey}:${article.article_url}`} article={article} playerName={playerName}
+        inDraft={newsArticleKeys(article).some(key => draftKeys.has(key))} canAdd={identityCurrent && !busy && edits.length < 40} dismissDisabled={busy}
+        onAdd={() => onChange([...edits, editScrapedArticle(article, crypto.randomUUID())])} onDismiss={() => onDismiss(article.article_url)} />)}
+    </section>
+    <h3 className="font-semibold">Locker articles</h3>
     {!articles.length && <p className="text-sm text-muted-foreground">No saved matching articles loaded.</p>}
     {articles.map((article, index) => {
       const edit = edits.find(item => item.sourceUrl === article.article_url);

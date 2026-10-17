@@ -1,4 +1,5 @@
 "use client";
+import { z } from "zod";
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
@@ -20,6 +21,7 @@ import MerchandiseSection from "./MerchandiseSection";
 import type { MerchandiseResult } from "@/lib/enrichment/merchandise";
 import { merchandiseQueueResultSchema, merchandiseReviewSchema, visibleMerchandiseReview, type MerchandiseReview } from "@/lib/preview-lockers/merchandise-review";
 import type { PlayerArticle } from "@/lib/enrichment/news";
+import { newsReviewSchema, newsReviewArticleSchema, type NewsReview } from "@/lib/preview-lockers/news-review";
 import { searchErrorMessage } from "@/lib/search/errors";
 import CfbCsvImport from "./CfbCsvImport";
 import StatsCsvImport from "./StatsCsvImport";
@@ -36,6 +38,9 @@ type Scalar = Exclude<keyof PreviewContent, "schools" | "pro_teams" | "awards" |
 export default function PreviewLockerForm({
   record,
   initialArticles = [],
+  initialNewsReview = null,
+  newsReviewCurrent = true,
+  newsReviewError = "",
   initialMerchandiseReview = null,
   merchandiseReviewCurrent = true,
   merchandiseReviewError = "",
@@ -49,6 +54,9 @@ export default function PreviewLockerForm({
 }: {
   record?: PreviewRecord;
   initialArticles?: PlayerArticle[];
+  initialNewsReview?: NewsReview | null;
+  newsReviewCurrent?: boolean;
+  newsReviewError?: string;
   initialMerchandiseReview?: MerchandiseReview | null;
   merchandiseReviewCurrent?: boolean;
   merchandiseReviewError?: string;
@@ -69,6 +77,8 @@ export default function PreviewLockerForm({
   const [merchandiseError, setMerchandiseError] = useState(merchandiseReviewError);
   const [dismissingMerchandise, setDismissingMerchandise] = useState(false);
   const [newsArticles, setNewsArticles] = useState(initialArticles);
+  const [newsReview, setNewsReview] = useState<{ review: NewsReview; identity: string; key: string } | null>(() => initialNewsReview ? { review: initialNewsReview, identity: record && newsReviewCurrent ? merchandiseIdentity(record) : "", key: "saved-" + initialNewsReview.version } : null);
+  const [newsError, setNewsError] = useState(newsReviewError);
   const [showStats, setShowStats] = useState(false);
   const [statsNeedReload, setStatsNeedReload] = useState(false);
   const [message, setMessage] = useState("");
@@ -204,23 +214,37 @@ export default function PreviewLockerForm({
   }
   async function loadNews(refresh = false) {
     if (pending.current || !saved || dirty) return;
-    pending.current = true; setBusy("news"); setError(""); setMessage("");
+    pending.current = true; setBusy("news"); setError(""); setNewsError(""); setMessage("");
     try {
       let refreshError = "";
       if (refresh) {
-        const response = await fetch(`/api/preview-lockers/${saved.id}/news`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+        const response = await fetch(`/api/preview-lockers/${saved.id}/news`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ revision: revision.current }) });
         const body = await response.json();
-        if (!response.ok) refreshError = (body.report?.errors ?? []).map((code: string) => searchErrorMessage(code)).filter(Boolean).join(" ") || "News refresh is unavailable. Previously saved articles are retained.";
+        if (response.status === 409) { setNewsReview(current => current ? { ...current, identity: "" } : null); throw new Error("This preview changed. Reload the saved version before searching news. Your draft is retained."); }
+        if (!response.ok) refreshError = [...(body.report?.errors ?? []), body.error].map((code: string) => searchErrorMessage(code)).filter(Boolean).join(" ") || "News refresh is unavailable. Previously saved articles are retained.";
       }
       const response = await fetch(`/api/preview-lockers/${saved.id}/news`, { cache: "no-store" });
       if (!response.ok) throw new Error(response.status === 401 || response.status === 403 ? "Your Admin session is no longer authorized to load articles." : "Saved articles could not be loaded. Your draft is retained.");
       const body = await response.json();
-      if (body.revision !== revision.current) throw new Error("This preview changed. Reload the saved version before refreshing articles. Your draft is retained.");
-      if (!Array.isArray(body.articles)) throw new Error("The article list was unavailable. Your draft is retained.");
-      setNewsArticles(body.articles);
+      if (body.revision !== revision.current) { setNewsReview(current => current ? { ...current, identity: "" } : null); throw new Error("This preview changed. Reload the saved version before refreshing articles. Your draft is retained."); }
+      const articles = z.array(newsReviewArticleSchema).max(24).safeParse(body.articles), review = newsReviewSchema.safeParse(body.review);
+      if (!articles.success || !review.success) throw new Error("The article list was unavailable. Your draft and previous reviews are retained.");
+      setNewsArticles(articles.data);
+      setNewsReview({ review: review.data, identity: merchandiseIdentity(draft), key: crypto.randomUUID() });
       setMessage(`Loaded ${body.articles.length} saved matching articles. Your manual additions, edits and hidden choices are unchanged.`);
-      if (refreshError) setError(refreshError);
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "News could not be loaded. Your draft is retained."); }
+      if (refreshError) setNewsError(refreshError);
+    } catch (cause) { setNewsError(cause instanceof Error ? cause.message : "News could not be loaded. Your draft is retained."); }
+    finally { pending.current = false; setBusy(null); }
+  }
+  async function dismissNews(url: string) {
+    if (pending.current || !saved || !newsReview) return;
+    pending.current = true; setBusy("news"); setNewsError("");
+    try {
+      const response = await fetch("/api/preview-lockers/" + saved.id + "/news", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ revision: revision.current, version: newsReview.review.version, url }) });
+      const body = await response.json(), review = newsReviewSchema.safeParse(body.review);
+      if (!response.ok || !review.success || body.revision !== revision.current) throw new Error(response.status === 409 ? "The saved news review queue changed. Reopen this preview before dismissing an article. Your draft is retained." : "The article dismissal could not be saved. Your saved article and draft are retained.");
+      setNewsReview(current => current ? { ...current, review: review.data, key: crypto.randomUUID() } : null);
+    } catch (cause) { setNewsError(cause instanceof Error ? cause.message : "The article dismissal could not be saved."); }
     finally { pending.current = false; setBusy(null); }
   }
   async function searchMerchandise() {
@@ -406,7 +430,7 @@ export default function PreviewLockerForm({
       </section>
       <section id="locker-panel-media" role="tabpanel" aria-labelledby="locker-tab-media" tabIndex={0} hidden={activeFolder !== "media"} className={styles.folderPanel}>
       <h2 className={styles.folderHeading}>Media & merchandise</h2>
-      <ArticlesSection articles={newsArticles} edits={draft.article_edits} onChange={article_edits => change({ article_edits })} saved={!!saved} dirty={dirty} canLoad={!!saved && !dirty && !busy} onReload={() => { void loadNews(); }} onRefresh={() => { void loadNews(true); }} />
+      <ArticlesSection articles={newsArticles} edits={draft.article_edits} onChange={article_edits => change({ article_edits })} saved={!!saved} dirty={dirty} canLoad={!!saved && !dirty && !busy} onReload={() => { void loadNews(); }} onRefresh={() => { void loadNews(true); }} review={newsReview?.review ?? null} reviewKey={newsReview?.key ?? ""} identityCurrent={!!saved && newsReview?.identity === merchandiseIdentity(draft)} playerName={draft.full_name} onDismiss={url => { void dismissNews(url); }} busy={!!busy} reviewError={newsError} />
       <MerchandiseSection items={draft.merchandise} onChange={merchandise => change({ merchandise })} onSearch={() => { void searchMerchandise(); }} canSearch={!!saved && !dirty && !busy} searching={busy === "merchandise" && !dismissingMerchandise} savingReview={dismissingMerchandise} searchedAt={merchandiseSearch?.review?.searched_at} result={merchandiseSearch?.result ?? null} resultKey={merchandiseSearch?.key ?? ""} searchError={merchandiseError} playerName={draft.full_name} identityCurrent={merchandiseSearch?.identity === merchandiseIdentity(draft)} onDismiss={url => { void dismissMerchandise(url); }} />
       <SocialSection items={draft.social} photos={draft.photos} videos={draft.videos} saved={!!saved} onChange={social => change({ social })} onUpload={(kind, files, social) => { void uploadFiles(kind, files, false, { social }); }} />
       </section>

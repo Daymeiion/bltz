@@ -79,7 +79,7 @@ it("edits and resets a scraped article, and removes manual products from the dra
 it("refreshes saved source results without replacing manual additions or hidden decisions", async () => {
   const curated = { ...record, article_edits: previewContent.shape.article_edits.parse([{ id: "hide", sourceUrl: article.article_url, visible: false, headline: article.headline, publisher: article.publisher, articleUrl: article.article_url }]) };
   await act(async () => root.render(<PreviewLockerForm record={curated} initialArticles={[article]} />));
-  fetcher.mockResolvedValueOnce(Response.json({ report: { status: "complete" } })).mockResolvedValueOnce(Response.json({ articles: [{ ...article, headline: "New source headline" }], revision: 3 }));
+  fetcher.mockResolvedValueOnce(Response.json({ report: { status: "complete" } })).mockResolvedValueOnce(Response.json({ articles: [{ ...article, headline: "New source headline" }], revision: 3, review: { articles: [], version: 1, searched_at: null, identity_key: "a".repeat(64) } }));
   await click("Refresh scraped news");
   expect(fetcher.mock.calls[0][1].method).toBe("POST");
   expect(fetcher.mock.calls[1][1]).toEqual({ cache: "no-store" });

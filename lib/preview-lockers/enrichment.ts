@@ -115,7 +115,7 @@ export async function enrichSavedPreview(client: SupabaseClient, id: string, con
       ? snapshot.news.articles.map(a => ({ ...a, headline_key: headlineKey(a) })) : null) as unknown as Json,
     p_report: snapshot.report as unknown as Json,
   });
-  if (error) return { ...snapshot.report, status: "unavailable", errors: [...snapshot.report.errors, ["PT409", "40001"].includes(error.code) ? "preview_changed" : "enrichment_not_saved"] };
+  if (error) return { ...snapshot.report, status: "unavailable", errors: [...snapshot.report.errors, ["PT409", "40001"].includes(error.code) ? "preview_changed" : error.code === "PT422" ? "news_review_full" : "enrichment_not_saved"] };
   return data as unknown as EnrichmentReport;
 }
 

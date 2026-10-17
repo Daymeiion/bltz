@@ -6,6 +6,8 @@ export const searchErrorMessages = {
   merchandise_rate_limited: "Merchandise discovery is cooling down or its daily search limit was reached. Try again later.",
   merchandise_metadata_unavailable: "Some seller pages could not be checked. Search-only suggestions are labelled unverified and require seller review.",
   news_identity_incomplete: "Save the player's full name and college or team before searching for news.",
+  news_review_full: "The saved news review queue is full. Your existing articles are retained. Dismiss unwanted articles before searching again.",
+  news_review_unavailable: "Saved news reviews could not be loaded or updated. Your pending articles and Locker are retained.",
   search_not_configured: "News search is not configured. Set the server-only Tavily API key.",
   search_auth_failed: "Tavily rejected the credential or access. Check the server configuration.",
   search_rate_limited: "Tavily is rate limited. Try again later.",

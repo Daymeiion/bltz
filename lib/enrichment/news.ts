@@ -41,7 +41,7 @@ export function normalizeArticleUrl(value: string, base?: string): string | null
   } catch { return null; }
 }
 const words = (s: string) => s.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
-export const headlineKey = (article: ArticleMetadata) => `${article.source_domain.replace(/^www\./, "")}|${words(article.headline)}`;
+export const headlineKey = (article: Pick<ArticleMetadata, "source_domain" | "headline">) => `${article.source_domain.replace(/^www\./, "")}|${words(article.headline)}`;
 export function dedupeArticles<T extends ArticleMetadata>(articles: T[]): T[] {
   const urls = new Set<string>();
   const headlines = new Set<string>();

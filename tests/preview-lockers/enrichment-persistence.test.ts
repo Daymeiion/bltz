@@ -39,7 +39,7 @@ it.each(["unavailable", "skipped", "throw"])("preserves articles for %s discover
   expect(report.last_news_success?.articles_accepted).toBe(3);
   if (status === "skipped") expect(mocks.discover).not.toHaveBeenCalled();
 });
-it("passes successful empty discovery as an explicit replacement", async () => {
+it("passes successful empty discovery as an explicit merge without erasing prior work", async () => {
   const { db, rpc } = client();
   await enrichSavedPreview(db, "preview", content, 2);
   expect(rpc).toHaveBeenCalledWith("save_preview_enrichment", expect.objectContaining({ p_articles: [] }));
