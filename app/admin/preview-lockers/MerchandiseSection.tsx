@@ -7,25 +7,28 @@ import type { MerchandiseResult } from "@/lib/enrichment/merchandise";
 import { normalizeArticleUrl } from "@/lib/enrichment/news";
 import MerchandiseResultCard from "./MerchandiseResults";
 
-export default function MerchandiseSection({ items, onChange, onSearch, canSearch, searching, result, resultKey, searchError, identityCurrent, playerName, onDismiss }: {
+export default function MerchandiseSection({ items, onChange, onSearch, canSearch, searching, result, resultKey, searchError, identityCurrent, playerName, onDismiss, searchedAt, savingReview = false }: {
   items: PreviewContent["merchandise"]; onChange: (items: PreviewContent["merchandise"]) => void;
   onSearch: () => void; canSearch: boolean; searching: boolean; result: MerchandiseResult | null; resultKey: string;
   searchError: string; identityCurrent: boolean; playerName: string; onDismiss: (url: string) => void;
+  searchedAt?: string; savingReview?: boolean;
 }) {
   const update = (id: string, patch: Partial<typeof items[number]>) => onChange(items.map(item => item.id === id ? { ...item, ...patch } : item));
   return <BuilderSection title="Merchandise" count={items.length} description="Add trading cards, jerseys and other products to the Locker Merchandise tab">
     <Button type="button" variant="outline" disabled={!canSearch} onClick={onSearch}>{searching ? "Searching merchandise…" : "Search merchandise"}</Button>
-    <p className="text-sm text-muted-foreground">Searches the saved player name with college and team history for trading cards and jerseys. Save your changes before searching. Results stay in this editor until you reload; review each seller listing before adding it to the draft, then save to show it in the Locker.</p>
+    <p className="text-sm text-muted-foreground">Searches the saved player name with college and team history for trading cards and jerseys. Save your changes before searching. Results are saved here for later review, separately from Locker merchandise. A new usable search refreshes this saved list; failed searches keep it. Review each seller listing before adding it to the draft, then save to show it in the Locker.</p>
     {searchError && <p role="alert" className="break-words text-sm text-red-400">{searchError}</p>}
     {searching && <p role="status" className="text-sm">Searching seller listings and checking player identity…</p>}
+    {savingReview && <p role="status" className="text-sm">Saving review queue…</p>}
     {result && <section aria-label="Merchandise search results" className="space-y-4">
       <h3 className="font-semibold" aria-live="polite">Listings for review · {result.items.length}</h3>
+      {searchedAt && <p className="text-sm text-muted-foreground">Saved search · <time dateTime={searchedAt}>{new Date(searchedAt).toISOString().replace("T", " ").slice(0, 16)} UTC</time>. Dismissals are saved. Prices and availability may have changed.</p>}
       {!identityCurrent && <p role="status" className="text-sm">The player identity changed or the saved version is stale. Reload or save, then search again before adding these listings.</p>}
       <p className="text-sm text-muted-foreground">Search suggestions are not added to the Locker automatically. Check the player, team, seller, current price and availability. Listings do not establish authenticity, endorsement or licensing rights.</p>
       {!result.items.length && <p className="text-sm">{result.status === "complete" ? "No matching merchandise listings available to review. You can add a reviewed product manually below." : "No matching listings could be verified from this search. Try again later or add a reviewed product manually."}</p>}
       {result.items.map(item => <MerchandiseResultCard key={`${resultKey}:${item.productUrl}`} item={item} playerName={playerName}
         inDraft={items.some(saved => [item.productUrl, item.canonicalUrl].includes(normalizeArticleUrl(saved.productUrl) ?? ""))}
-        canAdd={identityCurrent && !searching && items.length < 40}
+        canAdd={identityCurrent && !searching && !savingReview && items.length < 40} dismissDisabled={searching || savingReview}
         onAdd={() => onChange([...items, { id: crypto.randomUUID(), title: item.title, category: item.category, productUrl: item.productUrl, imageUrl: item.imageUrl, retailer: item.retailer, priceLabel: item.priceLabel, visible: true }])}
         onDismiss={() => onDismiss(item.productUrl)} />)}
     </section>}

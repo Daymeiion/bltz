@@ -3,9 +3,10 @@ import { useId, useState } from "react";
 import { Button } from "@/components/ui/button";
 import type { MerchandiseCandidate } from "@/lib/enrichment/merchandise";
 
-export default function MerchandiseResultCard({ item, playerName, inDraft, canAdd, onAdd, onDismiss }: {
+export default function MerchandiseResultCard({ item, playerName, inDraft, canAdd, onAdd, onDismiss, dismissDisabled = false }: {
   item: MerchandiseCandidate; playerName: string; inDraft: boolean; canAdd: boolean;
   onAdd: () => void; onDismiss: () => void;
+  dismissDisabled?: boolean;
 }) {
   const [reviewed, setReviewed] = useState(false);
   const [failedImage, setFailedImage] = useState(false);
@@ -20,6 +21,6 @@ export default function MerchandiseResultCard({ item, playerName, inDraft, canAd
     <p className="text-sm">{item.priceLabel ? `Seller-reported price: ${item.priceLabel}` : "Price not provided by seller metadata."} {item.availability === "out_of_stock" ? "Seller reports out of stock." : item.availability === "in_stock" ? "Seller reports in stock." : "Availability unknown."}</p>
     <a className="block break-all text-sm underline" href={item.productUrl} target="_blank" rel="noopener noreferrer">Review seller listing ↗</a>
     <label htmlFor={reviewId} className="flex min-h-11 items-start gap-3 text-sm"><input id={reviewId} className="mt-1" type="checkbox" checked={reviewed} disabled={inDraft || !canAdd} onChange={event => setReviewed(event.target.checked)} />I reviewed this listing for {playerName}.</label>
-    <div className="flex flex-wrap gap-3"><Button type="button" disabled={!reviewed || inDraft || !canAdd} onClick={onAdd}>{inDraft ? "In draft" : "Add to draft"}</Button><Button type="button" variant="outline" onClick={onDismiss}>Dismiss listing</Button></div>
+    <div className="flex flex-wrap gap-3"><Button type="button" disabled={!reviewed || inDraft || !canAdd} onClick={onAdd}>{inDraft ? "In draft" : "Add to draft"}</Button><Button type="button" variant="outline" disabled={dismissDisabled} onClick={onDismiss}>Dismiss listing</Button></div>
   </article>;
 }

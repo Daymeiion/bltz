@@ -18,6 +18,7 @@ import SocialSection from "./SocialSection";
 import ArticlesSection from "./ArticlesSection";
 import MerchandiseSection from "./MerchandiseSection";
 import { merchandiseResultSchema, type MerchandiseResult } from "@/lib/enrichment/merchandise";
+import { merchandiseReviewSchema, visibleMerchandiseReview, type MerchandiseReview } from "@/lib/preview-lockers/merchandise-review";
 import type { PlayerArticle } from "@/lib/enrichment/news";
 import { searchErrorMessage } from "@/lib/search/errors";
 import CfbCsvImport from "./CfbCsvImport";
@@ -35,6 +36,9 @@ type Scalar = Exclude<keyof PreviewContent, "schools" | "pro_teams" | "awards" |
 export default function PreviewLockerForm({
   record,
   initialArticles = [],
+  initialMerchandiseReview = null,
+  merchandiseReviewCurrent = true,
+  merchandiseReviewError = "",
   enrollmentEnabled = false,
   enrollmentContacts = [],
   reservedId,
@@ -45,6 +49,9 @@ export default function PreviewLockerForm({
 }: {
   record?: PreviewRecord;
   initialArticles?: PlayerArticle[];
+  initialMerchandiseReview?: MerchandiseReview | null;
+  merchandiseReviewCurrent?: boolean;
+  merchandiseReviewError?: string;
   enrollmentEnabled?: boolean;
   enrollmentContacts?: {id:string;label:string}[];
   reservedId?: string;
@@ -58,8 +65,9 @@ export default function PreviewLockerForm({
   const [enrollment, setEnrollment] = useState({contact_id:"",campaign:"",source:"",channel:"email",relationship:"warm",is_test:false});
   const [draft, setDraft] = useState<PreviewContent>(() => record ? previewContent.parse(Object.fromEntries(Object.keys(previewContent.shape).map(k => [k, record[k as keyof PreviewRecord]]))) : { ...initial(), full_name: referralName ?? "", slug: "" });
   const [busy, setBusy] = useState<"discovery" | "upload" | "save" | "complete" | "stats" | "news" | "merchandise" | null>(null);
-  const [merchandiseSearch, setMerchandiseSearch] = useState<{ result: MerchandiseResult; identity: string; key: string } | null>(null);
-  const [merchandiseError, setMerchandiseError] = useState("");
+  const [merchandiseSearch, setMerchandiseSearch] = useState<{ result: MerchandiseResult; identity: string; key: string; review?: MerchandiseReview } | null>(() => initialMerchandiseReview ? { result: visibleMerchandiseReview(initialMerchandiseReview), identity: record && merchandiseReviewCurrent ? merchandiseIdentity(record) : "", key: `saved-${initialMerchandiseReview.version}`, review: initialMerchandiseReview } : null);
+  const [merchandiseError, setMerchandiseError] = useState(merchandiseReviewError);
+  const [dismissingMerchandise, setDismissingMerchandise] = useState(false);
   const [newsArticles, setNewsArticles] = useState(initialArticles);
   const [showStats, setShowStats] = useState(false);
   const [statsNeedReload, setStatsNeedReload] = useState(false);
@@ -227,10 +235,23 @@ export default function PreviewLockerForm({
       if (body.revision !== revision.current) throw new Error("This preview changed. Reload the saved version before adding search results.");
       const parsed = merchandiseResultSchema.safeParse(body.result);
       if (!parsed.success) throw new Error("The merchandise search response was invalid. Previous results and your draft are retained.");
-      setMerchandiseSearch({ result: parsed.data, identity: merchandiseIdentity(draft), key: crypto.randomUUID() });
+      const review = merchandiseReviewSchema.safeParse(body.review);
+      if (!review.success) throw new Error("Search results could not be saved. Previous saved results and your draft are retained.");
+      setMerchandiseSearch({ result: visibleMerchandiseReview(review.data), identity: merchandiseIdentity(draft), key: crypto.randomUUID(), review: review.data });
       setMerchandiseError(explain(parsed.data.errors));
     } catch (cause) { setMerchandiseError(cause instanceof Error ? cause.message : "Merchandise search is unavailable. Your draft is retained."); }
     finally { pending.current = false; setBusy(null); }
+  }
+  async function dismissMerchandise(url: string) {
+    if (pending.current || !saved || !merchandiseSearch?.review) return;
+    pending.current = true; setBusy("merchandise"); setDismissingMerchandise(true); setMerchandiseError("");
+    try {
+      const response = await fetch(`/api/preview-lockers/${saved.id}/merchandise`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ revision: revision.current, version: merchandiseSearch.review.version, url }) });
+      const body = await response.json(); const review = merchandiseReviewSchema.safeParse(body.review);
+      if (!response.ok || !review.success || body.revision !== revision.current) throw new Error(response.status === 409 ? "The saved review queue changed. Reopen this preview before dismissing a listing. Your draft is retained." : "The dismissal could not be saved. The listing and your draft are retained.");
+      setMerchandiseSearch(current => current ? { ...current, result: visibleMerchandiseReview(review.data), review: review.data, key: crypto.randomUUID() } : null);
+    } catch (cause) { setMerchandiseError(cause instanceof Error ? cause.message : "The dismissal could not be saved."); }
+    finally { pending.current = false; setBusy(null); setDismissingMerchandise(false); }
   }
   async function uploadFiles(kind: "photo" | "video", files: FileList | null, asHeadshot = false, placement?: { award?: number; social?: string }) {
     if (!files?.length || !saved || pending.current) return;
@@ -386,7 +407,7 @@ export default function PreviewLockerForm({
       <section id="locker-panel-media" role="tabpanel" aria-labelledby="locker-tab-media" tabIndex={0} hidden={activeFolder !== "media"} className={styles.folderPanel}>
       <h2 className={styles.folderHeading}>Media & merchandise</h2>
       <ArticlesSection articles={newsArticles} edits={draft.article_edits} onChange={article_edits => change({ article_edits })} saved={!!saved} dirty={dirty} canLoad={!!saved && !dirty && !busy} onReload={() => { void loadNews(); }} onRefresh={() => { void loadNews(true); }} />
-      <MerchandiseSection items={draft.merchandise} onChange={merchandise => change({ merchandise })} onSearch={() => { void searchMerchandise(); }} canSearch={!!saved && !dirty && !busy} searching={busy === "merchandise"} result={merchandiseSearch?.result ?? null} resultKey={merchandiseSearch?.key ?? ""} searchError={merchandiseError} playerName={draft.full_name} identityCurrent={merchandiseSearch?.identity === merchandiseIdentity(draft)} onDismiss={url => setMerchandiseSearch(current => current ? { ...current, result: { ...current.result, items: current.result.items.filter(item => item.productUrl !== url) } } : null)} />
+      <MerchandiseSection items={draft.merchandise} onChange={merchandise => change({ merchandise })} onSearch={() => { void searchMerchandise(); }} canSearch={!!saved && !dirty && !busy} searching={busy === "merchandise" && !dismissingMerchandise} savingReview={dismissingMerchandise} searchedAt={merchandiseSearch?.review?.searched_at} result={merchandiseSearch?.result ?? null} resultKey={merchandiseSearch?.key ?? ""} searchError={merchandiseError} playerName={draft.full_name} identityCurrent={merchandiseSearch?.identity === merchandiseIdentity(draft)} onDismiss={url => { void dismissMerchandise(url); }} />
       <SocialSection items={draft.social} photos={draft.photos} videos={draft.videos} saved={!!saved} onChange={social => change({ social })} onUpload={(kind, files, social) => { void uploadFiles(kind, files, false, { social }); }} />
       </section>
       <label className="flex items-start gap-3"><input type="checkbox" checked={reviewed} onChange={e => setReviewed(e.target.checked)} className="mt-1 h-5 w-5" />I reviewed this draft for private demo use. This is not public publication or rights verification.</label>

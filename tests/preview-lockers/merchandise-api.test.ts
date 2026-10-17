@@ -5,7 +5,7 @@ vi.mock("@/lib/supabase/server", () => ({ createClient: async () => ({ auth: { g
 vi.mock("@/lib/preview-lockers/enrichment", () => ({ previewIdentityKey: () => "identity", previewNewsIdentity: (value: unknown) => value, withSchoolAliases: m.identity }));
 vi.mock("@/lib/enrichment/search-provider", () => ({ configuredSearchProvider: m.provider }));
 vi.mock("@/lib/enrichment/merchandise", async original => ({ ...await original<object>(), discoverMerchandise: m.discover }));
-import { POST } from "@/app/api/preview-lockers/[id]/merchandise/route";
+import { POST, PATCH } from "@/app/api/preview-lockers/[id]/merchandise/route";
 import { previewContent } from "@/lib/preview-lockers/validation";
 const id = "00000000-0000-4000-8000-000000000001";
 const row = { ...previewContent.parse({ slug: "fixture-player", full_name: "Fixture Player", school: "Arizona" }), id, revision: 3, created_at: "", updated_at: "" };
@@ -13,7 +13,7 @@ const request = (body: unknown = { revision: 3 }, origin = "http://localhost") =
 const params = { params: Promise.resolve({ id }) };
 beforeEach(() => {
   vi.resetAllMocks(); m.auth.mockResolvedValue({ data: { user: { id: "admin" } } });
-  m.rpc.mockImplementation(async (name: string) => ({ data: name === "admit_preview_discovery" ? "ticket" : true }));
+  m.rpc.mockImplementation(async (name: string, args?: { p_result: unknown }) => ({ data: name === "save_preview_merchandise_search" ? { result: args?.p_result, version: 1, searched_at: "2026-10-17T00:00:00Z", identity_key: "a".repeat(64), dismissed_urls: [] } : name === "admit_preview_discovery" ? "ticket" : true }));
   for (const name of ["from", "select", "eq"] as const) m[name].mockReturnValue(m);
   m.maybeSingle.mockResolvedValue({ data: row }); m.provider.mockReturnValue({ name: "fixture" });
   m.identity.mockResolvedValue({ fullName: "Fixture Player", sport: "football", schools: ["Arizona"], teams: ["San Diego Chargers"] });
@@ -52,4 +52,26 @@ it("rejects revisions changed during the search and finalizes failed discovery",
   expect(m.rpc).toHaveBeenCalledWith("finalize_preview_discovery", { p_request_id: "ticket", p_succeeded: false });
   m.discover.mockRejectedValue(new Error("private provider response"));
   const response = await POST(request(), params); expect(response.status).toBe(503); expect(await response.text()).not.toContain("private provider");
+});
+it("persists a usable snapshot but never writes unavailable or empty partial searches", async () => {
+  expect((await POST(request(), params)).status).toBe(200);
+  expect(m.rpc).toHaveBeenCalledWith("save_preview_merchandise_search", expect.objectContaining({ p_preview_id: id, p_revision: 3 }));
+  m.rpc.mockClear(); m.discover.mockResolvedValue({ items: [], status: "partial", candidates: 5, rejected: 5, errors: ["merchandise_metadata_unavailable"] });
+  expect((await POST(request(), params)).status).toBe(503);
+  expect(m.rpc).not.toHaveBeenCalledWith("save_preview_merchandise_search", expect.anything());
+});
+it("reports persistence failure and version conflicts without claiming results were saved", async () => {
+  m.rpc.mockImplementation(async name => name === "save_preview_merchandise_search" ? { error: { code: "PT409" } } : { data: true });
+  expect((await POST(request(), params)).status).toBe(409);
+  m.rpc.mockImplementation(async name => name === "save_preview_merchandise_search" ? { error: { code: "42501", message: "private detail" } } : { data: true });
+  const response = await POST(request(), params); expect(response.status).toBe(503); expect(await response.text()).not.toContain("private detail");
+});
+it("authorizes dismissals and accepts only revision, queue version and listing URL", async () => {
+  m.auth.mockResolvedValue({ data: { user: null } }); expect((await PATCH(request({ revision: 3, version: 1, url: "https://shop.example.com/products/card" }), params)).status).toBe(401);
+  m.auth.mockResolvedValue({ data: { user: { id: "admin" } } });
+  expect((await PATCH(request({ revision: 3, version: 1, url: "javascript:alert(1)" }), params)).status).toBe(400);
+  expect((await PATCH(request({ revision: 3, version: 1, url: "https://shop.example.com/products/card", merchandise: [] }), params)).status).toBe(400);
+  m.rpc.mockImplementation(async name => name === "dismiss_preview_merchandise_result" ? { error: { code: "PT409" } } : { data: true });
+  expect((await PATCH(request({ revision: 3, version: 1, url: "https://shop.example.com/products/card" }), params)).status).toBe(409);
+  expect(m.discover).not.toHaveBeenCalled();
 });

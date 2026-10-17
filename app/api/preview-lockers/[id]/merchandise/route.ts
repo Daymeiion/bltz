@@ -6,6 +6,11 @@ import { previewIdentityKey, previewNewsIdentity, withSchoolAliases } from "@/li
 import { configuredSearchProvider } from "@/lib/enrichment/search-provider";
 import { discoverMerchandise, merchandiseQueries } from "@/lib/enrichment/merchandise";
 import { fetchProductMetadata } from "@/lib/enrichment/safe-fetch";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { MerchandiseReviewDatabase } from "@/types/merchandise-review.generated";
+import { merchandiseResultSchema } from "@/lib/enrichment/merchandise";
+import { merchandiseReviewSchema, visibleMerchandiseReview } from "@/lib/preview-lockers/merchandise-review";
+import { previewUrl } from "@/lib/preview-lockers/validation";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -28,13 +33,35 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const admission = await client.rpc("admit_preview_discovery", { p_identity_hash: createHash("sha256").update(`merchandise:${previewIdentityKey(row)}`).digest("hex") });
     if (admission.error || !admission.data) throw new PreviewError("merchandise_rate_limited", 429);
     let succeeded = false;
+    const startedAt = new Date().toISOString();
     try {
       const result = await discoverMerchandise(identity, provider, fetchProductMetadata, AbortSignal.any([req.signal, AbortSignal.timeout(45_000)]));
       const current = await client.from("preview_lockers").select("revision").eq("id", id).maybeSingle();
       if (current.error) throw new PreviewError("preview_unavailable", 503);
       if (!current.data || current.data.revision !== row.revision) throw new PreviewError("preview_conflict", 409);
-      succeeded = result.status !== "unavailable";
-      return json({ revision: row.revision, result }, result.status === "unavailable" ? 503 : 200);
+      if (result.status === "unavailable" || (result.status === "partial" && !result.items.length)) return json({ result }, 503);
+      const parsed = merchandiseResultSchema.safeParse(result);
+      if (!parsed.success) throw new PreviewError("merchandise_review_unavailable", 503);
+      const stored = await (client as SupabaseClient<MerchandiseReviewDatabase>).rpc("save_preview_merchandise_search", { p_preview_id: id, p_revision: row.revision, p_identity_key: previewIdentityKey(row), p_started_at: startedAt, p_result: parsed.data });
+      if (stored.error) throw new PreviewError(stored.error.code === "PT409" ? "preview_conflict" : "merchandise_review_unavailable", stored.error.code === "PT409" ? 409 : 503);
+      const review = merchandiseReviewSchema.safeParse(stored.data);
+      if (!review.success) throw new PreviewError("merchandise_review_unavailable", 503);
+      succeeded = true;
+      return json({ revision: row.revision, result: visibleMerchandiseReview(review.data), review: review.data });
     } finally { await client.rpc("finalize_preview_discovery", { p_request_id: admission.data, p_succeeded: succeeded }); }
+  } catch (error) { return failure(error); }
+}
+
+/** A dismissal changes only the saved Admin review queue. */
+export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { client } = await previewAdmin(); const { id } = await params;
+    const input = z.object({ revision: z.number().int().positive(), version: z.number().int().positive(), url: previewUrl }).strict().safeParse(await readBody(req, 4096));
+    if (!z.uuid().safeParse(id).success || !input.success) throw new PreviewError("invalid_input", 400);
+    const stored = await (client as SupabaseClient<MerchandiseReviewDatabase>).rpc("dismiss_preview_merchandise_result", { p_preview_id: id, p_revision: input.data.revision, p_version: input.data.version, p_url: input.data.url });
+    if (stored.error) throw new PreviewError(stored.error.code === "PT409" ? "preview_conflict" : "merchandise_review_unavailable", stored.error.code === "PT409" ? 409 : 503);
+    const review = merchandiseReviewSchema.safeParse(stored.data);
+    if (!review.success) throw new PreviewError("merchandise_review_unavailable", 503);
+    return json({ revision: input.data.revision, result: visibleMerchandiseReview(review.data), review: review.data });
   } catch (error) { return failure(error); }
 }

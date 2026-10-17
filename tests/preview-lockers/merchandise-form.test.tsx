@@ -6,7 +6,7 @@ import { previewContent } from "@/lib/preview-lockers/validation";
 import type { MerchandiseCandidate } from "@/lib/enrichment/merchandise";
 const record = { ...previewContent.parse({ slug: "fixture-player", full_name: "Fixture Player", school: "Arizona" }), id: "00000000-0000-4000-8000-000000000001", revision: 3, created_at: "", updated_at: "" };
 const candidate: MerchandiseCandidate = { title: "Fixture Player Arizona football trading card", category: "trading_card", productUrl: "https://shop.example.com/products/card", canonicalUrl: "https://shop.example.com/products/card", imageUrl: null, retailer: "Card Shop", priceLabel: "USD 12.99", availability: "unknown", description: "Football card", matchedAffiliations: ["Arizona"] };
-const result = (items = [candidate]) => ({ revision: 3, result: { items, status: "complete", candidates: items.length, rejected: 0, errors: [] } });
+const result = (items = [candidate]) => { const data = { items, status: "complete" as const, candidates: items.length, rejected: 0, errors: [] }; return { revision: 3, result: data, review: { result: data, version: 1, searched_at: "2026-10-17T00:00:00Z", identity_key: "a".repeat(64), dismissed_urls: [] as string[] } }; };
 let host: HTMLDivElement; let root: Root; let fetcher: ReturnType<typeof vi.fn>;
 beforeEach(() => { host = document.createElement("div"); document.body.append(host); root = createRoot(host); fetcher = vi.fn(); vi.stubGlobal("fetch", fetcher); });
 afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.unstubAllGlobals(); });
@@ -42,9 +42,28 @@ it("allows selecting multiple candidates before saving, prevents duplicates and 
   const cards = [...host.querySelectorAll<HTMLElement>('section[aria-label="Merchandise search results"] article')];
   for (const card of cards) { await act(async () => card.querySelector<HTMLInputElement>('input[type="checkbox"]')!.click()); await click("Add to draft", card); }
   expect(host.querySelectorAll('[aria-label^="Merchandise "][aria-label$=" title"]')).toHaveLength(2);
+  const dismissed = result([candidate, jersey]); dismissed.review.dismissed_urls = [candidate.productUrl]; dismissed.review.version = 2;
+  fetcher.mockResolvedValueOnce(Response.json(dismissed));
   await click("Dismiss listing", cards[0]);
   expect(host.querySelectorAll('section[aria-label="Merchandise search results"] article')).toHaveLength(1);
   expect(host.querySelectorAll('[aria-label^="Merchandise "][aria-label$=" title"]')).toHaveLength(2);
+});
+it("loads saved review results on reopen without a search, resets review checks and keeps Locker merchandise separate", async () => {
+  await act(async () => root.render(<PreviewLockerForm record={record} initialMerchandiseReview={result().review} />));
+  expect(fetcher).not.toHaveBeenCalled();
+  expect(host.textContent).toContain("Saved search"); expect(host.textContent).toContain(candidate.title);
+  expect(button("Add to draft").disabled).toBe(true);
+  expect(host.querySelector('[aria-label="Merchandise 1 title"]')).toBeNull();
+  await act(async () => root.render(<PreviewLockerForm key="reopen" record={record} initialMerchandiseReview={result().review} merchandiseReviewCurrent={false} />));
+  expect(button("Add to draft").disabled).toBe(true); expect(host.textContent).toContain("identity changed");
+});
+it("retains the saved listing on failed dismissal and only updates the review queue after persistence", async () => {
+  await act(async () => root.render(<PreviewLockerForm record={record} initialMerchandiseReview={result().review} />));
+  fetcher.mockResolvedValueOnce(Response.json({ error: "preview_conflict" }, { status: 409 }));
+  await click("Dismiss listing");
+  expect(host.textContent).toContain("queue changed"); expect(host.textContent).toContain(candidate.title);
+  expect(fetcher.mock.calls[0][1].method).toBe("PATCH"); expect(JSON.parse(fetcher.mock.calls[0][1].body)).toEqual({ revision: 3, version: 1, url: candidate.productUrl });
+  expect(host.querySelector('[aria-label="Merchandise 1 title"]')).toBeNull();
 });
 it("labels search-only suggestions as unverified and requires review before adding them", async () => {
   await act(async () => root.render(<PreviewLockerForm record={record} />));

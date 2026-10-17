@@ -1,5 +1,6 @@
 /** Safe diagnostic codes only: never carry provider bodies, credentials or URLs. */
 export const searchErrorMessages = {
+  merchandise_review_unavailable: "Merchandise results could not be saved. Previous saved results and your draft are retained.",
   merchandise_identity_incomplete: "Save the player's full name and college or team before searching for merchandise.",
   merchandise_rate_limited: "Merchandise discovery is cooling down or its daily search limit was reached. Try again later.",
   merchandise_metadata_unavailable: "Some seller pages could not be checked. Search-only suggestions are labelled unverified and require seller review.",
