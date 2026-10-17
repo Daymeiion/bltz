@@ -2,7 +2,7 @@
 // Explicit aliases are campus-specific; ambiguous codes such as USC, OSU and Miami
 // are never expanded for identity matching without an unambiguous directory row.
 const VERIFIED_SCHOOLS = [
-  { name: "California", abbr: "CAL", aliases: ["Cal", "California Golden Bears", "UC Berkeley", "University of California, Berkeley", "University of California at Berkeley"] },
+  { name: "California", abbr: "CAL", aliases: ["Cal", "Cal Berkeley", "California Golden Bears", "UC Berkeley", "University of California, Berkeley", "University of California at Berkeley"] },
   { name: "UCLA", abbr: "UCLA", aliases: ["UCLA Bruins", "University of California, Los Angeles", "University of California at Los Angeles"] },
   { name: "Louisiana State", abbr: "LSU", aliases: ["LSU", "LSU Tigers", "Louisiana State University"] },
   { name: "Central Florida", abbr: "UCF", aliases: ["UCF", "UCF Knights", "University of Central Florida"] },

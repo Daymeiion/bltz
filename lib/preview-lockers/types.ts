@@ -66,6 +66,8 @@ export interface PreviewLockerRow {
   pro_teams: PreviewTeamPill[];
   awards: PreviewAward[];
   social?: import("./social").PreviewSocial[];
+  article_edits?: import("./validation").PreviewContent["article_edits"];
+  merchandise?: import("./validation").PreviewContent["merchandise"];
   career_stats: PreviewCareerStat[];
   career_seasons: PreviewCareerSeason[];
   videos: PreviewVideo[];

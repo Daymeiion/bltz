@@ -4,7 +4,10 @@ import { updatePreview, previewMediaBelongsTo } from "@/lib/preview-lockers/vali
 import { assertPreviewMediaExists, previewAdmin, readBody, json, failure, PreviewError } from "@/lib/preview-lockers/server";
 import type { PreviewDatabase } from "@/types/preview-lockers.generated";
 
+import { tryEnrichSavedPreview } from "@/lib/preview-lockers/enrichment";
+
 export const runtime = "nodejs";
+export const maxDuration = 60;
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { client } = await previewAdmin();
@@ -26,6 +29,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       .eq("preview_locker_id", id)
       .maybeSingle();
     const completionStatus = relationship.error ? "unavailable" : "available";
+    await tryEnrichSavedPreview(client, id, content, data.revision, false);
     return json({
       ...data,
       complete: relationship.data != null && Number(relationship.data.completed_revision) === data.revision,

@@ -1,0 +1,52 @@
+"use client";
+import { BuilderSection } from "./BuilderSection";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { editScrapedArticle, type ArticleEdit } from "@/lib/preview-lockers/media";
+import type { PlayerArticle } from "@/lib/enrichment/news";
+
+export default function ArticlesSection({ articles, edits, onChange, onReload, onRefresh, canLoad, dirty, saved }: {
+  articles: PlayerArticle[]; edits: ArticleEdit[]; onChange: (items: ArticleEdit[]) => void;
+  onReload: () => void; onRefresh: () => void; canLoad: boolean; dirty: boolean; saved: boolean;
+}) {
+  const update = (id: string, patch: Partial<ArticleEdit>) => onChange(edits.map(item => item.id === id ? { ...item, ...patch } : item));
+  const fields = (item: ArticleEdit, label: string) => <div className="mt-4 grid gap-4 sm:grid-cols-2">
+    <label className="grid gap-2 text-sm">Headline<Input aria-label={`${label} headline`} value={item.headline} maxLength={500} onChange={event => update(item.id, { headline: event.target.value })} /></label>
+    <label className="grid gap-2 text-sm">Publisher<Input aria-label={`${label} publisher`} value={item.publisher} maxLength={200} onChange={event => update(item.id, { publisher: event.target.value })} /></label>
+    <label className="grid gap-2 text-sm sm:col-span-2">Article link<Input aria-label={`${label} link`} type="url" value={item.articleUrl} maxLength={2048} onChange={event => update(item.id, { articleUrl: event.target.value })} /></label>
+    <label className="grid gap-2 text-sm">Image URL (optional)<Input aria-label={`${label} image`} type="url" value={item.imageUrl ?? ""} maxLength={2048} onChange={event => update(item.id, { imageUrl: event.target.value || null })} /></label>
+    <label className="grid gap-2 text-sm">Published date (optional)<Input aria-label={`${label} date`} type="date" value={item.publishedAt ?? ""} onChange={event => update(item.id, { publishedAt: event.target.value || null })} /></label>
+    <label className="grid gap-2 text-sm sm:col-span-2">Short summary<Textarea aria-label={`${label} summary`} value={item.summary} maxLength={600} onChange={event => update(item.id, { summary: event.target.value })} /></label>
+    <label className="flex min-h-11 items-center gap-3 text-sm"><input aria-label={`${label} visible`} type="checkbox" checked={item.visible} onChange={event => update(item.id, { visible: event.target.checked })} />Show in Locker articles</label>
+  </div>;
+  const existingSources = new Set(articles.map(article => article.article_url));
+  const additional = edits.filter(item => !item.sourceUrl || !existingSources.has(item.sourceUrl));
+  return <BuilderSection title="News articles" count={articles.length + edits.filter(item => !item.sourceUrl).length} description="Review scraped coverage and add or edit Locker article cards">
+    <div className="flex flex-wrap gap-3"><Button type="button" variant="outline" disabled={!canLoad} onClick={onReload}>Reload saved articles</Button><Button type="button" variant="outline" disabled={!canLoad} onClick={onRefresh}>Refresh scraped news</Button></div>
+    {!saved ? <p className="text-sm text-muted-foreground">Save this preview before loading scraped articles. You can add articles manually now.</p> : dirty ? <p className="text-sm text-muted-foreground">Save your draft before reloading or refreshing scraped news.</p> : <p className="text-sm text-muted-foreground">Search uses the saved player name, college and team history. Your article edits and hidden choices are retained when news is refreshed.</p>}
+    <h3 className="font-semibold">Scraped news</h3>
+    {!articles.length && <p className="text-sm text-muted-foreground">No saved matching articles loaded.</p>}
+    {articles.map((article, index) => {
+      const edit = edits.find(item => item.sourceUrl === article.article_url);
+      return <details key={article.article_url} className="rounded-lg border p-4">
+        <summary className="cursor-pointer break-words font-medium">{edit?.headline || article.headline} · {edit?.visible === false ? "Hidden" : "Shown"}</summary>
+        <p className="mt-3 text-sm text-muted-foreground">Discovered from {article.publisher}</p>
+        <a className="mt-2 block break-all text-sm underline" href={article.article_url} target="_blank" rel="noopener noreferrer">Original scraped article ↗</a>
+        {edit ? <>{fields(edit, `Scraped article ${index + 1}`)}<Button className="mt-4" type="button" variant="outline" onClick={() => onChange(edits.filter(item => item.id !== edit.id))}>Reset to scraped details</Button></> : <div className="mt-4 flex flex-wrap gap-3">
+          <Button type="button" variant="outline" disabled={edits.length >= 40} onClick={() => onChange([...edits, editScrapedArticle(article, crypto.randomUUID())])}>Edit article details</Button>
+          <Button type="button" variant="outline" disabled={edits.length >= 40} onClick={() => onChange([...edits, { ...editScrapedArticle(article, crypto.randomUUID()), visible: false }])}>Hide article from Locker</Button>
+        </div>}
+      </details>;
+    })}
+    <h3 className="font-semibold">Added articles & retained edits</h3>
+    {additional.map((item, index) => <details key={item.id} open className="rounded-lg border p-4">
+      <summary className="cursor-pointer break-words font-medium">{item.headline || `Added article ${index + 1}`} · {item.visible ? "Shown" : "Hidden"}</summary>
+      {item.sourceUrl && <p className="mt-3 text-sm text-muted-foreground">Retained edit of a previously scraped article.</p>}
+      {fields(item, `Added article ${index + 1}`)}
+      <Button className="mt-4" type="button" variant="outline" onClick={() => onChange(edits.filter(entry => entry.id !== item.id))}>{item.sourceUrl ? "Remove retained edit" : "Remove added article"}</Button>
+    </details>)}
+    <Button type="button" variant="outline" disabled={edits.length >= 40} onClick={() => onChange([...edits, { id: crypto.randomUUID(), sourceUrl: null, visible: true, headline: "", publisher: "", articleUrl: "", imageUrl: null, summary: "", publishedAt: null }])}>Add article</Button>
+    <p className="text-xs text-muted-foreground">Use the original publisher article link and a short summary. Add only coverage you reviewed for this player. Save the draft to apply changes.</p>
+  </BuilderSection>;
+}

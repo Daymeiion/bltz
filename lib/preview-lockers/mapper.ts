@@ -8,13 +8,14 @@ import { previewTeamBranding } from "./branding";
 import { combineCfbImports } from "./cfb-csv";
 import { combinePfrImports } from "./pfr-csv";
 import { previewStatLabels, type PreviewRecord, type ResolvedPreviewRecord } from "./validation";
+import { curatedArticles, lockerMerchandise } from "./media";
 
 export function previewHeadshot(row: { headshot_url: string | null; photos?: Array<{ isHeadshot?: boolean; url?: string | null }> }) {
   return row.photos?.find(photo => photo.isHeadshot && photo.url)?.url || row.headshot_url || "/images/black-headshot-fallback.svg";
 }
 
 function previewAwards(row: { awards: import("./types").PreviewAward[]; photos: Array<{ id: string; url?: string | null }> }) {
-  return row.awards.map(award => ({ ...award, imageUrl: row.photos.find(photo => photo.id === award.photoId)?.url || award.imageUrl || null }));
+  return row.awards.map(award => ({ ...award, evidenceStatus: "unverified" as const, imageUrl: row.photos.find(photo => photo.id === award.photoId)?.url || award.imageUrl || null }));
 }
 function previewSocialItems(row: { social?: import("./social").PreviewSocial[]; photos: Array<{ id: string; url?: string | null }>; videos: Array<{ id: string; url?: string | null }> }) {
   return (row.social ?? []).map(item => ({ ...item, imageUrl: row.photos.find(photo => photo.id === item.photoId)?.url || null, videoUrl: previewVideoSource(row.videos.find(video => video.id === item.videoId)?.url ?? null).playbackUrl }));
@@ -36,6 +37,8 @@ export function previewLockerData(row: PreviewRecord | ResolvedPreviewRecord, pu
   } : null;
   return {
     athleteId: null, slug: row.slug, lockerHref: `/preview-lockers/${encodeURIComponent(row.slug)}`, fullName: row.full_name,
+    articles: curatedArticles("enrichment" in row ? row.enrichment?.articles ?? [] : [], row.article_edits, row.updated_at),
+    merch: lockerMerchandise(row.merchandise),
     structuredStats: [...combinePfrImports(row.pfr_stats ?? []), ...combineCfbImports(row.cfb_stats ?? [])],
     hometown: row.hometown || "", position: row.position || "", jersey: row.jersey || "",
     levelLabel: row.level || "Athlete", headshotUrl: previewHeadshot(row),
@@ -67,6 +70,8 @@ export function previewPhotoData(row: PreviewRecord | ResolvedPreviewRecord, pub
 export function toLockerData(row: PreviewLockerRow): LockerData {
   const dob = row.dob ?? null;
   return {
+    merch: lockerMerchandise(row.merchandise),
+    articles: curatedArticles([], row.article_edits, row.updated_at),
     athleteId: null,
     slug: row.slug,
     lockerHref: `/preview-lockers/${encodeURIComponent(row.slug)}`,

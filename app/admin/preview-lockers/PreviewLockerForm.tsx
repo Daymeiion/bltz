@@ -15,6 +15,10 @@ import PreviewViewerAccess from "./PreviewViewerAccess";
 import styles from "./preview-form.module.css";
 import AwardsSection from "./AwardsSection";
 import SocialSection from "./SocialSection";
+import ArticlesSection from "./ArticlesSection";
+import MerchandiseSection from "./MerchandiseSection";
+import type { PlayerArticle } from "@/lib/enrichment/news";
+import { searchErrorMessage } from "@/lib/search/errors";
 import CfbCsvImport from "./CfbCsvImport";
 import StatsCsvImport from "./StatsCsvImport";
 import { BuilderSection } from "./BuilderSection";
@@ -24,10 +28,11 @@ import { createClient } from "@/lib/supabase/client";
 import { parseYouTubeBatch } from "@/lib/preview-lockers/youtube-bulk";
 
 const initial = () => previewContent.parse({ slug: "private-preview", full_name: "".padEnd(2, "_") });
-type Scalar = Exclude<keyof PreviewContent, "schools" | "pro_teams" | "awards" | "social" | "career_stats" | "cfb_stats" | "pfr_stats" | "videos" | "photos">;
+type Scalar = Exclude<keyof PreviewContent, "schools" | "pro_teams" | "awards" | "social" | "article_edits" | "merchandise" | "career_stats" | "cfb_stats" | "pfr_stats" | "videos" | "photos">;
 
 export default function PreviewLockerForm({
   record,
+  initialArticles = [],
   enrollmentEnabled = false,
   enrollmentContacts = [],
   reservedId,
@@ -37,6 +42,7 @@ export default function PreviewLockerForm({
   gtmCompleted = false,
 }: {
   record?: PreviewRecord;
+  initialArticles?: PlayerArticle[];
   enrollmentEnabled?: boolean;
   enrollmentContacts?: {id:string;label:string}[];
   reservedId?: string;
@@ -49,7 +55,8 @@ export default function PreviewLockerForm({
   const [enroll, setEnroll] = useState(enrollmentEnabled && !record && !reservedId);
   const [enrollment, setEnrollment] = useState({contact_id:"",campaign:"",source:"",channel:"email",relationship:"warm",is_test:false});
   const [draft, setDraft] = useState<PreviewContent>(() => record ? previewContent.parse(Object.fromEntries(Object.keys(previewContent.shape).map(k => [k, record[k as keyof PreviewRecord]]))) : { ...initial(), full_name: referralName ?? "", slug: "" });
-  const [busy, setBusy] = useState<"discovery" | "upload" | "save" | "complete" | "stats" | null>(null);
+  const [busy, setBusy] = useState<"discovery" | "upload" | "save" | "complete" | "stats" | "news" | null>(null);
+  const [newsArticles, setNewsArticles] = useState(initialArticles);
   const [showStats, setShowStats] = useState(false);
   const [statsNeedReload, setStatsNeedReload] = useState(false);
   const [message, setMessage] = useState("");
@@ -183,6 +190,27 @@ export default function PreviewLockerForm({
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Completion could not be saved. The preview remains draft / incomplete."); }
     finally { pending.current = false; setBusy(null); }
   }
+  async function loadNews(refresh = false) {
+    if (pending.current || !saved || dirty) return;
+    pending.current = true; setBusy("news"); setError(""); setMessage("");
+    try {
+      let refreshError = "";
+      if (refresh) {
+        const response = await fetch(`/api/preview-lockers/${saved.id}/news`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+        const body = await response.json();
+        if (!response.ok) refreshError = (body.report?.errors ?? []).map((code: string) => searchErrorMessage(code)).filter(Boolean).join(" ") || "News refresh is unavailable. Previously saved articles are retained.";
+      }
+      const response = await fetch(`/api/preview-lockers/${saved.id}/news`, { cache: "no-store" });
+      if (!response.ok) throw new Error(response.status === 401 || response.status === 403 ? "Your Admin session is no longer authorized to load articles." : "Saved articles could not be loaded. Your draft is retained.");
+      const body = await response.json();
+      if (body.revision !== revision.current) throw new Error("This preview changed. Reload the saved version before refreshing articles. Your draft is retained.");
+      if (!Array.isArray(body.articles)) throw new Error("The article list was unavailable. Your draft is retained.");
+      setNewsArticles(body.articles);
+      setMessage(`Loaded ${body.articles.length} saved matching articles. Your manual additions, edits and hidden choices are unchanged.`);
+      if (refreshError) setError(refreshError);
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "News could not be loaded. Your draft is retained."); }
+    finally { pending.current = false; setBusy(null); }
+  }
   async function uploadFiles(kind: "photo" | "video", files: FileList | null, asHeadshot = false, placement?: { award?: number; social?: string }) {
     if (!files?.length || !saved || pending.current) return;
     const limit = kind === "photo" ? 40 : 24;
@@ -252,7 +280,7 @@ export default function PreviewLockerForm({
     <p className="text-sm">Private demo only. Media suggestions are unverified; saving does not grant rights or create an Athlete Career ID.</p>
     {message && <p role="status" className="rounded-lg border p-3">{message}</p>}
     {error && <p role="alert" className="rounded-lg border border-red-500 p-3">{error}</p>}
-    <div className={styles.folderTabs} role="tablist" aria-label="Locker editing sections">{["info", "career", "stats", "images", "videos", "social"].map((key, index, tabs) => <button key={key} type="button" role="tab" id={`locker-tab-${key}`} aria-controls={`locker-panel-${key}`} aria-selected={activeFolder === key} tabIndex={activeFolder === key ? 0 : -1} className={styles.folderTab} onClick={() => setActiveFolder(key)} onKeyDown={event => {
+    <div className={styles.folderTabs} role="tablist" aria-label="Locker editing sections">{["info", "career", "stats", "images", "videos", "media"].map((key, index, tabs) => <button key={key} type="button" role="tab" id={`locker-tab-${key}`} aria-controls={`locker-panel-${key}`} aria-selected={activeFolder === key} tabIndex={activeFolder === key ? 0 : -1} className={styles.folderTab} onClick={() => setActiveFolder(key)} onKeyDown={event => {
       const next = event.key === "ArrowRight" ? (index + 1) % tabs.length : event.key === "ArrowLeft" ? (index + tabs.length - 1) % tabs.length : event.key === "Home" ? 0 : event.key === "End" ? tabs.length - 1 : null;
       if (next === null) return;
       event.preventDefault(); setActiveFolder(tabs[next]); event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>("[role=tab]")[next]?.focus();
@@ -334,8 +362,10 @@ export default function PreviewLockerForm({
         <p className="text-xs text-muted-foreground">An image URL or local upload plus an external HTTPS destination shows the banner. It is at most 70% of the viewport width. No image leaves no banner space.</p>
       </section>
       </section>
-      <section id="locker-panel-social" role="tabpanel" aria-labelledby="locker-tab-social" tabIndex={0} hidden={activeFolder !== "social"} className={styles.folderPanel}>
-      <h2 className={styles.folderHeading}>Social & content links</h2>
+      <section id="locker-panel-media" role="tabpanel" aria-labelledby="locker-tab-media" tabIndex={0} hidden={activeFolder !== "media"} className={styles.folderPanel}>
+      <h2 className={styles.folderHeading}>Media & merchandise</h2>
+      <ArticlesSection articles={newsArticles} edits={draft.article_edits} onChange={article_edits => change({ article_edits })} saved={!!saved} dirty={dirty} canLoad={!!saved && !dirty && !busy} onReload={() => { void loadNews(); }} onRefresh={() => { void loadNews(true); }} />
+      <MerchandiseSection items={draft.merchandise} onChange={merchandise => change({ merchandise })} />
       <SocialSection items={draft.social} photos={draft.photos} videos={draft.videos} saved={!!saved} onChange={social => change({ social })} onUpload={(kind, files, social) => { void uploadFiles(kind, files, false, { social }); }} />
       </section>
       <label className="flex items-start gap-3"><input type="checkbox" checked={reviewed} onChange={e => setReviewed(e.target.checked)} className="mt-1 h-5 w-5" />I reviewed this draft for private demo use. This is not public publication or rights verification.</label>
@@ -356,6 +386,7 @@ export default function PreviewLockerForm({
     {busy === "discovery" && <Button type="button" variant="outline" onClick={() => { abort.current?.abort(); setMessage("Discovery cancelled. Continue manually."); }}>Cancel discovery</Button>}
     {busy === "upload" && <p role="status">Uploading directly to private storage…</p>}
     {busy === "save" && <p role="status">Saving privately…</p>}
+    {busy === "news" && <p role="status">Loading saved player news…</p>}
     {busy === "complete" && <p role="status">Saving completion…</p>}
     {saved && <p className="rounded-lg border border-[#ffbb00]/40 p-3 text-sm">Ready to invite? <Link className="font-semibold text-[#ffbb00] underline" href={`/admin/preview-lockers/${saved.id}/link`}>Publish or manage the share link</Link>. Published links open without sign-in.</p>}
     {saved && <PreviewViewerAccess previewId={saved.id} initialAssigned={record ? viewerAssigned : false} />}

@@ -158,10 +158,11 @@ it("uses assigned award art and real social posts in the existing grids", async 
  await act(async()=>host.querySelector<HTMLButtonElement>('[aria-label="Close social post"]')!.click());
  await click('MERCH');
  expect(host.querySelector('.locker-merch-grid')).not.toBeNull();
- expect(host.querySelectorAll('.locker-merch-grid article')).toHaveLength(4);
+ expect(host.querySelectorAll('.locker-merch-grid article')).toHaveLength(0);
  expect(host.querySelector('.locker-merch-grid a')).toBeNull();
- expect(host.querySelectorAll('.locker-merch-buy:disabled')).toHaveLength(4);
- expect(host.textContent).toContain('Sample · not for sale');
+ expect(host.querySelectorAll('.locker-merch-buy:disabled')).toHaveLength(0);
+ expect(host.textContent).toContain('No merchandise added yet.');
+ expect(host.textContent).not.toContain('Sample · not for sale');
  expect(host.querySelector('[aria-label="Open short: Training reel"]')).toBeNull();
 });
 it("uses the supplied third-party merchandise URL for Buy Now", async () => {
@@ -178,4 +179,23 @@ it("uses the supplied third-party merchandise URL for Buy Now", async () => {
  expect(buy.rel).toContain('noopener');
  expect(buy.rel).toContain('sponsored');
  expect(host.querySelectorAll('.locker-merch-grid article')).toHaveLength(1);
+});
+
+it("renders only the builder's visible merchandise in the Locker merchandise tab", async () => {
+ const content = previewContent.parse({ slug: "merch-fixture", full_name: "Merch Fixture", merchandise: [
+   { id: "card", title: "Career trading card", category: "trading_card", productUrl: "https://shop.example.com/card", imageUrl: null, retailer: "Card Shop", priceLabel: "$12", visible: true },
+   { id: "jersey", title: "Hidden jersey", category: "jersey", productUrl: "https://shop.example.com/jersey", imageUrl: null, visible: false },
+ ] });
+ await act(async () => root.render(<LockerView data={previewLockerData({ ...record, ...content })} />));
+ const media = [...host.querySelectorAll('button')].find(button => button.textContent?.trim() === 'MEDIA')!;
+ await act(async () => media.dispatchEvent(new MouseEvent('mousedown',{button:0,bubbles:true})));
+ const merch = [...host.querySelectorAll('button')].find(button => button.textContent?.trim() === 'MERCH')!;
+ await act(async () => merch.click());
+ expect(host.querySelectorAll('.locker-merch-grid article')).toHaveLength(1);
+ expect(host.textContent).toContain('Career trading card');
+ expect(host.textContent).toContain('Card Shop');
+ expect(host.textContent).toContain('$12');
+ expect(host.textContent).toContain('Product image unavailable');
+ expect(host.textContent).not.toContain('Hidden jersey');
+ expect(host.querySelector('a.locker-merch-buy')?.getAttribute('href')).toBe('https://shop.example.com/card');
 });

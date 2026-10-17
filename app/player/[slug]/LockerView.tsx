@@ -13,8 +13,9 @@ import { trackProductEvent } from "@/lib/analytics/client";
 import { trackPreviewEvent } from "@/lib/analytics/preview-client";
 import { VideoPreview } from "@/components/player/VideoPreview";
 import { StructuredStats } from "@/components/player/StructuredStats";
-import { SAMPLE_MERCH } from "@/lib/preview-lockers/sample-merch";
 import { SpotifyPreviewBadge } from "@/components/player/SpotifyPreviewBadge";
+
+type LockerNews = Pick<import("@/lib/enrichment/news").NewsResult, "articles" | "status">;
 
 // ---------------------------------------------------------------------------
 // LockerView — fan-facing athlete locker, ported from the standalone design.
@@ -22,7 +23,7 @@ import { SpotifyPreviewBadge } from "@/components/player/SpotifyPreviewBadge";
 // Real scraped data (identity, school, NFL draft, height/weight, DOB, games,
 // bio, awards, videos, photos) is threaded into the layout. Sections without a
 // data source yet (season/career stat lines, pool earnings, game log, timeline,
-// extended combine measurables, article/podcast media) keep the design's sample
+// extended combine measurables) keep the design's sample
 // values so the full experience renders — swap these for live queries once the
 // stats pipeline lands. Search "SAMPLE" to find every placeholder.
 // ---------------------------------------------------------------------------
@@ -32,7 +33,7 @@ export type LockerData = {
   slug: string;
   lockerHref?: string;
   fullName: string;
-  merch?: { id: string; title: string; imageUrl: string; productUrl?: string; priceLabel?: string }[];
+  merch?: { id: string; title: string; imageUrl: string | null; productUrl?: string; priceLabel?: string | null; retailer?: string | null; category?: string }[];
   hometown: string;
   position: string;
   jersey: string;
@@ -105,7 +106,10 @@ export type LockerData = {
   schools: { label: string; name?: string; color: string; logo: string | null }[];
   proTeams: { label: string; name?: string; color: string; logo: string | null }[];
   social?: LockerSocial[];
-  awards: { imageUrl?: string | null; year: string; label: string; description?: string | null; sourceUrl?: string | null }[];
+  awards: { evidenceStatus?: "unverified" | "verified"; imageUrl?: string | null; year: string; label: string; description?: string | null; sourceUrl?: string | null; attribution?: string | null }[];
+  articles?: import("@/lib/enrichment/news").PlayerArticle[];
+  articlesLoading?: boolean;
+  articlesUnavailable?: boolean;
   timeline?: { year: string; tag: string; title: string; note: string }[];
   videos: { id: string; title: string; thumb: string | null; playbackUrl?: string | null; embedUrl?: string | null }[];
   podcastAppearances?: {
@@ -189,13 +193,29 @@ export default function LockerView({
   presentation = "page",
   footer,
   previewId,
+  newsPromise,
 }: {
   data: LockerData;
+  newsPromise?: Promise<LockerNews>;
   viewerMode?: LockerViewerMode;
   presentation?: LockerPresentation;
   footer?: React.ReactNode;
   previewId?: string;
 }) {
+  const [newsResolution, setNewsResolution] = useState<{ promise: Promise<LockerNews>; result: LockerNews } | null>(null);
+  const liveNews = newsResolution?.promise === newsPromise ? newsResolution?.result : null;
+  useEffect(() => {
+    if (!newsPromise) return;
+    let active = true;
+    // Consume the server-created promise without suspending/remounting the whole
+    // Locker. News arriving later must preserve tabs, video and modal state.
+    void newsPromise.then(result => {
+      if (active) setNewsResolution({ promise: newsPromise, result });
+    }, () => {
+      if (active) setNewsResolution({ promise: newsPromise, result: { articles: [], status: "unavailable" } });
+    });
+    return () => { active = false; };
+  }, [newsPromise]);
   const [tab, setTab] = useState<"bio" | "media" | "stats">("bio");
   const [bioSort, setBioSort] = useState("all");
   const [mediaSort, setMediaSort] = useState("articles");
@@ -248,7 +268,7 @@ export default function LockerView({
   const showAthleteNav = viewerMode === "athlete";
   const isEmbedded = presentation === "embedded";
   const isPrivatePreview = data.lockerHref?.startsWith("/preview-lockers/") === true;
-  const merchandise: NonNullable<LockerData["merch"]> = data.merch?.length ? data.merch : isPrivatePreview ? SAMPLE_MERCH : [];
+  const merchandise: NonNullable<LockerData["merch"]> = data.merch ?? [];
   const [heroMobile, setHeroMobile] = useState<boolean | null>(null);
   useEffect(() => {
     const media = window.matchMedia("(max-width: 767px)");
@@ -684,7 +704,7 @@ export default function LockerView({
     ? data.awards
     : [];
   const awards = awardSrc.map((a, index) => ({
-    cat: "awards", isAward: true, year: a.year, label: a.label, sourceUrl: a.sourceUrl, description: awardDescription(a.label, a.description), img: safeExternalUrl(a.imageUrl ?? "") ?? (isPrivatePreview ? null : poolAt(index)),
+    cat: "awards", isAward: true, evidenceStatus: isPrivatePreview ? "unverified" : a.evidenceStatus, year: a.year, label: a.label, sourceUrl: a.sourceUrl, attribution: a.attribution, description: awardDescription(a.label, a.description), img: safeExternalUrl(a.imageUrl ?? "") ?? (isPrivatePreview ? null : poolAt(index)),
     style: { flex: "none", width: 164, scrollSnapAlign: "start", borderRadius: 16, border: "1px solid #1E2640", background: "linear-gradient(160deg,#1a2035,#131829)" } as React.CSSProperties,
   }));
 
@@ -693,13 +713,10 @@ export default function LockerView({
   const bioPills = [["all", "ALL"], ["measurables", "MEASURABLES"], ["story", "STORY"]]
     .map(([key, label]) => ({ key, label, active: bioSort === key }));
 
-  // ---- MEDIA cards (visuals use real photos; SAMPLE article/podcast copy) ----
-  const mediaArticles = [
-    { source: "THE ATHLETIC", title: "THE CONFERENCE'S BEST COVER MAN", meta: "6 MIN READ", img: poolAt(0), dek: "Film, leadership, and the week-by-week rise of a verified locker profile.", originalUrl: "https://www.nytimes.com/athletic/" },
-    { source: "ESPN", title: "DRAFT STOCK RISING", meta: "4 MIN READ", img: poolAt(3), dek: "Scouts circle the traits, production, and projection behind the latest board movement.", originalUrl: "https://www.espn.com/" },
-    { source: "TEAM SITE", title: "LOCKER ROOM STANDARD SETTER", meta: "3 MIN READ", img: poolAt(1), dek: "How preparation and practice habits have become part of the weekly team story.", originalUrl: "https://calbears.com/" },
-    { source: "LOCAL PRESS", title: "FROM FRIDAY NIGHTS TO FEATURE FILM", meta: "5 MIN READ", img: poolAt(2), dek: "The hometown arc behind the athlete's growing media archive.", originalUrl: "https://www.latimes.com/sports/" },
-  ];
+  // Article headlines, artwork and destinations come only from discovered metadata.
+  const mediaArticles = (liveNews?.articles ?? data.articles ?? []).map(article => ({ source: article.publisher, title: article.headline, meta: article.published_at ? new Date(article.published_at).toLocaleDateString("en-US", { timeZone: "UTC", month: "short", day: "numeric", year: "numeric" }) : "Date unavailable", img: article.thumbnail_url, dek: article.summary, originalUrl: article.article_url }));
+  const articlesLoading = data.articlesLoading || Boolean(newsPromise && !liveNews);
+  const articlesUnavailable = data.articlesUnavailable || liveNews?.status === "unavailable";
   const mediaShorts: Array<{ source: string; title: string; meta: string; img: string | null; videoUrl: string | null; originalUrl?: string; embedUrl?: string | null }> = isPrivatePreview ? (data.social ?? []).filter(item => item.kind === "short").map(item => ({ source: item.handle || item.platform, title: item.title, meta: item.platform, img: item.imageUrl, videoUrl: item.videoUrl, originalUrl: item.sourceUrl, embedUrl: socialEmbedUrl(item.platform, item.sourceUrl, item.kind) })) : [
     { source: "@ATHLETE", title: "PREGAME WALK", meta: "218K VIEWS", img: poolAt(1), videoUrl: null },
     { source: "@ATHLETE", title: "FILM STUDY · 6AM", meta: "96K VIEWS", img: poolAt(2), videoUrl: null },
@@ -1361,10 +1378,11 @@ export default function LockerView({
                 {mediaSort === "articles" ? (
                   <div className={isPrivatePreview ? "preview-article-list" : undefined} style={{ padding: "14px 18px 10px" }}>
                     <div className={isPrivatePreview ? "preview-articles-grid grid grid-cols-[repeat(auto-fit,260px)] justify-center gap-3" : "grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"}>
+                      {!mediaArticles.length && <p role="status" className="col-span-full py-8 text-center text-sm text-white/60">{articlesLoading ? "Searching for matching news articles…" : articlesUnavailable ? "News articles are temporarily unavailable. Please check back later." : "No matching news articles found for this player yet."}</p>}
                       {(isPrivatePreview ? mediaArticles : mediaArticles.slice(0, 3)).map((article) => (
-                        <EditorialCard compactMobile={isPrivatePreview} key={article.title} title={article.title} image={article.img} description={article.dek} meta={[article.source, article.meta].filter(Boolean).join(' · ')} onClick={isPrivatePreview ? (safeExternalUrl(article.originalUrl) ? () => { const url = safeExternalUrl(article.originalUrl); if (url) setPendingArticleRedirect({ source: article.source, title: article.title, url }); } : undefined) : () => setArticleModalOpen(true)} />
+                        <EditorialCard compactMobile={isPrivatePreview} key={article.originalUrl} title={article.title} image={article.img} description={article.dek} meta={[article.source, article.meta].filter(Boolean).join(' · ')} onClick={safeExternalUrl(article.originalUrl) ? () => { const url = safeExternalUrl(article.originalUrl); if (url) setPendingArticleRedirect({ source: article.source, title: article.title, url }); } : undefined} />
                       ))}
-                      {!isPrivatePreview && <button type="button" className={isPrivatePreview ? "col-span-full justify-self-center" : undefined} onClick={() => setArticleModalOpen(true)} style={{ alignSelf: "center", marginTop: 2, border: "1px solid rgba(255,185,64,.45)", borderRadius: 9999, background: "rgba(255,185,64,.08)", color: lockerAccent, padding: "9px 13px", fontFamily: mono, fontWeight: 700, fontSize: 9, letterSpacing: ".12em", textTransform: "uppercase", cursor: "pointer" }}>
+                      {!isPrivatePreview && mediaArticles.length > 3 && <button type="button" onClick={() => setArticleModalOpen(true)} style={{ alignSelf: "center", marginTop: 2, border: "1px solid rgba(255,185,64,.45)", borderRadius: 9999, background: "rgba(255,185,64,.08)", color: lockerAccent, padding: "9px 13px", fontFamily: mono, fontWeight: 700, fontSize: 9, letterSpacing: ".12em", textTransform: "uppercase", cursor: "pointer" }}>
                         View all articles
                       </button>}
                     </div>
@@ -1375,8 +1393,9 @@ export default function LockerView({
                     <div className="locker-merch-grid">
                       {merchandise.map(item => {
                         return <article key={item.id} style={{ minWidth: 0, color: "#fff", textAlign: "center" }}>
-                          <img src={item.imageUrl} alt={item.title} style={{ width: "100%", aspectRatio: "1", objectFit: "contain", borderRadius: 14, background: "#131829" }} />
+                          {item.imageUrl ? <img src={item.imageUrl} alt={item.title} style={{ width: "100%", aspectRatio: "1", objectFit: "contain", borderRadius: 14, background: "#131829" }} /> : <div style={{ aspectRatio: "1", display: "grid", placeItems: "center", borderRadius: 14, background: "#131829", color: "rgba(255,255,255,.6)", fontSize: 12 }}>Product image unavailable</div>}
                           <h3 style={{ fontFamily: "Barlow, sans-serif", fontWeight: 700, fontSize: 18, overflowWrap: "anywhere", margin: "10px 0 4px" }}>{item.title}</h3>
+                          {(item.category || item.retailer) && <p style={{ fontSize: 12, color: "rgba(255,255,255,.6)" }}>{[item.category?.replaceAll("_", " "), item.retailer].filter(Boolean).join(" · ")}</p>}
                           {item.priceLabel && <p>{item.priceLabel}</p>}
                           {!item.productUrl && <p style={{ fontSize: 12, color: "rgba(255,255,255,.6)", margin: 0 }}>Sample · not for sale</p>}
                           {item.productUrl ? (
@@ -1791,7 +1810,7 @@ export default function LockerView({
                           style={isPrivatePreview ? { height: "auto", overflowY: "visible", paddingRight: 6 } : { height: 408, overflowY: "auto", overscrollBehavior: "auto", paddingRight: 6, display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 10 }}
                         >
                           {awards.map((award: any, i) => (
-                            <EditorialCard key={i} title={award.label} description={award.description} image={award.img} meta={String(award.year || '')} award={isPrivatePreview} href={safeExternalUrl(award.sourceUrl)} />
+                            <EditorialCard key={i} title={award.label} description={award.description} image={award.img} meta={[award.year, award.evidenceStatus === "unverified" ? "Unverified evidence" : award.evidenceStatus === "verified" ? "Verified award" : null].filter(Boolean).join(" · ")} attribution={award.attribution} award={isPrivatePreview} href={safeExternalUrl(award.sourceUrl)} />
                           ))}
                         </div>
                         {!isPrivatePreview && <div style={{ position: "absolute", top: 14 + awardsScrollProgress * 286, right: 1, width: 2, height: 54, borderRadius: 9999, background: "rgba(210,214,224,.72)", boxShadow: "0 0 8px rgba(210,214,224,.22)", opacity: awardsScrolling ? 1 : 0, transition: "opacity .22s ease, top .08s linear", pointerEvents: "none" }} />}
@@ -1801,7 +1820,7 @@ export default function LockerView({
                         <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: ".16em", color: lockerAccent, textTransform: "uppercase", marginBottom: 12 }}>Awards archive</div>
                         <div style={{ fontFamily: disp, fontWeight: 900, fontSize: 28, lineHeight: .9, textTransform: "uppercase", color: "#fff", marginBottom: 12 }}>Legacy still loading</div>
                         <p style={{ fontFamily: body, fontSize: 14, lineHeight: 1.55, color: "rgba(255,255,255,.68)", margin: 0 }}>
-                          No verified awards are attached yet, but a great career is more than a trophy case. BLTZ will add honors as they are verified.
+                          {isPrivatePreview ? "No award evidence has been added yet. Discovered honors will require verification." : "No awards are attached yet. Honors will appear here when available."}
                         </p>
                       </div>
                     )}

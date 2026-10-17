@@ -1,9 +1,10 @@
-// Preview table regenerated from isolated PostgreSQL information_schema by scripts/verify-preview-pfr-csv.mjs; remaining declarations retain their Supabase CLI provenance.
+// Preview table regenerated from isolated PostgreSQL information_schema by scripts/verify-preview-media.mjs; remaining declarations retain their Supabase CLI provenance.
 // Scoped additive extract; released database.generated.ts remains unchanged.
 // Short-link/inquiry fields regenerated from disposable PostgreSQL by verify-preview-access-window.mjs; hosted schema regeneration remains a release check.
 import type { Json } from "./database.generated";
 export type PreviewDatabase = { public: { Tables: { preview_lockers: {
         Row: {
+          article_edits: Json
           athlete_quote: string | null
           athlete_quote_author: string | null
           awards: Json
@@ -21,6 +22,7 @@ export type PreviewDatabase = { public: { Tables: { preview_lockers: {
           id: string
           jersey: string | null
           level: string | null
+          merchandise: Json
           pfr_stats: Json
           photo_room_banner_link: string | null
           photo_room_banner_storage_path: string | null
@@ -38,6 +40,7 @@ export type PreviewDatabase = { public: { Tables: { preview_lockers: {
           weight_lbs: number | null
         }
         Insert: {
+          article_edits?: Json
           athlete_quote?: string | null
           athlete_quote_author?: string | null
           awards?: Json
@@ -55,6 +58,7 @@ export type PreviewDatabase = { public: { Tables: { preview_lockers: {
           id?: string
           jersey?: string | null
           level?: string | null
+          merchandise?: Json
           pfr_stats?: Json
           photo_room_banner_link?: string | null
           photo_room_banner_storage_path?: string | null
@@ -72,6 +76,7 @@ export type PreviewDatabase = { public: { Tables: { preview_lockers: {
           weight_lbs?: number | null
         }
         Update: {
+          article_edits?: Json
           athlete_quote?: string | null
           athlete_quote_author?: string | null
           awards?: Json
@@ -89,6 +94,7 @@ export type PreviewDatabase = { public: { Tables: { preview_lockers: {
           id?: string
           jersey?: string | null
           level?: string | null
+          merchandise?: Json
           pfr_stats?: Json
           photo_room_banner_link?: string | null
           photo_room_banner_storage_path?: string | null

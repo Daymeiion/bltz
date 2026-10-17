@@ -3,6 +3,8 @@ import { z } from "zod";
 import { socialPlatforms, socialPlatformMatches } from "./social";
 import { cfbImports, combineCfbImports } from "./cfb-csv";
 import { pfrImports, combinePfrImports } from "./pfr-csv";
+import { isNewsArticleUrl } from "@/lib/enrichment/news-classification";
+import { evaluateSource } from "@/lib/source-policy/policy";
 
 // Display references only; the preview server never downloads these URLs.
 export function isPreviewUrl(value: string): boolean {
@@ -59,6 +61,21 @@ export const previewStatLabels: Record<(typeof previewStatKeys)[number], string>
 const careerStat = z.object({ key: z.enum(previewStatKeys), value: z.number().finite().min(0).max(1_000_000) }).strict()
   .refine(stat => stat.key === "sacks" || Number.isInteger(stat.value), "Only sacks may use a fractional value.");
 const uniqueIds = <T extends { id: string }>(items: T[]) => new Set(items.map(x => x.id)).size === items.length;
+const boundedMetadata = (items: unknown[]) => new TextEncoder().encode(JSON.stringify(items)).length <= 96000;
+const articleUrl = previewUrl.refine(isNewsArticleUrl, "Use an article link, not a homepage, profile or social post.")
+  .refine(url => evaluateSource(url).allowed_actions.includes("PERSIST_METADATA"), "This source does not allow saved metadata.");
+export const previewArticleEdit = z.object({
+  id, sourceUrl: articleUrl.nullable().default(null), visible: z.boolean().default(true),
+  headline: text(500).min(1), publisher: text(200).min(1), articleUrl, imageUrl: asset,
+  summary: text(600).default(""), publishedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(value => {
+    const date = new Date(value); return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+  }, "Use a valid calendar date.").nullable().default(null),
+}).strict();
+export const merchandiseCategories = ["trading_card", "jersey", "apparel", "memorabilia", "other"] as const;
+export const previewMerchandise = z.object({
+  id, title: text(160).min(1), category: z.enum(merchandiseCategories), productUrl: previewUrl,
+  imageUrl: asset, retailer: nullableText(160), priceLabel: nullableText(80), visible: z.boolean().default(true),
+}).strict();
 export const previewSocial = z.object({
   id, title: text(160).min(1), platform: z.enum(socialPlatforms), kind: z.enum(["short", "post"]),
   format: z.enum(["portrait", "square"]), sourceUrl: previewUrl, caption: text(2000).default(""), handle: text(120).default(""),
@@ -78,6 +95,11 @@ export const previewContent = z.object({
   schools: z.array(team).max(32).default([]), pro_teams: z.array(team).max(32).default([]),
   awards: z.array(award).max(40).default([]),
   social: z.array(previewSocial).max(40).refine(uniqueIds, "Social IDs must be unique.").default([]),
+  article_edits: z.array(previewArticleEdit).max(40).refine(uniqueIds, "Article IDs must be unique.")
+    .refine(items => { const sources = items.flatMap(item => item.sourceUrl ? [item.sourceUrl] : []); return new Set(sources).size === sources.length; }, "Keep only one edit per scraped article.")
+    .refine(boundedMetadata, "Article metadata is too large.").default([]),
+  merchandise: z.array(previewMerchandise).max(40).refine(uniqueIds, "Merchandise IDs must be unique.")
+    .refine(boundedMetadata, "Merchandise metadata is too large.").default([]),
   cfb_stats: cfbImports.refine(items => { try { combineCfbImports(items); return true; } catch { return false; } }, "College tables contain conflicting season values.").default([]),
   pfr_stats: pfrImports.refine(items => { try { combinePfrImports(items); return true; } catch { return false; } }, "NFL tables contain conflicting season values.").default([]),
   career_stats: z.array(careerStat).max(previewStatKeys.length).refine(items => new Set(items.map(item => item.key)).size === items.length, "Statistic keys must be unique.").default([]),
@@ -92,6 +114,11 @@ export type PreviewContent = z.infer<typeof previewContent>;
 export type PreviewRecord = z.infer<typeof previewRecord>;
 export type ResolvedPreviewRecord = Omit<PreviewRecord, "videos" | "photos"> & {
   photo_room_banner_resolved_url?: string | null;
+  enrichment_identity_key?: string;
+  enrichment?: {
+    awards: import("./types").PreviewAward[];
+    articles: import("@/lib/enrichment/news").PlayerArticle[];
+  };
   videos: Array<z.infer<typeof previewVideo> & { url: string }>;
   photos: Array<z.infer<typeof previewPhoto> & { url: string }>;
 };

@@ -6,6 +6,8 @@ import { previewRecord } from "@/lib/preview-lockers/validation";
 import PreviewLockerForm from "../../PreviewLockerForm";
 import { createServiceClient } from "@/lib/supabase/service";
 import { suggestPreviewAffiliations } from "@/lib/preview-lockers/affiliations";
+import EnrichmentPanel from "../../EnrichmentPanel";
+import { readPreviewEnrichment, type EnrichmentReport } from "@/lib/preview-lockers/enrichment";
 import PreviewBuilderWorkspace from "../../PreviewBuilderWorkspace";
 import { readBuilderContext } from "../../builder-workspace-data";
 export const dynamic = "force-dynamic";
@@ -23,6 +25,7 @@ export default async function EditPreview({ params }: { params: Promise<{ id: st
   if (viewer.error) throw new PreviewError("preview_unavailable", 503);
   if (relationship.error && relationship.error.code !== "42P01" && relationship.error.code !== "PGRST205") throw new PreviewError("preview_unavailable", 503);
   let record = previewRecord.parse(data);
+  const savedRecord = record;
   const service = createServiceClient();
   const identity = await service.from("preview_lockers").select("player_id").eq("id", id).maybeSingle();
   if (identity.error) throw new PreviewError("preview_unavailable", 503);
@@ -37,6 +40,10 @@ export default async function EditPreview({ params }: { params: Promise<{ id: st
   const seasons = profiles.filter(item => item.league === "nfl").flatMap(item => (item.normalized as { seasons?: Array<{ team?: string }> } | null)?.seasons ?? []);
   record = suggestPreviewAffiliations(record, { college, latestTeam: master.data?.latest_team, seasons }, schoolDirectory.data ?? []);
   const completedRevision = relationship.data?.completed_revision == null ? null : Number(relationship.data.completed_revision);
-  const context = await readBuilderContext(previewClient, id);
-  return <PreviewBuilderWorkspace context={context} selectedId={id} athleteName={record.full_name}><PreviewLockerForm key={id} record={record} viewerAssigned={viewer.data === true} gtmLinked={Boolean(relationship.data)} gtmCompleted={completedRevision === record.revision} /></PreviewBuilderWorkspace>;
+  const enrichment = await previewClient.from("preview_enrichments").select("report,source_revision").eq("preview_id", id).maybeSingle();
+  const [context, savedNews] = await Promise.all([
+    readBuilderContext(previewClient, id),
+    readPreviewEnrichment(previewClient, id, savedRecord, savedRecord.revision).catch(() => ({ articles: [] })),
+  ]);
+  return <PreviewBuilderWorkspace context={context} selectedId={id} athleteName={record.full_name}><details className="mb-5 rounded-xl border p-4"><summary className="min-h-8 cursor-pointer text-sm font-semibold">Awards & news enrichment</summary><div className="mt-3"><EnrichmentPanel key={id} id={id} initialReport={enrichment.error ? null : (enrichment.data?.report as EnrichmentReport | undefined) ?? null} stale={enrichment.data?.source_revision !== record.revision} /></div></details><PreviewLockerForm key={id} record={record} initialArticles={savedNews.articles} viewerAssigned={viewer.data === true} gtmLinked={Boolean(relationship.data)} gtmCompleted={completedRevision === record.revision} /></PreviewBuilderWorkspace>;
 }

@@ -1,4 +1,5 @@
 import "server-only";
+import { previewIdentityKey, readPreviewEnrichment } from "./enrichment";
 import { cache } from "react";
 import { previewWindowSchema, type PreviewWindow } from "./access-window";
 import { createClient } from "@/lib/supabase/server";
@@ -8,7 +9,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 
 export const PRIVATE_HEADERS = { "Cache-Control": "private, no-store", "Referrer-Policy": "no-referrer", "X-Robots-Tag": "noindex, nofollow, noarchive, noimageindex" };
 export const PREVIEW_MEDIA_BUCKETS = { photo: "preview-locker-photos", video: "preview-locker-videos" } as const;
-export const PREVIEW_COLUMNS = "id,slug,full_name,position,level,school,hometown,jersey,height_in,weight_lbs,games_played,headshot_url,hero_video_url,photo_room_banner_url,photo_room_banner_link,photo_room_banner_storage_path,bio,athlete_quote,athlete_quote_author,schools,pro_teams,awards,social,career_stats,cfb_stats,pfr_stats,videos,photos,revision,created_at,updated_at";
+export const PREVIEW_COLUMNS = "id,slug,full_name,position,level,school,hometown,jersey,height_in,weight_lbs,games_played,headshot_url,hero_video_url,photo_room_banner_url,photo_room_banner_link,photo_room_banner_storage_path,bio,athlete_quote,athlete_quote_author,schools,pro_teams,awards,social,article_edits,merchandise,career_stats,cfb_stats,pfr_stats,videos,photos,revision,created_at,updated_at";
 export class PreviewError extends Error {
   constructor(public code: string, public status: number) { super(code); }
 }
@@ -151,7 +152,7 @@ export const readPrivatePreview = cache(async (slug: string): Promise<(ResolvedP
       if (error) throw new PreviewError("preview_unavailable", 503);
       if (!data) return null;
       const resolved = await resolvePrivateMedia(authorization.client, previewRecord.parse(data));
-      return { ...await enrichPreviewSchoolBranding(authorization.client, resolved), publicLink: false };
+      return resolvePreviewEnrichment(authorization.client, resolved, false);
     }
   }
   // Load only an identifier before admission; pending content never reaches RSC.
@@ -170,9 +171,19 @@ export const readPrivatePreview = cache(async (slug: string): Promise<(ResolvedP
   // Nonstaff content has already passed RLS or the public window predicate.
   // Viewers cannot sign directly in Storage with an arbitrary longer lifetime.
   const resolved = await resolvePrivateMedia(client, previewRecord.parse(data), publicLink, service);
-  return { ...await enrichPreviewSchoolBranding(client, resolved), publicLink };
+  return resolvePreviewEnrichment(client, resolved, publicLink);
 });
 
 export async function isPublicPreview(client: ReturnType<typeof createServiceClient>, previewId: string): Promise<boolean> {
   return (await readPublicPreviewWindow(client, previewId)).state === "active";
+}
+
+/** Supplemental data is read only after the preview's existing access gate. */
+async function resolvePreviewEnrichment(client: Awaited<ReturnType<typeof createClient>>, row: ResolvedPreviewRecord, publicLink: boolean) {
+  // Display branding can change school labels; match the saved discovery identity first.
+  const identityKey = previewIdentityKey(row);
+  let enrichment: NonNullable<ResolvedPreviewRecord["enrichment"]> = { awards: row.awards, articles: [] };
+  try { enrichment = await readPreviewEnrichment(client, row.id, row, row.revision, identityKey); }
+  catch { /* Optional enrichment must not prevent an authorized base preview from loading. */ }
+  return { ...await enrichPreviewSchoolBranding(client, row), enrichment_identity_key: identityKey, enrichment, publicLink };
 }

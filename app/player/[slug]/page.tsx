@@ -1,6 +1,8 @@
 import { previewVideoSource } from "@/lib/preview-lockers/video";
+import type { NewsIdentity } from "@/lib/enrichment/news";
 import { notFound } from "next/navigation";
 import { readStructuredStats } from "@/lib/player/structured-stats";
+import { readPublicPlayerNews } from "@/lib/player/news";
 import { createClient } from "@/lib/supabase/server";
 import { MOCK_MEDIA, MOCK_PLAYERS, MOCK_VIDEOS } from "@/lib/mock";
 import {
@@ -13,6 +15,8 @@ import {
   nflTeamName,
 } from "@/lib/player/locker-format";
 import LockerView, { type LockerData } from "./LockerView";
+
+export const maxDuration = 60;
 
 // Mock data is only available in non-production builds. Production never returns
 // mock players, regardless of how `NEXT_PUBLIC_USE_MOCK` is set.
@@ -242,7 +246,7 @@ export default async function PlayerLocker({ params }: { params: Promise<{ slug:
     .from("players")
     .select(
       `id, full_name, name, slug, profile_image, headshot_url, hometown, video_url,
-       bio, position, level, school, dob, height_in, weight_lbs, games_played, current_status,
+       bio, position, level, school, college, team, dob, height_in, weight_lbs, games_played, current_status,
        gsis_id, cfb_team_id,
        nfl_player:nfl_players (
          headshot_url, latest_team, status, draft_year, draft_round, draft_pick,
@@ -438,5 +442,14 @@ export default async function PlayerLocker({ params }: { params: Promise<{ slug:
     })),
   };
 
-  return <LockerView data={data} />;
+  const newsIdentity: NewsIdentity = {
+    fullName: playerFullName, sport: "football", position: player.position || nflPlayer?.position || undefined,
+    schools: [...new Set([player.school, ...(player.college ?? []), cfbTeam?.display_name, nflPlayer?.college_name,
+      ...(data.structuredStats ?? []).filter(stats => stats.league === "ncaafb").flatMap(stats => stats.seasons.map(season => season.team)),
+    ].filter((value): value is string => !!value))],
+    teams: [...new Set([player.team, nflPlayer?.latest_team, nflPlayer?.draft_team,
+      ...(data.structuredStats ?? []).filter(stats => stats.league === "nfl").flatMap(stats => stats.seasons.map(season => season.team)),
+    ].filter((value): value is string => !!value))],
+  };
+  return <LockerView data={data} newsPromise={readPublicPlayerNews(player.id, newsIdentity)} />;
 }
