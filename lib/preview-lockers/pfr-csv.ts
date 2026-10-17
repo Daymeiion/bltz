@@ -29,7 +29,26 @@ export const pfrImports = z.array(pfrImport).max(cfbCategories.length)
     catch { return false; }
   }, "All NFL tables must reference the same player page.");
 export type PfrImport = z.infer<typeof pfrImport>;
-export const inspectPfrCsv = (input: string, category: CfbCategory) => inspectCsv(input, category);
+export function inspectPfrCsv(input: string, category: CfbCategory): CsvTable {
+  const table = inspectCsv(input, category);
+  // Repeated Yds/Lng columns need their source group. Keep this NFL-specific
+  // vocabulary separate from the college reader and provider normalization.
+  const defense: Record<string, string> = {
+    inttd: "interceptionReturnTouchdowns", fmb: "fumbles", frtd: "fumbleReturnTouchdowns",
+    qbhits: "quarterbackHits", sfty: "safeties", av: "approximateValue",
+  };
+  const groups: Record<string, Record<string, string>> = {
+    definterceptions: { yds: "interceptionReturnYards", lng: "longestInterceptionReturn" },
+    fumbles: { yds: "fumbleReturnYards" },
+  };
+  const clean = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const mapping = table.headers.map((header, index) => {
+    const parts = header.split(":");
+    const key = clean(parts.at(-1)!);
+    return table.mapping[index] || groups[clean(parts[0])]?.[key] || (category === "defense" ? defense[key] : "") || "";
+  });
+  return { ...table, mapping: mapping.map(key => key && mapping.filter(other => other === key).length > 1 ? "" : key) };
+}
 
 // PFR adds career, per-game, team summary, and multi-team total rows to exports.
 // Keep team stints when available, verifying their totals against the aggregate.
@@ -60,6 +79,7 @@ export function reviewPfrCsv(table: CsvTable, mapping: string[], category: CfbCa
     const stints = parsed.seasons.filter(other => other.year === row.year && !/^(?:\d+TM|TOT)$/i.test(other.team));
     if (!stints.length) return true;
     for (const [key, value] of Object.entries(row.statistics)) {
+      if (DISPLAY_STAT_FIELDS[key].maximum && stints.every(stint => stint.statistics[key] !== undefined) && Math.max(...stints.map(stint => stint.statistics[key])) !== value) throw new Error(`Team stints do not match the ${key} maximum in ${row.year}. Include all team rows.`);
       if (!DISPLAY_STAT_FIELDS[key].sum || stints.some(stint => stint.statistics[key] === undefined)) continue;
       if (Math.abs(stints.reduce((total, stint) => total + stint.statistics[key], 0) - value) > 0.001) throw new Error(`Team stints do not match the ${key} total in ${row.year}. Include all team rows.`);
     }

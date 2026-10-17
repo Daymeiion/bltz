@@ -48,8 +48,17 @@ export const STAT_FIELDS: Record<string, { path: string; label: string; sum: boo
 };
 
 // Manual CSV display fields do not change provider normalization or API requests.
-export const DISPLAY_STAT_FIELDS: Record<string, { label: string; sum: boolean }> = {
+export const DISPLAY_STAT_FIELDS: Record<string, { label: string; sum: boolean; maximum?: boolean }> = {
   ...STAT_FIELDS,
+  interceptionReturnYards: { label: "Interception return yards", sum: true },
+  interceptionReturnTouchdowns: { label: "Interception return TD", sum: true },
+  longestInterceptionReturn: { label: "Longest interception return", sum: false, maximum: true },
+  fumbles: { label: "Fumbles", sum: true },
+  fumbleReturnYards: { label: "Fumble return yards", sum: true },
+  fumbleReturnTouchdowns: { label: "Fumble return TD", sum: true },
+  quarterbackHits: { label: "QB hits", sum: true },
+  safeties: { label: "Safeties", sum: true },
+  approximateValue: { label: "Approximate Value (AV)", sum: true },
   tacklesForLoss: { label: "Tackles for loss", sum: true },
   fieldGoalsMade: { label: "Field goals made", sum: true },
   fieldGoalsAttempted: { label: "Field goal attempts", sum: true },
@@ -59,13 +68,13 @@ export const DISPLAY_STAT_FIELDS: Record<string, { label: string; sum: boolean }
   puntYards: { label: "Punt yards", sum: true },
 };
 
-// Only sum an additive metric when every included stint reports it. Rates are
-// displayed per stint; neither NFL nor NCAA ratings are summed or averaged.
+// Aggregate only when every included stint reports the metric. Longest returns
+// use the maximum; neither NFL nor NCAA ratings are summed or averaged.
 export function careerTotals(seasons: SeasonStats[]) {
   const totals: Record<string, number> = {};
   for (const [key, field] of Object.entries(DISPLAY_STAT_FIELDS)) {
-    if (field.sum && seasons.length && seasons.every(s => s.statistics[key] !== undefined)) {
-      totals[key] = seasons.reduce((n, s) => n + s.statistics[key], 0);
+    if ((field.sum || field.maximum) && seasons.length && seasons.every(s => s.statistics[key] !== undefined)) {
+      totals[key] = field.maximum ? Math.max(...seasons.map(s => s.statistics[key])) : seasons.reduce((n, s) => n + s.statistics[key], 0);
     }
   }
   return totals;
