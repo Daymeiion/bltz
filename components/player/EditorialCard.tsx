@@ -11,10 +11,11 @@ function articleMetadata(meta: string) {
 }
 
 /** Shared article / honor presentation; actions only appear when there is a destination. */
-export function EditorialCard({ title, image, description, meta, onClick, award = false, href, compactMobile = false, attribution }: {
+export function EditorialCard({ title, image, description, meta, onClick, award = false, href, compactMobile = false, attribution, imageFit = "cover" }: {
   title: string; image?: string | null; description?: string; meta?: string;
   onClick?: () => void; award?: boolean; href?: string | null; compactMobile?: boolean;
   attribution?: string | null;
+  imageFit?: "cover" | "contain";
 }) {
   const [failedImage, setFailedImage] = useState<string | null>(null);
   const visibleImage = image && image !== failedImage ? image : null;
@@ -30,7 +31,7 @@ export function EditorialCard({ title, image, description, meta, onClick, award 
     </div>
   </article>;
   return <article className={`${compactMobile ? "preview-article-card " : ""}flex min-w-0 flex-col rounded-[28px] border border-white/10 bg-black p-2 text-center text-white`}>
-    {visibleImage ? <img src={visibleImage} onError={() => setFailedImage(visibleImage)} onLoad={event => { if (event.currentTarget.naturalWidth <= 1 || event.currentTarget.naturalHeight <= 1) setFailedImage(visibleImage); }} referrerPolicy="no-referrer" alt="" loading="lazy" className="aspect-[4/3] w-full rounded-[21px] object-cover" /> :
+    {visibleImage ? <img src={visibleImage} onError={() => setFailedImage(visibleImage)} onLoad={event => { if (event.currentTarget.naturalWidth <= 1 || event.currentTarget.naturalHeight <= 1) setFailedImage(visibleImage); }} referrerPolicy="no-referrer" alt="" loading="lazy" className={`aspect-[4/3] w-full rounded-[21px] ${imageFit === "contain" ? "object-contain" : "object-cover"}`} /> :
       <div className="flex aspect-[4/3] flex-col items-center justify-center gap-3 rounded-[21px] bg-[#121923] text-[#ffbb00]"><span className="text-4xl" aria-hidden="true">{onClick ? "↗" : "★"}</span><span className="text-xs text-white/60">Article image unavailable</span></div>}
     <div className="flex flex-1 flex-col items-center gap-3 px-3 py-5">
       <h3 className="text-lg font-semibold leading-tight">{title}</h3>

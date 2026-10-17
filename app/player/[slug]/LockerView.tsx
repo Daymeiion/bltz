@@ -1810,7 +1810,7 @@ export default function LockerView({
                           style={isPrivatePreview ? { height: "auto", overflowY: "visible", paddingRight: 6 } : { height: 408, overflowY: "auto", overscrollBehavior: "auto", paddingRight: 6, display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 10 }}
                         >
                           {awards.map((award: any, i) => (
-                            <EditorialCard key={i} title={award.label} description={award.description} image={award.img} meta={[award.year, award.evidenceStatus === "unverified" ? "Unverified evidence" : award.evidenceStatus === "verified" ? "Verified award" : null].filter(Boolean).join(" · ")} attribution={award.attribution} award={isPrivatePreview} href={safeExternalUrl(award.sourceUrl)} />
+                            <EditorialCard key={i} title={award.label} description={award.description} image={award.img} imageFit="contain" meta={[award.year, award.evidenceStatus === "unverified" ? "Unverified evidence" : award.evidenceStatus === "verified" ? "Verified award" : null].filter(Boolean).join(" · ")} attribution={award.attribution} award={isPrivatePreview} href={safeExternalUrl(award.sourceUrl)} />
                           ))}
                         </div>
                         {!isPrivatePreview && <div style={{ position: "absolute", top: 14 + awardsScrollProgress * 286, right: 1, width: 2, height: 54, borderRadius: 9999, background: "rgba(210,214,224,.72)", boxShadow: "0 0 8px rgba(210,214,224,.22)", opacity: awardsScrolling ? 1 : 0, transition: "opacity .22s ease, top .08s linear", pointerEvents: "none" }} />}
