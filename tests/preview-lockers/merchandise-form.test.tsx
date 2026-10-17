@@ -46,6 +46,20 @@ it("allows selecting multiple candidates before saving, prevents duplicates and 
   expect(host.querySelectorAll('section[aria-label="Merchandise search results"] article')).toHaveLength(1);
   expect(host.querySelectorAll('[aria-label^="Merchandise "][aria-label$=" title"]')).toHaveLength(2);
 });
+it("labels search-only suggestions as unverified and requires review before adding them", async () => {
+  await act(async () => root.render(<PreviewLockerForm record={record} />));
+  fetcher.mockResolvedValueOnce(Response.json(result([{ ...candidate, evidence: "search_result", priceLabel: null }])));
+  await click("Search merchandise");
+  const card = host.querySelector<HTMLElement>('section[aria-label="Merchandise search results"] article')!;
+  expect(card.textContent).toContain("Search result only · seller page unverified");
+  expect(card.textContent).toContain("Search title mentions: Arizona");
+  expect(button("Add to draft", card).disabled).toBe(true);
+  expect(fetcher).toHaveBeenCalledTimes(1);
+  await act(async () => card.querySelector<HTMLInputElement>('input[type="checkbox"]')!.click());
+  await click("Add to draft", card);
+  expect(host.querySelector<HTMLInputElement>('[aria-label="Merchandise 1 title"]')?.value).toBe(candidate.title);
+  expect(fetcher).toHaveBeenCalledTimes(1);
+});
 it("preserves previous results on failure and refuses stale or malformed responses", async () => {
   await act(async () => root.render(<PreviewLockerForm record={record} />));
   fetcher.mockResolvedValueOnce(Response.json(result())); await click("Search merchandise");

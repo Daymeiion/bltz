@@ -21,7 +21,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     if (!saved.data) throw new PreviewError("preview_not_found", 404);
     const row = previewRecord.parse(saved.data);
     if (row.revision !== input.data.revision) throw new PreviewError("preview_conflict", 409);
-    const provider = configuredSearchProvider();
+    const provider = configuredSearchProvider({ reviewTitles: true });
     if (!provider) throw new PreviewError("search_not_configured", 503);
     const identity = await withSchoolAliases(client, previewNewsIdentity(row));
     if (!merchandiseQueries(identity).length) throw new PreviewError("merchandise_identity_incomplete", 400);

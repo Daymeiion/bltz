@@ -35,6 +35,59 @@ it("deduplicates listings, corroborates affiliations and never treats search sni
   expect(result.items[0]).not.toHaveProperty("visible");
   expect(extract).toHaveBeenCalledTimes(2);
 });
+it("does not let full career history crowd individual card and jersey listings out of the metadata budget", async () => {
+  const career = { ...identity, teams: ["BAL", "San Diego Chargers", "Arizona Cardinals", "Carolina Panthers"] };
+  const card = "https://www.amazon.com/Antoine-Cason/dp/B01N26VW34";
+  const jersey = "https://nflauction.nfl.com/cason-jersey/isynmv1/aucd/5491501";
+  const search = async (query: string) => [
+    ...Array.from({ length: 4 }, (_, i) => ({ url: `https://example.com/reference/${encodeURIComponent(query)}/${i}` })),
+    { url: query.includes("jersey") ? jersey : card },
+    { url: "https://example.com/collections/all" },
+  ];
+  const extract = vi.fn(async (url: string) => url === card || url === jersey ? {
+    ...product, productUrl: url, canonicalUrl: url,
+    title: `Antoine Cason San Diego Chargers football ${url === card ? "trading card" : "jersey"}`,
+    category: url === card ? "trading_card" as const : "jersey" as const,
+  } : null);
+  const result = await discoverMerchandise(career, { name: "fixture", search }, extract, signal());
+  expect(result.items.map(item => item.productUrl)).toEqual(expect.arrayContaining([card, jersey]));
+  expect(extract.mock.calls.length).toBeLessThanOrEqual(16);
+});
+it.each(["empty", "blocked"])("keeps a title-matched product as an explicitly unverified review suggestion when seller metadata is %s", async mode => {
+  const url = "https://shop.example.com/products/card";
+  const result = await discoverMerchandise(identity, { name: "fixture", search: async () => [{ url, title: "Antoine Cason San Diego Chargers football rookie card $99" }] }, async () => {
+    if (mode === "blocked") throw new Error("metadata_blocked"); return null;
+  }, signal());
+  expect(result.status).toBe("partial");
+  expect(result.items).toEqual([expect.objectContaining({ evidence: "search_result", category: "trading_card", priceLabel: null, availability: "unknown", imageUrl: null, description: "", matchedAffiliations: ["SD"] })]);
+});
+it.each([
+  ["Antoine Cason Arizona basketball trading card", "https://shop.example.com/products/card"],
+  ["Antoine Cason Stanford football trading card", "https://shop.example.com/products/card"],
+  ["Antoine Casonson Arizona football jersey", "https://shop.example.com/products/card"],
+  ["Antoine Cason Arizona jersey", "https://shop.example.com/products/card"],
+  ["Antoine Cason Arizona football jersey", "https://shop.example.com/story/cason"],
+])("never suggests a wrong-sport, namesake, missing-context or non-listing title: %s", async (title, url) => {
+  const result = await discoverMerchandise(identity, { name: "fixture", search: async () => [{ url, title }] }, async () => null, signal());
+  expect(result.items).toEqual([]);
+});
+it.each(["unsafe_destination", "source_policy_blocked:EXTRACT_METADATA", "metadata_too_large", "metadata_timeout"])("does not bypass the fetch boundary for %s", async reason => {
+  const result = await discoverMerchandise(identity, { name: "fixture", search: async () => [{ url: product.productUrl, title: product.title }] }, async () => { throw new Error(reason); }, signal());
+  expect(result.items).toEqual([]);
+});
+it("does not use a search title to override readable seller metadata for a different player", async () => {
+  const result = await discoverMerchandise(identity, { name: "fixture", search: async () => [{ url: product.productUrl, title: product.title }] }, async () => ({ ...product, title: "Other Player Stanford football card", description: "Stanford football" }), signal());
+  expect(result.items).toEqual([]);
+});
+it("retains titles only for merchandise review and never retains search snippets", async () => {
+  const { configuredSearchProvider } = await import("@/lib/enrichment/search-provider");
+  vi.stubEnv("TAVILY_API_KEY", "unit-secret");
+  vi.stubGlobal("fetch", vi.fn(async () => Response.json({ results: [{ url: product.productUrl, title: product.title, content: "Do not use this snippet" }] })));
+  try {
+    expect(await configuredSearchProvider()!.search("fixture", signal())).toEqual([{ url: product.productUrl }]);
+    expect(await configuredSearchProvider({ reviewTitles: true })!.search("fixture", signal())).toEqual([{ url: product.productUrl, title: product.title }]);
+  } finally { vi.unstubAllGlobals(); vi.unstubAllEnvs(); }
+});
 it("checks policy, validates output fields, and does not extract restricted sources", async () => {
   const extract = vi.fn(async () => ({ ...product, imageUrl: "https://127.0.0.1/a", priceLabel: "x".repeat(81) }));
   const result = await discoverMerchandise(identity, { name: "fixture", search: async () => [{ url: "https://www.pro-football-reference.com/products/cason" }, { url: product.productUrl }] }, extract, signal());

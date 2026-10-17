@@ -2,7 +2,7 @@
 export const searchErrorMessages = {
   merchandise_identity_incomplete: "Save the player's full name and college or team before searching for merchandise.",
   merchandise_rate_limited: "Merchandise discovery is cooling down or its daily search limit was reached. Try again later.",
-  merchandise_metadata_unavailable: "Some seller pages could not be checked. Only matching listings with readable metadata are shown.",
+  merchandise_metadata_unavailable: "Some seller pages could not be checked. Search-only suggestions are labelled unverified and require seller review.",
   news_identity_incomplete: "Save the player's full name and college or team before searching for news.",
   search_not_configured: "News search is not configured. Set the server-only Tavily API key.",
   search_auth_failed: "Tavily rejected the credential or access. Check the server configuration.",

@@ -5,10 +5,12 @@ import { canonicalizeTeam, NFL_FULL_NAMES } from "@/lib/pipeline/teams";
 import { mentionsSchool } from "@/lib/player/school-identity";
 import { previewMerchandise, previewUrl } from "@/lib/preview-lockers/validation";
 import { z } from "zod";
+import { clean } from "./article-metadata";
 
 export const merchandiseCandidateSchema = previewMerchandise.omit({ id: true, visible: true }).extend({
   canonicalUrl: previewUrl, description: z.string().max(600), matchedAffiliations: z.array(z.string().max(160)).min(1).max(12),
   availability: z.enum(["in_stock", "out_of_stock", "unknown"]),
+  evidence: z.enum(["seller_metadata", "search_result"]).optional(),
 }).strict();
 export const merchandiseResultSchema = z.object({
   items: z.array(merchandiseCandidateSchema).max(12), status: z.enum(["complete", "partial", "unavailable"]),
@@ -33,6 +35,17 @@ export function merchandiseQueries(identity: NewsIdentity): string[] {
   return identitySearchTerms(identity).slice(0, 6).flatMap(term => [`${term} trading cards`, `${term} jersey`]);
 }
 const words = (s: string) => ` ${s.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()} `;
+const detailPath = (url: string) => /\/(?:products?|items?|itm|dp|gp\/product|cards)\/[^/]+|\/isynmv1\/aucd\/\d+|(?:[\/+_-])p-\d+/i.test(new URL(url).pathname);
+function reviewSuggestion(url: string, title: string | undefined, identity: NewsIdentity): ProductMetadata | null {
+  const label = clean(title, 160);
+  const category = /\b(?:trading cards?|football cards?|rookie cards?|upper deck|panini|topps|bowman|donruss|prizm)\b/i.test(label) ? "trading_card" : /\bjerseys?\b/i.test(label) ? "jersey" : null;
+  if (!category || !detailPath(url)) return null;
+  const suggestion: ProductMetadata = { title: label, category, productUrl: url, canonicalUrl: url,
+    description: "", retailer: new URL(url).hostname.replace(/^www\./, ""), imageUrl: null,
+    priceLabel: null, availability: "unknown", evidence: "search_result" };
+  // A title can qualify a link for human review, never verify seller identity.
+  return productMatchesIdentity(suggestion, identity) ? suggestion : null;
+}
 export function productAffiliations(product: ProductMetadata, identity: NewsIdentity): string[] {
   const text = `${product.title} ${product.description}`;
   const normalized = words(text);
@@ -55,7 +68,7 @@ export async function discoverMerchandise(identity: NewsIdentity, provider: Sear
   if (!provider) return { ...result, status: "unavailable", errors: ["search_not_configured"] };
   const queries = merchandiseQueries(identity);
   if (!queries.length) return { ...result, status: "unavailable", errors: ["merchandise_identity_incomplete"] };
-  const groups: string[][] = [], seen = new Set<string>();
+  const groups: string[][] = [], seen = new Set<string>(), titles = new Map<string, string>();
   const searchSignal = AbortSignal.any([signal, AbortSignal.timeout(30_000)]);
   for (let i = 0; i < queries.length && !searchSignal.aborted; i += 4) {
     const searches = await Promise.allSettled(queries.slice(i, i + 4).map(query => provider.search(query, searchSignal)));
@@ -69,6 +82,7 @@ export async function discoverMerchandise(identity: NewsIdentity, provider: Sear
         result.candidates++;
         const url = normalizeArticleUrl(item.url);
         if (!url || !isProductUrl(url) || !evaluateSource(url).allowed_actions.includes("EXTRACT_METADATA") || !evaluateSource(url).allowed_actions.includes("PERSIST_METADATA")) { result.rejected++; continue; }
+        if (typeof item.title === "string" && !titles.has(url)) titles.set(url, item.title);
         if (!seen.has(url)) { seen.add(url); group.push(url); }
       }
       groups.push(group);
@@ -77,14 +91,32 @@ export async function discoverMerchandise(identity: NewsIdentity, provider: Sear
   }
   if (searchSignal.aborted) result.errors.push("search_timeout");
   const candidates: string[] = [];
-  for (let rank = 0; rank < 6 && candidates.length < 16; rank++) for (const group of groups) {
-    if (group[rank] && candidates.length < 16) candidates.push(group[rank]);
+  // Search ranking favors profiles, news and catalogs for long-retired players.
+  // Give individual listing paths the bounded metadata slots first, across all
+  // affiliations/categories. URL shape is scheduling only, never identity proof;
+  // metadata-backed results still need seller metadata and the identity gates.
+  for (const individual of [true, false]) {
+    for (let rank = 0; rank < 6 && candidates.length < 16; rank++) for (const group of groups) {
+      const url = group[rank];
+      if (url && candidates.length < 16 && detailPath(url) === individual) candidates.push(url);
+    }
   }
   const accepted = new Set<string>();
   for (let i = 0; i < candidates.length && !signal.aborted; i += 4) {
     const batch = await Promise.all(candidates.slice(i, i + 4).map(async url => {
       try {
-        const product = await extract(url, signal);
+        let product: ProductMetadata | null;
+        try { product = await extract(url, signal); }
+        catch (error) {
+          // Never turn an unsafe destination, policy failure or cancellation into
+          // a suggestion. Only a seller's blocked response is eligible here.
+          if (!(error instanceof Error) || error.message !== "metadata_blocked" || signal.aborted) throw error;
+          product = null; result.errors.push("merchandise_metadata_unavailable");
+        }
+        if (!product && !signal.aborted) {
+          product = reviewSuggestion(url, titles.get(url), identity);
+          if (product) result.errors.push("merchandise_metadata_unavailable");
+        } else if (product) product = { ...product, evidence: "seller_metadata" };
         if (!product || !isProductUrl(product.productUrl) || !isProductUrl(product.canonicalUrl)
           || ![product.productUrl, product.canonicalUrl].every(value => evaluateSource(value).allowed_actions.includes("PERSIST_METADATA"))
           || !productMatchesIdentity(product, identity)) { result.rejected++; return null; }

@@ -3,7 +3,7 @@ import type { SearchProvider } from "./news";
 import { tavilySearch } from "@/lib/search/tavily";
 
 /** Provider choice is isolated from persisted article/domain types. */
-export function configuredSearchProvider(): SearchProvider | null {
+export function configuredSearchProvider(options: { reviewTitles?: boolean } = {}): SearchProvider | null {
   if (!process.env.TAVILY_API_KEY?.trim()) return null;
   return {
     name: "tavily",
@@ -15,7 +15,7 @@ export function configuredSearchProvider(): SearchProvider | null {
         signal,
       });
       // Provider snippets and ranking scores are not athlete identity evidence.
-      return results.map(({ url }) => ({ url }));
+      return results.map(({ url, title }) => ({ url, ...(options.reviewTitles ? { title } : {}) }));
     },
   };
 }
