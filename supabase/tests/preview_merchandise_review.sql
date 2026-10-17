@@ -17,10 +17,10 @@ do $$ begin
 end $$;
 select public.save_preview_merchandise_search('00000000-0000-4000-8000-000000000001',1,repeat('a',64),'2021-01-01',
   '{"items":[{"productUrl":"https://shop.example.com/products/card"}],"status":"complete"}');
-do $$ begin if not exists(select 1 from public.preview_merchandise_searches where version=3 and cardinality(dismissed_urls)=1) then raise exception 'dismissal lost on refresh'; end if; end $$;
+do $$ begin if not exists(select 1 from public.preview_merchandise_searches where version=3 and jsonb_array_length(result->'items')=0 and cardinality(dismissed_keys)>0) then raise exception 'dismissal lost on refresh'; end if; end $$;
 select public.save_preview_merchandise_search('00000000-0000-4000-8000-000000000001',1,repeat('b',64),'2022-01-01',
   '{"items":[{"productUrl":"https://shop.example.com/products/card"}],"status":"complete"}');
-do $$ begin if not exists(select 1 from public.preview_merchandise_searches where version=4 and cardinality(dismissed_urls)=0) then raise exception 'identity reset failed'; end if; end $$;
+do $$ begin if not exists(select 1 from public.preview_merchandise_searches where version=4 and cardinality(dismissed_urls)=0 and cardinality(dismissed_keys)=0) then raise exception 'identity reset failed'; end if; end $$;
 select set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000003',false);
 do $$ begin
  if exists(select 1 from public.preview_merchandise_searches) then raise exception 'non-Admin read allowed'; end if;

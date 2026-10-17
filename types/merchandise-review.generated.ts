@@ -1,10 +1,11 @@
-// Generated from Supabase production schema after migration 20261017033348.
+// Generated from Supabase production schema after migration 20261017035825.
 // Scoped projection of official `supabase gen types --schema public` output.
 import type { Json } from "./database.generated";
 export type MerchandiseReviewDatabase = { public: { Tables: {
 preview_merchandise_searches: {
         Row: {
           created_at: string
+          dismissed_keys: string[]
           dismissed_urls: string[]
           identity_key: string
           preview_id: string
@@ -16,6 +17,7 @@ preview_merchandise_searches: {
         }
         Insert: {
           created_at?: string
+          dismissed_keys?: string[]
           dismissed_urls?: string[]
           identity_key: string
           preview_id: string
@@ -27,6 +29,7 @@ preview_merchandise_searches: {
         }
         Update: {
           created_at?: string
+          dismissed_keys?: string[]
           dismissed_urls?: string[]
           identity_key?: string
           preview_id?: string
@@ -46,7 +49,7 @@ preview_merchandise_searches: {
           },
         ]
       }
-}; Views: Record<string, never>; Functions: {
+}; Views: Record<never, never>; Functions: {
 save_preview_merchandise_search: {
         Args: {
           p_identity_key: string
@@ -66,4 +69,8 @@ dismiss_preview_merchandise_result: {
         }
         Returns: Json
       }
-}; Enums: Record<string, never>; CompositeTypes: Record<string, never> } };
+preview_merchandise_listing_keys: {
+        Args: { p_item: Json }
+        Returns: string[]
+      }
+}; Enums: Record<never, never>; CompositeTypes: Record<never, never> } };

@@ -75,3 +75,10 @@ it("authorizes dismissals and accepts only revision, queue version and listing U
   expect((await PATCH(request({ revision: 3, version: 1, url: "https://shop.example.com/products/card" }), params)).status).toBe(409);
   expect(m.discover).not.toHaveBeenCalled();
 });
+it("reports full queues without claiming a save or exposing database details", async () => {
+  m.rpc.mockImplementation(async name => name === "save_preview_merchandise_search" || name === "dismiss_preview_merchandise_result" ? { error: { code: "PT422", message: "private detail" } } : { data: true });
+  const response = await POST(request(), params);
+  expect(response.status).toBe(422); expect(await response.json()).toEqual({ error: "merchandise_review_full" });
+  expect(m.rpc).toHaveBeenCalledWith("finalize_preview_discovery", { p_request_id: true, p_succeeded: false });
+  expect((await PATCH(request({ revision: 3, version: 1, url: "https://shop.example.com/card" }), params)).status).toBe(422);
+});

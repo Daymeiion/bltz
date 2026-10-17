@@ -14,6 +14,11 @@ import { previewUrl } from "@/lib/preview-lockers/validation";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
+function reviewError(code: string) {
+  return code === "PT422" ? new PreviewError("merchandise_review_full", 422)
+    : code === "PT409" ? new PreviewError("preview_conflict", 409)
+    : new PreviewError("merchandise_review_unavailable", 503);
+}
 /** Admin discovery only. Review results are never written to Locker merchandise. */
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -43,7 +48,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       const parsed = merchandiseResultSchema.safeParse(result);
       if (!parsed.success) throw new PreviewError("merchandise_review_unavailable", 503);
       const stored = await (client as SupabaseClient<MerchandiseReviewDatabase>).rpc("save_preview_merchandise_search", { p_preview_id: id, p_revision: row.revision, p_identity_key: previewIdentityKey(row), p_started_at: startedAt, p_result: parsed.data });
-      if (stored.error) throw new PreviewError(stored.error.code === "PT409" ? "preview_conflict" : "merchandise_review_unavailable", stored.error.code === "PT409" ? 409 : 503);
+      if (stored.error) throw reviewError(stored.error.code);
       const review = merchandiseReviewSchema.safeParse(stored.data);
       if (!review.success) throw new PreviewError("merchandise_review_unavailable", 503);
       succeeded = true;
@@ -59,7 +64,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const input = z.object({ revision: z.number().int().positive(), version: z.number().int().positive(), url: previewUrl }).strict().safeParse(await readBody(req, 4096));
     if (!z.uuid().safeParse(id).success || !input.success) throw new PreviewError("invalid_input", 400);
     const stored = await (client as SupabaseClient<MerchandiseReviewDatabase>).rpc("dismiss_preview_merchandise_result", { p_preview_id: id, p_revision: input.data.revision, p_version: input.data.version, p_url: input.data.url });
-    if (stored.error) throw new PreviewError(stored.error.code === "PT409" ? "preview_conflict" : "merchandise_review_unavailable", stored.error.code === "PT409" ? 409 : 503);
+    if (stored.error) throw reviewError(stored.error.code);
     const review = merchandiseReviewSchema.safeParse(stored.data);
     if (!review.success) throw new PreviewError("merchandise_review_unavailable", 503);
     return json({ revision: input.data.revision, result: visibleMerchandiseReview(review.data), review: review.data });

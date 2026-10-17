@@ -51,7 +51,7 @@ it("allows selecting multiple candidates before saving, prevents duplicates and 
 it("loads saved review results on reopen without a search, resets review checks and keeps Locker merchandise separate", async () => {
   await act(async () => root.render(<PreviewLockerForm record={record} initialMerchandiseReview={result().review} />));
   expect(fetcher).not.toHaveBeenCalled();
-  expect(host.textContent).toContain("Saved search"); expect(host.textContent).toContain(candidate.title);
+  expect(host.textContent).toContain("Last search"); expect(host.textContent).toContain(candidate.title);
   expect(button("Add to draft").disabled).toBe(true);
   expect(host.querySelector('[aria-label="Merchandise 1 title"]')).toBeNull();
   await act(async () => root.render(<PreviewLockerForm key="reopen" record={record} initialMerchandiseReview={result().review} merchandiseReviewCurrent={false} />));
@@ -105,4 +105,22 @@ it("preserves existing products and shows an honest empty result without writing
   expect(host.textContent).toContain("No matching merchandise listings available to review");
   expect(host.querySelector<HTMLInputElement>('[aria-label="Merchandise 1 title"]')?.value).toBe("Saved jersey");
   expect(fetcher).toHaveBeenCalledTimes(1);
+});
+it("displays accumulated search results above twelve and retains them when the queue is full", async () => {
+  await act(async () => root.render(<PreviewLockerForm record={record} initialMerchandiseReview={result().review} />));
+  const items = Array.from({ length: 15 }, (_, i) => ({ ...candidate, productUrl: `https://shop.example.com/card/${i}`, canonicalUrl: `https://shop.example.com/card/${i}` }));
+  fetcher.mockResolvedValueOnce(Response.json(result(items))); await click("Search merchandise");
+  expect(host.querySelectorAll('section[aria-label="Merchandise search results"] article')).toHaveLength(15);
+  fetcher.mockResolvedValueOnce(Response.json({ error: "merchandise_review_full" }, { status: 422 })); await click("Search merchandise");
+  expect(host.textContent).toContain("existing results are retained");
+  expect(host.querySelectorAll('section[aria-label="Merchandise search results"] article')).toHaveLength(15);
+  expect(host.querySelector('[aria-label="Merchandise 1 title"]')).toBeNull();
+});
+it("recognizes a reviewed listing already in the draft through an alternate product URL", async () => {
+  const listing = { ...candidate, productUrl: "https://www.amazon.com/card/dp/B01N26VW34", canonicalUrl: "https://www.amazon.com/card/dp/B01N26VW34" };
+  const existing = { id: "saved-card", title: listing.title, category: listing.category, productUrl: "https://amazon.com/gp/product/B01N26VW34?ref=old", imageUrl: null, retailer: null, priceLabel: null, visible: true };
+  await act(async () => root.render(<PreviewLockerForm record={{ ...record, merchandise: [existing] }} initialMerchandiseReview={result([listing]).review} />));
+  expect(button("In draft").disabled).toBe(true);
+  expect(host.querySelectorAll('[aria-label^="Merchandise "][aria-label$=" title"]')).toHaveLength(1);
+  expect(fetcher).not.toHaveBeenCalled();
 });
