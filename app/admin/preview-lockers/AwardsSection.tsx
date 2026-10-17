@@ -1,17 +1,20 @@
 "use client";
+import type { ReactNode } from "react";
 import { BuilderSection } from "./BuilderSection";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import type { PreviewContent } from "@/lib/preview-lockers/validation";
 
-export default function AwardsSection({ awards, photos, saved, onChange, onUpload }: {
+export default function AwardsSection({ awards, photos, saved, onChange, onUpload, enrichment }: {
   awards: PreviewContent["awards"]; photos: PreviewContent["photos"]; saved: boolean;
+  enrichment?: ReactNode;
   onChange: (awards: PreviewContent["awards"]) => void;
   onUpload: (files: FileList | null, index: number) => void;
 }) {
   const update = (index: number, patch: Partial<PreviewContent["awards"][number]>) => onChange(awards.map((award, i) => i === index ? { ...award, ...patch } : award));
   return <BuilderSection title="Awards" count={awards.length} description="Expand to review and edit achievements">
+    {enrichment}
     {awards.map((award, index) => <section key={index} aria-label={`Award ${index + 1} details`} className="min-w-0 space-y-5 rounded-lg border p-4 sm:p-5">
       <h3 className="text-sm font-semibold">Award {index + 1}</h3>
       <div className="grid min-w-0 items-start gap-x-5 gap-y-4 sm:grid-cols-2">

@@ -1,7 +1,7 @@
 "use client";
 import { z } from "zod";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
@@ -37,6 +37,7 @@ type Scalar = Exclude<keyof PreviewContent, "schools" | "pro_teams" | "awards" |
 
 export default function PreviewLockerForm({
   record,
+  awardsEnrichment,
   initialArticles = [],
   initialNewsReview = null,
   newsReviewCurrent = true,
@@ -53,6 +54,7 @@ export default function PreviewLockerForm({
   gtmCompleted = false,
 }: {
   record?: PreviewRecord;
+  awardsEnrichment?: ReactNode;
   initialArticles?: PlayerArticle[];
   initialNewsReview?: NewsReview | null;
   newsReviewCurrent?: boolean;
@@ -383,7 +385,7 @@ export default function PreviewLockerForm({
       <section id="locker-panel-career" role="tabpanel" aria-labelledby="locker-tab-career" tabIndex={0} hidden={activeFolder !== "career"} className={styles.folderPanel}>
       <h2 className={styles.folderHeading}>Career & achievements</h2>
       {(["schools", "pro_teams"] as const).map(kind => <BuilderSection key={kind} title={kind === "schools" ? "School history" : "Pro team history"} count={draft[kind].length} description="Expand to review and edit career affiliations">{draft[kind].map((team, index) => <div key={index} className="grid items-end gap-4 rounded-lg border p-4 sm:grid-cols-2"><Input aria-label={`${kind} ${index + 1} label`} value={team.label} maxLength={80} onChange={e => change({ [kind]: draft[kind].map((v, i) => i === index ? { ...v, label: e.target.value } : v) })} /><Input aria-label={`${kind} ${index + 1} color`} type="color" value={team.color} onChange={e => change({ [kind]: draft[kind].map((v, i) => i === index ? { ...v, color: e.target.value } : v) })} /><Input aria-label={`${kind} ${index + 1} logo HTTPS URL`} value={team.logo ?? ""} maxLength={2048} onChange={e => change({ [kind]: draft[kind].map((v, i) => i === index ? { ...v, logo: e.target.value || null } : v) })} /><Button type="button" variant="outline" onClick={() => change({ [kind]: draft[kind].filter((_, i) => i !== index) })}>Remove from draft</Button></div>)}<Button type="button" variant="outline" disabled={draft[kind].length >= 32} onClick={() => change({ [kind]: [...draft[kind], { label: "", color: "#152238", logo: null }] })}>Add {kind === "schools" ? "school" : "pro team"}</Button></BuilderSection>)}
-      <AwardsSection awards={draft.awards} photos={draft.photos} saved={!!saved} onChange={awards => change({ awards })} onUpload={(files, index) => { void uploadFiles("photo", files, false, { award: index }); }} />
+      <AwardsSection enrichment={awardsEnrichment} awards={draft.awards} photos={draft.photos} saved={!!saved} onChange={awards => change({ awards })} onUpload={(files, index) => { void uploadFiles("photo", files, false, { award: index }); }} />
 
       </section>
       <section id="locker-panel-stats" role="tabpanel" aria-labelledby="locker-tab-stats" tabIndex={0} hidden={activeFolder !== "stats"} className={styles.folderPanel}>
