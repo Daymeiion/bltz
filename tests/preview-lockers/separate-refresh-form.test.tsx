@@ -1,0 +1,41 @@
+import { act } from "react";
+import { createRoot, type Root } from "react-dom/client";
+import { beforeEach, afterEach, expect, it, vi } from "vitest";
+import PreviewLockerForm from "@/app/admin/preview-lockers/PreviewLockerForm";
+import { previewContent } from "@/lib/preview-lockers/validation";
+const record = { ...previewContent.parse({ slug: "fixture-player", full_name: "Fixture Player", school: "Cal" }), id: "00000000-0000-4000-8000-000000000001", revision: 3, created_at: "", updated_at: "" };
+const awards = { status: "complete" as const, awards_discovered: 2, awards_normalized: 1, unmapped_awards: ["Local honor"], errors: [], updated_at: "2026-10-16T00:00:00Z", source_revision: 3 };
+let host: HTMLDivElement, root: Root, fetcher: ReturnType<typeof vi.fn>;
+beforeEach(() => { host = document.createElement("div"); document.body.append(host); root = createRoot(host); fetcher = vi.fn(); vi.stubGlobal("fetch", fetcher); });
+afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.unstubAllGlobals(); });
+const button = (text: string) => [...host.querySelectorAll<HTMLButtonElement>("button")].find(x => x.textContent === text)!;
+const report = { ...awards, last_awards_attempt: awards, article_candidates: 0, articles_accepted: 0, articles_rejected: 0, article_duplicates: 0 };
+it("keeps awards-only refresh inside Awards and news refresh beside saved Media articles", async () => {
+  await act(async () => root.render(<PreviewLockerForm record={record} initialEnrichmentReport={report} initialEnrichmentRevision={3} />));
+  expect(button("Refresh awards").closest('[role="tabpanel"]')?.id).toBe("locker-panel-career");
+  expect(button("Refresh awards").closest("details")?.querySelector("summary")?.textContent).toContain("Awards");
+  expect(button("Refresh scraped news").closest('[role="tabpanel"]')?.id).toBe("locker-panel-media");
+  expect(host.textContent).not.toContain("Refresh News");
+  let resolve: (value: Response) => void;
+  fetcher.mockReturnValueOnce(new Promise<Response>(done => { resolve = done; }));
+  await act(async () => button("Refresh awards").click());
+  expect(button("Refresh scraped news").disabled).toBe(true); expect(button("Refreshing awards…").disabled).toBe(true);
+  expect(fetcher.mock.calls[0][0]).toBe(`/api/preview-lockers/${record.id}/awards`);
+  expect(JSON.parse(fetcher.mock.calls[0][1].body)).toEqual({ revision: 3 });
+  await act(async () => resolve!(Response.json({ report: { ...report, last_awards_attempt: { ...awards, awards_normalized: 2 } } })));
+  expect(host.querySelector('[aria-labelledby="awards-enrichment-heading"]')?.textContent).toContain("Awards: 2/2 mapped");
+  expect(fetcher).toHaveBeenCalledTimes(1);
+  fetcher.mockResolvedValueOnce(Response.json({ report: { status: "complete" } })).mockResolvedValueOnce(Response.json({ revision: 3, articles: [], review: { articles: [], version: 1, searched_at: null, identity_key: "a".repeat(64) } }));
+  await act(async () => button("Refresh scraped news").click());
+  expect(fetcher.mock.calls.slice(1).map(call => call[0])).toEqual([`/api/preview-lockers/${record.id}/news`, `/api/preview-lockers/${record.id}/news`]);
+  expect(host.querySelector('[aria-labelledby="awards-enrichment-heading"]')?.textContent).toContain("Awards: 2/2 mapped");
+});
+it("retains the awards report after failure and disables refresh for unsaved edits", async () => {
+  await act(async () => root.render(<PreviewLockerForm record={record} initialEnrichmentReport={report} initialEnrichmentRevision={3} />));
+  fetcher.mockResolvedValueOnce(Response.json({ error: "preview_conflict" }, { status: 409 }));
+  await act(async () => button("Refresh awards").click());
+  expect(host.textContent).toContain("This preview changed"); expect(host.textContent).toContain("Awards: 1/2 mapped");
+  // Add an award through the normal editor so refresh cannot run on an unsaved draft.
+  await act(async () => button("Add award").click());
+  expect(button("Refresh awards").disabled).toBe(true); expect(button("Refresh scraped news").disabled).toBe(true);
+});

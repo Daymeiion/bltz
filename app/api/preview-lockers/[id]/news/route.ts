@@ -39,7 +39,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     if (input.data.revision !== undefined && row.revision !== input.data.revision) throw new PreviewError("preview_conflict", 409);
     // Admin and preview authorization above precede this bounded historical read.
     const knownUrls = await readPreviewNewsCandidates(createServiceClient(), id, row, row.revision);
-    const report = await tryEnrichSavedPreview(client, id, row, row.revision, true, knownUrls);
+    const report = await tryEnrichSavedPreview(client, id, row, row.revision, true, knownUrls, "news");
     return json({ report }, report.errors?.includes("preview_changed") ? 409 : report.errors?.includes("news_review_full") ? 422 : report.status === "unavailable" ? 503 : 200);
   } catch (error) { return failure(error); }
 }

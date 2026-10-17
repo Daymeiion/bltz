@@ -1,7 +1,7 @@
 "use client";
 import { z } from "zod";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,8 @@ import { SportradarPanel } from "./[id]/edit/SportradarPanel";
 import PreviewViewerAccess from "./PreviewViewerAccess";
 import styles from "./preview-form.module.css";
 import AwardsSection from "./AwardsSection";
+import EnrichmentPanel from "./EnrichmentPanel";
+import type { EnrichmentReport, AwardEnrichmentReport } from "@/lib/preview-lockers/enrichment";
 import SocialSection from "./SocialSection";
 import ArticlesSection from "./ArticlesSection";
 import MerchandiseSection from "./MerchandiseSection";
@@ -37,7 +39,8 @@ type Scalar = Exclude<keyof PreviewContent, "schools" | "pro_teams" | "awards" |
 
 export default function PreviewLockerForm({
   record,
-  awardsEnrichment,
+  initialEnrichmentReport = null,
+  initialEnrichmentRevision,
   initialArticles = [],
   initialNewsReview = null,
   newsReviewCurrent = true,
@@ -54,7 +57,8 @@ export default function PreviewLockerForm({
   gtmCompleted = false,
 }: {
   record?: PreviewRecord;
-  awardsEnrichment?: ReactNode;
+  initialEnrichmentReport?: EnrichmentReport | null;
+  initialEnrichmentRevision?: number;
   initialArticles?: PlayerArticle[];
   initialNewsReview?: NewsReview | null;
   newsReviewCurrent?: boolean;
@@ -74,7 +78,14 @@ export default function PreviewLockerForm({
   const [enroll, setEnroll] = useState(enrollmentEnabled && !record && !reservedId);
   const [enrollment, setEnrollment] = useState({contact_id:"",campaign:"",source:"",channel:"email",relationship:"warm",is_test:false});
   const [draft, setDraft] = useState<PreviewContent>(() => record ? previewContent.parse(Object.fromEntries(Object.keys(previewContent.shape).map(k => [k, record[k as keyof PreviewRecord]]))) : { ...initial(), full_name: referralName ?? "", slug: "" });
-  const [busy, setBusy] = useState<"discovery" | "upload" | "save" | "complete" | "stats" | "news" | "merchandise" | null>(null);
+  const [busy, setBusy] = useState<"discovery" | "upload" | "save" | "complete" | "stats" | "awards" | "news" | "merchandise" | null>(null);
+  const [awardsReport, setAwardsReport] = useState<AwardEnrichmentReport | null>(() => initialEnrichmentReport?.last_awards_attempt !== undefined ? initialEnrichmentReport.last_awards_attempt : initialEnrichmentReport && initialEnrichmentRevision ? {
+    status: initialEnrichmentReport.errors.includes("awards_unavailable") ? "unavailable" : "complete",
+    awards_discovered: initialEnrichmentReport.awards_discovered, awards_normalized: initialEnrichmentReport.awards_normalized,
+    unmapped_awards: initialEnrichmentReport.unmapped_awards, errors: initialEnrichmentReport.errors.filter(code => code.startsWith("awards_")),
+    updated_at: initialEnrichmentReport.updated_at, source_revision: initialEnrichmentRevision,
+  } : null);
+  const [awardsError, setAwardsError] = useState("");
   const [merchandiseSearch, setMerchandiseSearch] = useState<{ result: MerchandiseResult; identity: string; key: string; review?: MerchandiseReview } | null>(() => initialMerchandiseReview ? { result: visibleMerchandiseReview(initialMerchandiseReview), identity: record && merchandiseReviewCurrent ? merchandiseIdentity(record) : "", key: `saved-${initialMerchandiseReview.version}`, review: initialMerchandiseReview } : null);
   const [merchandiseError, setMerchandiseError] = useState(merchandiseReviewError);
   const [dismissingMerchandise, setDismissingMerchandise] = useState(false);
@@ -212,6 +223,18 @@ export default function PreviewLockerForm({
       setCompleted(true); setCompletionReviewed(false);
       setMessage("Preview complete. This confirms private-demo review only; identity and media rights remain unverified.");
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Completion could not be saved. The preview remains draft / incomplete."); }
+    finally { pending.current = false; setBusy(null); }
+  }
+  async function refreshAwards() {
+    if (pending.current || !saved || dirty) return;
+    pending.current = true; setBusy("awards"); setAwardsError("");
+    try {
+      const response = await fetch(`/api/preview-lockers/${saved.id}/awards`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ revision: revision.current }) });
+      const body = await response.json();
+      if (!response.ok) throw new Error(response.status === 409 ? "This preview changed. Reload the saved version before refreshing awards. Your draft is retained." : response.status === 401 || response.status === 403 ? "Your Admin session is no longer authorized to refresh awards." : "Awards enrichment is unavailable. Previous saved results are retained.");
+      if (!body.report?.last_awards_attempt || body.report.errors?.some((code: string) => ["preview_changed", "enrichment_not_saved"].includes(code))) throw new Error("Awards enrichment could not be saved. Previous results are retained.");
+      setAwardsReport(body.report.last_awards_attempt);
+    } catch (cause) { setAwardsError(cause instanceof Error ? cause.message : "Awards enrichment is unavailable. Previous saved results are retained."); }
     finally { pending.current = false; setBusy(null); }
   }
   async function loadNews(refresh = false, dismissedOffset = 0) {
@@ -385,7 +408,7 @@ export default function PreviewLockerForm({
       <section id="locker-panel-career" role="tabpanel" aria-labelledby="locker-tab-career" tabIndex={0} hidden={activeFolder !== "career"} className={styles.folderPanel}>
       <h2 className={styles.folderHeading}>Career & achievements</h2>
       {(["schools", "pro_teams"] as const).map(kind => <BuilderSection key={kind} title={kind === "schools" ? "School history" : "Pro team history"} count={draft[kind].length} description="Expand to review and edit career affiliations">{draft[kind].map((team, index) => <div key={index} className="grid items-end gap-4 rounded-lg border p-4 sm:grid-cols-2"><Input aria-label={`${kind} ${index + 1} label`} value={team.label} maxLength={80} onChange={e => change({ [kind]: draft[kind].map((v, i) => i === index ? { ...v, label: e.target.value } : v) })} /><Input aria-label={`${kind} ${index + 1} color`} type="color" value={team.color} onChange={e => change({ [kind]: draft[kind].map((v, i) => i === index ? { ...v, color: e.target.value } : v) })} /><Input aria-label={`${kind} ${index + 1} logo HTTPS URL`} value={team.logo ?? ""} maxLength={2048} onChange={e => change({ [kind]: draft[kind].map((v, i) => i === index ? { ...v, logo: e.target.value || null } : v) })} /><Button type="button" variant="outline" onClick={() => change({ [kind]: draft[kind].filter((_, i) => i !== index) })}>Remove from draft</Button></div>)}<Button type="button" variant="outline" disabled={draft[kind].length >= 32} onClick={() => change({ [kind]: [...draft[kind], { label: "", color: "#152238", logo: null }] })}>Add {kind === "schools" ? "school" : "pro team"}</Button></BuilderSection>)}
-      <AwardsSection enrichment={awardsEnrichment} awards={draft.awards} photos={draft.photos} saved={!!saved} onChange={awards => change({ awards })} onUpload={(files, index) => { void uploadFiles("photo", files, false, { award: index }); }} />
+      <AwardsSection enrichment={saved ? <EnrichmentPanel report={awardsReport} stale={dirty || !!awardsReport && awardsReport.source_revision !== saved.revision} disabled={dirty || !!busy} busy={busy === "awards"} error={awardsError} onRefresh={() => { void refreshAwards(); }} /> : undefined} awards={draft.awards} photos={draft.photos} saved={!!saved} onChange={awards => change({ awards })} onUpload={(files, index) => { void uploadFiles("photo", files, false, { award: index }); }} />
 
       </section>
       <section id="locker-panel-stats" role="tabpanel" aria-labelledby="locker-tab-stats" tabIndex={0} hidden={activeFolder !== "stats"} className={styles.folderPanel}>

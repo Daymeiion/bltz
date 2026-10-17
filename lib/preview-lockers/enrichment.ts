@@ -29,7 +29,13 @@ export async function withSchoolAliases(client: SupabaseClient, identity: NewsId
   } catch { /* Missing directory access preserves the original saved identity. */ }
   return identity;
 }
+export interface AwardEnrichmentReport {
+  status: "complete" | "unavailable";
+  awards_discovered: number; awards_normalized: number; unmapped_awards: string[];
+  errors: string[]; updated_at: string; source_revision: number;
+}
 export interface EnrichmentReport {
+  last_awards_attempt?: AwardEnrichmentReport | null;
   source_policy?: PolicyDiagnostics;
   news_status?: NewsResult["status"] | "skipped";
   last_news_success?: Omit<EnrichmentReport, "last_news_success"> | null;
@@ -45,12 +51,12 @@ export interface EnrichmentSnapshot {
 export async function buildEnrichment(content: PreviewContent, dependencies: {
   awards: () => Promise<NormalizedAward[]>;
   news: () => Promise<NewsResult>;
-}): Promise<EnrichmentSnapshot> {
-  const [awards, news] = await Promise.allSettled([Promise.resolve().then(dependencies.awards), Promise.resolve().then(dependencies.news)]);
+}, scope: "all" | "awards" | "news" = "all"): Promise<EnrichmentSnapshot> {
+  const [awards, news] = await Promise.allSettled([scope === "news" ? null : Promise.resolve().then(dependencies.awards), scope === "awards" ? null : Promise.resolve().then(dependencies.news)]);
   const normalized = awards.status === "fulfilled" ? awards.value : null;
   const articles = news.status === "fulfilled" ? news.value : null;
   const newsError = news.status === "rejected" && news.reason instanceof Error && news.reason.message === "news_rate_limited" ? "news_rate_limited" : "news_unavailable";
-  const errors = [...(normalized ? [] : ["awards_unavailable"]), ...(articles?.errors ?? [newsError])];
+  const errors = [...(scope === "news" || normalized ? [] : ["awards_unavailable"]), ...(scope === "awards" ? [] : articles?.errors ?? [newsError])];
   return { awards: normalized, news: articles, report: {
     status: errors.length ? (normalized || articles?.articles.length ? "partial" : "unavailable") : "complete",
     awards_discovered: content.awards.length, awards_normalized: normalized?.filter(a => a.award_id).length ?? 0,
@@ -62,10 +68,10 @@ export async function buildEnrichment(content: PreviewContent, dependencies: {
   } };
 }
 
-export async function enrichSavedPreview(client: SupabaseClient, id: string, content: PreviewContent, revision: number, refreshNews = true, knownUrls: string[] = []): Promise<EnrichmentReport> {
+export async function enrichSavedPreview(client: SupabaseClient, id: string, content: PreviewContent, revision: number, refreshNews = true, knownUrls: string[] = [], scope: "all" | "awards" | "news" = "all"): Promise<EnrichmentReport> {
   const startedAt = new Date().toISOString();
   const identityKey = previewIdentityKey(content);
-  const previous = await client.from("preview_enrichments").select("report,identity_key").eq("preview_id", id).maybeSingle();
+  const previous = await client.from("preview_enrichments").select("report,identity_key,source_revision").eq("preview_id", id).maybeSingle();
   // Never spend the discovery budget on a result that cannot be persisted.
   // This also keeps base preview saves available while an additive migration is pending.
   if (previous.error) return {
@@ -73,7 +79,7 @@ export async function enrichSavedPreview(client: SupabaseClient, id: string, con
     awards_normalized: 0, unmapped_awards: [], article_candidates: 0, articles_accepted: 0,
     articles_rejected: 0, article_duplicates: 0, errors: ["enrichment_unavailable", "enrichment_not_saved"], updated_at: startedAt,
   };
-  const needsNews = refreshNews || (!previous.error && (!previous.data || previous.data.identity_key !== identityKey));
+  const needsNews = scope !== "awards" && (refreshNews || (!previous.data || previous.data.identity_key !== identityKey));
   const snapshot = await buildEnrichment(content, {
     async awards() {
       const { data, error } = await client.from("award_catalog").select("*").eq("active", true);
@@ -97,7 +103,26 @@ export async function enrichSavedPreview(client: SupabaseClient, id: string, con
         return result;
       } finally { await client.rpc("finalize_preview_discovery", { p_request_id: admission.data, p_succeeded: succeeded }); }
     },
-  });
+  }, scope);
+  const priorReport = previous.data?.identity_key === identityKey ? previous.data.report as EnrichmentReport | null : null;
+  if (scope === "news") {
+    // Keep award diagnostics and links untouched by a news-only search.
+    snapshot.report.awards_discovered = priorReport?.awards_discovered ?? 0;
+    snapshot.report.awards_normalized = priorReport?.awards_normalized ?? 0;
+    snapshot.report.unmapped_awards = priorReport?.unmapped_awards ?? [];
+    snapshot.report.last_awards_attempt = priorReport?.last_awards_attempt !== undefined ? priorReport.last_awards_attempt : (priorReport ? {
+      status: priorReport.errors.includes("awards_unavailable") ? "unavailable" : "complete",
+      awards_discovered: priorReport.awards_discovered, awards_normalized: priorReport.awards_normalized,
+      unmapped_awards: priorReport.unmapped_awards, errors: priorReport.errors.filter(code => code.startsWith("awards_")),
+      updated_at: priorReport.updated_at, source_revision: previous.data!.source_revision,
+    } : null);
+  } else {
+    snapshot.report.last_awards_attempt = {
+      status: snapshot.awards ? "complete" : "unavailable", awards_discovered: snapshot.report.awards_discovered,
+      awards_normalized: snapshot.report.awards_normalized, unmapped_awards: snapshot.report.unmapped_awards,
+      errors: snapshot.report.errors.filter(code => code.startsWith("awards_")), updated_at: startedAt, source_revision: revision,
+    };
+  }
   // Defense at the persistence boundary, even if an alternate discovery adapter
   // returns metadata that did not pass the normal source checks.
   for (const article of snapshot.news?.articles ?? []) {

@@ -20,6 +20,32 @@ function client() {
   return { db: db as unknown as SupabaseClient, rpc, query };
 }
 beforeEach(() => { vi.clearAllMocks(); mocks.provider.mockReturnValue({ name: "fixture" }); mocks.discover.mockResolvedValue(news); });
+it("awards-only refresh never searches or spends news budget even when identity changed", async () => {
+  const { db, rpc, query } = client();
+  query.maybeSingle.mockResolvedValue({ data: { identity_key: "old-identity", report: null } });
+  vi.spyOn(db, "from").mockImplementation((table: string) => table === "award_catalog"
+    ? { select: () => ({ eq: async () => ({ data: [], error: null }) }) } as never : query as never);
+  const report = await enrichSavedPreview(db, "preview", content, 2, false, [], "awards");
+  expect(report).toMatchObject({ status: "complete", news_status: "skipped", last_awards_attempt: { status: "complete", source_revision: 2 } });
+  expect(mocks.provider).not.toHaveBeenCalled(); expect(mocks.discover).not.toHaveBeenCalled();
+  expect(rpc).toHaveBeenCalledTimes(1);
+  expect(rpc).toHaveBeenCalledWith("save_preview_enrichment", expect.objectContaining({ p_articles: null, p_awards: expect.any(Array) }));
+});
+it("news-only refresh leaves award links and diagnostics untouched", async () => {
+  const { db, rpc, query } = client();
+  const awards = { status: "complete", awards_discovered: 4, awards_normalized: 3, unmapped_awards: ["Local honor"], errors: [], updated_at: "2026-10-16T00:00:00Z", source_revision: 2 };
+  query.maybeSingle.mockResolvedValue({ data: { identity_key: previewIdentityKey(content), source_revision: 2, report: { ...awards, last_awards_attempt: awards } } });
+  const report = await enrichSavedPreview(db, "preview", content, 2, true, [], "news");
+  expect(db.from).not.toHaveBeenCalledWith("award_catalog"); expect(mocks.discover).toHaveBeenCalledTimes(1);
+  expect(rpc).toHaveBeenCalledWith("save_preview_enrichment", expect.objectContaining({ p_awards: null, p_articles: [] }));
+  expect(report.last_awards_attempt).toEqual(awards); expect(report.awards_normalized).toBe(3);
+});
+it("does not invent an awards attempt after repeated news-only searches", async () => {
+  const { db, query } = client();
+  query.maybeSingle.mockResolvedValue({ data: { identity_key: previewIdentityKey(content), source_revision: 2,
+    report: { last_awards_attempt: null, awards_discovered: 0, awards_normalized: 0, unmapped_awards: [], errors: [] } } });
+  expect((await enrichSavedPreview(db, "preview", content, 2, true, [], "news")).last_awards_attempt).toBeNull();
+});
 it("does not spend the discovery budget when enrichment storage is unavailable", async () => {
   const { db, rpc, query } = client();
   query.maybeSingle.mockResolvedValue({ data: null, error: { code: "PGRST205" } });

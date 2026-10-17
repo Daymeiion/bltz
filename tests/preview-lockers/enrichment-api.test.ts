@@ -8,6 +8,7 @@ vi.mock("@/lib/preview-lockers/enrichment", () => ({ previewIdentityKey: () => "
 vi.mock("@/lib/supabase/service", () => ({ createServiceClient: mock.service }));
 import { POST as create } from "@/app/api/preview-lockers/route";
 import { GET as readNews, POST as refresh, PATCH as dismiss } from "@/app/api/preview-lockers/[id]/news/route";
+import { POST as refreshAwards } from "@/app/api/preview-lockers/[id]/awards/route";
 import { previewContent } from "@/lib/preview-lockers/validation";
 const id = "00000000-0000-4000-8000-000000000001";
 const content = previewContent.parse({ slug: "fixture-athlete", full_name: "Fixture Athlete" });
@@ -62,7 +63,7 @@ it("refreshes persisted identity only, rejects overrides and reports save failur
   expect((await refresh(request({ full_name: "Wrong Athlete" }), params)).status).toBe(400);
   expect((await refresh(request({}), params)).status).toBe(200);
   expect(mock.candidates).toHaveBeenCalledWith(expect.anything(), id, row, 1);
-  expect(mock.enrich).toHaveBeenCalledWith(expect.anything(), id, row, 1, true, ["https://sports.example.com/old"]);
+  expect(mock.enrich).toHaveBeenCalledWith(expect.anything(), id, row, 1, true, ["https://sports.example.com/old"], "news");
   mock.enrich.mockResolvedValue({ status: "unavailable", errors: ["enrichment_not_saved"] });
   const response = await refresh(request({}), params); expect(response.status).toBe(503);
   expect(response.headers.get("Cache-Control")).toBe("private, no-store");
@@ -76,6 +77,30 @@ it("preserves saved news when historical candidate retrieval fails", async () =>
 it("requires the supplied saved revision before spending discovery budget", async () => {
   expect((await refresh(request({ revision: 2 }), params)).status).toBe(409);
   expect(mock.enrich).not.toHaveBeenCalled(); expect(mock.candidates).not.toHaveBeenCalled();
+});
+
+it("refreshes awards only from the authorized saved revision without reading news candidates", async () => {
+  expect((await refreshAwards(request({ revision: 1 }), params)).status).toBe(200);
+  expect(mock.enrich).toHaveBeenCalledWith(expect.anything(), id, row, 1, false, [], "awards");
+  expect(mock.candidates).not.toHaveBeenCalled(); expect(mock.service).not.toHaveBeenCalled();
+});
+it("protects awards refresh from anonymous, non-admin, cross-origin, stale and overridden input", async () => {
+  mock.auth.mockResolvedValue({ data: { user: null } });
+  expect((await refreshAwards(request({ revision: 1 }), params)).status).toBe(401);
+  mock.auth.mockResolvedValue({ data: { user: { id: "viewer" } } }); mock.rpc.mockResolvedValue({ data: false });
+  expect((await refreshAwards(request({ revision: 1 }), params)).status).toBe(403);
+  mock.rpc.mockResolvedValue({ data: true });
+  expect((await refreshAwards(request({ revision: 1 }, "https://other.example.com"), params)).status).toBe(403);
+  for (const body of [{}, { revision: 1, awards: [] }, { revision: 0 }]) expect((await refreshAwards(request(body), params)).status).toBe(400);
+  expect((await refreshAwards(request({ revision: 2 }), params)).status).toBe(409);
+  expect(mock.enrich).not.toHaveBeenCalled(); expect(mock.candidates).not.toHaveBeenCalled();
+});
+it("reports awards persistence conflicts and unavailable sources without claiming success", async () => {
+  mock.enrich.mockResolvedValue({ status: "unavailable", errors: ["preview_changed"] });
+  expect((await refreshAwards(request({ revision: 1 }), params)).status).toBe(409);
+  mock.enrich.mockResolvedValue({ status: "unavailable", errors: ["awards_unavailable"] });
+  const response = await refreshAwards(request({ revision: 1 }), params);
+  expect(response.status).toBe(503); expect(response.headers.get("cache-control")).toBe("private, no-store");
 });
 it("returns safe full-queue and stale-search statuses without claiming a save", async () => {
   mock.enrich.mockResolvedValue({ status: "unavailable", errors: ["news_review_full"] });
