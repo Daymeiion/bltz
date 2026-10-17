@@ -28,7 +28,8 @@ async function approve() { await act(async () => section().querySelector<HTMLInp
 
 it("reviews, saves, reloads, replaces and removes NFL tables through the existing draft workflow", async () => {
   await act(async () => root.render(<PreviewLockerForm record={record()} />));
-  await review();
+  await review("Season,Team,G,Sk\n2024,AAA,17,2.5\nCareer,,17,2.5");
+  expect(section().textContent).toContain("PFR career totals included from the CSV");
   const add = [...section().querySelectorAll("button")].find(node => node.textContent === "Add reviewed statistics to draft")!;
   expect(add.disabled).toBe(true);
   await approve(); await click("Add reviewed statistics to draft");
@@ -39,16 +40,19 @@ it("reviews, saves, reloads, replaces and removes NFL tables through the existin
   const body = JSON.parse(fetcher.mock.calls[0][1].body);
   expect(body.revision).toBe(3);
   expect(body.content.pfr_stats[0].seasons[0].statistics.sacks).toBe(2.5);
+  expect(body.content.pfr_stats[0].careerTotals).toEqual({ gamesPlayed: 17, gamesStarted: null, statistics: { sacks: 2.5 } });
   expect(body.content.cfb_stats).toEqual([]);
   expect(body.content).not.toHaveProperty("player_id");
   await act(async () => root.render(<PreviewLockerForm key="reload" record={{ ...record(), ...body.content, revision: 4 }} />));
   expect(section().textContent).toContain("defense · 1 season/team rows");
+  expect(section().textContent).toContain("career totals included");
   await review("Season,Team,G,Sk\n2024,AAA,17,3.5");
   expect(section().textContent).toContain("replaces the existing defense import");
   await approve(); await click("Add reviewed statistics to draft");
   await click("Save draft", host);
   expect(JSON.parse(fetcher.mock.calls[1][1].body).content.pfr_stats).toHaveLength(1);
   expect(JSON.parse(fetcher.mock.calls[1][1].body).content.pfr_stats[0].seasons[0].statistics.sacks).toBe(3.5);
+  expect(JSON.parse(fetcher.mock.calls[1][1].body).content.pfr_stats[0]).not.toHaveProperty("careerTotals");
   await click("Remove defense from draft"); await click("Save draft", host);
   expect(JSON.parse(fetcher.mock.calls[2][1].body).content.pfr_stats).toEqual([]);
 });

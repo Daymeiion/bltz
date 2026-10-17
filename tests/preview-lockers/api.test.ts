@@ -30,7 +30,7 @@ it("reports a committed save even when the postwrite completion read fails", asy
   expect(response.status).toBe(200);
   expect(await response.json()).toEqual({ id, slug: content.slug, revision: 8, complete: false, completionStatus: "unavailable" });
 });
-const nfl = [{ category: "defense", sourceUrl: "https://www.pro-football-reference.com/players/F/FixtPl00.htm", importedAt: "2026-10-11T00:00:00.000Z", seasons: [{ year: 2024, team: "AAA", gamesPlayed: 17, gamesStarted: null, statistics: { sacks: 2.5 } }] }];
+const nfl = [{ category: "defense", sourceUrl: "https://www.pro-football-reference.com/players/F/FixtPl00.htm", importedAt: "2026-10-11T00:00:00.000Z", seasons: [{ year: 2024, team: "AAA", gamesPlayed: 17, gamesStarted: null, statistics: { sacks: 2.5 } }], careerTotals: { seasonCount: 1, gamesPlayed: 17, gamesStarted: null, statistics: { sacks: 2.5, passesDefended: 4 } } }];
 it("passes validated NFL tables through admin create and revision-protected update", async () => {
   const imported = { ...content, pfr_stats: nfl };
   mock.single.mockResolvedValue({ data: { ...imported, id, revision: 1 }, error: null });
@@ -48,4 +48,11 @@ it("rejects unrelated NFL source pages and unauthorized CSV writes before persis
   mock.rpc.mockResolvedValue({ data: false });
   expect((await PATCH(request({ revision: 1, content: { ...content, pfr_stats: nfl } }, "PATCH"), { params: Promise.resolve({ id }) })).status).toBe(403);
   expect(mock.from).not.toHaveBeenCalled();
+});
+it("rejects conflicting or unsupported career totals before database access", async () => {
+  for (const statistics of [{ sacks: 3.5 }, { inventedStat: 5 }]) {
+    const invalid = [{ ...nfl[0], careerTotals: { ...nfl[0].careerTotals, statistics } }];
+    expect((await POST(request({ id, content: { ...content, pfr_stats: invalid } }))).status).toBe(400);
+    expect(mock.from).not.toHaveBeenCalled();
+  }
 });

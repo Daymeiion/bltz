@@ -9,9 +9,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { StructuredStats } from "@/components/player/StructuredStats";
 import { CSV_LIMIT, cfbCategories, columnOptions, combineCfbImports, inspectCsv, reviewCsv, type CfbCategory, type CfbImport, type CsvTable } from "@/lib/preview-lockers/cfb-csv";
 import { canSaveStatsImports } from "@/lib/source-policy/preview-stats";
-import { combinePfrImports, inspectPfrCsv, reviewPfrCsv } from "@/lib/preview-lockers/pfr-csv";
+import { combinePfrImports, inspectPfrCsv, reviewPfrCsv, type PfrImport } from "@/lib/preview-lockers/pfr-csv";
 
-export default function StatsCsvImport({ athleteName, value, onChange, league = "college", disabled = false }: { athleteName: string; value: CfbImport[]; onChange: (value: CfbImport[]) => void; league?: "college" | "nfl"; disabled?: boolean }) {
+type StatsCsvTable = CfbImport & Pick<PfrImport, "careerTotals">;
+export default function StatsCsvImport({ athleteName, value, onChange, league = "college", disabled = false }: { athleteName: string; value: StatsCsvTable[]; onChange: (value: StatsCsvTable[]) => void; league?: "college" | "nfl"; disabled?: boolean }) {
   const pro = league === "nfl";
   const label = pro ? "NFL" : "college";
   const sourceLabel = pro ? "NFL player source URL" : "Player source URL";
@@ -23,7 +24,7 @@ export default function StatsCsvImport({ athleteName, value, onChange, league = 
   const [csv, setCsv] = useState("");
   const [table, setTable] = useState<CsvTable | null>(null);
   const [mapping, setMapping] = useState<string[]>([]);
-  const [review, setReview] = useState<ReturnType<typeof reviewCsv> | null>(null);
+  const [review, setReview] = useState<{ imported: StatsCsvTable; warnings: string[] } | null>(null);
   const [approved, setApproved] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -32,7 +33,7 @@ export default function StatsCsvImport({ athleteName, value, onChange, league = 
   function fail(cause: unknown) { setError(cause instanceof ZodError ? cause.issues.map(issue => issue.message).slice(0, 3).join(" ") : cause instanceof Error ? cause.message : "Unable to read CSV."); }
   return <BuilderSection title={`Import ${label} statistics`} count={value.length} description={`Expand to import a ${pro ? "Pro Football Reference" : "college"} CSV table. No API quota used.`}>
     <fieldset disabled={disabled || reading} className="min-w-0 space-y-5">
-    <div><p className="text-sm text-muted-foreground">{pro ? <>Import regular-season totals for {athleteName || "this player"} from their Pro Football Reference player page. Use Export Data → Get table as CSV, then upload or paste one table at a time. Review each column before adding it to the draft. Career summaries and average rows are skipped; game logs and postseason tables are outside this import.</> : <>College CSV import is paused for new data for {athleteName || "this player"}. Sports Reference is link-only: previously saved tables are preserved and can be removed. Existing manual statistics fields remain available. A reviewed CSV source is required before enabling new imports.</>}</p></div>
+    <div><p className="text-sm text-muted-foreground">{pro ? <>Import regular-season totals for {athleteName || "this player"} from their Pro Football Reference player page. Use Export Data → Get table as CSV, then upload or paste one table at a time. Include the career summary to display PFR’s reported totals separately from season sums. Team summaries and average rows are skipped; game logs and postseason tables are outside this import.</> : <>College CSV import is paused for new data for {athleteName || "this player"}. Sports Reference is link-only: previously saved tables are preserved and can be removed. Existing manual statistics fields remain available. A reviewed CSV source is required before enabling new imports.</>}</p></div>
     <label className="grid gap-2 text-sm font-medium">{sourceLabel}<Input aria-label={sourceLabel} type="url" maxLength={2048} value={source} onChange={e => { setSource(e.target.value); setReview(null); setApproved(false); }} placeholder={pro ? "https://www.pro-football-reference.com/players/B/BradTo00.htm" : "https://www.sports-reference.com/cfb/players/player-name-1.html"} /></label>
     <label className="grid gap-2 text-sm font-medium">Table category<select aria-label={pro ? "NFL table category" : "Table category"} className="rounded border bg-background p-2" value={category} onChange={e => { setCategory(e.target.value as CfbCategory); reset(); }}>{cfbCategories.map(item => <option key={item} value={item}>{item}</option>)}</select></label>
     <label className="grid gap-2 text-sm font-medium">Upload CSV<Input aria-label={`Upload ${label} CSV`} type="file" accept=".csv,text/csv" disabled={reading} onChange={async e => {
@@ -50,13 +51,14 @@ export default function StatsCsvImport({ athleteName, value, onChange, league = 
     </div>}
     {review && <div className="space-y-3">
       <p className="text-sm">{review.imported.seasons.length} season/team rows for {athleteName}. {value.some(item => item.category === category) ? `This replaces the existing ${category} import when you add it to the draft.` : "This adds a new table to the draft."}</p>
+      {review.imported.careerTotals && <p className="text-sm">PFR career totals included from the CSV. Review them separately from the available-season sums; missing season values remain unknown.</p>}
       <div className="rounded-lg bg-[#0c1524]"><StructuredStats records={combine([review.imported])} /></div>
       {review.warnings.length > 0 && <details><summary className="cursor-pointer">{review.warnings.length} skipped columns or summary rows</summary><ul className="list-inside list-disc text-sm">{review.warnings.map((warning, index) => <li key={index}>{warning}</li>)}</ul></details>}
-      <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={approved} onChange={e => setApproved(e.target.checked)} />I verified this source, player, {pro ? "regular-season totals, " : ""}seasons, column mappings, and skipped data for {athleteName}.</label>
+      <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={approved} onChange={e => setApproved(e.target.checked)} />I verified this source, player, {pro ? "regular-season totals, " : ""}{review.imported.careerTotals ? "reported career totals, " : ""}seasons, column mappings, and skipped data for {athleteName}.</label>
       <Button type="button" disabled={!approved} onClick={() => { try { if (!pro && !canSaveStatsImports([review.imported])) throw new Error("This source is reference-only. New statistics cannot be added; previously saved tables remain unchanged."); const next = [...value.filter(item => item.category !== category), review.imported]; combine(next); onChange(next); reset(); setCsv(""); setMessage(`${pro ? "NFL" : "College"} statistics added to draft. Save draft to persist them privately.`); } catch (cause) { fail(cause); } }}>Add reviewed statistics to draft</Button>
     </div>}
     {error && <p role="alert" className="text-sm text-red-500">{error}</p>}{message && <p role="status" className="text-sm">{message}</p>}
-    {value.length > 0 && <div className="space-y-3"><h3 className="font-semibold">{pro ? "NFL" : "College"} tables in this draft</h3>{value.map(item => <div key={item.category} className="flex flex-wrap items-center justify-between gap-3 rounded border p-3"><div className="text-sm"><p>{item.category} · {item.seasons.length} season/team rows</p><a href={item.sourceUrl} target="_blank" rel="noopener noreferrer" className="break-all underline">Source player page</a></div><Button type="button" variant="outline" onClick={() => { onChange(value.filter(batch => batch.category !== item.category)); setReview(null); setApproved(false); }}>Remove {item.category} from draft</Button></div>)}</div>}
+    {value.length > 0 && <div className="space-y-3"><h3 className="font-semibold">{pro ? "NFL" : "College"} tables in this draft</h3>{value.map(item => <div key={item.category} className="flex flex-wrap items-center justify-between gap-3 rounded border p-3"><div className="text-sm"><p>{item.category} · {item.seasons.length} season/team rows{item.careerTotals ? " · career totals included" : ""}</p><a href={item.sourceUrl} target="_blank" rel="noopener noreferrer" className="break-all underline">Source player page</a></div><Button type="button" variant="outline" onClick={() => { onChange(value.filter(batch => batch.category !== item.category)); setReview(null); setApproved(false); }}>Remove {item.category} from draft</Button></div>)}</div>}
     </fieldset>
   </BuilderSection>;
 }

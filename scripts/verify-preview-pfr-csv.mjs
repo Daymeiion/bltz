@@ -26,7 +26,7 @@ try {
     grant select(career_stats),insert(career_stats),update(career_stats) on public.preview_lockers to authenticated;
     create function public.preview_conversion(uuid,text,uuid,uuid,jsonb) returns jsonb language sql as $$ select '{}'::jsonb $$;`);
   for (const name of ['20260914213500_preview_award_sources.sql', '20260915003000_preview_award_descriptions.sql', '20260916193000_private_preview_cfb_csv.sql', '20260922190000_preview_awards_social.sql', '20260929120000_preview_photo_room_banner.sql', '20260929195816_preview_photo_room_banner_upload.sql', '20261011170240_preview_pfr_csv.sql']) await apply(name);
-  const imported = [{ category: 'defense', sourceUrl: 'https://www.pro-football-reference.com/players/F/FixtPl00.htm', importedAt: '2026-10-11T00:00:00.000Z', seasons: [{ year: 2024, team: 'AAA', gamesPlayed: 17, gamesStarted: null, statistics: { sacks: 2.5 } }] }];
+  const imported = [{ category: 'defense', sourceUrl: 'https://www.pro-football-reference.com/players/F/FixtPl00.htm', importedAt: '2026-10-11T00:00:00.000Z', seasons: [{ year: 2024, team: 'AAA', gamesPlayed: 17, gamesStarted: null, statistics: { sacks: 2.5 } }], careerTotals: { seasonCount: 1, gamesPlayed: 17, gamesStarted: null, statistics: { sacks: 2.5, passesDefended: 4 } } }];
   await db.exec(`set role authenticated; select set_config('request.jwt.claim.sub','${admin}',false);`);
   await db.query('insert into preview_lockers(id,slug,full_name,pfr_stats) values ($1,$2,$3,$4)', [preview, 'pfr-fixture', 'PFR Fixture', JSON.stringify(imported)]);
   assert.deepEqual((await db.query('select pfr_stats from preview_lockers where id=$1', [preview])).rows[0].pfr_stats, imported);

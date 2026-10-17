@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { cfbCategories, cfbImport, cfbSeason, combineSeasonImports, inspectCsv, readCsvSeasons, type CfbCategory, type CsvTable } from "./cfb-csv";
 import { DISPLAY_STAT_FIELDS } from "@/lib/sportradar/types";
+import type { ReportedCareerTotals } from "@/lib/player/structured-stats-types";
 
 export const pfrSourcePage = z.string().max(2048).url().refine(value => {
   try {
@@ -11,8 +12,20 @@ export const pfrSourcePage = z.string().max(2048).url().refine(value => {
   } catch { return false; }
 }, "Use the athlete's HTTPS Pro Football Reference player page.");
 
+export const pfrCareerTotals = z.object({
+  gamesPlayed: cfbSeason.shape.gamesPlayed,
+  gamesStarted: cfbSeason.shape.gamesStarted,
+  statistics: cfbSeason.shape.statistics,
+  seasonCount: z.number().int().min(1).max(120).optional(),
+}).strict().superRefine((totals, ctx) => {
+  if (!cfbSeason.safeParse({ year: 2000, team: "Career", gamesPlayed: totals.gamesPlayed, gamesStarted: totals.gamesStarted, statistics: totals.statistics }).success) {
+    ctx.addIssue({ code: "custom", message: "Career totals must use valid game counts and supported statistic values, not per-game averages." });
+  }
+});
+
 export const pfrImport = cfbImport.extend({
   sourceUrl: pfrSourcePage,
+  careerTotals: pfrCareerTotals.optional(),
   seasons: z.array(cfbSeason.refine(row => !row.sourceNote, "College bowl notes do not apply to NFL statistics."))
     .min(1).max(120).refine(rows => new Set(rows.map(row => `${row.year}/${row.team.toLowerCase()}`)).size === rows.length, "Duplicate season/team rows.")
     .superRefine((rows, ctx) => {
@@ -21,6 +34,30 @@ export const pfrImport = cfbImport.extend({
         if (/^(?:\d+TM|TOT)$/i.test(row.team) && sameYear.length > 1) ctx.addIssue({ code: "custom", message: "A multi-team total cannot be saved alongside team stints for the same season." });
       }
     }),
+}).superRefine(({ seasons, careerTotals: totals }, ctx) => {
+  if (!totals) return;
+  const conflict = (message: string) => ctx.addIssue({ code: "custom", path: ["careerTotals"], message });
+  if (totals.seasonCount !== undefined && totals.seasonCount !== new Set(seasons.map(row => row.year)).size) conflict("Career summary season count does not match the included seasons. Include the full season table.");
+  for (const key of ["gamesPlayed", "gamesStarted"] as const) {
+    const reported = totals[key];
+    if (reported === null) continue;
+    const known = seasons.reduce((sum, row) => sum + (row[key] ?? 0), 0);
+    if (known > reported || (seasons.every(row => row[key] !== null) && known !== reported)) conflict(`Career ${key} does not match the included seasons. Include the full season table.`);
+  }
+  for (const [key, reported] of Object.entries(totals.statistics)) {
+    const field = DISPLAY_STAT_FIELDS[key];
+    if (!field) continue; // The nested schema reports unsupported keys safely.
+    const known = seasons.flatMap(row => row.statistics[key] === undefined ? [] : [row.statistics[key]]);
+    if (!known.length) continue;
+    const complete = known.length === seasons.length;
+    if (field.maximum) {
+      const maximum = Math.max(...known);
+      if (maximum > reported || (complete && maximum !== reported)) conflict(`Career ${field.label} conflicts with the included seasons.`);
+    } else if (field.sum) {
+      const sum = known.reduce((total, value) => total + value, 0);
+      if ((complete && Math.abs(sum - reported) > 0.001) || (!key.toLowerCase().includes("yards") && sum > reported + 0.001)) conflict(`Career ${field.label} conflicts with the included seasons.`);
+    }
+  }
 });
 export const pfrImports = z.array(pfrImport).max(cfbCategories.length)
   .refine(items => new Set(items.map(item => item.category)).size === items.length, "Only one NFL import per table category.")
@@ -51,7 +88,7 @@ export function inspectPfrCsv(input: string, category: CfbCategory): CsvTable {
 }
 
 // PFR adds career, per-game, team summary, and multi-team total rows to exports.
-// Keep team stints when available, verifying their totals against the aggregate.
+// Store the career summary separately; never turn summaries into season rows.
 export function reviewPfrCsv(table: CsvTable, mapping: string[], category: CfbCategory, sourceUrl: string) {
   pfrSourcePage.parse(sourceUrl);
   const yearIndex = mapping.indexOf("year");
@@ -60,10 +97,19 @@ export function reviewPfrCsv(table: CsvTable, mapping: string[], category: CfbCa
   const warnings: string[] = [];
   let previousYear = "";
   const rows: string[][] = [];
+  let careerSummary: z.infer<typeof pfrCareerTotals> | undefined;
   for (const cells of table.rows) {
     let year = cells[yearIndex]?.trim() ?? "";
     const team = cells[teamIndex]?.trim() ?? "";
-    if (/^(?:career|total|totals|year|season|\d+\s+yrs?|\d+\s+game\s+avg|.+\(\d+\s+yrs?\))$/i.test(year) || (!year && !team)) {
+    if (/^(?:career|totals?|\d+\s+yrs?)$/i.test(year)) {
+      if (careerSummary) throw new Error("Only one career summary may be imported per table. Remove duplicate summaries.");
+      const summaryRow = readCsvSeasons({ ...table, rows: [cells.map((cell, index) => index === yearIndex ? "2000" : index === teamIndex ? "Career" : cell)] }, mapping, false).seasons[0];
+      const count = /^(\d+)\s+yrs?$/i.exec(year);
+      careerSummary = pfrCareerTotals.parse({ gamesPlayed: summaryRow.gamesPlayed, gamesStarted: summaryRow.gamesStarted, statistics: summaryRow.statistics, ...(count ? { seasonCount: Number(count[1]) } : {}) });
+      previousYear = "";
+      continue;
+    }
+    if (/^(?:year|season|\d+\s+game\s+avg|.+\(\d+\s+yrs?\))$/i.test(year) || (!year && !team)) {
       warnings.push(`Skipped summary/header row: ${year || "blank"}`); previousYear = ""; continue;
     }
     if (!year && team && previousYear) year = previousYear;
@@ -89,7 +135,7 @@ export function reviewPfrCsv(table: CsvTable, mapping: string[], category: CfbCa
     warnings.push(`Skipped ${row.year} ${row.team} total; retained individual team stints to avoid double counting.`);
     return false;
   });
-  return { imported: pfrImport.parse({ category, sourceUrl, importedAt: new Date().toISOString(), seasons }), warnings };
+  return { imported: pfrImport.parse({ category, sourceUrl, importedAt: new Date().toISOString(), seasons, ...(careerSummary ? { careerTotals: careerSummary } : {}) }), warnings };
 }
 
 export function combinePfrImports(imports: PfrImport[]) {
@@ -98,5 +144,17 @@ export function combinePfrImports(imports: PfrImport[]) {
   for (const record of records) for (const row of record.seasons) {
     if (/^(?:\d+TM|TOT)$/i.test(row.team) && record.seasons.some(other => other.year === row.year && other.team !== row.team)) throw new Error(`NFL tables mix a multi-team total and team stints in ${row.year}. Use the same team rows in each table.`);
   }
-  return records.map(record => ({ ...record, sourceUrls: [...new Set(validated.map(item => item.sourceUrl))] }));
+  const summaries = validated.flatMap(batch => batch.careerTotals ? [batch.careerTotals] : []);
+  let reportedCareerTotals: ReportedCareerTotals | undefined;
+  if (summaries.length) {
+    const statistics: Record<string, number> = {};
+    for (const summary of summaries) for (const [key, value] of Object.entries(summary.statistics)) {
+      if (statistics[key] !== undefined && statistics[key] !== value) throw new Error(`Conflicting reported career ${DISPLAY_STAT_FIELDS[key].label}. Replace the conflicting table.`);
+      statistics[key] = value;
+    }
+    // Category tables may cover different spans. Never sum their game counts.
+    const sharedCount = (key: "gamesPlayed" | "gamesStarted") => summaries.every(summary => summary[key] !== null && summary[key] === summaries[0][key]) ? summaries[0][key] : null;
+    reportedCareerTotals = { gamesPlayed: sharedCount("gamesPlayed"), gamesStarted: sharedCount("gamesStarted"), statistics };
+  }
+  return records.map(record => ({ ...record, sourceUrls: [...new Set(validated.map(item => item.sourceUrl))], ...(reportedCareerTotals ? { reportedCareerTotals } : {}) }));
 }

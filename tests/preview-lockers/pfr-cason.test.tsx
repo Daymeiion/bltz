@@ -54,8 +54,16 @@ describe("Antoine Cason's pasted defense CSV", () => {
     expect(table.querySelector('th[aria-label="Longest interception return"]')?.textContent).toBe("Lng");
     expect(table.querySelector('th[aria-label="Interception return yards"]')?.getAttribute("title")).toBe("Interception return yards");
     const totals = table.querySelector("tfoot tr")!;
-    expect([...totals.children].slice(0, 3).map(cell => cell.textContent)).toEqual(["Totals", "110", "60"]);
-    expect(totals.firstElementChild?.getAttribute("aria-label")).toBe("Available-season totals");
+    expect([...totals.children].slice(0, 3).map(cell => cell.textContent)).toEqual(["PFR career", "110", "60"]);
+    expect(totals.firstElementChild?.getAttribute("aria-label")).toBe("Career totals reported by Pro Football Reference");
+    const seasonTotals = table.querySelectorAll("tfoot tr")[1];
+    expect(seasonTotals.firstElementChild?.textContent).toBe("Season sum");
+    const headings = [...table.querySelectorAll("thead tr:last-child th")];
+    for (const [label, reported] of [["Combined tackles", "381"], ["Passes defended", "63"]]) {
+      const index = 3 + headings.findIndex(cell => cell.getAttribute("aria-label") === label);
+      expect(totals.children[index].textContent).toBe(reported);
+      expect(seasonTotals.children[index].textContent).toBe("—");
+    }
     const sourceLink = host.querySelector<HTMLAnchorElement>(`a[href="${source}"]`)!;
     expect(sourceLink.textContent).toBe("Pro-Football-Reference.com");
     expect(sourceLink.parentElement?.textContent).toContain("Statistics courtesy of");
