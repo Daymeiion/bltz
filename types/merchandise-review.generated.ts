@@ -1,5 +1,5 @@
-// Scoped projection of official production schema after migration 20261017071708.
-// Includes pending migration 20261017073440; regenerate after its authorized application.
+// Generated from Supabase production schema after migration 20261017073440.
+// Scoped projection of official `supabase gen types --schema public` output.
 import type { Json } from "./database.generated";
 export type MerchandiseReviewDatabase = { public: { Tables: {
 preview_merchandise_searches: {
@@ -30,8 +30,8 @@ preview_merchandise_searches: {
           version?: number
         }
         Update: {
-          dismissed_items?: Json
           created_at?: string
+          dismissed_items?: Json
           dismissed_keys?: string[]
           dismissed_urls?: string[]
           identity_key?: string
@@ -52,9 +52,7 @@ preview_merchandise_searches: {
           },
         ]
       }
-}; Views: Record<never, never>; Functions: {
-restore_preview_merchandise_result: { Args: { p_preview_id: string; p_revision: number; p_version: number; p_identity_key: string; p_url: string }; Returns: Json }
-
+}; Views: Record<string, never>; Functions: {
 save_preview_merchandise_search: {
         Args: {
           p_identity_key: string
@@ -87,4 +85,14 @@ preview_merchandise_listing_keys: {
         Args: { p_item: Json }
         Returns: string[]
       }
-}; Enums: Record<never, never>; CompositeTypes: Record<never, never> } };
+restore_preview_merchandise_result: {
+        Args: {
+          p_identity_key: string
+          p_preview_id: string
+          p_revision: number
+          p_url: string
+          p_version: number
+        }
+        Returns: Json
+      }
+}; Enums: Record<string, never>; CompositeTypes: Record<string, never> } };

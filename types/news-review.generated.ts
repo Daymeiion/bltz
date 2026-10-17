@@ -1,5 +1,5 @@
-// Scoped projection of official production schema after migration 20261017071708.
-// Includes pending migration 20261017073440; regenerate after its authorized application.
+// Generated from Supabase production schema after migration 20261017073440.
+// Scoped projection of official `supabase gen types --schema public` output.
 import type { Json } from "./database.generated";
 export type NewsReviewDatabase = { public: { Tables: {
 player_articles: {
@@ -146,8 +146,6 @@ preview_enrichments: {
         ]
       }
 }; Views: Record<string, never>; Functions: {
-restore_preview_news_article: { Args: { p_preview_id: string; p_revision: number; p_version: number; p_identity_key: string; p_url: string }; Returns: Json }
-
 preview_news_article_keys: {
         Args: { p_article: Json }
         Returns: string[]
@@ -179,6 +177,16 @@ save_preview_enrichment: {
           p_report: Json
           p_revision: number
           p_started_at: string
+        }
+        Returns: Json
+      }
+restore_preview_news_article: {
+        Args: {
+          p_identity_key: string
+          p_preview_id: string
+          p_revision: number
+          p_url: string
+          p_version: number
         }
         Returns: Json
       }
