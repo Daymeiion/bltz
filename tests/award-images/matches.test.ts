@@ -17,6 +17,8 @@ it.each(["JimThorpeAward.png","jim-thorpe-award-2007-final-300x400 (2).PNG","jim
 });
 it("shows generic All-American artwork as multiple uncertain variants",()=>{
  const rows=suggestions("Award-AllAmericanIcon.png");expect(rows.map(row=>row.award.id).sort()).toEqual(["consensus","first","unanimous"]);expect(rows.every(row=>row.confidence==="review")).toBe(true);
+ const broadAlias=suggestAwardImageMatches({images:[image("All-American.png")],catalog:catalog.map(row=>row.id==="first"?{...row,aliases:["All-American"]}:row)});
+ expect(broadAlias.every(row=>row.confidence==="review")).toBe(true);
  expect(suggestions("FirstTeamAllAmerican.webp").map(row=>row.award.id)).toEqual(["first"]);
  expect(suggestions("1st-Team-All-American.webp").map(row=>row.award.id)).toEqual(["first"]);
  expect(suggestions("All-American-Consensus.png").map(row=>row.award.id)).toEqual(["consensus"]);

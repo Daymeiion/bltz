@@ -40,13 +40,14 @@ export function suggestAwardImageMatches(library: Pick<AwardImageLibrary, "image
       let match: Pick<AwardImageMatch, "confidence" | "reason"> | null = null;
       for (const {alias, name, target} of names) {
         if (!target.length || incompatible(words, name, award.level)) continue;
-        if (compact(words) === compact(name) || compact(content) === compact(target) || [...content].sort().join(" ") === [...target].sort().join(" ")) {
-          match = { confidence: "clear", reason: `Name matches “${alias}”.` }; break;
-        }
         // Generic All-American artwork can illustrate different definitions,
         // but never implies which specific honor the athlete received.
         if (compact(content) === "allamerican" && name.includes("all") && name.includes("american")) {
           match = { confidence: "review", reason: "Generic All-American artwork; confirm this award variant." };
+          continue;
+        }
+        if (compact(words) === compact(name) || compact(content) === compact(target) || [...content].sort().join(" ") === [...target].sort().join(" ")) {
+          match = { confidence: "clear", reason: `Name matches “${alias}”.` }; break;
         }
       }
       if (match) suggestions.push({key: `${award.id}:${image.id}`, image, award, sourceName, sourceKind: image.original_filename ? "filename" : "legacy_title", ...match});
