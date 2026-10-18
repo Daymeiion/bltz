@@ -42,6 +42,17 @@ it("resolves a merchandise override after authorization without adding it to pho
  expect(previewLockerData(result!).merch?.[0].imageUrl).toBe("https://storage.example.com/override.png");
  expect(result?.photos).toEqual([]); expect(product.imageUrl).toBe("https://shop.example.com/default.png");
 });
+it("resolves an uploaded news image into the Locker article card without publishing it as a photo",async()=>{
+ const photoPath=`${id}/photos/00000000-0000-4000-8000-000000000003.png`;
+ const article={id:"article",sourceUrl:"https://publisher.example.com/career",headline:"Fixture Player career",publisher:"Sports Press",articleUrl:"https://publisher.example.com/career",imageUrl:"https://publisher.example.com/default.png",imageStoragePath:photoPath,summary:"",publishedAt:null,visible:true};
+ const saved={...row,videos:[],article_edits:[article]};
+ service.maybeSingle.mockResolvedValue({data:saved,error:null});mocks.maybeSingle.mockResolvedValue({data:saved,error:null});
+ mocks.signed.mockResolvedValue({data:[{signedUrl:"https://storage.example.com/news.png"}],error:null});
+ const result=await readPrivatePreview("fixture-player");
+ expect(mocks.signed).toHaveBeenCalledWith([photoPath],900);expect(result?.photos).toEqual([]);
+ expect(previewLockerData(result!).articles?.[0].thumbnail_url).toBe("https://storage.example.com/news.png");
+ expect(article.imageUrl).toBe("https://publisher.example.com/default.png");
+});
 
 it("fails closed when a private read URL cannot be signed", async () => {
   mocks.signed.mockResolvedValue({ data: null, error: { message: "private detail" } });

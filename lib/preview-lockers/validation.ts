@@ -75,6 +75,7 @@ const articleUrl = previewUrl.refine(isNewsArticleUrl, "Use an article link, not
 export const previewArticleEdit = z.object({
   id, sourceUrl: articleUrl.nullable().default(null), visible: z.boolean().default(true),
   headline: text(500).min(1), publisher: text(200).min(1), articleUrl, imageUrl: asset,
+  imageStoragePath: storagePath.refine(path => path.includes("/photos/"), "Use an uploaded image.").nullable().optional(),
   summary: text(600).default(""), publishedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(value => {
     const date = new Date(value); return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
   }, "Use a valid calendar date.").nullable().default(null),
@@ -134,7 +135,7 @@ export type ResolvedPreviewRecord = Omit<PreviewRecord, "videos" | "photos"> & {
 };
 export function previewMediaBelongsTo(recordId: string, content: PreviewContent): boolean {
   return (!content.photo_room_banner_storage_path || content.photo_room_banner_storage_path.startsWith(`${recordId}/photos/`))
-    && content.merchandise.every(item => !item.imageStoragePath || item.imageStoragePath.startsWith(`${recordId}/photos/`))
+    && [...content.merchandise,...content.article_edits].every(item => !item.imageStoragePath || item.imageStoragePath.startsWith(`${recordId}/photos/`))
     && [...content.photos, ...content.videos].every(item => !("storagePath" in item) || item.storagePath.startsWith(`${recordId}/`));
 }
 export function equivalentPreview(a: unknown, b: unknown): boolean {

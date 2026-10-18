@@ -27,7 +27,7 @@ it("replaces the scraped image, persists only the private path, and restores the
  const payload=JSON.parse(fetcher.mock.calls[1][1].body);
  expect(payload.content.merchandise[0]).toMatchObject({imageUrl:defaultUrl,imageStoragePath:path});
  expect(JSON.stringify(payload)).not.toContain(uploadedUrl);expect(payload.content.photos).toEqual([]);
- await act(async()=>root.render(<PreviewLockerForm key="reload" record={{...record,...payload.content,revision:2}} initialMerchandiseImages={{[path]:uploadedUrl}}/>));
+ await act(async()=>root.render(<PreviewLockerForm key="reload" record={{...record,...payload.content,revision:2}} initialImageUrls={{[path]:uploadedUrl}}/>));
  expect(image()?.src).toBe(uploadedUrl); await click('Use default image');expect(image()?.src).toBe(defaultUrl);
  fetcher.mockResolvedValueOnce(Response.json({id,slug:record.slug,revision:3}));await click('Save draft');
  expect(JSON.parse(fetcher.mock.calls.at(-1)![1].body).content.merchandise[0]).toMatchObject({imageUrl:defaultUrl,imageStoragePath:null});

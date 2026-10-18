@@ -9,21 +9,26 @@ import { newsArticleKeys, type NewsReview } from "@/lib/preview-lockers/news-rev
 import NewsResultCard from "./NewsResults";
 import DismissedReviewList from "./DismissedReviewList";
 import BulkReviewControls from "./BulkReviewControls";
+import EditorialImageInput from "./EditorialImageInput";
 
-export default function ArticlesSection({ articles, edits, onChange, onReload, onRefresh, canLoad, dirty, saved, review, reviewKey, identityCurrent = true, playerName, onDismiss, onDismissSelected, onRestore, onRestoreSelected, onDismissedPage, busy = false, reviewError = "" }: {
+export default function ArticlesSection({ articles, edits, onChange, onReload, onRefresh, canLoad, dirty, saved, review, reviewKey, identityCurrent = true, playerName, onDismiss, onDismissSelected, onRestore, onRestoreSelected, onDismissedPage, busy = false, reviewError = "", imageUrls = {}, imageError, onUploadImage }: {
   articles: PlayerArticle[]; edits: ArticleEdit[]; onChange: (items: ArticleEdit[]) => void;
   onReload: () => void; onRefresh: () => void; canLoad: boolean; dirty: boolean; saved: boolean;
   review: NewsReview | null; reviewKey: string; identityCurrent?: boolean; playerName: string;
   onDismiss: (url: string) => void; busy?: boolean; reviewError?: string;
   onRestoreSelected?: (urls: string[]) => Promise<boolean>; onRestore?: (url: string) => void; onDismissedPage?: (offset: number) => void;
   onDismissSelected: (urls: string[]) => Promise<boolean>;
+  imageUrls?:Record<string,string>; imageError?:{id:string;message:string}|null;
+  onUploadImage?:(item:ArticleEdit,file:File|undefined)=>void;
 }) {
   const update = (id: string, patch: Partial<ArticleEdit>) => onChange(edits.map(item => item.id === id ? { ...item, ...patch } : item));
-  const fields = (item: ArticleEdit, label: string) => <div className="mt-4 grid gap-4 sm:grid-cols-2">
+  const imageInput = (item:ArticleEdit,label:string) => <EditorialImageInput label={label} title={item.headline} kind="article" defaultUrl={item.imageUrl} storagePath={item.imageStoragePath} imageUrls={imageUrls} saved={saved} busy={busy} disabled={!item.id && edits.length>=40} error={imageError?.id===(item.sourceUrl??item.id)?imageError.message:undefined} onUpload={file=>onUploadImage?.({...item,id:item.id||crypto.randomUUID()},file)} onDefault={()=>update(item.id,{imageStoragePath:null})}/>;
+  const fields = (item: ArticleEdit, label: string, showImage=true) => <div className="mt-4 grid gap-4 sm:grid-cols-2">
     <label className="grid gap-2 text-sm">Headline<Input aria-label={`${label} headline`} value={item.headline} maxLength={500} onChange={event => update(item.id, { headline: event.target.value })} /></label>
     <label className="grid gap-2 text-sm">Publisher<Input aria-label={`${label} publisher`} value={item.publisher} maxLength={200} onChange={event => update(item.id, { publisher: event.target.value })} /></label>
     <label className="grid gap-2 text-sm sm:col-span-2">Article link<Input aria-label={`${label} link`} type="url" value={item.articleUrl} maxLength={2048} onChange={event => update(item.id, { articleUrl: event.target.value })} /></label>
-    <label className="grid gap-2 text-sm">Image URL (optional)<Input aria-label={`${label} image`} type="url" value={item.imageUrl ?? ""} maxLength={2048} onChange={event => update(item.id, { imageUrl: event.target.value || null })} /></label>
+    {showImage&&imageInput(item,label)}
+    <label className="grid gap-2 text-sm">Default image URL (optional)<Input aria-label={`${label} image`} type="url" value={item.imageUrl ?? ""} maxLength={2048} onChange={event => update(item.id, { imageUrl: event.target.value || null })} /></label>
     <label className="grid gap-2 text-sm">Published date (optional)<Input aria-label={`${label} date`} type="date" value={item.publishedAt ?? ""} onChange={event => update(item.id, { publishedAt: event.target.value || null })} /></label>
     <label className="grid gap-2 text-sm sm:col-span-2">Short summary<Textarea aria-label={`${label} summary`} value={item.summary} maxLength={600} onChange={event => update(item.id, { summary: event.target.value })} /></label>
     <label className="flex min-h-11 items-center gap-3 text-sm"><input aria-label={`${label} visible`} type="checkbox" checked={item.visible} onChange={event => update(item.id, { visible: event.target.checked })} />Show in Locker articles</label>
@@ -69,9 +74,10 @@ export default function ArticlesSection({ articles, edits, onChange, onReload, o
         <summary className="cursor-pointer break-words font-medium">{edit?.headline || article.headline} · {edit?.visible === false ? "Hidden" : "Shown"}</summary>
         <p className="mt-3 text-sm text-muted-foreground">Discovered from {article.publisher}</p>
         <a className="mt-2 block break-all text-sm underline" href={article.article_url} target="_blank" rel="noopener noreferrer">Original scraped article ↗</a>
-        {edit ? <>{fields(edit, `Scraped article ${index + 1}`)}<Button className="mt-4" type="button" variant="outline" onClick={() => onChange(edits.filter(item => item.id !== edit.id))}>Reset to scraped details</Button></> : <div className="mt-4 flex flex-wrap gap-3">
-          <Button type="button" variant="outline" disabled={edits.length >= 40} onClick={() => onChange([...edits, editScrapedArticle(article, crypto.randomUUID())])}>Edit article details</Button>
-          <Button type="button" variant="outline" disabled={edits.length >= 40} onClick={() => onChange([...edits, { ...editScrapedArticle(article, crypto.randomUUID()), visible: false }])}>Hide article from Locker</Button>
+        <div className="mt-4">{imageInput(edit??editScrapedArticle(article,""),`Scraped article ${index+1}`)}</div>
+        {edit ? <>{fields(edit, `Scraped article ${index + 1}`,false)}<Button className="mt-4" type="button" variant="outline" disabled={busy} onClick={() => onChange(edits.filter(item => item.id !== edit.id))}>Reset to scraped details</Button></> : <div className="mt-4 flex flex-wrap gap-3">
+          <Button type="button" variant="outline" disabled={busy || edits.length >= 40} onClick={() => onChange([...edits, editScrapedArticle(article, crypto.randomUUID())])}>Edit article details</Button>
+          <Button type="button" variant="outline" disabled={busy || edits.length >= 40} onClick={() => onChange([...edits, { ...editScrapedArticle(article, crypto.randomUUID()), visible: false }])}>Hide article from Locker</Button>
         </div>}
       </details>;
     })}
@@ -80,9 +86,9 @@ export default function ArticlesSection({ articles, edits, onChange, onReload, o
       <summary className="cursor-pointer break-words font-medium">{item.headline || `Added article ${index + 1}`} · {item.visible ? "Shown" : "Hidden"}</summary>
       {item.sourceUrl && <p className="mt-3 text-sm text-muted-foreground">Retained edit of a previously scraped article.</p>}
       {fields(item, `Added article ${index + 1}`)}
-      <Button className="mt-4" type="button" variant="outline" onClick={() => onChange(edits.filter(entry => entry.id !== item.id))}>{item.sourceUrl ? "Remove retained edit" : "Remove added article"}</Button>
+      <Button className="mt-4" type="button" variant="outline" disabled={busy} onClick={() => onChange(edits.filter(entry => entry.id !== item.id))}>{item.sourceUrl ? "Remove retained edit" : "Remove added article"}</Button>
     </details>)}
-    <Button type="button" variant="outline" disabled={edits.length >= 40} onClick={() => onChange([...edits, { id: crypto.randomUUID(), sourceUrl: null, visible: true, headline: "", publisher: "", articleUrl: "", imageUrl: null, summary: "", publishedAt: null }])}>Add article</Button>
+    <Button type="button" variant="outline" disabled={busy || edits.length >= 40} onClick={() => onChange([...edits, { id: crypto.randomUUID(), sourceUrl: null, visible: true, headline: "", publisher: "", articleUrl: "", imageUrl: null, summary: "", publishedAt: null }])}>Add article</Button>
     <p className="text-xs text-muted-foreground">Use the original publisher article link and a short summary. Add only coverage you reviewed for this player. Save the draft to apply changes.</p>
   </BuilderSection>;
 }

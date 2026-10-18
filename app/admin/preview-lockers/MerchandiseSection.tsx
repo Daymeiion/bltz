@@ -8,6 +8,7 @@ import { merchandiseListingKeys } from "@/lib/preview-lockers/merchandise-review
 import MerchandiseResultCard from "./MerchandiseResults";
 import DismissedReviewList from "./DismissedReviewList";
 import BulkReviewControls from "./BulkReviewControls";
+import EditorialImageInput from "./EditorialImageInput";
 
 export default function MerchandiseSection({ items, onChange, onSearch, canSearch, searching, result, resultKey, searchError, identityCurrent, playerName, onDismiss, onDismissSelected, onRestore, onRestoreSelected, dismissedItems = [], searchedAt, savingReview = false, busy = false, saved = false, imageUrls = {}, imageError, onUploadImage }: {
   items: PreviewContent["merchandise"]; onChange: (items: PreviewContent["merchandise"]) => void;
@@ -62,14 +63,7 @@ export default function MerchandiseSection({ items, onChange, onSearch, canSearc
         <label className="grid gap-2 text-sm">Product title<Input aria-label={`Merchandise ${index + 1} title`} value={item.title} maxLength={160} onChange={event => update(item.id, { title: event.target.value })} /></label>
         <label className="grid gap-2 text-sm">Category<select aria-label={`Merchandise ${index + 1} category`} className="h-10 min-w-0 rounded-md border bg-background px-3" value={item.category} onChange={event => update(item.id, { category: event.target.value as typeof item.category })}>{merchandiseCategories.map(category => <option key={category} value={category}>{({ trading_card: "Trading card", jersey: "Jersey", apparel: "Apparel", memorabilia: "Memorabilia", other: "Other" })[category]}</option>)}</select></label>
         <label className="grid gap-2 text-sm sm:col-span-2">Product link<Input aria-label={`Merchandise ${index + 1} link`} type="url" value={item.productUrl} maxLength={2048} onChange={event => update(item.id, { productUrl: event.target.value })} /></label>
-        <div className="space-y-3 sm:col-span-2">
-          {(item.imageStoragePath ? imageUrls[item.imageStoragePath] : item.imageUrl) ? <img src={(item.imageStoragePath ? imageUrls[item.imageStoragePath] : item.imageUrl)!} alt={`${item.title || `Merchandise ${index + 1}`} image`} className="h-40 w-full rounded border object-contain p-2" /> : <p className="text-sm text-muted-foreground">{item.imageStoragePath ? "Uploaded image preview unavailable. You can replace it or use the default." : "No default image. Upload one below."}</p>}
-          <p className="text-xs text-muted-foreground">{item.imageStoragePath ? "Uploaded image" : "Default image"} · The scraped image is used until you upload a replacement.</p>
-          <label className="grid gap-2 text-sm">{item.imageStoragePath || item.imageUrl ? "Replace merchandise image" : "Upload merchandise image"}<Input aria-label={`Merchandise ${index + 1} upload image`} type="file" accept="image/jpeg,image/png,image/webp" disabled={!saved || busy || !onUploadImage} onChange={event => { onUploadImage?.(item.id,event.target.files?.[0]); event.target.value=""; }} /><span className="text-xs text-muted-foreground">JPG, PNG or WebP. Up to 10 MB. Save the draft to keep your image.</span></label>
-          {!saved && <p className="text-sm text-muted-foreground">Save the draft once before uploading images.</p>}
-          {item.imageStoragePath && <Button type="button" variant="outline" disabled={busy} onClick={() => update(item.id,{imageStoragePath:null})}>Use default image</Button>}
-          {imageError?.id === item.id && <p role="alert" className="text-sm text-red-400">{imageError.message}</p>}
-        </div>
+        <EditorialImageInput label={`Merchandise ${index+1}`} title={item.title} kind="merchandise" defaultUrl={item.imageUrl} storagePath={item.imageStoragePath} imageUrls={imageUrls} saved={saved} busy={busy} error={imageError?.id===item.id?imageError.message:undefined} onUpload={file=>onUploadImage?.(item.id,file)} onDefault={()=>update(item.id,{imageStoragePath:null})}/>
         <label className="grid gap-2 text-sm">Default image URL (optional)<Input aria-label={`Merchandise ${index + 1} image`} type="url" value={item.imageUrl ?? ""} maxLength={2048} onChange={event => update(item.id, { imageUrl: event.target.value || null })} /></label>
         <label className="grid gap-2 text-sm">Retailer (optional)<Input aria-label={`Merchandise ${index + 1} retailer`} value={item.retailer ?? ""} maxLength={160} onChange={event => update(item.id, { retailer: event.target.value || null })} /></label>
         <label className="grid gap-2 text-sm">Price label (optional)<Input aria-label={`Merchandise ${index + 1} price`} placeholder="$25 · check seller for current price" value={item.priceLabel ?? ""} maxLength={80} onChange={event => update(item.id, { priceLabel: event.target.value || null })} /></label>

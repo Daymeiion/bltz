@@ -50,7 +50,7 @@ export default function PreviewLockerForm({
   initialMerchandiseReview = null,
   merchandiseReviewCurrent = true,
   merchandiseReviewError = "",
-  initialMerchandiseImages = {},
+  initialImageUrls = {},
   enrollmentEnabled = false,
   enrollmentContacts = [],
   reservedId,
@@ -69,7 +69,7 @@ export default function PreviewLockerForm({
   initialMerchandiseReview?: MerchandiseReview | null;
   merchandiseReviewCurrent?: boolean;
   merchandiseReviewError?: string;
-  initialMerchandiseImages?: Record<string, string>;
+  initialImageUrls?: Record<string, string>;
   enrollmentEnabled?: boolean;
   enrollmentContacts?: {id:string;label:string}[];
   reservedId?: string;
@@ -92,8 +92,8 @@ export default function PreviewLockerForm({
   const [awardsError, setAwardsError] = useState("");
   const [merchandiseSearch, setMerchandiseSearch] = useState<{ result: MerchandiseResult; identity: string; key: string; review?: MerchandiseReview } | null>(() => initialMerchandiseReview ? { result: visibleMerchandiseReview(initialMerchandiseReview), identity: record && merchandiseReviewCurrent ? merchandiseIdentity(record) : "", key: `saved-${initialMerchandiseReview.version}`, review: initialMerchandiseReview } : null);
   const [merchandiseError, setMerchandiseError] = useState(merchandiseReviewError);
-  const [merchandiseImages, setMerchandiseImages] = useState(initialMerchandiseImages);
-  const [merchandiseImageError, setMerchandiseImageError] = useState<{id:string;message:string}|null>(null);
+  const [editorialImages, setEditorialImages] = useState(initialImageUrls);
+  const [editorialImageError, setEditorialImageError] = useState<{kind:"article"|"merchandise";id:string;message:string}|null>(null);
   const [dismissingMerchandise, setDismissingMerchandise] = useState(false);
   const [newsArticles, setNewsArticles] = useState(initialArticles);
   const [newsReview, setNewsReview] = useState<{ review: NewsReview; identity: string; key: string } | null>(() => initialNewsReview ? { review: initialNewsReview, identity: record && newsReviewCurrent ? merchandiseIdentity(record) : "", key: "saved-" + initialNewsReview.version } : null);
@@ -352,15 +352,15 @@ export default function PreviewLockerForm({
       setError(`${cause instanceof Error ? cause.message : "Private upload failed."}${uploaded.length ? ` ${uploaded.length} completed upload${uploaded.length === 1 ? " was" : "s were"} retained in this draft.` : ""}`);
     } finally { pending.current = false; setBusy(null); }
   }
-  async function uploadMerchandiseImage(id: string, file: File | undefined) {
+  async function uploadEditorialImage(kind: "article" | "merchandise", id: string, file: File | undefined, article?: PreviewContent["article_edits"][number]) {
     if (!file || !saved || pending.current) return;
-    setMerchandiseImageError(null);
+    setEditorialImageError(null);
     if (!['image/jpeg','image/png','image/webp'].includes(file.type) || !file.size || file.size > 10 * 1024 * 1024) {
-      setMerchandiseImageError({id,message:"Choose a JPG, PNG or WebP image, up to 10 MB."}); return;
+      setEditorialImageError({kind,id,message:"Choose a JPG, PNG or WebP image, up to 10 MB."}); return;
     }
     pending.current = true; setBusy("upload");
     try {
-      const response = await fetch(`/api/preview-lockers/${saved.id}/uploads`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind: "merchandise", mimeType: file.type, size: file.size }) });
+      const response = await fetch(`/api/preview-lockers/${saved.id}/uploads`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind, mimeType: file.type, size: file.size }) });
       if (!response.ok) throw new Error("Could not prepare this image. Try again.");
       const ticket = await response.json() as {path:string;token:string;bucket:string};
       const bucket = createClient().storage.from(ticket.bucket);
@@ -368,10 +368,14 @@ export default function PreviewLockerForm({
       if (upload.error) throw new Error("Image upload failed. Your current image is unchanged.");
       const preview = await bucket.createSignedUrl(ticket.path, 900);
       if (preview.error || !preview.data?.signedUrl) throw new Error("Could not finish this image upload. Try again.");
-      setMerchandiseImages(current => ({...current,[ticket.path]:preview.data.signedUrl}));
-      change(current => ({merchandise:current.merchandise.map(item => item.id === id ? {...item,imageStoragePath:ticket.path} : item)}));
-      setMessage("Merchandise image uploaded. Save the draft to keep it. The default image is retained.");
-    } catch (cause) { setMerchandiseImageError({id,message:cause instanceof Error ? cause.message : "Image upload failed."}); }
+      setEditorialImages(current => ({...current,[ticket.path]:preview.data.signedUrl}));
+      change(current => {
+        if (kind === "merchandise") return {merchandise:current.merchandise.map(item => item.id === id ? {...item,imageStoragePath:ticket.path} : item)};
+        const existing=current.article_edits.find(item=>item.id===article!.id || !!article!.sourceUrl && item.sourceUrl===article!.sourceUrl);
+        return {article_edits:existing?current.article_edits.map(item=>item.id===existing.id?{...item,imageStoragePath:ticket.path}:item):[...current.article_edits,{...article!,imageStoragePath:ticket.path}]};
+      });
+      setMessage(`${kind === "article" ? "Article" : "Merchandise"} image uploaded. Save the draft to keep it. The default image is retained.`);
+    } catch (cause) { setEditorialImageError({kind,id,message:cause instanceof Error ? cause.message : "Image upload failed."}); }
     finally { pending.current = false; setBusy(null); }
   }
   async function uploadBanner(file: File | undefined) {
@@ -489,8 +493,8 @@ export default function PreviewLockerForm({
       </section>
       <section id="locker-panel-media" role="tabpanel" aria-labelledby="locker-tab-media" tabIndex={0} hidden={activeFolder !== "media"} className={styles.folderPanel}>
       <h2 className={styles.folderHeading}>Media & merchandise</h2>
-      <ArticlesSection articles={newsArticles} edits={draft.article_edits} onChange={article_edits => change({ article_edits })} saved={!!saved} dirty={dirty} canLoad={!!saved && !dirty && !busy} onReload={() => { void loadNews(); }} onRefresh={() => { void loadNews(true); }} review={newsReview?.review ?? null} reviewKey={newsReview?.key ?? ""} identityCurrent={!!saved && newsReview?.identity === merchandiseIdentity(draft)} playerName={draft.full_name} onDismiss={url => { void dismissNews(url); }} onDismissSelected={dismissNews} onRestore={url => { void dismissNews(url, true); }} onRestoreSelected={urls => dismissNews(urls, true)} onDismissedPage={offset => { void loadNews(false, offset); }} busy={!!busy} reviewError={newsError} />
-      <MerchandiseSection saved={!!saved} imageUrls={merchandiseImages} imageError={merchandiseImageError} onUploadImage={(id,file) => { void uploadMerchandiseImage(id,file); }} items={draft.merchandise} onChange={merchandise => change({ merchandise })} onSearch={() => { void searchMerchandise(); }} canSearch={!!saved && !dirty && !busy} searching={busy === "merchandise" && !dismissingMerchandise} savingReview={dismissingMerchandise} searchedAt={merchandiseSearch?.review?.searched_at} result={merchandiseSearch?.result ?? null} resultKey={merchandiseSearch?.key ?? ""} searchError={merchandiseError} playerName={draft.full_name} identityCurrent={merchandiseSearch?.identity === merchandiseIdentity(draft)} onDismiss={url => { void dismissMerchandise(url); }} onDismissSelected={dismissMerchandise} onRestore={url => { void dismissMerchandise(url, true); }} onRestoreSelected={urls => dismissMerchandise(urls, true)} dismissedItems={merchandiseSearch?.review ? dismissedMerchandiseItems(merchandiseSearch.review) : []} busy={!!busy} />
+      <ArticlesSection imageUrls={editorialImages} imageError={editorialImageError?.kind === "article" ? editorialImageError : null} onUploadImage={(item,file) => { void uploadEditorialImage("article",item.sourceUrl??item.id,file,item); }} articles={newsArticles} edits={draft.article_edits} onChange={article_edits => change({ article_edits })} saved={!!saved} dirty={dirty} canLoad={!!saved && !dirty && !busy} onReload={() => { void loadNews(); }} onRefresh={() => { void loadNews(true); }} review={newsReview?.review ?? null} reviewKey={newsReview?.key ?? ""} identityCurrent={!!saved && newsReview?.identity === merchandiseIdentity(draft)} playerName={draft.full_name} onDismiss={url => { void dismissNews(url); }} onDismissSelected={dismissNews} onRestore={url => { void dismissNews(url, true); }} onRestoreSelected={urls => dismissNews(urls, true)} onDismissedPage={offset => { void loadNews(false, offset); }} busy={!!busy} reviewError={newsError} />
+      <MerchandiseSection saved={!!saved} imageUrls={editorialImages} imageError={editorialImageError?.kind === "merchandise" ? editorialImageError : null} onUploadImage={(id,file) => { void uploadEditorialImage("merchandise",id,file); }} items={draft.merchandise} onChange={merchandise => change({ merchandise })} onSearch={() => { void searchMerchandise(); }} canSearch={!!saved && !dirty && !busy} searching={busy === "merchandise" && !dismissingMerchandise} savingReview={dismissingMerchandise} searchedAt={merchandiseSearch?.review?.searched_at} result={merchandiseSearch?.result ?? null} resultKey={merchandiseSearch?.key ?? ""} searchError={merchandiseError} playerName={draft.full_name} identityCurrent={merchandiseSearch?.identity === merchandiseIdentity(draft)} onDismiss={url => { void dismissMerchandise(url); }} onDismissSelected={dismissMerchandise} onRestore={url => { void dismissMerchandise(url, true); }} onRestoreSelected={urls => dismissMerchandise(urls, true)} dismissedItems={merchandiseSearch?.review ? dismissedMerchandiseItems(merchandiseSearch.review) : []} busy={!!busy} />
       <SocialSection items={draft.social} photos={draft.photos} videos={draft.videos} saved={!!saved} onChange={social => change({ social })} onUpload={(kind, files, social) => { void uploadFiles(kind, files, false, { social }); }} />
       </section>
       <label className="flex items-start gap-3"><input type="checkbox" checked={reviewed} onChange={e => setReviewed(e.target.checked)} className="mt-1 h-5 w-5" />I reviewed this draft for private demo use. This is not public publication or rights verification.</label>

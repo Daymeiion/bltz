@@ -22,19 +22,19 @@ it("refuses to persist a storage locator until the private object exists", async
   expect(response.status).toBe(400); expect(mocks.update).not.toHaveBeenCalled();
   expect(mocks.storageFrom).toHaveBeenCalledWith("preview-locker-photos"); expect(mocks.list).toHaveBeenCalledWith(`${id}/photos`, { limit: 100, offset: 0, sortBy: { column: "name", order: "asc" } });
 });
-it("checks merchandise upload ownership and existence before saving",async()=>{
- const product={id:"card",title:"Football card",category:"trading_card",productUrl:"https://shop.example.com/card",imageUrl:"https://shop.example.com/default.png",imageStoragePath:path};
- const payload=previewContent.parse({...content,photos:[],merchandise:[product]});
+it.each(["merchandise","article_edits"] as const)("checks %s upload ownership and existence before saving",async field=>{
+ const item=field==="merchandise"?{id:"card",title:"Football card",category:"trading_card",productUrl:"https://shop.example.com/card",imageUrl:"https://shop.example.com/default.png",imageStoragePath:path}:{id:"article",headline:"Fixture Player career",publisher:"Sports Press",articleUrl:"https://publisher.example.com/career",imageUrl:"https://publisher.example.com/default.png",imageStoragePath:path};
+ const payload=previewContent.parse({...content,photos:[],[field]:[item]});
  mocks.list.mockResolvedValue({data:[],error:null});
  expect((await PATCH(request(payload),{params:Promise.resolve({id})})).status).toBe(400);
  expect(mocks.update).not.toHaveBeenCalled();
- const foreign=previewContent.parse({...payload,merchandise:[{...product,imageStoragePath:path.replace(id,"00000000-0000-4000-8000-000000000009")}]});
+ const foreign=previewContent.parse({...payload,[field]:[{...item,imageStoragePath:path.replace(id,"00000000-0000-4000-8000-000000000009")}]});
  mocks.list.mockClear();
  expect((await PATCH(request(foreign),{params:Promise.resolve({id})})).status).toBe(400); expect(mocks.list).not.toHaveBeenCalled();
  mocks.list.mockResolvedValue({data:[{name:path.split('/').at(-1)}],error:null});
  mocks.maybeSingle.mockResolvedValueOnce({data:{id,slug:payload.slug,revision:2},error:null}).mockResolvedValueOnce({data:null,error:null});
  expect((await PATCH(request(payload),{params:Promise.resolve({id})})).status).toBe(200);
- expect(mocks.update).toHaveBeenCalledWith(expect.objectContaining({merchandise:payload.merchandise}));
+ expect(mocks.update).toHaveBeenCalledWith(expect.objectContaining({[field]:payload[field]}));
 });
 
 it("persists an owned existing object through the revision guard", async () => {

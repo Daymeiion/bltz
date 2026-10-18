@@ -35,6 +35,7 @@ try {
   await db.exec('revoke all on function public.publish_onboarding_run(uuid,uuid,jsonb,jsonb,text,jsonb,uuid,text) from public,anon,authenticated; grant execute on function public.publish_onboarding_run(uuid,uuid,jsonb,jsonb,text,jsonb,uuid,text) to service_role;');
   await apply('20261018030520_athlete_birthdate_high_school.sql');
   await apply('20261018184205_preview_merchandise_image_uploads.sql');
+  await apply('20261018185632_preview_article_image_uploads.sql');
   assert.deepEqual((await db.query('select dob,high_school from preview_lockers where id=$1', [legacyId])).rows[0], {dob: null, high_school: null});
   const publish = (await db.query("select pg_get_functiondef('public.publish_onboarding_run(uuid,uuid,jsonb,jsonb,text,jsonb,uuid,text)'::regprocedure) definition")).rows[0].definition;
   assert.match(publish, /dob, high_school, height_in/);
@@ -103,6 +104,17 @@ try {
   await db.exec('reset role');
   assert.ok((await db.query("select count(*)::int n from audit_logs where new_values->'merchandise'->0->>'imageStoragePath'=$1",[uploadedProduct.imageStoragePath])).rows[0].n>0);
   await db.exec('reset role');
+  await db.exec(`set role authenticated; select set_config('request.jwt.claim.sub','${admin}',false);`);
+  const uploadedArticle={...article,imageUrl:'https://publisher.example.com/default.png',imageStoragePath:uploadedProduct.imageStoragePath};
+  await db.query('update preview_lockers set article_edits=$1 where id=$2',[JSON.stringify([uploadedArticle]),id]);
+  assert.deepEqual((await read()).rows[0].article_edits,[uploadedArticle]);
+  for(const imageStoragePath of [`${other}/photos/00000000-0000-4000-8000-000000000007.png`,`${id}/videos/00000000-0000-4000-8000-000000000007.mp4`,'../foreign.png',42]) {
+    await assert.rejects(db.query('update preview_lockers set article_edits=$1 where id=$2',[JSON.stringify([{...uploadedArticle,imageStoragePath}]),id]));
+  }
+  await db.query('update preview_lockers set article_edits=$1 where id=$2',[JSON.stringify([{...uploadedArticle,imageStoragePath:null}]),id]);
+  assert.equal((await read()).rows[0].article_edits[0].imageUrl,uploadedArticle.imageUrl);
+  await db.exec('reset role');
+  assert.ok((await db.query("select count(*)::int n from audit_logs where new_values->'article_edits'->0->>'imageStoragePath'=$1",[uploadedArticle.imageStoragePath])).rows[0].n>0);
   if (process.argv.includes('--generate-types')) {
     const columns = (await db.query("select column_name,data_type,is_nullable,column_default from information_schema.columns where table_schema='public' and table_name='preview_lockers' order by column_name")).rows;
     const fields = mode => columns.map(column => {

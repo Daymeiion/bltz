@@ -12,7 +12,7 @@ import { readBuilderContext } from "../../builder-workspace-data";
 import { readNewsReview } from "@/lib/preview-lockers/news-review-server";
 import { readMerchandiseReview } from "@/lib/preview-lockers/merchandise-review-server";
 import { previewIdentityKey } from "@/lib/preview-lockers/enrichment";
-import { merchandiseImageUrls } from "@/lib/preview-lockers/merchandise-images";
+import { editorialImageUrls } from "@/lib/preview-lockers/editorial-images";
 export const dynamic = "force-dynamic";
 export default async function EditPreview({ params }: { params: Promise<{ id: string }> }) {
   const { client } = await previewAdmin(); const { id } = await params;
@@ -44,12 +44,12 @@ export default async function EditPreview({ params }: { params: Promise<{ id: st
   record = suggestPreviewAffiliations(record, { college, latestTeam: master.data?.latest_team, seasons }, schoolDirectory.data ?? []);
   const completedRevision = relationship.data?.completed_revision == null ? null : Number(relationship.data.completed_revision);
   const enrichment = await previewClient.from("preview_enrichments").select("report,source_revision").eq("preview_id", id).maybeSingle();
-  const [context, savedNews, merchandise, newsReview, merchandiseImages] = await Promise.all([
+  const [context, savedNews, merchandise, newsReview, editorialImages] = await Promise.all([
     readBuilderContext(previewClient, id),
     readPreviewEnrichment(previewClient, id, savedRecord, savedRecord.revision).catch(() => ({ articles: [] })),
     readMerchandiseReview(previewClient, id).then(review => ({ review, error: "" })).catch(() => ({ review: null, error: "Saved merchandise results could not be loaded. Your Locker merchandise is retained. Reopen this preview to try again." })),
     readNewsReview(previewClient, id, savedRecord).then(review => ({ review, error: "" })).catch(() => ({ review: null, error: "Saved news reviews could not be loaded. Your Locker articles are retained. Reopen this preview to try again." })),
-    merchandiseImageUrls(previewClient, record.merchandise).catch(() => ({})),
+    editorialImageUrls(previewClient, [...record.merchandise,...record.article_edits]).catch(() => ({})),
   ]);
-  return <PreviewBuilderWorkspace context={context} selectedId={id} athleteName={record.full_name}><PreviewLockerForm initialMerchandiseImages={merchandiseImages} initialEnrichmentReport={enrichment.error ? null : (enrichment.data?.report as EnrichmentReport | undefined) ?? null} initialEnrichmentRevision={enrichment.data?.source_revision} key={id} record={record} initialArticles={savedNews.articles} initialNewsReview={newsReview.review} newsReviewCurrent={!newsReview.review || newsReview.review.identity_key === previewIdentityKey(savedRecord)} newsReviewError={newsReview.error} initialMerchandiseReview={merchandise.review} merchandiseReviewCurrent={!merchandise.review || merchandise.review.identity_key === previewIdentityKey(record)} merchandiseReviewError={merchandise.error} viewerAssigned={viewer.data === true} gtmLinked={Boolean(relationship.data)} gtmCompleted={completedRevision === record.revision} /></PreviewBuilderWorkspace>;
+  return <PreviewBuilderWorkspace context={context} selectedId={id} athleteName={record.full_name}><PreviewLockerForm initialImageUrls={editorialImages} initialEnrichmentReport={enrichment.error ? null : (enrichment.data?.report as EnrichmentReport | undefined) ?? null} initialEnrichmentRevision={enrichment.data?.source_revision} key={id} record={record} initialArticles={savedNews.articles} initialNewsReview={newsReview.review} newsReviewCurrent={!newsReview.review || newsReview.review.identity_key === previewIdentityKey(savedRecord)} newsReviewError={newsReview.error} initialMerchandiseReview={merchandise.review} merchandiseReviewCurrent={!merchandise.review || merchandise.review.identity_key === previewIdentityKey(record)} merchandiseReviewError={merchandise.error} viewerAssigned={viewer.data === true} gtmLinked={Boolean(relationship.data)} gtmCompleted={completedRevision === record.revision} /></PreviewBuilderWorkspace>;
 }
