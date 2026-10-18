@@ -181,6 +181,22 @@ it("uses the supplied third-party merchandise URL for Buy Now", async () => {
  expect(host.querySelectorAll('.locker-merch-grid article')).toHaveLength(1);
 });
 
+it("contains news artwork in both the Media cards and the full article dialog", async () => {
+ const article_edits = Array.from({ length: 4 }, (_, index) => ({ id: `article-${index}`, visible: true, headline: `Career article ${index}`, publisher: "Sports News", articleUrl: `https://news.example.com/${index}`, imageUrl: `https://news.example.com/${index}.jpg`, summary: "Career coverage", publishedAt: null, sourceUrl: null }));
+ const data = { ...previewLockerData({ ...record, article_edits }), lockerHref: "/player/synthetic" };
+ await act(async () => root.render(<LockerView data={data} />));
+ const media = [...host.querySelectorAll('button')].find(button => button.textContent?.trim() === 'MEDIA')!;
+ await act(async () => media.dispatchEvent(new MouseEvent('mousedown', { button: 0, bubbles: true })));
+ const images = () => [...host.querySelectorAll<HTMLImageElement>('article img')];
+ expect(images()).toHaveLength(3);
+ expect(images().every(image => image.classList.contains('object-contain'))).toBe(true);
+ const all = [...host.querySelectorAll('button')].find(button => button.textContent?.trim() === 'View all articles')!;
+ await act(async () => all.click());
+ const dialogImages = [...host.querySelectorAll<HTMLImageElement>('[role="dialog"][aria-label="Articles"] article img')];
+ expect(dialogImages).toHaveLength(4);
+ expect(dialogImages.every(image => image.classList.contains('object-contain'))).toBe(true);
+});
+
 it("renders only the builder's visible merchandise in the Locker merchandise tab", async () => {
  const content = previewContent.parse({ slug: "merch-fixture", full_name: "Merch Fixture", merchandise: [
    { id: "card", title: "Career trading card", category: "trading_card", productUrl: "https://shop.example.com/card", imageUrl: null, retailer: "Card Shop", priceLabel: "$12", visible: true },

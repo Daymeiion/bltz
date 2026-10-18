@@ -441,7 +441,7 @@
     min-height: 0;
     aspect-ratio: 1;
     border-radius: 15px;
-    object-fit: cover;
+    object-fit: contain;
   }
   .preview-article-card > div:last-child {
     min-width: 0;

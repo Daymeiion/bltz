@@ -1382,7 +1382,7 @@ export default function LockerView({
                     <div className={isPrivatePreview ? "preview-articles-grid grid grid-cols-[repeat(auto-fit,260px)] justify-center gap-3" : "grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"}>
                       {!mediaArticles.length && <p role="status" className="col-span-full py-8 text-center text-sm text-white/60">{articlesLoading ? "Searching for matching news articles…" : articlesUnavailable ? "News articles are temporarily unavailable. Please check back later." : "No matching news articles found for this player yet."}</p>}
                       {(isPrivatePreview ? mediaArticles : mediaArticles.slice(0, 3)).map((article) => (
-                        <EditorialCard compactMobile={isPrivatePreview} key={article.originalUrl} title={article.title} image={article.img} description={article.dek} meta={[article.source, article.meta].filter(Boolean).join(' · ')} onClick={safeExternalUrl(article.originalUrl) ? () => { const url = safeExternalUrl(article.originalUrl); if (url) setPendingArticleRedirect({ source: article.source, title: article.title, url }); } : undefined} />
+                        <EditorialCard imageFit="contain" compactMobile={isPrivatePreview} key={article.originalUrl} title={article.title} image={article.img} description={article.dek} meta={[article.source, article.meta].filter(Boolean).join(' · ')} onClick={safeExternalUrl(article.originalUrl) ? () => { const url = safeExternalUrl(article.originalUrl); if (url) setPendingArticleRedirect({ source: article.source, title: article.title, url }); } : undefined} />
                       ))}
                       {!isPrivatePreview && mediaArticles.length > 3 && <button type="button" onClick={() => setArticleModalOpen(true)} style={{ alignSelf: "center", marginTop: 2, border: "1px solid rgba(255,185,64,.45)", borderRadius: 9999, background: "rgba(255,185,64,.08)", color: lockerAccent, padding: "9px 13px", fontFamily: mono, fontWeight: 700, fontSize: 9, letterSpacing: ".12em", textTransform: "uppercase", cursor: "pointer" }}>
                         View all articles
@@ -1627,7 +1627,7 @@ export default function LockerView({
                       </div>
                       <div className={isPrivatePreview ? "locker-modal-scroll preview-article-list" : "locker-modal-scroll"} style={{ overflowY: "auto", padding: "12px 18px 22px", display: "flex", flexDirection: "column", gap: 10 }}>
                         {mediaArticles.map((article) => (
-                          <EditorialCard compactMobile={isPrivatePreview} key={article.title} title={article.title} image={article.img} description={article.dek} meta={[article.source, article.meta].filter(Boolean).join(' · ')} onClick={safeExternalUrl(article.originalUrl) ? () => { const url = safeExternalUrl(article.originalUrl); if (url) setPendingArticleRedirect({ source: article.source, title: article.title, url }); } : undefined} />
+                          <EditorialCard imageFit="contain" compactMobile={isPrivatePreview} key={article.title} title={article.title} image={article.img} description={article.dek} meta={[article.source, article.meta].filter(Boolean).join(' · ')} onClick={safeExternalUrl(article.originalUrl) ? () => { const url = safeExternalUrl(article.originalUrl); if (url) setPendingArticleRedirect({ source: article.source, title: article.title, url }); } : undefined} />
                         ))}
                       </div>
                     </div>

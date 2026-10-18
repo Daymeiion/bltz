@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { JerseyNumberRow } from "@/components/player/JerseyNumberRow";
-import { corroborateJerseys, jerseyBadge, uniqueJerseys } from "@/lib/player/jersey-history";
+import { chronologicalJerseys, corroborateJerseys, jerseyBadge, uniqueJerseys } from "@/lib/player/jersey-history";
 import { extractPfrJerseys } from "@/lib/pipeline/scrapers/pfr-jerseys";
 import { discoverWikipediaJerseys, extractJerseyHistory, extractRosterJerseys } from "@/lib/pipeline/scrapers/jersey-history";
 import { discoveryDraft } from "@/lib/preview-lockers/discovery";
@@ -10,6 +10,7 @@ import { previewLockerData } from "@/lib/preview-lockers/mapper";
 import { previewContent } from "@/lib/preview-lockers/validation";
 import { evaluateSource } from "@/lib/source-policy/policy";
 import { readFileSync } from "node:fs";
+import { inspectPfrCsv, reviewPfrCsv } from "@/lib/preview-lockers/pfr-csv";
 
 const wiki = "https://en.wikipedia.org/wiki/Antoine_Cason";
 const pfr = "https://www.pro-football-reference.com/players/C/CasoAn99.htm";
@@ -18,6 +19,23 @@ const referenceHtml = `<h1>Antoine Cason</h1>${["sdg", "crd", "car", "rav"].map(
 afterEach(() => vi.unstubAllGlobals());
 
 describe("team-specific jersey history", () => {
+  it("orders Cason's badges by imported career seasons, including Carolina before Baltimore in 2014", () => {
+    const table = inspectPfrCsv(readFileSync("tests/preview-lockers/antoine-cason-defense.csv", "utf8"), "defense");
+    const imported = reviewPfrCsv(table, table.mapping, "defense", pfr).imported;
+    const content = previewContent.parse({ full_name: "Antoine Cason", slug: "antoine-cason", pfr_stats: [imported],
+      pro_teams: [teams[3], teams[0], teams[1], teams[2]].map((label, i) => ({ label, color: "#152238", jerseyNumbers: [i === 0 ? "23" : "20"] })) });
+    const before = JSON.stringify(content);
+    const mapped = previewLockerData({ ...content, id: "00000000-0000-4000-8000-000000000001", revision: 1, created_at: "", updated_at: "" });
+    expect(mapped.jerseyHistory?.map(item => item.team)).toEqual(teams);
+    expect(mapped.jerseyHistory?.map(item => item.number)).toEqual(["20", "20", "20", "23"]);
+    expect(JSON.stringify(content)).toBe(before);
+  });
+
+  it("uses first seasons for college teams and preserves unknown history and number-change order", () => {
+    const badges = [{ team: "Unknown", number: "9" }, { team: "Second College", number: "7" }, { team: "First College", number: "1" }, { team: "First College", number: "2" }, { team: "Other Unknown", number: "0" }];
+    expect(chronologicalJerseys(badges, [{ year: 2010, team: "Second College" }, { year: 2007, team: "First College" }, { year: 2011, team: "First College" }]).map(item => item.number)).toEqual(["1", "2", "7", "9", "0"]);
+    expect(chronologicalJerseys(badges, [])).toEqual(badges);
+  });
   it("reads the actual visible PFR SVG badge colors and confirms independent roster matches", () => {
     const fragment = readFileSync("tests/pipeline/antoine-cason-jersey-badges.html", "utf8");
     const result = extractPfrJerseys(fragment, "Antoine Cason", teams, pfr);

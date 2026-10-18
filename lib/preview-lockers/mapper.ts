@@ -9,10 +9,19 @@ import { combineCfbImports } from "./cfb-csv";
 import { combinePfrImports } from "./pfr-csv";
 import { previewStatLabels, type PreviewRecord, type ResolvedPreviewRecord } from "./validation";
 import { curatedArticles, lockerMerchandise } from "./media";
-import { jerseyBadge, uniqueJerseys } from "@/lib/player/jersey-history";
+import { chronologicalJerseys, jerseyBadge, uniqueJerseys } from "@/lib/player/jersey-history";
 
-function previewJerseyHistory(row: Pick<PreviewLockerRow, "schools" | "pro_teams">) {
-  const teams = [...(row.schools ?? []), ...(row.pro_teams ?? [])];
+function previewJerseyHistory(row: Pick<PreviewLockerRow, "schools" | "pro_teams"> & {
+  pfr_stats?: Array<{ seasons: Array<{ year: number; team: string }> }>;
+  cfb_stats?: Array<{ seasons: Array<{ year: number; team: string }> }>;
+  career_seasons?: PreviewLockerRow["career_seasons"];
+}) {
+  const orderedTeams = (teams: PreviewLockerRow["pro_teams"], seasons: Array<{ year: number | string; team: string | null }>) =>
+    chronologicalJerseys(teams.map(team => ({ ...team, team: team.name || team.label })), seasons);
+  const teams = [
+    ...orderedTeams(row.schools ?? [], [...(row.cfb_stats ?? []).flatMap(batch => batch.seasons), ...(row.career_seasons ?? []).filter(season => season.level !== "pro")]),
+    ...orderedTeams(row.pro_teams ?? [], [...(row.pfr_stats ?? []).flatMap(batch => batch.seasons), ...(row.career_seasons ?? []).filter(season => season.level === "pro")]),
+  ];
   return uniqueJerseys(teams.flatMap(team => team.jerseyStatus === "conflict" ? [] : (team.jerseyNumbers ?? []).map(number => ({ team: team.name || team.label, number, sourceUrl: team.jerseySourceUrl, color: team.jerseyColor, borderColor: team.jerseyBorderColor })))).map(item => jerseyBadge(item, teams.find(team => (team.name || team.label) === item.team)?.color));
 }
 

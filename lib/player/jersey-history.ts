@@ -26,6 +26,19 @@ export function uniqueJerseys(items: JerseyHistory[]): JerseyHistory[] {
   return [...seen.values()];
 }
 
+/** Earliest recorded season first; source row order breaks same-season ties. */
+export function chronologicalJerseys<T extends { team: string }>(items: T[], seasons: Array<{ year: number | string; team: string | null }>): T[] {
+  // PFR uses historical abbreviations that differ from the Locker's team codes.
+  const aliases: Record<string, string> = { SDG: "SD", CRD: "ARI", RAV: "BAL", GNB: "GB", KAN: "KC", NWE: "NE", NOR: "NO", SFO: "SF", TAM: "TB", CLT: "IND", HTX: "HOU", OTI: "TEN", RAI: "OAK", RAM: "LAR" };
+  const key = (team: string) => jerseyTeamKey(aliases[team.trim().toUpperCase()] ?? team);
+  const first = new Map<string, number>();
+  const ordered = seasons.filter(row => row.team && /^\d{4}$/.test(String(row.year)))
+    .toSorted((a, b) => Number(a.year) - Number(b.year));
+  for (const [index, row] of ordered.entries()) if (!first.has(key(row.team!))) first.set(key(row.team!), index);
+  // Missing history remains stable, after teams with recorded seasons.
+  return items.toSorted((a, b) => (first.get(key(a.team)) ?? Infinity) - (first.get(key(b.team)) ?? Infinity));
+}
+
 export function corroborateJerseys(reference: JerseyHistory[], rosters: JerseyHistory[]): JerseyHistory[] {
   const side = (items: JerseyHistory[], team: string) => items.filter(item => jerseyTeamKey(item.team) === jerseyTeamKey(team));
   return uniqueJerseys([...reference, ...rosters]).map(item => {
