@@ -83,6 +83,7 @@ export const merchandiseCategories = ["trading_card", "jersey", "apparel", "memo
 export const previewMerchandise = z.object({
   id, title: text(160).min(1), category: z.enum(merchandiseCategories), productUrl: previewUrl,
   imageUrl: asset, retailer: nullableText(160), priceLabel: nullableText(80), visible: z.boolean().default(true),
+  imageStoragePath: storagePath.refine(path => path.includes("/photos/"), "Use an uploaded image.").nullable().optional(),
 }).strict();
 export const previewSocial = z.object({
   id, title: text(160).min(1), platform: z.enum(socialPlatforms), kind: z.enum(["short", "post"]),
@@ -133,6 +134,7 @@ export type ResolvedPreviewRecord = Omit<PreviewRecord, "videos" | "photos"> & {
 };
 export function previewMediaBelongsTo(recordId: string, content: PreviewContent): boolean {
   return (!content.photo_room_banner_storage_path || content.photo_room_banner_storage_path.startsWith(`${recordId}/photos/`))
+    && content.merchandise.every(item => !item.imageStoragePath || item.imageStoragePath.startsWith(`${recordId}/photos/`))
     && [...content.photos, ...content.videos].every(item => !("storagePath" in item) || item.storagePath.startsWith(`${recordId}/`));
 }
 export function equivalentPreview(a: unknown, b: unknown): boolean {

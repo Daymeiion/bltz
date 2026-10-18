@@ -6,6 +6,7 @@ const service = vi.hoisted(() => ({ rpc: vi.fn(), from: vi.fn(), select: vi.fn()
 vi.mock("@/lib/supabase/server", () => ({ createClient: async () => ({ auth: { getUser: mocks.auth }, rpc: mocks.rpc, from: mocks.from, storage: { from: mocks.storageFrom } }) }));
 vi.mock("@/lib/supabase/service", () => ({ createServiceClient: () => ({ ...service, storage: { from: service.storageFrom } }) }));
 import { readPrivatePreview } from "@/lib/preview-lockers/server";
+import { previewLockerData } from "@/lib/preview-lockers/mapper";
 
 const id = "00000000-0000-4000-8000-000000000001";
 const path = `${id}/videos/00000000-0000-4000-8000-000000000002.mp4`;
@@ -29,6 +30,17 @@ it("resolves uploaded media through the matching private bucket", async () => {
   expect(mocks.storageFrom).not.toHaveBeenCalled();
   expect(mocks.signed).toHaveBeenCalledWith([path], 900);
   expect(result?.videos[0].url).toBe("https://storage.example/signed");
+});
+it("resolves a merchandise override after authorization without adding it to photos",async()=>{
+ const photoPath=`${id}/photos/00000000-0000-4000-8000-000000000003.png`;
+ const product={id:"card",title:"Football card",category:"trading_card" as const,productUrl:"https://shop.example.com/card",imageUrl:"https://shop.example.com/default.png",imageStoragePath:photoPath,retailer:null,priceLabel:null,visible:true};
+ const saved={...row,videos:[],merchandise:[product]};
+ service.maybeSingle.mockResolvedValue({data:saved,error:null}); mocks.maybeSingle.mockResolvedValue({data:saved,error:null});
+ mocks.signed.mockResolvedValue({data:[{signedUrl:"https://storage.example.com/override.png"}],error:null});
+ const result=await readPrivatePreview("fixture-player");
+ expect(mocks.signed).toHaveBeenCalledWith([photoPath],900);
+ expect(previewLockerData(result!).merch?.[0].imageUrl).toBe("https://storage.example.com/override.png");
+ expect(result?.photos).toEqual([]); expect(product.imageUrl).toBe("https://shop.example.com/default.png");
 });
 
 it("fails closed when a private read URL cannot be signed", async () => {

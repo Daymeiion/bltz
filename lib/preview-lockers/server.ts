@@ -62,7 +62,7 @@ export async function readBody(req: Request, limit = 128 * 1024): Promise<unknow
 }
 async function resolvePrivateMedia(client: Awaited<ReturnType<typeof createClient>>, row: PreviewRecord, publicLink = false, signer = client): Promise<ResolvedPreviewRecord> {
   const groups = [
-    { bucket: PREVIEW_MEDIA_BUCKETS.photo, items: [...row.photos.filter((item): item is typeof item & { storagePath: string } => "storagePath" in item), ...(row.photo_room_banner_storage_path ? [{ storagePath: row.photo_room_banner_storage_path }] : [])] },
+    { bucket: PREVIEW_MEDIA_BUCKETS.photo, items: [...row.photos.filter((item): item is typeof item & { storagePath: string } => "storagePath" in item), ...row.merchandise.flatMap(item => item.imageStoragePath ? [{storagePath:item.imageStoragePath}] : []), ...(row.photo_room_banner_storage_path ? [{ storagePath: row.photo_room_banner_storage_path }] : [])] },
     { bucket: PREVIEW_MEDIA_BUCKETS.video, items: row.videos.filter((item): item is typeof item & { storagePath: string } => "storagePath" in item) },
   ];
   const urls = new Map<string, string>();
@@ -92,11 +92,12 @@ async function resolvePrivateMedia(client: Awaited<ReturnType<typeof createClien
     ...row,
     photo_room_banner_resolved_url: row.photo_room_banner_storage_path ? urls.get(row.photo_room_banner_storage_path) : null,
     photos: row.photos.map(item => "storagePath" in item ? { ...item, url: urls.get(item.storagePath)! } : item),
+    merchandise: row.merchandise.map(item => item.imageStoragePath ? {...item,imageUrl:urls.get(item.imageStoragePath) ?? null} : item),
     videos: row.videos.map(item => "storagePath" in item ? { ...item, url: urls.get(item.storagePath)! } : item),
   } as ResolvedPreviewRecord;
 }
 export async function assertPreviewMediaExists(client: Awaited<ReturnType<typeof createClient>>, content: PreviewContent) {
-  for (const [kind, items] of [["photo", [...content.photos, ...(content.photo_room_banner_storage_path ? [{ storagePath: content.photo_room_banner_storage_path }] : [])]], ["video", content.videos]] as const) {
+  for (const [kind, items] of [["photo", [...content.photos, ...content.merchandise.flatMap(item => item.imageStoragePath ? [{storagePath:item.imageStoragePath}] : []), ...(content.photo_room_banner_storage_path ? [{ storagePath: content.photo_room_banner_storage_path }] : [])]], ["video", content.videos]] as const) {
     const stored = items.filter((item): item is typeof item & { storagePath: string } => "storagePath" in item);
     if (!stored.length) continue;
     const folder = stored[0].storagePath.split("/").slice(0, -1).join("/");

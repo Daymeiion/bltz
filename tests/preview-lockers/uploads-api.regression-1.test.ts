@@ -60,3 +60,12 @@ it("issues a private photo-bucket ticket for an ad image without using a gallery
   expect(body.path).toMatch(new RegExp(`^${id}/photos/[0-9a-f-]{36}\\.png$`));
   expect((await POST(request({ kind: "banner", mimeType: "video/mp4", size: 1024 }, "http://localhost"), { params: Promise.resolve({ id }) })).status).toBe(400);
 });
+it("uploads merchandise replacements without consuming a photo slot and rejects non-images", async () => {
+  mocks.maybeSingle.mockResolvedValue({data:{photos:Array(40).fill({}),videos:[]},error:null});
+  const response=await POST(request({kind:"merchandise",mimeType:"image/webp",size:1024},"http://localhost"),{params:Promise.resolve({id})});
+  expect(response.status).toBe(200);
+  const body=await response.json(); expect(body.bucket).toBe("preview-locker-photos");
+  expect(body.path).toMatch(new RegExp(`^${id}/photos/[0-9a-f-]{36}\\.webp$`));
+  expect((await POST(request({kind:"merchandise",mimeType:"video/mp4",size:1024},"http://localhost"),{params:Promise.resolve({id})})).status).toBe(400);
+  expect((await POST(request({kind:"merchandise",mimeType:"image/png",size:10485761},"http://localhost"),{params:Promise.resolve({id})})).status).toBe(400);
+});

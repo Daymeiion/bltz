@@ -9,13 +9,15 @@ import MerchandiseResultCard from "./MerchandiseResults";
 import DismissedReviewList from "./DismissedReviewList";
 import BulkReviewControls from "./BulkReviewControls";
 
-export default function MerchandiseSection({ items, onChange, onSearch, canSearch, searching, result, resultKey, searchError, identityCurrent, playerName, onDismiss, onDismissSelected, onRestore, onRestoreSelected, dismissedItems = [], searchedAt, savingReview = false, busy = false }: {
+export default function MerchandiseSection({ items, onChange, onSearch, canSearch, searching, result, resultKey, searchError, identityCurrent, playerName, onDismiss, onDismissSelected, onRestore, onRestoreSelected, dismissedItems = [], searchedAt, savingReview = false, busy = false, saved = false, imageUrls = {}, imageError, onUploadImage }: {
   items: PreviewContent["merchandise"]; onChange: (items: PreviewContent["merchandise"]) => void;
   onSearch: () => void; canSearch: boolean; searching: boolean; result: MerchandiseResult | null; resultKey: string;
   searchError: string; identityCurrent: boolean; playerName: string; onDismiss: (url: string) => void;
   searchedAt?: string; savingReview?: boolean;
   onRestoreSelected?: (urls: string[]) => Promise<boolean>; onRestore?: (url: string) => void; dismissedItems?: MerchandiseResult["items"];
   onDismissSelected: (urls: string[]) => Promise<boolean>; busy?: boolean;
+  saved?: boolean; imageUrls?: Record<string,string>; imageError?: {id:string;message:string}|null;
+  onUploadImage?: (id:string,file:File|undefined) => void;
 }) {
   const update = (id: string, patch: Partial<typeof items[number]>) => onChange(items.map(item => item.id === id ? { ...item, ...patch } : item));
   const draftKeys = new Set(items.flatMap(merchandiseListingKeys));
@@ -60,12 +62,20 @@ export default function MerchandiseSection({ items, onChange, onSearch, canSearc
         <label className="grid gap-2 text-sm">Product title<Input aria-label={`Merchandise ${index + 1} title`} value={item.title} maxLength={160} onChange={event => update(item.id, { title: event.target.value })} /></label>
         <label className="grid gap-2 text-sm">Category<select aria-label={`Merchandise ${index + 1} category`} className="h-10 min-w-0 rounded-md border bg-background px-3" value={item.category} onChange={event => update(item.id, { category: event.target.value as typeof item.category })}>{merchandiseCategories.map(category => <option key={category} value={category}>{({ trading_card: "Trading card", jersey: "Jersey", apparel: "Apparel", memorabilia: "Memorabilia", other: "Other" })[category]}</option>)}</select></label>
         <label className="grid gap-2 text-sm sm:col-span-2">Product link<Input aria-label={`Merchandise ${index + 1} link`} type="url" value={item.productUrl} maxLength={2048} onChange={event => update(item.id, { productUrl: event.target.value })} /></label>
-        <label className="grid gap-2 text-sm">Image URL (optional)<Input aria-label={`Merchandise ${index + 1} image`} type="url" value={item.imageUrl ?? ""} maxLength={2048} onChange={event => update(item.id, { imageUrl: event.target.value || null })} /></label>
+        <div className="space-y-3 sm:col-span-2">
+          {(item.imageStoragePath ? imageUrls[item.imageStoragePath] : item.imageUrl) ? <img src={(item.imageStoragePath ? imageUrls[item.imageStoragePath] : item.imageUrl)!} alt={`${item.title || `Merchandise ${index + 1}`} image`} className="h-40 w-full rounded border object-contain p-2" /> : <p className="text-sm text-muted-foreground">{item.imageStoragePath ? "Uploaded image preview unavailable. You can replace it or use the default." : "No default image. Upload one below."}</p>}
+          <p className="text-xs text-muted-foreground">{item.imageStoragePath ? "Uploaded image" : "Default image"} · The scraped image is used until you upload a replacement.</p>
+          <label className="grid gap-2 text-sm">{item.imageStoragePath || item.imageUrl ? "Replace merchandise image" : "Upload merchandise image"}<Input aria-label={`Merchandise ${index + 1} upload image`} type="file" accept="image/jpeg,image/png,image/webp" disabled={!saved || busy || !onUploadImage} onChange={event => { onUploadImage?.(item.id,event.target.files?.[0]); event.target.value=""; }} /><span className="text-xs text-muted-foreground">JPG, PNG or WebP. Up to 10 MB. Save the draft to keep your image.</span></label>
+          {!saved && <p className="text-sm text-muted-foreground">Save the draft once before uploading images.</p>}
+          {item.imageStoragePath && <Button type="button" variant="outline" disabled={busy} onClick={() => update(item.id,{imageStoragePath:null})}>Use default image</Button>}
+          {imageError?.id === item.id && <p role="alert" className="text-sm text-red-400">{imageError.message}</p>}
+        </div>
+        <label className="grid gap-2 text-sm">Default image URL (optional)<Input aria-label={`Merchandise ${index + 1} image`} type="url" value={item.imageUrl ?? ""} maxLength={2048} onChange={event => update(item.id, { imageUrl: event.target.value || null })} /></label>
         <label className="grid gap-2 text-sm">Retailer (optional)<Input aria-label={`Merchandise ${index + 1} retailer`} value={item.retailer ?? ""} maxLength={160} onChange={event => update(item.id, { retailer: event.target.value || null })} /></label>
         <label className="grid gap-2 text-sm">Price label (optional)<Input aria-label={`Merchandise ${index + 1} price`} placeholder="$25 · check seller for current price" value={item.priceLabel ?? ""} maxLength={80} onChange={event => update(item.id, { priceLabel: event.target.value || null })} /></label>
         <label className="flex min-h-11 items-center gap-3 text-sm"><input aria-label={`Merchandise ${index + 1} visible`} type="checkbox" checked={item.visible} onChange={event => update(item.id, { visible: event.target.checked })} />Show in Locker merchandise</label>
       </div>
-      <Button className="mt-4" type="button" variant="outline" onClick={() => onChange(items.filter(entry => entry.id !== item.id))}>Remove merchandise</Button>
+      <Button className="mt-4" type="button" variant="outline" disabled={busy} onClick={() => onChange(items.filter(entry => entry.id !== item.id))}>Remove merchandise</Button>
     </details>)}
     <Button type="button" variant="outline" disabled={items.length >= 40} onClick={() => onChange([...items, { id: crypto.randomUUID(), title: "", category: "trading_card", productUrl: "", imageUrl: null, retailer: null, priceLabel: null, visible: true }])}>Add merchandise</Button>
   </BuilderSection>;
