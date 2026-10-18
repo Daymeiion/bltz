@@ -1,4 +1,5 @@
 "use client";
+import AwardImagePicker from "./AwardImagePicker";
 import type { ReactNode } from "react";
 import { BuilderSection } from "./BuilderSection";
 import { Button } from "@/components/ui/button";
@@ -22,8 +23,9 @@ export default function AwardsSection({ awards, photos, saved, onChange, onUploa
         <label className="grid min-w-0 gap-2 text-sm">Award name<Input aria-label={`Award ${index + 1} label`} maxLength={200} value={award.label} onChange={e => update(index, { label: e.target.value })} /></label>
         <label className="grid min-w-0 gap-2 text-sm sm:col-span-2">Description<Textarea aria-label={`Award ${index + 1} description`} placeholder="What does this award recognize?" rows={2} maxLength={160} value={award.description ?? ""} onChange={e => update(index, { description: e.target.value })} /></label>
         <label className="grid min-w-0 gap-2 text-sm sm:col-span-2">Related article URL<Input type="url" aria-label={`Award ${index + 1} article URL`} placeholder="https://… (optional)" value={award.sourceUrl ?? ""} onChange={e => update(index, { sourceUrl: e.target.value || null })} /></label>
-        <label className="grid min-w-0 gap-2 text-sm sm:col-span-2">Award image<select aria-label={`Award ${index + 1} image`} className="h-10 w-full min-w-0 rounded-md border bg-background px-3" value={award.photoId ?? ""} onChange={e => update(index, { photoId: e.target.value || null })}><option value="">Use image URL / no image</option>{photos.map(photo => <option key={photo.id} value={photo.id}>{photo.title || "Untitled photo"}</option>)}</select></label>
-        <label className="grid min-w-0 gap-2 text-sm sm:col-span-2">Image URL (optional)<Input type="url" aria-label={`Award ${index + 1} image URL`} placeholder="https://…" value={award.imageUrl ?? ""} onChange={e => update(index, { imageUrl: e.target.value || null })} /></label>
+        <AwardImagePicker award={award} onChange={patch => update(index, patch)} />
+        <label className="grid min-w-0 gap-2 text-sm sm:col-span-2">Award image<select aria-label={`Award ${index + 1} image`} className="h-10 w-full min-w-0 rounded-md border bg-background px-3" value={award.photoId ?? ""} onChange={e => update(index, { photoId: e.target.value || null, imageAssetId: null, imageMode: "custom" })}><option value="">Use image URL / no image</option>{photos.map(photo => <option key={photo.id} value={photo.id}>{photo.title || "Untitled photo"}</option>)}</select></label>
+        <label className="grid min-w-0 gap-2 text-sm sm:col-span-2">Image URL (optional)<Input type="url" aria-label={`Award ${index + 1} image URL`} placeholder="https://…" value={award.imageUrl ?? ""} onChange={e => update(index, { imageUrl: e.target.value || null, photoId: null, imageAssetId: null, imageMode: "custom" })} /></label>
         {saved && <label className="grid min-w-0 gap-2 text-sm sm:col-span-2">Upload award image<Input aria-label={`Award ${index + 1} upload image`} type="file" accept="image/png,image/jpeg,image/webp" disabled={photos.length >= 40} onChange={e => { onUpload(e.target.files, index); e.target.value = ""; }} /><span className="text-xs text-muted-foreground">PNG, JPG, or WebP. Up to 10 MB.</span></label>}
       </div>
       <div className="flex flex-wrap gap-3 border-t pt-4"><Button type="button" variant="outline" onClick={() => onChange(awards.filter((_, i) => i !== index))}>Remove from draft</Button></div>

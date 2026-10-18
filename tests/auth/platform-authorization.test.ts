@@ -43,6 +43,13 @@ describe("platform assignment authorization", () => {
       }
 
       expect(route).not.toContain("getCurrentUserProfile");
+      if (file.includes(join("admin", "award-images")) || file.includes(join("admin", "award-catalog"))) {
+        expect(route).toContain("await previewAdmin()");
+        for (const operation of ["client.from(", "client.storage.", "await readBody(", "await adminAwardLibrary("]) {
+          if (route.includes(operation)) expect(route.indexOf("await previewAdmin()")).toBeLessThan(route.indexOf(operation));
+        }
+        continue;
+      }
       const isAccessExtension = file.endsWith(join("preview-lockers", "[id]", "access-extension", "route.ts"));
       const isInvitationEmail = file.endsWith(join("preview-lockers", "[id]", "invitation-email", "route.ts"));
       if (isAccessExtension || isInvitationEmail) {

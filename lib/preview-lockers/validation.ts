@@ -38,7 +38,7 @@ const team = z.object({ label: text(80).min(1), color: z.string().regex(/^#[0-9a
   jerseyColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
   jerseyBorderColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
 }).strict();
-const award = z.object({ imageUrl: previewUrl.nullable().optional(), photoId: id.nullable().optional(), year: text(20), label: text(200).min(1), description: text(160).nullable().optional(), sourceUrl: previewUrl.nullable().optional() }).strict();
+const award = z.object({ catalogAwardId:z.uuid().nullable().optional(),imageAssetId:z.uuid().nullable().optional(),imageMode:z.enum(["auto","custom","none"]).optional(),imageUrl: previewUrl.nullable().optional(), photoId: id.nullable().optional(), year: text(20), label: text(200).min(1), description: text(160).nullable().optional(), sourceUrl: previewUrl.nullable().optional() }).strict();
 const storagePath = z.string().min(1).max(240).regex(/^[0-9a-f-]{36}\/(photos|videos)\/[0-9a-f-]{36}\.(jpg|png|webp|mp4|webm|mov)$/);
 export const previewMediaMimeTypes = ["image/jpeg", "image/png", "image/webp", "video/mp4", "video/webm", "video/quicktime"] as const;
 export type PreviewMediaMime = (typeof previewMediaMimeTypes)[number];

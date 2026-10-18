@@ -8,9 +8,11 @@ export interface CatalogAward {
   description: string; aliases: string[]; canonical_image_url: string | null;
   image_source_url: string | null; image_license: string | null; attribution: string | null;
   asset_status: "placeholder" | "approved"; active: boolean;
+  image_asset_id?: string | null;
 }
 export interface AwardEvidence {
   label: string; year: string; sourceUrl?: string | null; description?: string | null;
+  catalogAwardId?: string | null;
 }
 export interface NormalizedAward {
   award_id: string | null; raw_label: string; year: string; edition: string;
@@ -37,7 +39,7 @@ export function normalizeAward(evidence: AwardEvidence, catalog: CatalogAward[])
     .replace(/\(([IVXLCDM]+(?:\s*,\s*[IVXLCDM]+)*)\)/gi, "")
     .replace(/\b(?:19|20)\d{2}\b/g, "").replace(/^\s*\d+\s*[×x]\s*/i, ""));
   const matches = catalog.filter(a => a.active && [a.name, a.slug, ...a.aliases].some(alias => awardKey(alias) === key));
-  const award = matches.length === 1 ? matches[0] : null;
+  const award = evidence.catalogAwardId !== undefined ? catalog.find(item=>item.active && item.id===evidence.catalogAwardId) ?? null : matches.length === 1 ? matches[0] : null;
   return { award_id: award?.id ?? null, raw_label: raw, year, edition,
     source_url: evidence.sourceUrl ?? null, source_type: evidence.sourceUrl ? "source_reference" : "admin_input",
     confidence: award ? 1 : 0, verified: false,

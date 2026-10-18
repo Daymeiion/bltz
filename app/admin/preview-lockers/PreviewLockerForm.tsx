@@ -327,7 +327,7 @@ export default function PreviewLockerForm({
     const uploaded: Array<{ id: string; title: string; storagePath: string; mimeType: PreviewMediaMime }> = [];
     const retainUploaded = () => {
       if (!uploaded.length) return;
-      const attachment: Partial<PreviewContent> = placement?.award !== undefined ? { awards: draft.awards.map((award, i) => i === placement.award ? { ...award, photoId: uploaded[0].id } : award) } : placement?.social ? { social: draft.social.map(item => item.id === placement.social ? { ...item, [kind === "photo" ? "photoId" : "videoId"]: uploaded[0].id } : item) } : {};
+      const attachment: Partial<PreviewContent> = placement?.award !== undefined ? { awards: draft.awards.map((award, i) => i === placement.award ? { ...award, photoId: uploaded[0].id, imageAssetId: null, imageMode: "custom" as const } : award) } : placement?.social ? { social: draft.social.map(item => item.id === placement.social ? { ...item, [kind === "photo" ? "photoId" : "videoId"]: uploaded[0].id } : item) } : {};
       if (kind === "photo") change({ ...attachment, photos: [...draft.photos.map(photo => asHeadshot ? { ...photo, isHeadshot: false } : photo), ...uploaded.map((item, index) => ({ ...item, ...(asHeadshot ? { isHeadshot: index === 0, inHeroSlideshow: false } : placement ? { inHeroSlideshow: false } : {}), credits: null, sourceUrl: null, level: "off-field" as const, season: null }))] });
       else change({ ...attachment, videos: [...draft.videos, ...uploaded.map(item => ({ ...item, thumb: null }))] });
     };

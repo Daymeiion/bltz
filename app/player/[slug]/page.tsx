@@ -1,3 +1,4 @@
+import { publicAwardArtwork } from "@/lib/award-images/server";
 import { previewVideoSource } from "@/lib/preview-lockers/video";
 import { jerseyBadge } from "@/lib/player/jersey-history";
 import type { NewsIdentity } from "@/lib/enrichment/news";
@@ -416,10 +417,10 @@ export default async function PlayerLocker({ params }: { params: Promise<{ slug:
       : null,
     schools,
     proTeams,
-    awards: (awardRows ?? []).map((a: any) => ({
+    awards: await publicAwardArtwork((awardRows ?? []).map((a: any) => ({
       year: String(a.year ?? ""),
       label: (a.award_name || a.award_short_desc || "").toUpperCase(),
-    })),
+    }))),
     videos: (vids ?? []).map((v: any) => ({
       id: String(v.id),
       title: (v.title || "HIGHLIGHT").toUpperCase(),

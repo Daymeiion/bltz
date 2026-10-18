@@ -73,6 +73,11 @@ export function AdminSidebar() {
       icon: <IconAddressBook className="h-5 w-5 flex-shrink-0" />,
     },
     {
+      label: "Award Image Library",
+      href: "/admin/award-images",
+      icon: <IconShield className="h-5 w-5 flex-shrink-0" />,
+    },
+    {
       label: "Settings",
       href: "/admin/settings",
       icon: <IconSettings className="h-5 w-5 flex-shrink-0" />,

@@ -1,7 +1,8 @@
+import { publicAwardArtwork } from "@/lib/award-images/server";
 import "server-only";
 import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { normalizeAward, normalizeAwards, catalogImage, type CatalogAward, type NormalizedAward } from "@/lib/enrichment/awards";
+import { normalizeAward, normalizeAwards, type CatalogAward, type NormalizedAward } from "@/lib/enrichment/awards";
 import type { EnrichmentDatabase } from "@/types/enrichment.generated";
 import type { Json } from "@/types/database.generated";
 import { articleRelevance, discoverNews, headlineKey, type NewsIdentity, type NewsResult, type PlayerArticle } from "@/lib/enrichment/news";
@@ -156,8 +157,9 @@ export async function readPreviewEnrichment(client: SupabaseClient, id: string, 
   const linkedCatalog = [...new Map(links.flatMap(link => link.award_catalog ? [[link.award_catalog.id, link.award_catalog] as const] : [])).values()];
   const storedArticles = (articleResult.error ? [] : articleResult.data ?? []) as PlayerArticle[];
   const identity = storedArticles.length ? await withSchoolAliases(client, previewNewsIdentity(content)) : previewNewsIdentity(content);
+  const resolvedAwards = await publicAwardArtwork(content.awards, linkedCatalog);
   return {
-    awards: content.awards.flatMap(input => {
+    awards: resolvedAwards.flatMap(input => {
       const normalized = normalizeAward(input, linkedCatalog);
       const link = links.find(a => (a.raw_label === input.label || (normalized.award_id && a.award_catalog?.id === normalized.award_id)) && a.year === normalized.year && a.edition === normalized.edition);
       const award = link?.award_catalog;
@@ -166,8 +168,6 @@ export async function readPreviewEnrichment(client: SupabaseClient, id: string, 
       if (seen.has(key)) return [];
       seen.add(key);
       return [{ ...input, evidenceStatus: "unverified" as const, label: award.name, year: link?.year || input.year,
-        // A placeholder catalog entry must not erase an admin-selected preview image.
-        imageUrl: catalogImage(award) || input.imageUrl, photoId: catalogImage(award) ? null : input.photoId, attribution: award.attribution,
         description: input.description || award.description || undefined }];
     }),
     // Apply current gates to older saved results too, without spending search

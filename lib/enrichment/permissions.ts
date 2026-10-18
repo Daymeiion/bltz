@@ -3,7 +3,7 @@ import type { CatalogAward } from "./awards";
 
 /** Narrow reference-asset adapter for the conceptual media permission API.
  * This is not the future Media Graph rights engine. */
-export function resolveMediaPermissions(asset: CatalogAward, usageContext: "preview_award") {
+export function resolveMediaPermissions(asset: Pick<CatalogAward,"active"|"asset_status"|"canonical_image_url"|"image_source_url"|"image_license"|"attribution">, usageContext: "preview_award") {
   const allowed = usageContext === "preview_award" && asset.active && asset.asset_status === "approved"
     && !!asset.canonical_image_url && isPreviewUrl(asset.canonical_image_url)
     && !!asset.image_source_url && isPreviewUrl(asset.image_source_url)

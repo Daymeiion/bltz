@@ -1,3 +1,4 @@
+import { assertAwardReferences } from "@/lib/award-images/server";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { updatePreview, previewMediaBelongsTo } from "@/lib/preview-lockers/validation";
@@ -19,6 +20,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const { revision, content } = parsed.data;
     if (!previewMediaBelongsTo(id, content)) throw new PreviewError("invalid_media_path", 400);
     await assertPreviewMediaExists(client, content);
+    await assertAwardReferences(client, content.awards);
     const update: PreviewDatabase["public"]["Tables"]["preview_lockers"]["Update"] = { ...content };
     // Older open editors omit these fields. Preserve saved values until the
     // operator actually submits an edit or an explicit null to clear them.

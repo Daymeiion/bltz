@@ -1,3 +1,4 @@
+import { assertAwardReferences } from "@/lib/award-images/server";
 import { createPreview, previewRecord, equivalentPreview, previewMediaBelongsTo } from "@/lib/preview-lockers/validation";
 import { assertPreviewMediaExists, previewAdmin, readBody, json, failure, PreviewError, PREVIEW_COLUMNS } from "@/lib/preview-lockers/server";
 import { previewEnrollment } from "@/lib/preview-lockers/conversion";
@@ -19,6 +20,7 @@ export async function POST(req: Request) {
     if (enrollment && process.env.PREVIEW_CONVERSION_ENABLED !== "true") throw new PreviewError("conversion_unavailable", 503);
     if (!previewMediaBelongsTo(id, content)) throw new PreviewError("invalid_media_path", 400);
     await assertPreviewMediaExists(client, content);
+    await assertAwardReferences(client, content.awards);
     if (enrollment) {
       const { data, error } = await (client as unknown as SupabaseClient<ConversionDatabase>).rpc("preview_conversion_create", { p_id: id, p_content: content, p_enrollment: enrollment });
       if (error) throw new PreviewError(error.code === "23505" || error.code === "22023" ? "enrollment_conflict" : "could_not_create", error.code === "23505" || error.code === "22023" ? 409 : 503);
