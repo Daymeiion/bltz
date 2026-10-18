@@ -1,76 +1,86 @@
 "use client";
-import { useCallback,useEffect,useState } from "react";
+
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import AwardImageMatches from "./AwardImageMatches";
-import BucketAwardImages from "./BucketAwardImages";
 import { createClient } from "@/lib/supabase/client";
-import { imageType } from "@/lib/award-images/model";
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { IMAGE_LIMIT, imageType, type AwardImageLibrary as Library } from "@/lib/award-images/model";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { AWARD_IMAGE_BUCKET,BUNDLED_AWARD_IMAGES,IMAGE_LIMIT,imageDetails,catalogDetails,type AwardImage,type AwardImageLibrary as Library } from "@/lib/award-images/model";
-type Candidate={previewId:string;photoId:string;title:string;player:string};
-type UploadItem={name:string;status:string};
-const blankDetails=(title:string)=>({title,image_source_url:null,image_license:null,attribution:null,asset_status:"placeholder" as const,active:true});
-async function responseJson(response:Response){const body=await response.json();if(!response.ok)throw new Error(body.error?.replaceAll("_"," ")||"Request failed. Try again.");return body;}
-const details=(image:AwardImage)=>({title:image.title,image_source_url:image.image_source_url||null,image_license:image.image_license||null,attribution:image.attribution||null,asset_status:image.asset_status,active:image.active});
 
-export default function AwardImageLibrary(){
- const [library,setLibrary]=useState<Library|null>(null),[candidates,setCandidates]=useState<Candidate[]>([]),[source,setSource]=useState("");
- const [query,setQuery]=useState(""),[busy,setBusy]=useState(false),[error,setError]=useState(""),[message,setMessage]=useState(""),[editing,setEditing]=useState<AwardImage|null>(null),[queue,setQueue]=useState<UploadItem[]>([]);
- const load=useCallback(async()=>{const [data,imports]=await Promise.all([fetch("/api/admin/award-images",{cache:"no-store"}).then(responseJson),fetch("/api/admin/award-images/imports",{cache:"no-store"}).then(responseJson)]);setLibrary(data);setCandidates(imports.candidates);},[]);
- useEffect(()=>{void load().catch(()=>setError("Could not load the award library. Retry below."));},[load]);
- async function mutate(url:string,body:unknown,method="POST"){setBusy(true);setError("");try{await responseJson(await fetch(url,{method,headers:{"Content-Type":"application/json"},body:JSON.stringify(body)}));await load();setMessage("Saved. Locker image choices remain independently editable.");return true;}catch(cause){setError(cause instanceof Error?cause.message:"Could not save.");return false;}finally{setBusy(false);}}
- async function upload(files:File[],bundled=false){
-  if(busy)return;setBusy(true);setError("");setQueue(files.map(file=>({name:file.name,status:"Waiting"})));
-  let saved=0,duplicates=0,failed=0;
-  for(const [index,file] of files.entries()){
-   const update=(status:string)=>setQueue(items=>items.map((item,i)=>i===index?{...item,status}:item));
-   if(file.size>IMAGE_LIMIT || !/\.(png|jpe?g|webp)$/i.test(file.name)){update("Skipped: use PNG, JPG or WebP, up to 10 MB each.");failed++;continue;}
-   update("Uploading…");
-   try{
-    const manifest=bundled?BUNDLED_AWARD_IMAGES.find(item=>file.name===item.path.split("/").at(-1)):null;
-    const metadata={...blankDetails(manifest?.title??file.name.replace(/\.[^.]+$/,"").replace(/[_-]/g," ").slice(0,160)),...(manifest?{image_source_url:new URL(manifest.path,window.location.origin).href,image_license:"Reuse on BLTZ Locker award cards authorized by the BLTZ administrator.",attribution:"BLTZ-provided reference artwork",asset_status:"approved"}: {})};
-    const bytes=await file.arrayBuffer(),type=imageType(new Uint8Array(bytes));
-    if(!type)throw new Error("Invalid image");
-    const sha256=Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",bytes))).map(value=>value.toString(16).padStart(2,"0")).join("");
-    const claim={sha256,mime:type.mime,size:file.size,original_filename:file.name};
-    const ticket=await responseJson(await fetch("/api/admin/award-images/uploads",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(claim)}));
-    let result=ticket;
-    if(!ticket.duplicate){
-      const uploaded=await createClient().storage.from(ticket.bucket).uploadToSignedUrl(ticket.path,ticket.token,file,{contentType:type.mime});
-      if(uploaded.error&&!/already exists|duplicate/i.test(uploaded.error.message))throw new Error("Upload failed");
-      result=await responseJson(await fetch("/api/admin/award-images/uploads",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({...claim,details:metadata})}));
+type UploadItem = { name: string; status: string };
+async function responseJson(response: Response) {
+  const body = await response.json();
+  if (!response.ok) throw new Error(body.error?.replaceAll("_", " ") || "Request failed. Try again.");
+  return body;
+}
+
+export default function AwardImageLibrary() {
+  const [library, setLibrary] = useState<Library | null>(null);
+  const [query, setQuery] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+  const [queue, setQueue] = useState<UploadItem[]>([]);
+  const load = useCallback(async () => {
+    setLibrary(await responseJson(await fetch("/api/admin/award-images", { cache: "no-store" })));
+  }, []);
+  useEffect(() => { void load().catch(() => setError("Could not load images. Try refreshing below.")); }, [load]);
+
+  async function upload(files: File[]) {
+    if (busy || !files.length) return;
+    setBusy(true); setError(""); setMessage("");
+    setQueue(files.map(file => ({ name: file.name, status: "Waiting" })));
+    let saved = 0, duplicates = 0, failed = 0;
+    for (const [index, file] of files.entries()) {
+      const update = (status: string) => setQueue(items => items.map((item, i) => i === index ? { ...item, status } : item));
+      if (file.size > IMAGE_LIMIT || !/\.(png|jpe?g|webp)$/i.test(file.name)) {
+        update("Skipped: use PNG, JPG or WebP, up to 10 MB each."); failed++; continue;
+      }
+      update("Uploading…");
+      try {
+        const bytes = await file.arrayBuffer(), type = imageType(new Uint8Array(bytes));
+        if (!type) throw new Error("Invalid image");
+        const sha256 = Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", bytes))).map(value => value.toString(16).padStart(2, "0")).join("");
+        const claim = { sha256, mime: type.mime, size: file.size, original_filename: file.name };
+        const ticket = await responseJson(await fetch("/api/admin/award-images/uploads", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(claim) }));
+        let result = ticket;
+        if (!ticket.duplicate) {
+          const uploaded = await createClient().storage.from(ticket.bucket).uploadToSignedUrl(ticket.path, ticket.token, file, { contentType: type.mime });
+          if (uploaded.error && !/already exists|duplicate/i.test(uploaded.error.message)) throw new Error("Upload failed");
+          const details = { title: file.name.replace(/\.[^.]+$/, "").replace(/[_-]/g, " ").slice(0, 160) || "Award image", image_source_url: null, image_license: null, attribution: null, asset_status: "placeholder", active: true };
+          result = await responseJson(await fetch("/api/admin/award-images/uploads", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...claim, details }) }));
+        }
+        if (result.duplicate) { duplicates++; update("Already in library"); }
+        else { saved++; update("Saved"); }
+      } catch { failed++; update("Upload failed. Select this file again to retry."); }
     }
-    if(result.duplicate){duplicates++;update("Already in library");}else{saved++;update("Saved");}
-   }catch{failed++;update("Upload failed. Select this file again to retry; saved files will not duplicate.");}
+    try { await load(); } catch { setError("Uploads finished, but images could not refresh. Refresh below to see saved images."); }
+    setMessage(`${saved} uploaded · ${duplicates} already saved · ${failed} skipped or failed.`);
+    setBusy(false);
   }
-  try{await load();}catch{setError("Uploads finished, but the library could not refresh. Reload the library to review saved images.");}
-  setMessage(`${saved} uploaded · ${duplicates} already saved · ${failed} skipped or failed.`);setBusy(false);
- }
- async function importBundled(){try{const files=await Promise.all(BUNDLED_AWARD_IMAGES.map(async item=>{const result=await fetch(item.path);if(!result.ok)throw new Error();return new File([await result.blob()],item.path.split("/").at(-1)!,{type:"image/png"});}));await upload(files,true);}catch{setError("Could not read the bundled BLTZ graphics. Try again.");}}
- async function saveImage(){if(!editing)return;const parsed=imageDetails.safeParse(details(editing));if(!parsed.success){setError(parsed.error.issues[0].message);return;}if(await mutate(`/api/admin/award-images/${editing.id}`,{revision:editing.revision,details:parsed.data},"PATCH"))setEditing(null);}
- const images=library?.images.filter(image=>image.title.toLowerCase().includes(query.toLowerCase()))??[];
- return <div className="mx-auto max-w-7xl space-y-7 p-4 md:p-8">
-  <header className="flex flex-wrap items-start justify-between gap-4"><div><h1 className="font-oswald text-3xl font-bold uppercase">Award Image Library</h1><p className="mt-2 max-w-2xl text-sm text-muted-foreground">Store shared trophy artwork and award graphics, map award names, then review each player’s choice in the preview builder.</p></div><Link href="/admin/preview-lockers" className="text-sm underline">Preview Lockers</Link></header>
-  <section className="space-y-4 rounded-lg border bg-card p-5" aria-label="Award image uploads"><h2 className="text-xl font-semibold">Upload images</h2><p className="text-sm text-muted-foreground">Select multiple files or a folder. PNG, JPG and WebP, up to 10 MB per image. Files are stored in the private Supabase award library; identical files are kept once.</p><div className="grid gap-4 sm:grid-cols-2"><label className="grid gap-2 text-sm">Choose images<Input aria-label="Upload award images" type="file" multiple accept="image/png,image/jpeg,image/webp" disabled={busy} onChange={e=>{void upload(Array.from(e.target.files??[]));e.target.value="";}}/></label><label className="grid gap-2 text-sm">Choose a folder<Input aria-label="Upload award image folder" type="file" multiple {...{webkitdirectory:""}} disabled={busy} onChange={e=>{void upload(Array.from(e.target.files??[]));e.target.value="";}}/></label></div><div className="flex flex-wrap items-center gap-3"><Button variant="outline" disabled={busy} onClick={()=>void importBundled()}>Import existing BLTZ graphics</Button><span className="text-xs text-muted-foreground">Supabase bucket: {AWARD_IMAGE_BUCKET} / images</span></div>{queue.length>0&&<details open={busy}><summary className="cursor-pointer text-sm">Upload progress ({queue.length} files)</summary><ul className="mt-3 max-h-56 overflow-auto text-sm" aria-live="polite">{queue.map((item,index)=><li className="flex flex-wrap justify-between gap-2 border-b py-2" key={index}><span className="break-all">{item.name}</span><span>{item.status}</span></li>)}</ul></details>}</section>
-  <section className="space-y-3 rounded-lg border bg-card p-5" aria-label="Import existing award images"><h2 className="text-lg font-semibold">Import from existing Lockers</h2><p className="text-sm text-muted-foreground">Copies uploaded artwork into the shared bucket, or registers an existing image reference. Source images stay attached to their original Locker.</p><div className="flex flex-wrap gap-3"><select aria-label="Existing Locker award image" className="min-h-11 min-w-0 max-w-full flex-1 rounded border bg-background px-3" value={source} onChange={e=>setSource(e.target.value)}><option value="">Choose an existing award image</option>{candidates.map((item,index)=><option key={`${item.previewId}:${item.photoId}`} value={index}>{item.player} · {item.title}</option>)}</select><Button disabled={busy||source===""} onClick={()=>{const item=candidates[Number(source)];if(item)void mutate("/api/admin/award-images/imports",{previewId:item.previewId,photoId:item.photoId});}}>Import selected image</Button></div></section>
-  <BucketAwardImages busy={busy} onBusyChange={setBusy} onReload={load}/>
-  {error&&<p role="alert" className="rounded border border-red-500/40 p-3 text-sm text-red-500">{error}</p>}{message&&<p role="status" className="text-sm">{message}</p>}
-  {library&&<AwardImageMatches library={library} busy={busy} onReload={load} onReview={image=>setEditing({...image})}/>}
-  <div className="flex flex-wrap items-center gap-3"><Input aria-label="Search award images" className="max-w-md" placeholder="Search stored images" value={query} onChange={e=>setQuery(e.target.value)}/><Button variant="outline" disabled={busy} onClick={()=>void load().catch(()=>setError("Could not reload library."))}>Reload library</Button></div>
-  {!library&&!error&&<p role="status">Loading award images…</p>}
-  {library&&<><section aria-label="Stored award images" className="grid grid-cols-[repeat(auto-fill,minmax(170px,1fr))] gap-4">{images.map(image=><button key={image.id} type="button" className="min-w-0 rounded-lg border bg-card p-3 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#ffbb00]" onClick={()=>setEditing({...image})}>{image.imageUrl?<img loading="lazy" decoding="async" className="h-36 w-full object-contain" src={image.imageUrl} alt={image.title}/>:<div className="grid h-36 place-items-center text-xs text-muted-foreground">Image unavailable</div>}<span className="mt-3 block break-words font-semibold">{image.title}</span><span className="mt-1 block text-xs text-muted-foreground">{!image.active?"Archived":image.asset_status==="approved"?"Approved for display":"Needs display review"}</span></button>)}{!images.length&&<p className="col-span-full text-sm text-muted-foreground">No matching images yet. Upload files or import the existing BLTZ artwork.</p>}</section>
-  {editing&&<Dialog open onOpenChange={open=>{if(!open)setEditing(null);}}><DialogContent className="max-h-[85dvh] overflow-y-auto sm:max-w-2xl"><DialogTitle>Review image</DialogTitle><DialogDescription>Review the source, usage permission and credit before approving this artwork for Locker cards.</DialogDescription>{editing.original_filename&&<p className="break-all text-xs text-muted-foreground">Original filename: {editing.original_filename}</p>}<div className="grid gap-4 sm:grid-cols-2"><label className="grid gap-2 text-sm">Image title<Input aria-label="Image title" value={editing.title} onChange={e=>setEditing({...editing,title:e.target.value})}/></label><label className="grid gap-2 text-sm">Source URL<Input aria-label="Image source URL" value={editing.image_source_url??""} onChange={e=>setEditing({...editing,image_source_url:e.target.value||null})}/></label><label className="grid gap-2 text-sm">Usage permission / license<Textarea aria-label="Image usage permission" value={editing.image_license??""} onChange={e=>setEditing({...editing,image_license:e.target.value||null})}/></label><label className="grid gap-2 text-sm">Credit<Textarea aria-label="Image credit" value={editing.attribution??""} onChange={e=>setEditing({...editing,attribution:e.target.value||null})}/></label></div><label className="flex min-h-11 items-center gap-3 text-sm"><input aria-label="Approved for award display" type="checkbox" checked={editing.asset_status==="approved"} onChange={e=>setEditing({...editing,asset_status:e.target.checked?"approved":"placeholder"})}/>Approved for display on Locker award cards</label><label className="flex min-h-11 items-center gap-3 text-sm"><input aria-label="Image active" type="checkbox" checked={editing.active} onChange={e=>setEditing({...editing,active:e.target.checked})}/>Active (archived images stop displaying)</label><div className="flex gap-3"><Button disabled={busy} onClick={()=>void saveImage()}>Save image details</Button><Button variant="outline" onClick={()=>setEditing(null)}>Cancel image edit</Button></div></DialogContent></Dialog>}
-  <section className="space-y-4" aria-label="Award catalog mappings"><h2 className="text-2xl font-semibold">Award name mappings</h2><p className="text-sm text-muted-foreground">A shared image can illustrate several distinct award definitions. Exact names and aliases suggest matches; ambiguous names require review.</p>{library.catalog.filter(row=>row.active).map(award=><Mapping key={`${award.id}:${award.updated_at}`} award={award} images={library.images} busy={busy} onSave={values=>mutate(`/api/admin/award-catalog/${award.id}`,values,"PATCH")}/>)}<NewAward busy={busy} images={library.images} onSave={values=>mutate("/api/admin/award-catalog",values)}/></section></>}
- </div>;
-}
-function Mapping({award,images,busy,onSave}:{award:Library["catalog"][number];images:AwardImage[];busy:boolean;onSave:(body:unknown)=>Promise<boolean>}){
- const [asset,setAsset]=useState(award.image_asset_id??""),[aliases,setAliases]=useState(award.aliases.join("\n"));
- return <details className="rounded-lg border bg-card p-4"><summary className="cursor-pointer font-semibold">{award.name}<span className="ml-3 text-xs font-normal text-muted-foreground">{award.level||award.league||award.sport} · {award.image_asset_id?"Image mapped":"No default image"}</span></summary><div className="mt-4 grid gap-4 sm:grid-cols-2"><label className="grid gap-2 text-sm">Default library image<select aria-label={`${award.name} default image`} className="min-h-11 rounded border bg-background px-3" value={asset} onChange={e=>setAsset(e.target.value)}><option value="">No library default</option>{images.filter(image=>image.active).map(image=><option key={image.id} value={image.id}>{image.title}{image.asset_status!=="approved"?" · needs display review":""}</option>)}</select></label><label className="grid gap-2 text-sm">Alternate award names (one per line)<Textarea aria-label={`${award.name} aliases`} value={aliases} onChange={e=>setAliases(e.target.value)}/></label><Button disabled={busy} onClick={()=>void onSave({updated_at:award.updated_at,image_asset_id:asset||null,aliases:[...new Set(aliases.split(/\r?\n/).map(value=>value.trim()).filter(Boolean))]})}>Save {award.name} mapping</Button></div></details>;
-}
-function NewAward({busy,images,onSave}:{busy:boolean;images:AwardImage[];onSave:(body:unknown)=>Promise<boolean>}){
- const [name,setName]=useState(""),[level,setLevel]=useState("college"),[asset,setAsset]=useState(""),[kind,setKind]=useState("individual"),[error,setError]=useState("");
- return <details className="rounded-lg border bg-card p-4"><summary className="cursor-pointer font-semibold">Add an award definition</summary><div className="mt-4 grid gap-4 sm:grid-cols-2"><label className="grid gap-2 text-sm">Official award name<Input aria-label="New award name" value={name} onChange={e=>setName(e.target.value)}/></label><label className="grid gap-2 text-sm">Level<select aria-label="New award level" className="min-h-11 rounded border bg-background px-3" value={level} onChange={e=>setLevel(e.target.value)}><option value="college">College</option><option value="pro">Pro</option><option value="hs">High school</option></select></label><label className="grid gap-2 text-sm">Default image<select aria-label="New award image" className="min-h-11 rounded border bg-background px-3" value={asset} onChange={e=>setAsset(e.target.value)}><option value="">Choose later</option>{images.filter(image=>image.active).map(image=><option key={image.id} value={image.id}>{image.title}</option>)}</select></label><label className="grid gap-2 text-sm">Award type<select aria-label="New award type" className="min-h-11 rounded border bg-background px-3" value={kind} onChange={e=>setKind(e.target.value)}><option value="individual">Individual award</option><option value="selection">Selection / honor</option><option value="championship">Championship</option></select></label><Button disabled={busy} onClick={async()=>{const parsed=catalogDetails.safeParse({name,slug:name.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,""),sport:"football",level,award_type:kind,aliases:[],image_asset_id:asset||null});if(!parsed.success){setError("Enter a valid award name.");return;}if(await onSave(parsed.data)){setName("");setError("");}}}>Add award definition</Button>{error&&<p role="alert">{error}</p>}</div></details>;
+
+  const images = library?.images.filter(image => `${image.title} ${image.original_filename ?? ""}`.toLowerCase().includes(query.toLowerCase())) ?? [];
+  return <div className="mx-auto max-w-7xl space-y-7 p-4 md:p-8">
+    <header className="flex flex-wrap items-start justify-between gap-4">
+      <div><h1 className="font-oswald text-3xl font-bold uppercase">Award Image Library</h1><p className="mt-2 text-sm text-muted-foreground">Upload images, then choose one for each award in the preview builder.</p></div>
+      <Link href="/admin/preview-lockers" className="text-sm underline">Preview Lockers</Link>
+    </header>
+    <section className="space-y-4 rounded-lg border bg-card p-5" aria-label="Award image uploads">
+      <h2 className="text-xl font-semibold">Upload images</h2>
+      <p className="text-sm text-muted-foreground">Choose multiple PNG, JPG or WebP images. Up to 10 MB each.</p>
+      <Input aria-label="Upload award images" type="file" multiple accept="image/png,image/jpeg,image/webp" disabled={busy} onChange={e => { void upload(Array.from(e.target.files ?? [])); e.target.value = ""; }} />
+      {queue.length > 0 && <details open={busy}><summary className="cursor-pointer text-sm">Upload progress ({queue.length} files)</summary><ul className="mt-3 max-h-56 overflow-auto text-sm" aria-live="polite">{queue.map((item, index) => <li className="flex flex-wrap justify-between gap-2 border-b py-2" key={index}><span className="break-all">{item.name}</span><span>{item.status}</span></li>)}</ul></details>}
+    </section>
+    {error && <p role="alert" className="text-sm text-red-500">{error}</p>}
+    {message && <p role="status" className="text-sm">{message}</p>}
+    <section aria-label="Stored award images" className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-xl font-semibold">All images{library ? ` (${library.images.length})` : ""}</h2><div className="flex max-w-full gap-2"><Input aria-label="Search award images" placeholder="Search images" value={query} onChange={e => setQuery(e.target.value)} /><Button type="button" variant="outline" disabled={busy} onClick={() => { setError(""); void load().catch(() => setError("Could not refresh images.")); }}>Refresh</Button></div></div>
+      {!library && !error && <p role="status">Loading images…</p>}
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">{images.map(image => <figure key={image.id} className="min-w-0 rounded-lg border bg-card p-3">
+        {image.imageUrl ? <img loading="lazy" decoding="async" className="h-36 w-full object-contain" src={image.imageUrl} alt={image.title} /> : <div className="grid h-36 place-items-center text-xs text-muted-foreground">Image unavailable</div>}
+        <figcaption className="mt-3 break-words text-sm">{image.title}</figcaption>
+      </figure>)}</div>
+      {library && !images.length && <p className="text-sm text-muted-foreground">{query ? "No images match your search." : "No images yet. Upload your award images above."}</p>}
+    </section>
+  </div>;
 }

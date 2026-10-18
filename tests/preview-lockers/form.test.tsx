@@ -496,10 +496,15 @@ it("saves video categories, reloads them, and preserves them when selecting the 
 });
 
 it("saves and reloads award art and Social fields without altering existing media", async () => {
- const record={...previewContent.parse({slug:"social-fixture",full_name:"Social Fixture",awards:[{year:"2020",label:"Honor"}],photos:[{id:"p1",title:"Trophy",url:"https://example.com/trophy.png",level:"off-field"}]}),id:"00000000-0000-4000-8000-000000000001",revision:1,created_at:"",updated_at:""};
+ const record={...previewContent.parse({slug:"social-fixture",full_name:"Social Fixture",awards:[{year:"2020",label:"Honor",photoId:"p1"}],photos:[{id:"p1",title:"Trophy",url:"https://example.com/trophy.png",level:"off-field"}]}),id:"00000000-0000-4000-8000-000000000001",revision:1,created_at:"",updated_at:""};
  await act(async()=>root.render(<PreviewLockerForm record={record} />));
  const select=async(label:string,value:string)=>{const el=host.querySelector<HTMLSelectElement>(`[aria-label="${label}"]`)!; await act(async()=>{el.value=value;el.dispatchEvent(new Event('change',{bubbles:true}));});};
- await select('Award 1 image','p1');
+ expect(host.querySelector<HTMLImageElement>('img[alt="Honor image"]')?.src).toBe('https://example.com/trophy.png');
+ const imageId='00000000-0000-4000-8000-000000000002';
+ const library={images:[{id:imageId,title:'Library trophy',imageUrl:'https://example.com/shared.png',active:true,asset_status:'placeholder'}],catalog:[]};
+ fetcher.mockResolvedValueOnce(Response.json(library));
+ await click('Choose award image');
+ await act(async()=>[...document.querySelectorAll('button')].find(button=>button.textContent==='Library trophy')!.click());
  await click('Add short or social post');
  await fill('Social 1 title','Career update'); await fill('Social 1 link','https://x.com/athlete/status/123');
  await select('Social 1 platform','X'); await select('Social 1 placement','post'); await select('Social 1 image','p1');
@@ -507,12 +512,14 @@ it("saves and reloads award art and Social fields without altering existing medi
  fetcher.mockResolvedValueOnce(new Response(JSON.stringify({id:record.id,slug:record.slug,revision:2})));
  const save=[...host.querySelectorAll('button')].find(b=>b.textContent==='Save draft')!;
  await act(async()=>save.click());
- const payload=JSON.parse(fetcher.mock.calls[0][1].body);
- expect(payload.content.awards[0].photoId).toBe('p1');
+ const payload=JSON.parse(fetcher.mock.calls.find(([url])=>url===`/api/preview-lockers/${record.id}`)![1].body);
+ expect(payload.content.awards[0]).toMatchObject({imageAssetId:imageId,imageMode:'custom',photoId:null});
  expect(payload.content.social[0]).toMatchObject({kind:'post',platform:'X',format:'square',caption:'A new chapter',photoId:'p1'});
  expect(payload.content.photos).toEqual(record.photos);
  await act(async()=>root.unmount()); root=createRoot(host);
  await act(async()=>root.render(<PreviewLockerForm record={{...record,...payload.content,revision:2}} />));
  expect(host.querySelector<HTMLSelectElement>('[aria-label="Social 1 platform"]')?.value).toBe('X');
- expect(host.querySelector<HTMLSelectElement>('[aria-label="Award 1 image"]')?.value).toBe('p1');
+ fetcher.mockResolvedValueOnce(Response.json(library));
+ await click('Choose award image');
+ expect([...document.querySelectorAll('button')].find(button=>button.textContent==='Library trophy')?.getAttribute('aria-pressed')).toBe('true');
 });

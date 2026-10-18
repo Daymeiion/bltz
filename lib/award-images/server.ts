@@ -7,6 +7,7 @@ import { json, PreviewError } from "@/lib/preview-lockers/server";
 import { previewUrl } from "@/lib/preview-lockers/validation";
 import { AWARD_IMAGE_BUCKET, IMAGE_LIMIT, awardArtwork, imageType, type AwardImage, type AwardImageChoice, type AwardImageLibrary } from "./model";
 import { normalizeAward, type CatalogAward } from "@/lib/enrichment/awards";
+import type { AwardArtworkContext } from "@/lib/enrichment/permissions";
 
 export async function signedImages(client:SupabaseClient, rows:AwardImage[]) {
  const paths=rows.flatMap(row=>row.storage_path?[row.storage_path]:[]);
@@ -23,18 +24,19 @@ export async function adminAwardLibrary(client:SupabaseClient):Promise<AwardImag
  return {images:await signedImages(client,images),catalog};
 }
 /** Called only after the existing Locker/preview visibility gate. */
-export async function publicAwardArtwork<T extends AwardImageChoice>(awards:T[], fallback:CatalogAward[]=[]):Promise<T[]> {
+export async function publicAwardArtwork<T extends AwardImageChoice>(awards:T[], fallback:CatalogAward[]=[], context:AwardArtworkContext="preview_award"):Promise<T[]> {
  try {
   const client=createServiceClient();
   const catalogResult=await client.from("award_catalog").select("*").eq("active",true).limit(500);
   const catalog=catalogResult.error?fallback:catalogResult.data??fallback;
   const matches=new Set(awards.map(award=>normalizeAward(award,catalog).award_id));
   const ids=[...new Set([...awards.flatMap(a=>a.imageAssetId?[a.imageAssetId]:[]),...catalog.filter(row=>matches.has(row.id)).flatMap(a=>a.image_asset_id?[a.image_asset_id]:[])])];
-  const images=ids.length?await client.from("award_image_assets").select("*").in("id",ids).eq("active",true).eq("asset_status","approved"):null;
+  const query=ids.length?client.from("award_image_assets").select("*").in("id",ids).eq("active",true):null;
+  const images=query?await (context==="preview_demo_award"?query:query.eq("asset_status","approved")):null;
   const library={catalog,images:await signedImages(client,images?.data??[])} as AwardImageLibrary;
-  return awards.map(award=>{const {catalog:match,...art}=awardArtwork(award,library);return {...award,...art,...(match?{label:match.name}:{} )};});
+  return awards.map(award=>{const {catalog:match,...art}=awardArtwork(award,library,context);return {...award,...art,...(match?{label:match.name}:{} )};});
  } catch {
-  return awards.map(award=>{const {catalog,...art}=awardArtwork(award,{catalog:fallback as AwardImageLibrary["catalog"],images:[]});return {...award,...art,...(catalog?{label:catalog.name}:{})};});
+  return awards.map(award=>{const {catalog,...art}=awardArtwork(award,{catalog:fallback as AwardImageLibrary["catalog"],images:[]},context);return {...award,...art,...(catalog?{label:catalog.name}:{})};});
  }
 }
 export async function assertAwardReferences(client:SupabaseClient, awards:AwardImageChoice[]) {

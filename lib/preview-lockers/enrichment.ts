@@ -157,7 +157,7 @@ export async function readPreviewEnrichment(client: SupabaseClient, id: string, 
   const linkedCatalog = [...new Map(links.flatMap(link => link.award_catalog ? [[link.award_catalog.id, link.award_catalog] as const] : [])).values()];
   const storedArticles = (articleResult.error ? [] : articleResult.data ?? []) as PlayerArticle[];
   const identity = storedArticles.length ? await withSchoolAliases(client, previewNewsIdentity(content)) : previewNewsIdentity(content);
-  const resolvedAwards = await publicAwardArtwork(content.awards, linkedCatalog);
+  const resolvedAwards = await publicAwardArtwork(content.awards, linkedCatalog, "preview_demo_award");
   return {
     awards: resolvedAwards.flatMap(input => {
       const normalized = normalizeAward(input, linkedCatalog);

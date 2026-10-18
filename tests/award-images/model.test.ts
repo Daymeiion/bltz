@@ -25,6 +25,14 @@ it("keeps photo/URL overrides across catalog refresh and supports default, custo
 it.each([{active:false},{asset_status:"placeholder"},{image_license:null},{image_source_url:null},{attribution:null}])("withholds ineligible shared artwork: %j",patch=>{
  expect(awardArtwork({label:"Thorpe Award",year:"2007"},{catalog,images:[{...image,...patch} as AwardImage]}).imageUrl).toBeNull();
 });
+it("displays preview demo selections without source or approval while retaining canonical checks",()=>{
+ const demo={catalog,images:[{...image,asset_status:"placeholder",image_source_url:null,image_license:null,attribution:null} as AwardImage]};
+ const award={label:"Thorpe Award",year:"2007",imageAssetId:id,imageMode:"custom" as const};
+ expect(awardArtwork(award,demo,"preview_demo_award").imageUrl).toBe(image.imageUrl);
+ expect(awardArtwork(award,demo).imageUrl).toBeNull();
+ expect(awardArtwork(award,{...demo,images:[{...demo.images[0],active:false}]},"preview_demo_award").imageUrl).toBeNull();
+ expect(awardArtwork(award,{...demo,images:[{...demo.images[0],imageUrl:"javascript:alert(1)"}]},"preview_demo_award").imageUrl).toBeNull();
+});
 it("persists reviewed image choices and rejects invalid metadata and bytes",()=>{
  const awards=[{label:"Thorpe Award",year:"2007",catalogAwardId:catalog[0].id,imageMode:"custom",imageAssetId:id}];
  expect(previewContent.parse({slug:"fixture-player",full_name:"Fixture Player",awards}).awards).toEqual(awards);

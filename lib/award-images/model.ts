@@ -3,7 +3,7 @@ import type { AwardImageDatabase } from "@/types/award-images.generated";
 import { previewUrl } from "@/lib/preview-lockers/validation";
 import type { CatalogAward } from "@/lib/enrichment/awards";
 import { catalogImage, normalizeAward, type AwardEvidence } from "@/lib/enrichment/awards";
-import { resolveMediaPermissions } from "@/lib/enrichment/permissions";
+import { resolveMediaPermissions, type AwardArtworkContext } from "@/lib/enrichment/permissions";
 
 export const AWARD_IMAGE_BUCKET = "award-library";
 export const IMAGE_LIMIT = 10 * 1024 * 1024;
@@ -21,7 +21,7 @@ export const BUNDLED_AWARD_IMAGES = [
  {title:"BLTZ Award Star",path:"/images/Awards/Award-StarIcon.png"},
 ];
 export type AwardImageChoice = AwardEvidence & {imageMode?:"auto"|"custom"|"none";imageAssetId?:string|null;photoId?:string|null;imageUrl?:string|null;attribution?:string|null};
-export function awardArtwork(input:AwardImageChoice, library:Pick<AwardImageLibrary,"images"|"catalog">) {
+export function awardArtwork(input:AwardImageChoice, library:Pick<AwardImageLibrary,"images"|"catalog">, context:AwardArtworkContext="preview_award") {
  const matched=normalizeAward(input,library.catalog);
  const catalog=library.catalog.find(row=>row.id===matched.award_id);
  const mode=input.imageMode ?? (input.imageAssetId || input.photoId || input.imageUrl ? "custom" : "auto");
@@ -30,7 +30,7 @@ export function awardArtwork(input:AwardImageChoice, library:Pick<AwardImageLibr
  const assetId=mode==="custom" ? input.imageAssetId : catalog?.image_asset_id;
  if(assetId) {
   const image=library.images.find(row=>row.id===assetId);
-  const imageUrl=image ? resolveMediaPermissions({...image,canonical_image_url:image.imageUrl},"preview_award").imageUrl : null;
+  const imageUrl=image ? resolveMediaPermissions({...image,canonical_image_url:image.imageUrl},context).imageUrl : null;
   return {imageUrl,photoId:null,attribution:imageUrl?image?.attribution??null:null,catalog};
  }
  return {imageUrl:catalog?catalogImage(catalog):null,photoId:null,attribution:catalog?.attribution??null,catalog};
