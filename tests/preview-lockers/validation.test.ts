@@ -10,7 +10,9 @@ describe("private preview validation", () => {
   it.each(["https://example.com/x", "https://EXAMPLE.com/x?q=1#photo", "https://www.youtube.com/watch?v=abcdefghijk"])("accepts public reference %s", url => expect(isPreviewUrl(url)).toBe(true));
   it("bounds fields and nested arrays, rejects unknown fields and duplicate IDs", () => {
     const draft = { slug: "synthetic-preview", full_name: "Synthetic Preview" };
-    expect(previewContent.safeParse({ ...draft, dob: "2000-01-01" }).success).toBe(false);
+    expect(previewContent.safeParse({ ...draft, dob: "2000-01-01" }).success).toBe(true);
+    expect(previewContent.safeParse({ ...draft, dob: "2000-02-30" }).success).toBe(false);
+    expect(previewContent.safeParse({ ...draft, dob: "2999-01-01" }).success).toBe(false);
     expect(previewContent.safeParse({ ...draft, bio: "x".repeat(4001) }).success).toBe(false);
     expect(previewContent.safeParse({ ...draft, bio: "bad\u0001" }).success).toBe(false);
     const video = { id: "v1", title: "Demo", url: "https://example.com/demo.mp4", thumb: null };

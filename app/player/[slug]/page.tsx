@@ -247,7 +247,7 @@ export default async function PlayerLocker({ params }: { params: Promise<{ slug:
     .from("players")
     .select(
       `id, full_name, name, slug, profile_image, headshot_url, hometown, video_url,
-       bio, position, level, school, college, team, dob, height_in, weight_lbs, games_played, current_status,
+       bio, position, level, school, high_school, college, team, dob, height_in, weight_lbs, games_played, current_status,
        gsis_id, cfb_team_id,
        nfl_player:nfl_players (
          headshot_url, latest_team, status, draft_year, draft_round, draft_pick,
@@ -347,13 +347,6 @@ export default async function PlayerLocker({ params }: { params: Promise<{ slug:
     `${playerFullName} hasn't written their story yet. Check back soon.`;
 
   const jersey = nflPlayer?.jersey_number != null ? `#${nflPlayer.jersey_number}` : "";
-  const schoolName =
-    player.school ||
-    cfbTeam?.display_name ||
-    nflPlayer?.college_name ||
-    nflTeamName(nflPlayer?.latest_team) ||
-    "—";
-
   // Rotating college pill — one entry today (we store a single cfb_team), but
   // shaped as a list so multi-school careers slot in once that data exists.
   const schools: { label: string; color: string; logo: string | null }[] = cfbTeam
@@ -402,7 +395,7 @@ export default async function PlayerLocker({ params }: { params: Promise<{ slug:
     careerStats: [],
     careerSeasons: [],
     gameLogs: [],
-    highSchool: schoolName,
+    highSchool: player.high_school || (player.level === "hs" ? player.school || "" : ""),
     classOf: nflPlayer?.draft_year ? String(nflPlayer.draft_year) : "—",
     school: cfbTeam
       ? {

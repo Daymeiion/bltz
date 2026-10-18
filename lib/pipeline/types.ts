@@ -112,6 +112,7 @@ export interface ScraperResult {
   facts?: Partial<{
     full_name: string;
     dob: string; // YYYY-MM-DD
+    high_school: string;
     height_in: number;
     weight_lbs: number;
     games_played: number;
@@ -144,6 +145,7 @@ export interface PipelineDraft {
   full_name: string;
   bio: string;
   dob?: string | null;
+  high_school?: string | null;
   height_in?: number | null;
   weight_lbs?: number | null;
   games_played?: number | null;

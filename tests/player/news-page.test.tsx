@@ -25,6 +25,14 @@ beforeEach(() => {
   mocks.stats.mockResolvedValue([{ league: "nfl", seasons: [{ team: "Washington Commanders" }] }]);
   mocks.news.mockResolvedValue({ articles: [{ headline: "Actual career coverage" }], status: "complete" });
 });
+it("displays saved high school separately from college on canonical Lockers", async () => {
+  mocks.client.mockResolvedValue(database({...player, dob:"1986-07-09", high_school:"Los Alamitos High School"}));
+  const page = await PlayerLocker({params:Promise.resolve({slug:"alex-smith"})});
+  expect(page.props.data).toMatchObject({highSchool:"Los Alamitos High School",dobDisplay:"07-09-1986"});
+  mocks.client.mockResolvedValue(database(player));
+  const missing = await PlayerLocker({params:Promise.resolve({slug:"alex-smith"})});
+  expect(missing.props.data.highSchool).toBe("");
+});
 it("does not discover news for an invisible or missing canonical player", async () => {
   mocks.client.mockResolvedValue(database(null));
   await expect(PlayerLocker({ params: Promise.resolve({ slug: "alex-smith" }) })).rejects.toThrow("NOT_FOUND");

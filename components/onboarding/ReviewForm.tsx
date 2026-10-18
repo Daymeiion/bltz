@@ -22,6 +22,7 @@ interface FormState {
   full_name: string;
   bio: string;
   dob: string;
+  high_school: string;
   height_in: string;
   weight_lbs: string;
   games_played: string;
@@ -51,6 +52,7 @@ export function ReviewForm({ userId, runId, draft, initialSlug, requiresVerifica
     full_name: draft.full_name ?? "",
     bio: draft.bio ?? "",
     dob: draft.dob ?? "",
+    high_school: draft.high_school ?? "",
     height_in: draft.height_in != null ? String(draft.height_in) : "",
     weight_lbs: draft.weight_lbs != null ? String(draft.weight_lbs) : "",
     games_played: draft.games_played != null ? String(draft.games_played) : "",
@@ -96,6 +98,7 @@ export function ReviewForm({ userId, runId, draft, initialSlug, requiresVerifica
           full_name: state.full_name.trim(),
           bio: state.bio.trim(),
           dob: state.dob || null,
+          high_school: state.high_school || null,
           height_in: state.height_in ? Number(state.height_in) : null,
           weight_lbs: state.weight_lbs ? Number(state.weight_lbs) : null,
           games_played: state.games_played ? Number(state.games_played) : null,
@@ -148,6 +151,7 @@ export function ReviewForm({ userId, runId, draft, initialSlug, requiresVerifica
       weight_lbs: state.weight_lbs ? Number(state.weight_lbs) : null,
       games_played: state.games_played ? Number(state.games_played) : null,
       dob: state.dob || null,
+      high_school: state.high_school || null,
       headshot_url: state.headshot_url,
       awards: draft.awards,
       youtube_urls: draft.youtube_urls,
@@ -221,6 +225,12 @@ export function ReviewForm({ userId, runId, draft, initialSlug, requiresVerifica
                 onChange={(e) => update("school", e.target.value)}
                 className="h-12 rounded border-white/15 bg-black/40 text-white"
               />
+            </Field>
+            <Field label="Birthdate">
+              <Input aria-label="Birthdate" type="date" min="1850-01-01" max={new Date().toISOString().slice(0, 10)} value={state.dob} onChange={(e) => update("dob", e.target.value)} className="h-12 rounded border-white/15 bg-black/40 text-white" />
+            </Field>
+            <Field label="High school">
+              <Input aria-label="High school" value={state.high_school} maxLength={160} onChange={(e) => update("high_school", e.target.value)} className="h-12 rounded border-white/15 bg-black/40 text-white" />
             </Field>
             <Field label="Hometown">
               <Input

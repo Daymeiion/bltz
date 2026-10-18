@@ -11,6 +11,19 @@ beforeEach(() => { host = document.createElement("div"); document.body.append(ho
 afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.unstubAllGlobals(); });
 async function fill(label: string, value: string) { const input = host.querySelector<HTMLInputElement | HTMLTextAreaElement>(`[aria-label="${label}"]`)!; await act(async () => { Object.getOwnPropertyDescriptor(input.tagName === "TEXTAREA" ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype, "value")!.set!.call(input, value); input.dispatchEvent(new Event("input", { bubbles: true })); }); }
 async function click(text: string) { const button = [...host.querySelectorAll("button")].find(b => b.textContent === text)!; expect(button).toBeTruthy(); await act(async () => button.click()); }
+it("saves and reloads reviewed birthdate and high school independently of college", async () => {
+  const record = { ...previewContent.parse({ slug: "antoine-cason", full_name: "Antoine Cason", school: "Arizona", dob: "1986-07-09", high_school: "Los Alamitos High School" }), id: "00000000-0000-4000-8000-000000000001", revision: 3, created_at: "", updated_at: "" };
+  await act(async () => root.render(<PreviewLockerForm record={record} />));
+  expect(host.querySelector<HTMLInputElement>('[aria-label="Birthdate"]')!.type).toBe("date");
+  await fill("Birthdate", "1986-07-10"); await fill("High school", "Reviewed High School");
+  fetcher.mockResolvedValueOnce(Response.json({id:record.id,slug:record.slug,revision:4}));
+  await click("Save draft");
+  const body = JSON.parse(fetcher.mock.calls[0][1].body);
+  expect(body.content).toMatchObject({dob:"1986-07-10",high_school:"Reviewed High School",school:"Arizona"});
+  await act(async () => root.render(<PreviewLockerForm key="bio-reload" record={{...record,...body.content,revision:4}} />));
+  expect(host.querySelector<HTMLInputElement>('[aria-label="Birthdate"]')!.value).toBe("1986-07-10");
+  expect(host.querySelector<HTMLInputElement>('[aria-label="High school"]')!.value).toBe("Reviewed High School");
+});
 it("compares PFR badges with saved roster numbers and persists per-team colors without storing HTML", async () => {
   const source = "https://en.wikipedia.org/wiki/2012_San_Diego_Chargers_season";
   const record = { ...previewContent.parse({ slug: "antoine-cason", full_name: "Antoine Cason", pro_teams: [

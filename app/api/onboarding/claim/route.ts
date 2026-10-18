@@ -78,7 +78,7 @@ export async function POST(req: Request) {
   const { data: player } = await sb
     .from("players")
     .select(
-      "id, full_name, position, level, school_id, dob, height_in, weight_lbs, games_played, current_status, hometown, bio, slug",
+      "id, full_name, position, level, school_id, dob, high_school, height_in, weight_lbs, games_played, current_status, hometown, bio, slug",
     )
     .eq("id", tokenRow.player_id)
     .maybeSingle();
@@ -124,6 +124,7 @@ export async function POST(req: Request) {
     full_name: player.full_name ?? "",
     bio: player.bio ?? "",
     dob: player.dob ?? null,
+    high_school: player.high_school ?? null,
     height_in: player.height_in ?? null,
     weight_lbs: player.weight_lbs ?? null,
     games_played: player.games_played ?? null,

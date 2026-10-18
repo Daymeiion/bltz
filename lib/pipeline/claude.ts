@@ -31,7 +31,7 @@ const HIGH_TRUST_SOURCES: ReadonlySet<ScraperSource> = new Set([
 ]);
 
 type FieldOrigin = Partial<Record<
-  "dob" | "height_in" | "weight_lbs" | "games_played" | "position" | "school" | "hometown",
+  "dob" | "high_school" | "height_in" | "weight_lbs" | "games_played" | "position" | "school" | "hometown",
   ScraperSource
 >>;
 
@@ -40,12 +40,13 @@ function pickFacts(
   results: ScraperResult[],
 ): Pick<
   PipelineDraft,
-  "dob" | "height_in" | "weight_lbs" | "games_played" | "position" | "school" | "schools" | "hometown" | "pro_teams" | "awards" | "youtube_urls" | "photos" | "gsis_id" | "jersey_history"
+  "dob" | "high_school" | "height_in" | "weight_lbs" | "games_played" | "position" | "school" | "schools" | "hometown" | "pro_teams" | "awards" | "youtube_urls" | "photos" | "gsis_id" | "jersey_history"
 > & { _origin: FieldOrigin } {
   // First-non-null wins per field — high-trust structured sources (nflverse)
   // are registered first in SCRAPERS, so their values seed the facts before
   // prose scrapers fill gaps.
   let dob: string | undefined;
+  let high_school: string | undefined;
   let height_in: number | undefined;
   let weight_lbs: number | undefined;
   let games_played: number | undefined;
@@ -63,6 +64,7 @@ function pickFacts(
   const origin: FieldOrigin = {};
   for (const r of results) {
     if (!r.ok || !r.facts) continue;
+    if (r.facts.high_school && !high_school) { high_school = r.facts.high_school; origin.high_school = r.source; }
     if (r.facts.dob && !dob) { dob = r.facts.dob; origin.dob = r.source; }
     if (r.facts.height_in && !height_in) { height_in = r.facts.height_in; origin.height_in = r.source; }
     if (r.facts.weight_lbs && !weight_lbs) { weight_lbs = r.facts.weight_lbs; origin.weight_lbs = r.source; }
@@ -95,6 +97,7 @@ function pickFacts(
   }
   return {
     dob: dob ?? null,
+    high_school: high_school ?? null,
     height_in: height_in ?? null,
     weight_lbs: weight_lbs ?? null,
     games_played: games_played ?? null,
@@ -259,6 +262,7 @@ export async function synthesize(opts: SynthesizeOptions): Promise<PipelineDraft
     full_name: identity.full_name,
     bio,
     dob: factual.dob,
+    high_school: factual.high_school,
     height_in: factual.height_in,
     weight_lbs: factual.weight_lbs,
     games_played: factual.games_played,

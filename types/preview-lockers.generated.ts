@@ -13,11 +13,13 @@ export type PreviewDatabase = { public: { Tables: { preview_lockers: {
           cfb_stats: Json
           created_at: string
           created_by: string
+          dob: string | null
           full_name: string
           games_played: number | null
           headshot_url: string | null
           height_in: number | null
           hero_video_url: string | null
+          high_school: string | null
           hometown: string | null
           id: string
           jersey: string | null
@@ -49,11 +51,13 @@ export type PreviewDatabase = { public: { Tables: { preview_lockers: {
           cfb_stats?: Json
           created_at?: string
           created_by?: string
+          dob?: string | null
           full_name: string
           games_played?: number | null
           headshot_url?: string | null
           height_in?: number | null
           hero_video_url?: string | null
+          high_school?: string | null
           hometown?: string | null
           id?: string
           jersey?: string | null
@@ -85,11 +89,13 @@ export type PreviewDatabase = { public: { Tables: { preview_lockers: {
           cfb_stats?: Json
           created_at?: string
           created_by?: string
+          dob?: string | null
           full_name?: string
           games_played?: number | null
           headshot_url?: string | null
           height_in?: number | null
           hero_video_url?: string | null
+          high_school?: string | null
           hometown?: string | null
           id?: string
           jersey?: string | null

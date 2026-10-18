@@ -140,7 +140,7 @@ describe("POST /api/onboarding/publish", () => {
     createServiceClient.mockReturnValue(serviceClient);
 
     const { POST } = await import("@/app/api/onboarding/publish/route");
-    const response = await POST(jsonRequest(publishBody()));
+    const response = await POST(jsonRequest(publishBody({high_school:"Reviewed High School"})));
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({
@@ -156,6 +156,7 @@ describe("POST /api/onboarding/publish", () => {
         p_claim_player_id: "22222222-2222-4222-8222-222222222222",
         p_claim_token: "claim_token_123",
         p_headshot_url: "https://cdn.example.com/headshot.jpg",
+        p_player: expect.objectContaining({ high_school: "Reviewed High School" }),
       }),
     );
     expect(serviceClient.insertedTables).toEqual([]);

@@ -5,6 +5,7 @@ import { cfbImports, combineCfbImports } from "./cfb-csv";
 import { pfrImports, combinePfrImports } from "./pfr-csv";
 import { isNewsArticleUrl } from "@/lib/enrichment/news-classification";
 import { evaluateSource } from "@/lib/source-policy/policy";
+import { birthdateSchema, highSchoolSchema } from "@/lib/player/bio-fields";
 
 // Display references only; the preview server never downloads these URLs.
 export function isPreviewUrl(value: string): boolean {
@@ -92,6 +93,7 @@ export const previewContent = z.object({
   slug: previewSlug, full_name: text(120).min(2), position: nullableText(60),
   level: z.enum(["hs", "college", "pro", "former"]).nullable().default(null),
   school: nullableText(160), hometown: nullableText(160), jersey: nullableText(10),
+  dob: birthdateSchema.nullable().default(null), high_school: highSchoolSchema.nullable().default(null),
   height_in: z.number().int().min(40).max(96).nullable().default(null),
   weight_lbs: z.number().int().min(60).max(450).nullable().default(null),
   games_played: z.number().int().min(0).max(1000).nullable().default(null),

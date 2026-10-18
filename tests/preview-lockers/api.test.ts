@@ -22,6 +22,17 @@ it("returns unchanged idempotent create and rejects later-version retries", asyn
 it("uses revision compare-and-set and returns conflict rather than overwriting", async () => {
   mock.maybeSingle.mockResolvedValue({data:null,error:null}); expect((await PATCH(request({revision:7,content},"PATCH"),{params:Promise.resolve({id})})).status).toBe(409); expect(mock.eq).toHaveBeenCalledWith("revision",7);
 });
+it("preserves biography fields omitted by older editors and persists explicit edits or clears", async () => {
+  const {dob:_dob,high_school:_highSchool,...legacy}=content;
+  mock.maybeSingle.mockResolvedValue({data:{id,slug:content.slug,revision:2},error:null});
+  expect((await PATCH(request({revision:1,content:legacy},"PATCH"),{params:Promise.resolve({id})})).status).toBe(200);
+  expect(mock.update.mock.calls[0][0]).not.toHaveProperty("dob");
+  expect(mock.update.mock.calls[0][0]).not.toHaveProperty("high_school");
+  expect((await PATCH(request({revision:2,content:{...content,dob:"1986-07-09",high_school:"Los Alamitos High School"}},"PATCH"),{params:Promise.resolve({id})})).status).toBe(200);
+  expect(mock.update.mock.calls[1][0]).toMatchObject({dob:"1986-07-09",high_school:"Los Alamitos High School"});
+  expect((await PATCH(request({revision:3,content},"PATCH"),{params:Promise.resolve({id})})).status).toBe(200);
+  expect(mock.update.mock.calls[2][0]).toMatchObject({dob:null,high_school:null});
+});
 it("reports a committed save even when the postwrite completion read fails", async () => {
   mock.maybeSingle
     .mockResolvedValueOnce({ data: { id, slug: content.slug, revision: 8 }, error: null })

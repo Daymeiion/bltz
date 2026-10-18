@@ -3,6 +3,7 @@ import type { PipelineDraft, PlayerIdentityInput } from "@/lib/pipeline/types";
 import { nflLogo, nflTeamCode, nflTeamColor } from "@/lib/player/locker-format";
 import { previewContent, previewUrl, previewPhoto, previewVideo, slugify, youtubeEmbed, type PreviewContent } from "./validation";
 import { jerseyTeamKey, uniqueJerseys } from "@/lib/player/jersey-history";
+import { birthdateSchema, highSchoolSchema } from "@/lib/player/bio-fields";
 
 const OTHER_PRO_TEAM_COLORS: Record<string, string> = {
   "bc lions": "#F15A22",
@@ -17,7 +18,7 @@ const OTHER_PRO_TEAM_COLORS: Record<string, string> = {
 };
 
 // A discovery result is a suggestion, not verification, rights clearance or a Career ID.
-// Explicit projection discards DOB, source blobs, IDs and auto-confirmed flags.
+// Explicit projection discards source blobs, IDs and auto-confirmed flags.
 export function discoveryDraft(identity: PlayerIdentityInput, draft?: PipelineDraft): PreviewContent {
   const boundedInteger = (value: number | null | undefined, min: number, max: number) => Number.isInteger(value) && value! >= min && value! <= max ? value : null;
   const name = (draft?.full_name || identity.full_name).slice(0, 120);
@@ -40,6 +41,8 @@ export function discoveryDraft(identity: PlayerIdentityInput, draft?: PipelineDr
   const candidate = {
     slug: slugify(name) || "private-preview", full_name: name,
     school,
+    dob: birthdateSchema.safeParse(draft?.dob).data ?? null,
+    high_school: highSchoolSchema.safeParse(draft?.high_school).data ?? (identity.level === "hs" ? school : null),
     position: (draft?.position || identity.position || "").slice(0, 60) || null,
     level: identity.level || null, bio: (draft?.bio || "").slice(0, 4000),
     hometown: (draft?.hometown || "").slice(0, 160) || null,

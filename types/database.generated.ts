@@ -1,3 +1,4 @@
+// players.high_school regenerated from PostgreSQL information_schema by scripts/verify-preview-media.mjs; remaining schema retains Supabase CLI provenance.
 export type Json =
   | string
   | number
@@ -3369,6 +3370,7 @@ export type Database = {
           gsis_id: string | null
           headshot_url: string | null
           height_in: number | null
+          high_school: string | null
           highlight_url: string | null
           hometown: string | null
           id: string
@@ -3415,6 +3417,7 @@ export type Database = {
           gsis_id?: string | null
           headshot_url?: string | null
           height_in?: number | null
+          high_school?: string | null
           highlight_url?: string | null
           hometown?: string | null
           id?: string
@@ -3461,6 +3464,7 @@ export type Database = {
           gsis_id?: string | null
           headshot_url?: string | null
           height_in?: number | null
+          high_school?: string | null
           highlight_url?: string | null
           hometown?: string | null
           id?: string

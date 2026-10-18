@@ -13,12 +13,17 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const { client } = await previewAdmin();
     const { id } = await params;
     if (!z.uuid().safeParse(id).success) throw new PreviewError("invalid_input", 400);
-    const parsed = updatePreview.safeParse(await readBody(req));
+    const input = await readBody(req);
+    const parsed = updatePreview.safeParse(input);
     if (!parsed.success) throw new PreviewError("invalid_input", 400);
     const { revision, content } = parsed.data;
     if (!previewMediaBelongsTo(id, content)) throw new PreviewError("invalid_media_path", 400);
     await assertPreviewMediaExists(client, content);
-    const update: PreviewDatabase["public"]["Tables"]["preview_lockers"]["Update"] = content;
+    const update: PreviewDatabase["public"]["Tables"]["preview_lockers"]["Update"] = { ...content };
+    // Older open editors omit these fields. Preserve saved values until the
+    // operator actually submits an edit or an explicit null to clear them.
+    const submitted = (input as { content: Record<string, unknown> }).content;
+    for (const key of ["dob", "high_school"] as const) if (!Object.hasOwn(submitted, key)) delete update[key];
     const { data, error } = await client.from("preview_lockers").update(update).eq("id", id).eq("revision", revision).select("id,slug,revision").maybeSingle();
     if (error?.code === "23505") throw new PreviewError("preview_conflict", 409);
     if (error) throw new PreviewError("could_not_update", 503);

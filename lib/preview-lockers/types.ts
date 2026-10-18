@@ -54,6 +54,7 @@ export interface PreviewLockerRow {
   height_in: number | null;
   weight_lbs: number | null;
   dob: string | null;
+  high_school?: string | null;
   games_played: number | null;
   headshot_url: string | null;
   hero_video_url: string | null;
@@ -91,6 +92,7 @@ export interface CreatePreviewLockerInput {
   height_in?: number | null;
   weight_lbs?: number | null;
   dob?: string | null;
+  high_school?: string | null;
   games_played?: number | null;
   headshot_url?: string | null;
   hero_video_url?: string | null;

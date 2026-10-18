@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { getTestRun, getTestUser } from "@/lib/onboarding/test-auth";
+import { birthdateSchema, highSchoolSchema } from "@/lib/player/bio-fields";
 
 export const runtime = "nodejs";
 
@@ -12,7 +13,8 @@ const Body = z.object({
   run_id: z.string().uuid(),
   full_name: z.string().min(2).max(120),
   bio: z.string().max(4000).optional().default(""),
-  dob: z.string().nullable().optional(),
+  dob: birthdateSchema.nullable().optional(),
+  high_school: highSchoolSchema.nullable().optional(),
   height_in: z.number().int().min(40).max(96).nullable().optional(),
   weight_lbs: z.number().int().min(60).max(450).nullable().optional(),
   games_played: z.number().int().min(0).max(1000).nullable().optional(),
@@ -136,6 +138,7 @@ export async function POST(req: Request) {
     slug: body.slug,
     bio: body.bio,
     dob: body.dob,
+    ...(body.high_school !== undefined ? { high_school: body.high_school } : {}),
     height_in: body.height_in,
     weight_lbs: body.weight_lbs,
     games_played: body.games_played,

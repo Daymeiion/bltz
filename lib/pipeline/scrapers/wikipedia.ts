@@ -8,6 +8,7 @@ import { extractJerseyHistory, discoverWikipediaJerseys } from "./jersey-history
 import { fetchPfrJerseyHistory } from "@/lib/enrichment/safe-fetch";
 import { corroborateJerseys } from "@/lib/player/jersey-history";
 import { decodeHTML } from "entities";
+import { birthdateSchema, highSchoolSchema } from "@/lib/player/bio-fields";
 
 /**
  * Wikipedia scraper. We use the public REST API — no auth required and
@@ -171,7 +172,23 @@ function parseDob(text: string): string | undefined {
     "september","october","november","december",
   ];
   const monthNum = String(months.indexOf(monthName.toLowerCase()) + 1).padStart(2, "0");
-  return `${year}-${monthNum}-${day.padStart(2, "0")}`;
+  return birthdateSchema.safeParse(`${year}-${monthNum}-${day.padStart(2, "0")}`).data;
+}
+
+/** Only the matched athlete's infobox, never another person's school in prose. */
+export function extractWikipediaHighSchool(html: string): string | undefined {
+  const infobox = /<table\b[^>]*class=["'][^"']*\binfobox\b[^"']*["'][^>]*>([\s\S]*?)<\/table>/i.exec(html)?.[1];
+  if (!infobox) return undefined;
+  for (const row of infobox.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi)) {
+    const heading = /<th\b[^>]*>([\s\S]*?)<\/th>/i.exec(row[1])?.[1];
+    if (!heading || !/^high\s+school\s*:?$/i.test(stripHtml(heading).trim())) continue;
+    const cell = /<td\b[^>]*>([\s\S]*?)<\/td>/i.exec(row[1])?.[1];
+    if (!cell) continue;
+    const schoolTitle = [...cell.matchAll(/<a\b[^>]*title=["']([^"']+)["'][^>]*>/gi)].map(match => decodeHTML(match[1])).find(title => /\bhigh school\b/i.test(title));
+    const label = schoolTitle ?? decodeHTML(stripHtml(cell.replace(/<sup\b[^>]*>[\s\S]*?<\/sup>/gi, "").replace(/<br\s*\/?\s*>/gi, " · "))).replace(/\s*·\s*\([^)]*\)\s*$/, "").trim();
+    return highSchoolSchema.safeParse(label).data;
+  }
+  return undefined;
 }
 
 function parseHeightInches(text: string): number | undefined {
@@ -417,6 +434,7 @@ export async function scrapeWikipedia(
       facts: {
         bio_text: summary.extract,
         dob: parseDob(fullText),
+        high_school: articleHtml.ok ? extractWikipediaHighSchool(articleHtml.html) : undefined,
         height_in: parseHeightInches(fullText),
         weight_lbs: parseWeight(fullText),
         hometown: extractHometown(fullText),
