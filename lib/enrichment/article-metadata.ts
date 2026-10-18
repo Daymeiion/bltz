@@ -6,7 +6,7 @@ import { requireSourceAction, remoteAssetReference, sourceProvenance } from "@/l
 type ObjectValue = Record<string, unknown>;
 export const object = (v: unknown): ObjectValue => v && typeof v === "object" && !Array.isArray(v) ? v as ObjectValue : {};
 export const clean = (v: unknown, max = 500): string => typeof v === "string" ? decodeHTML(v.replace(/<[^>]*>/g, " ")).replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, max) : "";
-function attrs(tag: string): Record<string, string> {
+export function attrs(tag: string): Record<string, string> {
   const out: Record<string, string> = {};
   for (const match of tag.matchAll(/([\w:-]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/g)) out[match[1].toLowerCase()] = decodeHTML(match[2] ?? match[3] ?? match[4]);
   return out;
