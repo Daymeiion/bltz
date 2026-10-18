@@ -34,6 +34,27 @@ export function merchandiseQueries(identity: NewsIdentity): string[] {
   // kind so plentiful trading cards cannot consume the jersey search budget.
   return identitySearchTerms(identity).slice(0, 6).flatMap(term => [`${term} trading cards`, `${term} jersey`]);
 }
+export const MERCHANDISE_MARKETPLACES = ["ebay.com", "fanatics.com", "comc.com"] as const;
+export function merchandiseSearchPlan(identity: NewsIdentity): Array<{ query: string; includeDomains?: readonly string[] }> {
+  const general = merchandiseQueries(identity);
+  if (!general.length) return [];
+  const colleges = identitySearchTerms({ ...identity, teams: [] });
+  const teams = identitySearchTerms({ ...identity, schools: [], searchSchools: [] });
+  // Visit every marketplace in the first batch, then the alternate affiliation.
+  // COMC gets card queries; eBay/Fanatics split college/team cards and jerseys.
+  const targeted = [0, 1].flatMap(pass => MERCHANDISE_MARKETPLACES.map((domain, index) => {
+    const contexts = pass === 0 ? (colleges.length ? colleges : teams) : (teams.length ? teams : colleges);
+    const term = contexts[index % contexts.length];
+    const category = domain === "comc.com" || (index === 0 ? pass === 0 : pass === 1) ? "trading cards" : "jersey";
+    return { query: `${term} ${category}`, includeDomains: [domain] };
+  }));
+  const seen = new Set<string>();
+  return [...targeted, ...general.map(query => ({ query }))].filter(search => {
+    const key = JSON.stringify(["includeDomains" in search ? search.includeDomains : [], search.query]);
+    if (seen.has(key)) return false;
+    seen.add(key); return true;
+  });
+}
 const words = (s: string) => ` ${s.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()} `;
 const detailPath = (url: string) => /\/(?:products?|items?|itm|dp|gp\/product|cards)\/[^/]+|\/isynmv1\/aucd\/\d+|(?:[\/+_-])p-\d+/i.test(new URL(url).pathname);
 function reviewSuggestion(url: string, title: string | undefined, identity: NewsIdentity): ProductMetadata | null {
@@ -66,12 +87,12 @@ export async function discoverMerchandise(identity: NewsIdentity, provider: Sear
   extract: (url: string, signal: AbortSignal) => Promise<ProductMetadata | null>, signal: AbortSignal): Promise<MerchandiseResult> {
   const result: MerchandiseResult = { items: [], status: "complete", candidates: 0, rejected: 0, errors: [] };
   if (!provider) return { ...result, status: "unavailable", errors: ["search_not_configured"] };
-  const queries = merchandiseQueries(identity);
-  if (!queries.length) return { ...result, status: "unavailable", errors: ["merchandise_identity_incomplete"] };
+  const searchesToRun = merchandiseSearchPlan(identity);
+  if (!searchesToRun.length) return { ...result, status: "unavailable", errors: ["merchandise_identity_incomplete"] };
   const groups: string[][] = [], seen = new Set<string>(), titles = new Map<string, string>();
   const searchSignal = AbortSignal.any([signal, AbortSignal.timeout(30_000)]);
-  for (let i = 0; i < queries.length && !searchSignal.aborted; i += 4) {
-    const searches = await Promise.allSettled(queries.slice(i, i + 4).map(query => provider.search(query, searchSignal)));
+  for (let i = 0; i < searchesToRun.length && !searchSignal.aborted; i += 4) {
+    const searches = await Promise.allSettled(searchesToRun.slice(i, i + 4).map(({ query, includeDomains }) => provider.search(query, searchSignal, { includeDomains })));
     for (const search of searches) {
       if (search.status === "rejected") {
         result.errors.push(search.reason instanceof SearchProviderError ? search.reason.code : "search_failed");

@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { expect, it, vi } from "vitest";
-import { discoverMerchandise, isProductUrl, merchandiseQueries, productMatchesIdentity, type ProductMetadata } from "@/lib/enrichment/merchandise";
+import { discoverMerchandise, isProductUrl, merchandiseQueries, merchandiseSearchPlan, MERCHANDISE_MARKETPLACES, productMatchesIdentity, type ProductMetadata } from "@/lib/enrichment/merchandise";
 import { extractProductMetadata } from "@/lib/enrichment/product-metadata";
 import { SearchProviderError } from "@/lib/search/errors";
 const identity = { fullName: "Antoine Cason", sport: "football", schools: ["Arizona"], teams: ["SD"] };
@@ -14,6 +14,48 @@ it("searches each bounded college/team context with a quoted name and both tradi
   expect(merchandiseQueries({ ...identity, schools: [], teams: [] })).toEqual([]);
   expect(merchandiseQueries({ ...identity, fullName: "Antoine" })).toEqual([]);
   expect(merchandiseQueries({ ...identity, teams: Array.from({ length: 30 }, (_, i) => `Team ${i}`) })).toHaveLength(12);
+});
+it("targets every requested marketplace with college and team context while retaining bounded general searches", () => {
+  const plan = merchandiseSearchPlan(identity);
+  expect(plan.slice(0, 3).map(search => search.includeDomains)).toEqual([["ebay.com"], ["fanatics.com"], ["comc.com"]]);
+  for (const domain of MERCHANDISE_MARKETPLACES) {
+    const targeted = plan.filter(search => search.includeDomains?.includes(domain));
+    expect(targeted).toHaveLength(2);
+    expect(targeted.some(search => search.query.includes("Arizona"))).toBe(true);
+    expect(targeted.some(search => search.query.includes("San Diego Chargers"))).toBe(true);
+    expect(targeted.every(search => search.query.startsWith('"Antoine Cason" football '))).toBe(true);
+    if (domain === "comc.com") expect(targeted.every(search => search.query.endsWith("trading cards"))).toBe(true);
+    else expect(targeted.map(search => search.query.split(" ").at(-1))).toEqual(expect.arrayContaining(["cards", "jersey"]));
+  }
+  expect(plan.filter(search => !search.includeDomains).map(search => search.query)).toEqual(merchandiseQueries(identity));
+  expect(merchandiseSearchPlan({...identity,teams:Array.from({length:30},(_,i)=>`Team ${i}`)}).length).toBeLessThanOrEqual(18);
+  expect(merchandiseSearchPlan({...identity,schools:[],teams:[]})).toEqual([]);
+  expect(merchandiseSearchPlan({...identity,fullName:"Antoine"})).toEqual([]);
+});
+it("returns matching listings from all three marketplaces once each for review",async()=>{
+  const urls=["https://www.ebay.com/itm/123456789", "https://www.fanatics.com/football/jersey/p-1234567", "https://www.comc.com/Cards/Football/2008/Topps/123/Antoine_Cason/1234567"];
+  const search=vi.fn(async(_query:string,_signal:AbortSignal,options?:{includeDomains?:readonly string[]})=>options?.includeDomains ? [{url:urls[MERCHANDISE_MARKETPLACES.indexOf(options.includeDomains[0] as typeof MERCHANDISE_MARKETPLACES[number])]}] : urls.map(url=>({url})));
+  const result=await discoverMerchandise(identity,{name:"fixture",search},async url=>({...product,productUrl:url,canonicalUrl:url}),signal());
+  expect(result.items.map(item=>item.productUrl)).toEqual(expect.arrayContaining(urls));
+  expect(result.items).toHaveLength(3);expect(result.items.every(item=>!("visible" in item))).toBe(true);
+  for(const domain of MERCHANDISE_MARKETPLACES) expect(search.mock.calls.some(([, , options])=>options?.includeDomains?.includes(domain))).toBe(true);
+});
+it("passes marketplace domain filters to Tavily and rejects lookalike hosts without restricting general searches",async()=>{
+  const {configuredSearchProvider}=await import("@/lib/enrichment/search-provider");
+  vi.stubEnv("TAVILY_API_KEY","unit-secret");
+  const fetcher=vi.fn(async(_url:unknown,_init?:RequestInit)=>Response.json({results:[
+    {url:"https://www.ebay.com/itm/123",title:product.title},
+    {url:"https://ebay.com.unrelated.example.com/products/123",title:product.title},
+    {url:product.productUrl,title:product.title},
+  ]}));
+  vi.stubGlobal("fetch",fetcher);
+  try {
+    const provider=configuredSearchProvider({reviewTitles:true})!;
+    expect(await provider.search('"Antoine Cason" Arizona trading cards',signal(),{includeDomains:["ebay.com"]})).toEqual([{url:"https://www.ebay.com/itm/123",title:product.title}]);
+    expect(JSON.parse(fetcher.mock.calls[0][1]!.body as string).include_domains).toEqual(["ebay.com"]);
+    expect(await provider.search("fixture",signal())).toHaveLength(3);
+    expect(JSON.parse(fetcher.mock.calls[1][1]!.body as string).include_domains).toEqual([]);
+  } finally {vi.unstubAllGlobals();vi.unstubAllEnvs();}
 });
 it.each([
   ["Alex Smith Utah basketball trading card", "Utah basketball", false],

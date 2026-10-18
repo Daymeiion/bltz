@@ -36,7 +36,7 @@ export default function MerchandiseSection({ items, onChange, onSearch, canSearc
   };
   return <BuilderSection title="Merchandise" count={items.length} description="Add trading cards, jerseys and other products to the Locker Merchandise tab">
     <Button type="button" variant="outline" disabled={!canSearch} onClick={onSearch}>{searching ? "Searching merchandise…" : "Search merchandise"}</Button>
-    <p className="text-sm text-muted-foreground">Searches the saved player name with college and team history for trading cards and jerseys. Save your changes before searching. Results are saved here for later review, separately from Locker merchandise. New searches add unique listings and keep your pending reviews; dismissed listings stay dismissed. Review each seller listing before adding it to the draft, then save to show it in the Locker.</p>
+    <p className="text-sm text-muted-foreground">Targets eBay, Fanatics and COMC, plus broader web listings, using the saved player name with college and team history for trading cards and jerseys. Save your changes before searching. Results are saved here for later review, separately from Locker merchandise. New searches add unique listings and keep your pending reviews; dismissed listings stay dismissed. Review each seller listing before adding it to the draft, then save to show it in the Locker.</p>
     {searchError && <p role="alert" className="break-words text-sm text-red-400">{searchError}</p>}
     {searching && <p role="status" className="text-sm">Searching seller listings and checking player identity…</p>}
     {savingReview && <p role="status" className="text-sm">Saving review queue…</p>}

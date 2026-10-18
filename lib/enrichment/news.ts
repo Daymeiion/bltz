@@ -13,7 +13,7 @@ export interface NewsIdentity {
 }
 export interface SearchProvider {
   name: string;
-  search(query: string, signal: AbortSignal): Promise<Array<{ url: string; title?: string }>>;
+  search(query: string, signal: AbortSignal, options?: { includeDomains?: readonly string[] }): Promise<Array<{ url: string; title?: string }>>;
 }
 export interface ArticleMetadata {
   headline: string; article_url: string; canonical_url: string; publisher: string;
