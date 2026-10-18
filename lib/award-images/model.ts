@@ -7,9 +7,10 @@ import { resolveMediaPermissions } from "@/lib/enrichment/permissions";
 
 export const AWARD_IMAGE_BUCKET = "award-library";
 export const IMAGE_LIMIT = 10 * 1024 * 1024;
+export const originalFilename = z.string().trim().min(1).max(255).regex(/^[^\u0000-\u001f\u007f/\\]+$/);
 const text = (max: number) => z.string().trim().max(max).regex(/^[^\u0000-\u001f\u007f]*$/);
 export const imageDetails = z.object({ title:text(160).min(1),image_source_url:previewUrl.nullable(),image_license:text(500).nullable(),attribution:text(500).nullable(),asset_status:z.enum(["placeholder","approved"]),active:z.boolean() }).strict().refine(value=>value.asset_status!=="approved" || !!(value.image_source_url && value.image_license?.trim() && value.attribution?.trim()),"Approved images need a source, usage permission and credit.");
-export type AwardImage = z.infer<typeof imageDetails> & Pick<AwardImageDatabase["public"]["Tables"]["award_image_assets"]["Row"],"id"|"storage_path"|"external_url"|"sha256"|"mime_type"|"byte_size"|"revision"> & {imageUrl:string|null};
+export type AwardImage = z.infer<typeof imageDetails> & Pick<AwardImageDatabase["public"]["Tables"]["award_image_assets"]["Row"],"id"|"storage_path"|"external_url"|"sha256"|"mime_type"|"byte_size"|"revision"> & {imageUrl:string|null;original_filename?:string|null};
 export type AwardImageLibrary = {images:AwardImage[];catalog:Array<CatalogAward & {image_asset_id?:string|null;updated_at:string;imageUrl?:string|null}>};
 export const catalogDetails = z.object({name:text(200).min(1),slug:z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(100),sport:text(40).min(1),level:z.enum(["hs","college","pro"]).nullable(),award_type:z.enum(["selection","individual","championship"]),aliases:z.array(text(200).min(1)).max(40),image_asset_id:z.uuid().nullable()}).strict();
 export const BUNDLED_AWARD_IMAGES = [

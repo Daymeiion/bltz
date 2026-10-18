@@ -1,10 +1,10 @@
 import { z } from "zod";
 import { previewAdmin, readBody, json, failure, PreviewError } from "@/lib/preview-lockers/server";
-import { AWARD_IMAGE_BUCKET, IMAGE_LIMIT, imageDetails, imageType } from "@/lib/award-images/model";
-import { storeAwardBytes } from "@/lib/award-images/server";
+import { AWARD_IMAGE_BUCKET, IMAGE_LIMIT, imageDetails, imageType, originalFilename } from "@/lib/award-images/model";
+import { storeAwardBytes, rememberAwardFilename } from "@/lib/award-images/server";
 import { createHash } from "node:crypto";
 
-const upload = z.object({ sha256: z.string().regex(/^[a-f0-9]{64}$/), mime: z.enum(["image/png", "image/jpeg", "image/webp"]), size: z.number().int().positive().max(IMAGE_LIMIT) });
+const upload = z.object({ sha256: z.string().regex(/^[a-f0-9]{64}$/), mime: z.enum(["image/png", "image/jpeg", "image/webp"]), size: z.number().int().positive().max(IMAGE_LIMIT), original_filename: originalFilename.optional() });
 const pathFor = (input: z.infer<typeof upload>) => `images/${input.sha256}.${input.mime === "image/png" ? "png" : input.mime === "image/jpeg" ? "jpg" : "webp"}`;
 export const runtime = "nodejs";
 export async function POST(req: Request) {
@@ -14,7 +14,7 @@ export async function POST(req: Request) {
     if (!parsed.success) throw new PreviewError("invalid_award_image", 400);
     const existing = await client.from("award_image_assets").select("id").eq("sha256", parsed.data.sha256).maybeSingle();
     if (existing.error) throw new PreviewError("award_library_unavailable", 503);
-    if (existing.data) return json({ id: existing.data.id, duplicate: true });
+    if (existing.data) { await rememberAwardFilename(client, existing.data.id, parsed.data.original_filename); return json({ id: existing.data.id, duplicate: true }); }
     const path = pathFor(parsed.data);
     const signed = await client.storage.from(AWARD_IMAGE_BUCKET).createSignedUploadUrl(path);
     if (signed.error || !signed.data?.token) throw new PreviewError("upload_unavailable", 503);
@@ -30,6 +30,6 @@ export async function PATCH(req: Request) {
     if (file.error || !file.data || file.data.size !== parsed.data.size || file.data.size > IMAGE_LIMIT) throw new PreviewError("award_upload_incomplete", 400);
     const bytes = new Uint8Array(await file.data.arrayBuffer());
     if (imageType(bytes)?.mime !== parsed.data.mime || createHash("sha256").update(bytes).digest("hex") !== parsed.data.sha256) throw new PreviewError("invalid_award_image", 400);
-    return await storeAwardBytes(client, bytes, parsed.data.details.title, parsed.data.details);
+    return await storeAwardBytes(client, bytes, parsed.data.details.title, {...parsed.data.details,...(parsed.data.original_filename ? {original_filename: parsed.data.original_filename} : {})});
   } catch (error) { return failure(error); }
 }

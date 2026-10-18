@@ -1,4 +1,5 @@
 // Generated from applied migrations by scripts/verify-award-images.mjs.
+import type { Json } from './database.generated';
 export type AwardImageDatabase = { public: { Tables: {
   award_image_assets: {
     Row: {
@@ -18,6 +19,7 @@ export type AwardImageDatabase = { public: { Tables: {
       created_by: string
       created_at: string
       updated_at: string
+      original_filename: string | null
     }
     Insert: {
       id?: string
@@ -36,6 +38,7 @@ export type AwardImageDatabase = { public: { Tables: {
       created_by?: string
       created_at?: string
       updated_at?: string
+      original_filename?: string | null
     }
     Update: {
       id?: string
@@ -54,6 +57,7 @@ export type AwardImageDatabase = { public: { Tables: {
       created_by?: string
       created_at?: string
       updated_at?: string
+      original_filename?: string | null
     }
     Relationships: [
   {
@@ -147,4 +151,4 @@ export type AwardImageDatabase = { public: { Tables: {
   }
 ]
   }
-}; Views: Record<string, never>; Functions: Record<string, never>; Enums: Record<string, never>; CompositeTypes: Record<string, never> } };
+}; Views: Record<string, never>; Functions: { approve_award_image_matches: { Args: { p_matches: Json }; Returns: Json } }; Enums: Record<string, never>; CompositeTypes: Record<string, never> } };

@@ -40,6 +40,7 @@ try {
   await apply('20260929205021_preview_awards_news_enrichment.sql');
   await apply('20261018015519_preview_team_jersey_numbers.sql');
   await apply('20261018033550_award_image_library.sql');
+  await apply('20261018043104_award_image_filename_matches.sql');
   const bucket=(await db.query("select * from storage.buckets where id='award-library'")).rows[0];
   assert.equal(bucket.public,false);assert.equal(Number(bucket.file_size_limit),10485760);
   const hash='a'.repeat(64),path=`images/${hash}.png`;
@@ -75,16 +76,48 @@ try {
   const audit=(await db.query("select * from audit_logs where action='award_image.update'")).rows[0];
   assert.equal(audit.previous_values.asset_status,'placeholder');assert.equal(audit.new_values.asset_status,'approved');
   assert.equal((await db.query("select has_schema_privilege('authenticated','private','usage') ok")).rows[0].ok,false);
+  await db.exec(`set role authenticated;select set_config('request.jwt.claim.sub','${admin}',false)`);
+  await db.query('update award_image_assets set original_filename=$1 where id=$2',['Jim-Thorpe-Award.png',image.id]);
+  await assert.rejects(db.query('update award_image_assets set original_filename=$1 where id=$2',['Changed.png',image.id]),/original_filename_immutable/);
+  for(const bad of ['folder/image.png','folder\\image.png','', 'x'.repeat(256),'bad\nname.png']) await assert.rejects(db.query("insert into award_image_assets(title,external_url,original_filename) values ('Bad name','https://bltz.vercel.app/bad.png',$1)",[bad]),/check constraint/);
+  const imageRevision=(await db.query('select revision from award_image_assets where id=$1',[image.id])).rows[0].revision;
+  const selected=(await db.query("select id,updated_at::text from award_catalog where slug in ('heisman-trophy','maxwell-award') order by id")).rows;
+  const batch=selected.map(award=>({award_id:award.id,image_asset_id:image.id,award_updated_at:award.updated_at,image_revision:imageRevision}));
+  const approve=rows=>db.query('select approve_award_image_matches($1::jsonb) result',[JSON.stringify(rows)]);
+  const auditCount=async()=>(await db.query('select count(*)::int n from audit_logs')).rows[0].n;
+  await db.exec('reset role');const before=await auditCount();
+  await db.exec(`set role authenticated;select set_config('request.jwt.claim.sub','${admin}',false)`);
+  await assert.rejects(approve([batch[0],{...batch[1],award_updated_at:'2000-01-01T00:00:00Z'}]),/award_mapping_changed/);
+  assert.equal((await db.query('select image_asset_id from award_catalog where id=$1',[batch[0].award_id])).rows[0].image_asset_id,null);
+  await db.exec('reset role');assert.equal(await auditCount(),before);
+  await db.exec(`set role authenticated;select set_config('request.jwt.claim.sub','${admin}',false)`);
+  await assert.rejects(approve([{...batch[0],image_revision:1}]),/award_image_changed/);
+  await assert.rejects(approve([batch[0],batch[0]]),/duplicate_award_match/);
+  for(const invalid of [null,[],Array(101).fill(batch[0]),[{...batch[0],extra:true}],[{...batch[0],image_revision:0}],[{...batch[0],image_asset_id:other}]])await assert.rejects(approve(invalid));
+  assert.deepEqual((await approve(batch)).rows[0].result,{saved:2,unchanged:0});
+  assert.deepEqual((await approve(batch)).rows[0].result,{saved:0,unchanged:2});
+  const newImage=(await db.query("insert into award_image_assets(title,external_url,original_filename) values ('Pending artwork','https://bltz.vercel.app/reference.png','Heisman-Trophy.webp') returning id,revision")).rows[0];
+  const current=(await db.query('select id,updated_at::text from award_catalog where id=$1',[batch[0].award_id])).rows[0];
+  const replacement={award_id:current.id,image_asset_id:newImage.id,award_updated_at:current.updated_at,image_revision:newImage.revision};
+  await approve([replacement]); // A mapping does not approve display metadata.
+  assert.equal((await db.query('select asset_status from award_image_assets where id=$1',[newImage.id])).rows[0].asset_status,'placeholder');
+  await db.query('update award_image_assets set active=false where id=$1',[newImage.id]);
+  await assert.rejects(approve([replacement]),/award_image_changed/);
+  await db.exec(`select set_config('request.jwt.claim.sub','${other}',false)`);await assert.rejects(approve(batch),/forbidden/);
+  await db.exec('reset role;set role anon');await assert.rejects(approve(batch),/permission denied/);
+  await db.exec('reset role;set role service_role');await assert.rejects(approve(batch),/permission denied/);await db.exec('reset role');
+  assert.equal(await auditCount(),before+5); // 3 mappings + image insert/archive, no retry/failed-batch audit.
+  assert.equal((await db.query("select has_schema_privilege('authenticated','private','usage') ok")).rows[0].ok,false);
   // Generate a scoped contract from the applied schema, including actual FKs.
   const tables=['award_image_assets','award_catalog'];
-  let output="// Generated from applied migrations by scripts/verify-award-images.mjs.\nexport type AwardImageDatabase = { public: { Tables: {\n";
+  let output="// Generated from applied migrations by scripts/verify-award-images.mjs.\nimport type { Json } from './database.generated';\nexport type AwardImageDatabase = { public: { Tables: {\n";
   for(const table of tables){
     const cols=(await db.query("select column_name,data_type,is_nullable,column_default from information_schema.columns where table_schema='public' and table_name=$1 order by ordinal_position",[table])).rows;
     const fields=mode=>cols.map(c=>`      ${c.column_name}${mode==='Update'||(mode==='Insert'&&(c.column_default!==null||c.is_nullable==='YES'))?'?':''}: ${c.data_type==='boolean'?'boolean':['integer','bigint'].includes(c.data_type)?'number':c.data_type==='ARRAY'?'string[]':'string'}${c.is_nullable==='YES'?' | null':''}`).join('\n');
     const relationships=(await db.query(`select c.conname as "foreignKeyName",false as "isOneToOne",r.relname as "referencedRelation",(select json_agg(a.attname order by u.ord) from unnest(c.conkey) with ordinality u(num,ord) join pg_attribute a on a.attrelid=c.conrelid and a.attnum=u.num) as columns,(select json_agg(a.attname order by u.ord) from unnest(c.confkey) with ordinality u(num,ord) join pg_attribute a on a.attrelid=c.confrelid and a.attnum=u.num) as "referencedColumns" from pg_constraint c join pg_class r on r.oid=c.confrelid where c.contype='f' and c.conrelid=('public.'||$1)::regclass`,[table])).rows;
     output+=`  ${table}: {\n    Row: {\n${fields('Row')}\n    }\n    Insert: {\n${fields('Insert')}\n    }\n    Update: {\n${fields('Update')}\n    }\n    Relationships: ${JSON.stringify(relationships,null,2)}\n  }\n`;
   }
-  output+='}; Views: Record<string, never>; Functions: Record<string, never>; Enums: Record<string, never>; CompositeTypes: Record<string, never> } };\n';
+  output+='}; Views: Record<string, never>; Functions: { approve_award_image_matches: { Args: { p_matches: Json }; Returns: Json } }; Enums: Record<string, never>; CompositeTypes: Record<string, never> } };\n';
   if(process.argv.includes('--generate-types'))fs.writeFileSync('types/award-images.generated.ts',output);
   else assert.equal(fs.readFileSync('types/award-images.generated.ts','utf8').replace(/\r\n/g,'\n'),output);
   console.log('PASS: award library migration, private storage policies, admin/anonymous/non-admin access, approved-image constraints, duplicate prevention, immutable storage, revisions, audit, catalog FKs, saved preview references and generated types.');
