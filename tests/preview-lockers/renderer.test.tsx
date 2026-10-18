@@ -17,6 +17,18 @@ beforeEach(() => {
 });
 afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.unstubAllGlobals(); });
 const record = { ...previewContent.parse({ slug: "canonical-slug-collision", full_name: "Synthetic Preview", bio: "Entered career story", schools: [{ label: "Fixture College", color: "#152238" }], awards: [{ year: "2001", label: "Synthetic honor" }], headshot_url: "https://custom.example.com/portrait.jpg", photos: [{ id: "photo", title: "Career photo", url: "https://custom.example.com/career.jpg", level: "cfb" }] }), id: "00000000-0000-4000-8000-000000000001", revision: 1, created_at: "", updated_at: "" };
+it.each(["Long Beach, California", "Stockton, California", "Lake Mary, FL"])("uses the same state abbreviation in the hero and Bio for %s", async hometown => {
+  const expected = hometown.replace(/California$/, "CA");
+  for (const preview of [true, false]) {
+    const data = previewLockerData({ ...record, hometown });
+    if (!preview) delete data.lockerHref;
+    await act(async () => root.render(<LockerView data={data} />));
+    expect(host.querySelector('.locker-hero-copy')?.textContent).toContain(expected);
+    expect(host.querySelector('.basic-info-hometown')?.textContent).toContain(expected);
+    expect(host.querySelector('.locker-hero-copy')?.textContent).not.toContain("CALIFORNIA");
+    expect(host.querySelector('.basic-info-hometown')?.textContent).not.toContain("CALIFORNIA");
+  }
+});
 it("renders saved birthdate and high school in the shared Locker Bio card", async () => {
   await act(async () => root.render(<LockerView data={previewLockerData({...record,dob:"1986-07-09",high_school:"Los Alamitos High School",school:"Arizona",level:"former"})} />));
   expect(host.textContent).toContain("07-09-1986");

@@ -2,6 +2,7 @@
 import { socialEmbedUrl, type LockerSocial } from "@/lib/preview-lockers/social";
 import { awardDescription } from "@/lib/preview-lockers/award-descriptions";
 import { schoolHistoryName, proHistoryName } from "@/lib/player/team-history-name";
+import { formatHometown } from "@/lib/player/locker-format";
 import { FittedHeroName } from "@/components/player/FittedHeroName";
 import { EditorialCard } from "@/components/player/EditorialCard";
 
@@ -841,7 +842,8 @@ export default function LockerView({
     hasBio
       ? data.bio
       : "Bio has not been added yet. BLTZ will show an athlete-written summary or a verified profile snippet once signup, scraped source, school, or team data is available.";
-  const displayHometown = hasKnownText(data.hometown) ? data.hometown : unknownText;
+  const formattedHometown = formatHometown(data.hometown);
+  const displayHometown = hasKnownText(formattedHometown) ? formattedHometown : unknownText;
   const displayStory =
     hasKnownText(data.story)
       ? data.story!
@@ -1105,7 +1107,7 @@ export default function LockerView({
                   <img src={data.headshotUrl} alt={data.fullName} />
                 </div>}
                 <FittedHeroName name={data.fullName} fontFamily={disp} />
-                <div style={{ fontFamily: mono, fontSize: 14, letterSpacing: ".14em", color: "#F5A623", margin: "4px 0 8px", fontWeight: 700 }}>{data.hometown}</div>
+                <div style={{ fontFamily: mono, fontSize: 14, letterSpacing: ".14em", color: "#F5A623", margin: "4px 0 8px", fontWeight: 700 }}>{formattedHometown}</div>
                 <div style={{ display: "flex", gap: 8, alignItems: "center", width: "100%" }}>
                   <RotatingPill items={collegeTeams} fallback={{ label: "SCHOOL", color: "#1A3DCC" }} desktopSchoolNames />
                   <div style={{ width: 46, height: 46, borderRadius: 9999, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(255,255,255,.1)", border: "1px solid rgba(255,255,255,.28)", backdropFilter: "blur(8px)", fontFamily: disp, fontWeight: 800, fontSize: 16, color: "#fff", flex: "none" }}>{data.position || "—"}</div>

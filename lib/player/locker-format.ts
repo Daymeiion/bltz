@@ -10,6 +10,35 @@ export const LEVEL_LABEL: Record<string, string> = {
   former: "Former pro",
 };
 
+const US_STATE_CODES: Record<string, string> = {
+  ALABAMA: "AL", ALASKA: "AK", ARIZONA: "AZ", ARKANSAS: "AR", CALIFORNIA: "CA",
+  COLORADO: "CO", CONNECTICUT: "CT", DELAWARE: "DE", FLORIDA: "FL", GEORGIA: "GA",
+  HAWAII: "HI", IDAHO: "ID", ILLINOIS: "IL", INDIANA: "IN", IOWA: "IA", KANSAS: "KS",
+  KENTUCKY: "KY", LOUISIANA: "LA", MAINE: "ME", MARYLAND: "MD", MASSACHUSETTS: "MA",
+  MICHIGAN: "MI", MINNESOTA: "MN", MISSISSIPPI: "MS", MISSOURI: "MO", MONTANA: "MT",
+  NEBRASKA: "NE", NEVADA: "NV", "NEW HAMPSHIRE": "NH", "NEW JERSEY": "NJ",
+  "NEW MEXICO": "NM", "NEW YORK": "NY", "NORTH CAROLINA": "NC", "NORTH DAKOTA": "ND",
+  OHIO: "OH", OKLAHOMA: "OK", OREGON: "OR", PENNSYLVANIA: "PA", "RHODE ISLAND": "RI",
+  "SOUTH CAROLINA": "SC", "SOUTH DAKOTA": "SD", TENNESSEE: "TN", TEXAS: "TX", UTAH: "UT",
+  VERMONT: "VT", VIRGINIA: "VA", WASHINGTON: "WA", "WEST VIRGINIA": "WV",
+  WISCONSIN: "WI", WYOMING: "WY", "DISTRICT OF COLUMBIA": "DC", "PUERTO RICO": "PR",
+  GUAM: "GU", "AMERICAN SAMOA": "AS", "NORTHERN MARIANA ISLANDS": "MP", "U.S. VIRGIN ISLANDS": "VI",
+};
+
+/** Display only: abbreviate a U.S. state component, never words inside a city. */
+export function formatHometown(hometown?: string | null): string {
+  const value = hometown?.trim() ?? "";
+  const parts = value.split(/,\s*/);
+  const country = /^(?:U\.?S\.?A?\.?|United States(?: of America)?)$/i.test(parts.at(-1) ?? "");
+  const stateIndex = parts.length - (country ? 2 : 1);
+  if (stateIndex < 1) return value;
+  const state = parts[stateIndex].trim().replace(/\s+/g, " ").toUpperCase();
+  const code = US_STATE_CODES[state];
+  if (!code) return value;
+  parts[stateIndex] = code;
+  return parts.join(", ");
+}
+
 // 3-letter team codes used by nflverse / NFL.com.
 export const NFL_TEAM_NAMES: Record<string, string> = {
   ARI: "Arizona Cardinals", ATL: "Atlanta Falcons", BAL: "Baltimore Ravens",
