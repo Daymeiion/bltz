@@ -5,16 +5,19 @@ import Link from "next/link";
 import { ArrowUpRight, ClipboardCheck, Search, UserRound } from "lucide-react";
 import type { BuilderContext } from "./builder-workspace-data";
 import styles from "./builder-workspace.module.css";
+import { PreviewSavedContext } from "./PreviewSavedContext";
 
-export default function PreviewBuilderWorkspace({ context, selectedId, athleteName, children }: {
-  context: BuilderContext; selectedId?: string; athleteName?: string; children: ReactNode;
+export default function PreviewBuilderWorkspace({ context, selectedId, athleteName, previewSlug, children }: {
+  context: BuilderContext; selectedId?: string; athleteName?: string; previewSlug?: string; children: ReactNode;
 }) {
   const [search, setSearch] = useState("");
+  const [lastSaved, setLastSaved] = useState<{ selection?: string; slug: string } | null>(null);
+  const savedSlug = lastSaved && lastSaved.selection === selectedId ? lastSaved.slug : previewSlug ?? context.athletes.find(row => row.id === selectedId)?.slug;
   const query = search.trim().toLocaleLowerCase();
   const athletes = context.athletes.filter(row => [row.full_name, row.school, row.position, row.level].some(value => value?.toLocaleLowerCase().includes(query)));
   const claim = context.claim?.preview_id === selectedId ? context.claim : null;
   const referrals = context.referrals.filter(row => row.referrer_preview_id === selectedId);
-  return <section className={styles.workspace}>
+  return <PreviewSavedContext.Provider value={slug => setLastSaved({selection:selectedId,slug})}><section className={styles.workspace}>
     <header className={styles.header}><div><span className={styles.eyebrow}>BLTZ / Private previews</span><h1>Preview locker builder</h1><p>Build the athlete’s career, review their feedback, and prepare the next preview.</p></div><Link href="/admin/preview-lockers" className={styles.headerLink}>Saved previews<ArrowUpRight size={16} aria-hidden="true" /></Link></header>
     <div className={styles.columns}>
       <aside className={styles.rail} aria-label="Athlete preview search">
@@ -26,7 +29,7 @@ export default function PreviewBuilderWorkspace({ context, selectedId, athleteNa
         <div className={styles.railFooter}><Link href="/admin/preview-lockers/new">+ Create private preview</Link><p>{athletes.length} of {context.athletes.length} athletes</p></div>
       </aside>
       <section className={styles.editor} aria-label="Selected athlete locker editor">
-        <div className={styles.editorHeader}><div><span className={styles.eyebrow}>{selectedId ? "Selected athlete" : "New preview"}</span><h2>{athleteName || "Create private preview"}</h2></div><span className={styles.privateLabel}>Private workspace</span></div>
+        <div className={styles.editorHeader}><div><span className={styles.eyebrow}>{selectedId ? "Selected athlete" : "New preview"}</span><div className={styles.athleteHeading}><h2>{athleteName || "Create private preview"}</h2>{savedSlug && <Link href={`/preview-lockers/${encodeURIComponent(savedSlug)}`} target="_blank" rel="noopener noreferrer" className={styles.headerLink} aria-label="View preview locker (opens in a new tab)" title="View the last saved Locker">View preview locker<ArrowUpRight size={16} aria-hidden="true" /></Link>}</div></div><span className={styles.privateLabel}>Private workspace</span></div>
         <div className={styles.editorBody}>{children}</div>
       </section>
       <aside className={styles.rail} aria-label="Selected athlete claim feedback">
@@ -42,5 +45,5 @@ export default function PreviewBuilderWorkspace({ context, selectedId, athleteNa
         <div className={styles.railFooter}><Link href="/admin/preview-lockers/requests">All locker requests<ArrowUpRight size={14} aria-hidden="true" /></Link><p>Claim interest does not verify identity or media rights.</p></div>
       </aside>
     </div>
-  </section>;
+  </section></PreviewSavedContext.Provider>;
 }

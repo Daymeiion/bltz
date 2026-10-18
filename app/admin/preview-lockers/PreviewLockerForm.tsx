@@ -1,10 +1,11 @@
 "use client";
 import EditorialImageInput from "./EditorialImageInput";
+import { PreviewSavedContext } from "./PreviewSavedContext";
 import { PfrJerseyImport } from "./PfrJerseyImport";
 import { reviewPfrJerseys } from "@/lib/preview-lockers/jersey-review";
 import { z } from "zod";
 
-import { useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
@@ -79,6 +80,7 @@ export default function PreviewLockerForm({
   gtmLinked?: boolean;
   gtmCompleted?: boolean;
 }) {
+  const onPreviewSaved = useContext(PreviewSavedContext);
   const [activeFolder, setActiveFolder] = useState("info");
   const [enroll, setEnroll] = useState(enrollmentEnabled && !record && !reservedId);
   const [enrollment, setEnrollment] = useState({contact_id:"",campaign:"",source:"",channel:"email",relationship:"warm",is_test:false});
@@ -209,7 +211,7 @@ export default function PreviewLockerForm({
         if (failure?.error === "source_policy_blocked") throw new Error("This statistics source is reference-only. Keep or remove previously saved imports; new or changed imports cannot be saved. Your draft is retained.");
         throw new Error(response.status === 409 ? "Save conflict: this slug or GTM contact may already be linked, enrollment details changed, or the record changed. Your draft is retained. Open the saved list before retrying." : response.status === 401 || response.status === 403 ? "Your Admin session is no longer authorized. Sign in again before saving." : "Save failed. Your draft is retained; retry is safe.");
       }
-      const data = await response.json(); savedDraft.current = JSON.stringify(parsed.data); setSaved(data); revision.current = data.revision; setReviewed(false); setCompletionReviewed(false); setDirty(false);
+      const data = await response.json(); savedDraft.current = JSON.stringify(parsed.data); setSaved(data); onPreviewSaved?.(data.slug); revision.current = data.revision; setReviewed(false); setCompletionReviewed(false); setDirty(false);
       if (gtmLinked) setCompleted(data.complete === true);
       setMessage(asDraft ? "Draft saved privately. You can close this editor and resume from the preview list. No new enrollment or completion was recorded." : data.completionStatus === "unavailable"
         ? "Saved privately. Completion status could not be refreshed; reload before marking this preview complete."

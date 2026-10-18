@@ -36,11 +36,16 @@ it("searches saved athletes without changing the selected athlete’s feedback a
   expect(feedback.textContent).not.toContain("First Referral");
 });
 it("keeps edits and upload controls mounted across keyboard folder navigation, and saves the original athlete revision", async () => {
-  const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({ id, slug: "first-athlete", revision: 4 })));
+  const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({ id, slug: "edited-athlete", revision: 4 })));
   vi.stubGlobal("fetch", fetcher);
   const record = { ...previewContent.parse({ slug: "first-athlete", full_name: "First Athlete" }), id, revision: 3, created_at: "", updated_at: "" };
-  await act(async () => root.render(<PreviewLockerForm record={record} />));
+  await act(async () => root.render(<PreviewBuilderWorkspace context={context()} selectedId={id} athleteName={record.full_name}><PreviewLockerForm record={record} /></PreviewBuilderWorkspace>));
   await input("Full name", "Edited First Athlete");
+  await input("Private URL slug", "edited-athlete");
+  const previewLink = () => host.querySelector<HTMLAnchorElement>('[aria-label="View preview locker (opens in a new tab)"]')!;
+  expect(previewLink().getAttribute("href")).toBe("/preview-lockers/first-athlete");
+  expect(previewLink().target).toBe("_blank");
+  expect(previewLink().rel).toContain("noopener");
   const tabs = [...host.querySelectorAll<HTMLButtonElement>('[role="tab"]')];
   expect(tabs).toHaveLength(6);
   await act(async () => tabs[0].dispatchEvent(new KeyboardEvent("keydown", { key: "End", bubbles: true })));
@@ -56,6 +61,7 @@ it("keeps edits and upload controls mounted across keyboard folder navigation, a
   const payload = JSON.parse(fetcher.mock.calls[0][1].body);
   expect(payload.revision).toBe(3);
   expect(payload.content.full_name).toBe("Edited First Athlete");
+  expect(previewLink().getAttribute("href")).toBe("/preview-lockers/edited-athlete");
 });
 it("scopes claim and referrals in the database query and refuses mismatched data", async () => {
   const queries: Array<{ table: string; eq: ReturnType<typeof vi.fn> }> = [];

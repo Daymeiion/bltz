@@ -30,6 +30,7 @@
 .railFooter a { display:flex; align-items:center; justify-content:space-between; min-height:36px; color:var(--ink); font-weight:600; }
 .railFooter p { margin:6px 0 0; font-size:11px; color:var(--muted); }
 .editorHeader { display:flex; align-items:center; justify-content:space-between; gap:12px; border-bottom:1px solid var(--line); padding:19px 21px; min-height:86px; }
+.athleteHeading { display:flex; align-items:center; flex-wrap:wrap; gap:4px 16px; }
 .editorHeader h2 { margin:3px 0 0; font:700 27px/1.1 'BLTZ Career Condensed',sans-serif; text-transform:uppercase; overflow-wrap:anywhere; }
 .privateLabel { font:10px/1.5 'JetBrains Mono',monospace; color:var(--accent); text-align:right; }
 .editorBody { padding:18px; min-height:0; flex:1; overflow:auto; }
