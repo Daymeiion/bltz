@@ -2,7 +2,7 @@ import { assertAwardReferences } from "@/lib/award-images/server";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { updatePreview, previewMediaBelongsTo } from "@/lib/preview-lockers/validation";
-import { assertPreviewMediaExists, previewAdmin, readBody, json, failure, PreviewError } from "@/lib/preview-lockers/server";
+import { assertPreviewMediaExists, previewAdmin, readBody, json, failure, PreviewError, PREVIEW_COLUMNS } from "@/lib/preview-lockers/server";
 import type { PreviewDatabase } from "@/types/preview-lockers.generated";
 
 import { tryEnrichSavedPreview } from "@/lib/preview-lockers/enrichment";
@@ -21,12 +21,11 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (!previewMediaBelongsTo(id, content)) throw new PreviewError("invalid_media_path", 400);
     await assertPreviewMediaExists(client, content);
     await assertAwardReferences(client, content.awards);
-    const update: PreviewDatabase["public"]["Tables"]["preview_lockers"]["Update"] = { ...content };
-    // Older open editors omit these fields. Preserve saved values until the
-    // operator actually submits an edit or an explicit null to clear them.
+    // Defaults validate old editors, but are not edits. Never persist an empty
+    // array/null for a field the operator's editor did not actually submit.
     const submitted = (input as { content: Record<string, unknown> }).content;
-    for (const key of ["dob", "high_school"] as const) if (!Object.hasOwn(submitted, key)) delete update[key];
-    const { data, error } = await client.from("preview_lockers").update(update).eq("id", id).eq("revision", revision).select("id,slug,revision").maybeSingle();
+    const update: PreviewDatabase["public"]["Tables"]["preview_lockers"]["Update"] = Object.fromEntries(Object.entries(content).filter(([key]) => Object.hasOwn(submitted, key)));
+    const { data, error } = await client.from("preview_lockers").update(update).eq("id", id).eq("revision", revision).select(PREVIEW_COLUMNS).maybeSingle();
     if (error?.code === "23505") throw new PreviewError("preview_conflict", 409);
     if (error) throw new PreviewError("could_not_update", 503);
     if (!data) throw new PreviewError("preview_conflict", 409);
@@ -36,9 +35,11 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       .eq("preview_locker_id", id)
       .maybeSingle();
     const completionStatus = relationship.error ? "unavailable" : "available";
-    await tryEnrichSavedPreview(client, id, content, data.revision, false);
+    // Enrich the actual saved snapshot, including fields retained for old clients.
+    const savedContent = { ...content, ...Object.fromEntries(Object.keys(content).filter(key => Object.hasOwn(data, key)).map(key => [key, data[key as keyof typeof data]])) };
+    await tryEnrichSavedPreview(client, id, savedContent, data.revision, false);
     return json({
-      ...data,
+      id: data.id, slug: data.slug, revision: data.revision,
       complete: relationship.data != null && Number(relationship.data.completed_revision) === data.revision,
       completionStatus,
     });

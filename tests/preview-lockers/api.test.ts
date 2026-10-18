@@ -41,6 +41,12 @@ it("reports a committed save even when the postwrite completion read fails", asy
   expect(response.status).toBe(200);
   expect(await response.json()).toEqual({ id, slug: content.slug, revision: 8, complete: false, completionStatus: "unavailable" });
 });
+it("never writes schema defaults over fields omitted by an older or partial editor", async () => {
+  mock.maybeSingle.mockResolvedValue({data:{id,slug:content.slug,revision:2},error:null});
+  const response = await PATCH(request({revision:1,content:{slug:content.slug,full_name:content.full_name,bio:"New biography"}},"PATCH"),{params:Promise.resolve({id})});
+  expect(response.status).toBe(200);
+  expect(mock.update.mock.calls[0][0]).toEqual({slug:content.slug,full_name:content.full_name,bio:"New biography"});
+});
 const nfl = [{ category: "defense", sourceUrl: "https://www.pro-football-reference.com/players/F/FixtPl00.htm", importedAt: "2026-10-11T00:00:00.000Z", seasons: [{ year: 2024, team: "AAA", gamesPlayed: 17, gamesStarted: null, statistics: { sacks: 2.5 } }], careerTotals: { seasonCount: 1, gamesPlayed: 17, gamesStarted: null, statistics: { sacks: 2.5, passesDefended: 4 } } }];
 it("passes validated NFL tables through admin create and revision-protected update", async () => {
   const imported = { ...content, pfr_stats: nfl };

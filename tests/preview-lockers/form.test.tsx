@@ -119,6 +119,33 @@ it("retains manually entered biography and photo when discovery returns manual f
   expect(host.textContent).toMatch(/nflverse NFL roster data.*cfbverse college roster data.*Wikipedia.*ESPN.*YouTube/);
   expect(host.textContent).toContain("Google Images is not queried");
 });
+it("keeps uploaded NFL and college stats plus all curated media through repeat scraping, save and reload", async () => {
+  const path = "00000000-0000-4000-8000-000000000001/photos/00000000-0000-4000-8000-000000000002.png";
+  const season = {year:2008,team:"CIN",gamesPlayed:7,gamesStarted:7,statistics:{tackles:37}};
+  const record = {...previewContent.parse({slug:"keith-rivers",full_name:"Keith Rivers",school:"USC",bio:"Reviewed biography",
+    pfr_stats:[{category:"defense",sourceUrl:"https://www.pro-football-reference.com/players/R/RiveKe99.htm",importedAt:"2026-10-18T00:00:00.000Z",seasons:[season]}],
+    cfb_stats:[{category:"defense",sourceUrl:"https://www.sports-reference.com/cfb/players/keith-rivers-1.html",importedAt:"2026-10-18T00:00:00.000Z",seasons:[{...season,year:2007,team:"USC"}]}],
+    career_stats:[{key:"tackles",value:340}],
+    photos:[{id:"photo-0",title:"Uploaded headshot",storagePath:path,mimeType:"image/png",level:"pro",isHeadshot:true}],
+    videos:[{id:"video-0",title:"Reviewed video",url:"https://youtu.be/abcdefghijk",thumb:null}],
+    article_edits:[{id:"news-0",headline:"Reviewed news",publisher:"Press",articleUrl:"https://press.example.com/rivers",imageStoragePath:path}],
+    merchandise:[{id:"merch-0",title:"Reviewed card",category:"trading_card",productUrl:"https://shop.example.com/card",imageStoragePath:path}],
+  }),id:"00000000-0000-4000-8000-000000000001",revision:3,created_at:"",updated_at:""};
+  await act(async () => root.render(<PreviewLockerForm record={record} gtmLinked />));
+  const suggestion = previewContent.parse({slug:record.slug,full_name:record.full_name,bio:"Replacement biography",videos:[{id:"video-0",title:"New discovered video",url:"https://youtu.be/lmnopqrstuv",thumb:null}]});
+  fetcher.mockResolvedValue(new Response("")); discovery.read.mockResolvedValue({draft:suggestion,message:"Suggestions ready"});
+  await click("Build with web scraper"); await click("Build with web scraper");
+  fetcher.mockResolvedValueOnce(Response.json({id:record.id,slug:record.slug,revision:4}));
+  await click("Save draft");
+  const saved = JSON.parse(fetcher.mock.calls.at(-1)![1].body).content;
+  for (const key of ["bio","pfr_stats","cfb_stats","career_stats","photos","article_edits","merchandise"] as const) expect(saved[key]).toEqual(record[key]);
+  expect(saved.videos).toHaveLength(2);
+  expect(saved.videos[0]).toEqual(record.videos[0]);
+  await act(async () => root.render(<PreviewLockerForm key="after-repeat-scrape" record={{...record,...saved,revision:4}} gtmLinked />));
+  fetcher.mockResolvedValueOnce(Response.json({id:record.id,slug:record.slug,revision:5}));
+  await click("Save draft");
+  expect(JSON.parse(fetcher.mock.calls.at(-1)![1].body).content).toEqual(saved);
+});
 it("requires review, retains create id on retry and exposes full saved navigation", async () => {
   await act(async () => root.render(<PreviewLockerForm />)); await fill("Full name", "Synthetic Preview");
   expect([...host.querySelectorAll("button")].find(b => b.textContent === "Save private preview")!.disabled).toBe(true);
