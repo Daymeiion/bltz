@@ -20,6 +20,7 @@ it("saves a reusable image selection in the award JSON and restores catalog/defa
  fetcher.mockResolvedValue(Response.json(library));
  await act(async()=>root.render(<Editor/>));await click("Choose from Award Image Library");
  expect(document.body.textContent).toContain("Matched: Thorpe Award");
+ expect(document.querySelector<HTMLImageElement>('img[alt="Current award image"]')?.src).toBe(image.imageUrl);
  await click("Shared trophy");expect(saved).toMatchObject({imageMode:"custom",imageAssetId:id,photoId:null});
  const reloaded=previewContent.parse({slug:"fixture-player",full_name:"Fixture Player",awards:[saved]}).awards[0];expect(reloaded.imageAssetId).toBe(id);
  await click("Hide award image");expect(saved).toMatchObject({imageMode:"none",imageAssetId:null});
