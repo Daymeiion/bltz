@@ -6,8 +6,31 @@ import { discoveryDraft } from "@/lib/preview-lockers/discovery";
 import { previewContent } from "@/lib/preview-lockers/validation";
 import { mergeSuggestions } from "@/lib/preview-lockers/merge-suggestions";
 import { previewLockerData } from "@/lib/preview-lockers/mapper";
+import { highSchoolSchema } from "@/lib/player/bio-fields";
 
 describe("reviewed athlete biography fields", () => {
+  it.each([
+    ["Edison High School (Stockton, California)", "Edison High School"],
+    ["De La Salle High School (Concord, California)", "De La Salle High School"],
+    ["St. Mary's Academy, Los Angeles, California", "St. Mary's Academy"],
+    ["Lincoln High School · San Diego, CA", "Lincoln High School"],
+    ["High School for the Performing Arts", "High School for the Performing Arts"],
+    ["Los Alamitos High School", "Los Alamitos High School"],
+  ])("keeps only the high-school name from %s through scraping and save/reload", (source, expected) => {
+    const html = `<table class="infobox"><tr><th>High school</th><td><a title="${source}">${source}</a></td></tr></table>`;
+    expect(extractWikipediaHighSchool(html)).toBe(expected);
+    expect(highSchoolSchema.parse(source)).toBe(expected);
+    const saved = previewContent.parse({ full_name: "Fixture Athlete", slug: "fixture-athlete", high_school: source });
+    expect(previewContent.parse(JSON.parse(JSON.stringify(saved))).high_school).toBe(expected);
+  });
+  it("carries scraped birthday and hometown into a new preview without GTM or CSV prefills", async () => {
+    const identity = { full_name: "Fixture Athlete", school: "Fixture College", level: "former" as const };
+    const draft = await synthesize({ identity, results: [{ source: "wikipedia", ok: true, facts: { dob: "1986-07-12", hometown: "Stockton, California", high_school: "Edison High School (Stockton, California)" }, urls: ["https://en.wikipedia.org/wiki/Fixture_Athlete"] }] });
+    const suggestion = discoveryDraft(identity, draft);
+    expect(suggestion).toMatchObject({ dob: "1986-07-12", hometown: "Stockton, California", high_school: "Edison High School" });
+    const merged = mergeSuggestions(previewContent.parse({ full_name: identity.full_name, slug: "fixture-athlete" }), suggestion);
+    expect(previewContent.parse(JSON.parse(JSON.stringify(merged)))).toMatchObject({ dob: "1986-07-12", hometown: "Stockton, California", high_school: "Edison High School" });
+  });
   it("extracts the athlete's infobox high school without copying another person's school", () => {
     const html = '<p>His father attended Other High School.</p><table class="infobox biography vcard"><tr><th>College</th><td>Arizona</td></tr><tr><th scope="row">High school</th><td><a title="Los Alamitos High School">Los Alamitos</a><br>(California)<sup>[1]</sup></td></tr></table>';
     expect(extractWikipediaHighSchool(html)).toBe("Los Alamitos High School");
@@ -34,6 +57,7 @@ describe("reviewed athlete biography fields", () => {
     for (const dob of ["1986-02-30", "2999-01-01", "1986-7-9", "07/09/1986", "1800-01-01"]) expect(previewContent.safeParse({ ...content, dob }).success).toBe(false);
     expect(previewContent.safeParse({ ...content, high_school: "x".repeat(161) }).success).toBe(false);
     expect(previewContent.safeParse({ ...content, high_school: "School\nOther" }).success).toBe(false);
+    expect(highSchoolSchema.safeParse("(California)").success).toBe(false);
     expect(discoveryDraft({full_name: "Fixture Athlete"}, {full_name: "Fixture Athlete",bio:"",dob:"1986-02-30",awards:[],photos:[],youtube_urls:[],confirmed:{},sources:[]}).dob).toBeNull();
   });
 });

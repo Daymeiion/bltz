@@ -2,7 +2,7 @@
 import { socialEmbedUrl, type LockerSocial } from "@/lib/preview-lockers/social";
 import { awardDescription } from "@/lib/preview-lockers/award-descriptions";
 import { schoolHistoryName, proHistoryName } from "@/lib/player/team-history-name";
-import { formatHometown } from "@/lib/player/locker-format";
+import { formatHometown, highSchoolName } from "@/lib/player/locker-format";
 import { FittedHeroName } from "@/components/player/FittedHeroName";
 import { EditorialCard } from "@/components/player/EditorialCard";
 
@@ -858,7 +858,8 @@ export default function LockerView({
       ? [data.jersey]
       : [];
   const displayPosition = hasKnownText(data.position) ? data.position : unknownText;
-  const displayHighSchool = hasKnownText(data.highSchool) ? data.highSchool : unknownText;
+  const schoolName = highSchoolName(data.highSchool);
+  const displayHighSchool = hasKnownText(schoolName) ? schoolName : unknownText;
 
   const tabIdx = { bio: 0, media: 1, stats: 2 }[tab];
   const normalizedHeadshotUrl = safeExternalUrl(data.headshotUrl);

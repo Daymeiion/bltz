@@ -34,6 +34,17 @@ it("renders saved birthdate and high school in the shared Locker Bio card", asyn
   expect(host.textContent).toContain("07-09-1986");
   expect(host.textContent).toContain("Los Alamitos High School");
 });
+it("displays only the school name for existing public and private Locker values", async () => {
+  for (const preview of [true, false]) {
+    const data = { ...previewLockerData(record), highSchool: "Edison High School (Stockton, California)" };
+    if (!preview) delete data.lockerHref;
+    await act(async () => root.render(<LockerView data={data} />));
+    const school = host.querySelector('.basic-info-high-school')?.textContent;
+    expect(school).toContain("Edison High School");
+    expect(school).not.toContain("Stockton");
+    expect(school).not.toContain("California");
+  }
+});
 it("keeps the Getty demo row out of the main locker", async () => {
   await act(async () => root.render(<LockerView data={previewLockerData(record)} />));
   expect(host.querySelector('section[aria-label="Related media"]')).toBeNull();

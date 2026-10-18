@@ -25,6 +25,18 @@ const US_STATE_CODES: Record<string, string> = {
   GUAM: "GU", "AMERICAN SAMOA": "AS", "NORTHERN MARIANA ISLANDS": "MP", "U.S. VIRGIN ISLANDS": "VI",
 };
 
+/** School names exclude trailing location/disambiguation qualifiers. */
+export function highSchoolName(value?: string | null): string {
+  let name = value?.trim() ?? "";
+  let previous: string;
+  do {
+    previous = name;
+    name = name.replace(/\s*\([^()]*\)\s*$/, "").trim();
+  } while (name !== previous);
+  const locationSuffix = /^(.+?\b(?:school|academy))(?:\s*,\s*|\s+[·–—-]\s+).+$/i.exec(name);
+  return locationSuffix?.[1].trim() ?? name;
+}
+
 /** Display only: abbreviate a U.S. state component, never words inside a city. */
 export function formatHometown(hometown?: string | null): string {
   const value = hometown?.trim() ?? "";
