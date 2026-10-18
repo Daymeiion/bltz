@@ -36,6 +36,8 @@ try {
   await apply('20261018030520_athlete_birthdate_high_school.sql');
   await apply('20261018184205_preview_merchandise_image_uploads.sql');
   await apply('20261018185632_preview_article_image_uploads.sql');
+  await apply('20261018015519_preview_team_jersey_numbers.sql');
+  await apply('20261018191834_preview_school_logo_uploads.sql');
   assert.deepEqual((await db.query('select dob,high_school from preview_lockers where id=$1', [legacyId])).rows[0], {dob: null, high_school: null});
   const publish = (await db.query("select pg_get_functiondef('public.publish_onboarding_run(uuid,uuid,jsonb,jsonb,text,jsonb,uuid,text)'::regprocedure) definition")).rows[0].definition;
   assert.match(publish, /dob, high_school, height_in/);
@@ -44,7 +46,7 @@ try {
   assert.deepEqual((await db.query('select article_edits,merchandise from preview_lockers where id=$1', [legacyId])).rows[0], { article_edits: [], merchandise: [] });
   await db.exec(`set role authenticated; select set_config('request.jwt.claim.sub','${admin}',false);`);
   await db.query('insert into preview_lockers(id,slug,full_name,article_edits,merchandise) values ($1,$2,$3,$4,$5)', [id, 'media-fixture', 'Media Fixture', JSON.stringify([article]), JSON.stringify([product])]);
-  const read = () => db.query('select revision,article_edits,merchandise from preview_lockers where id=$1', [id]);
+  const read = () => db.query('select revision,article_edits,merchandise,schools from preview_lockers where id=$1', [id]);
   assert.deepEqual((await read()).rows[0].merchandise, [product]);
   await db.query('update preview_lockers set article_edits=$1 where id=$2 and revision=1', [JSON.stringify([{ ...article, visible: true }]), id]);
   assert.equal((await read()).rows[0].revision, 2);
@@ -115,6 +117,18 @@ try {
   assert.equal((await read()).rows[0].article_edits[0].imageUrl,uploadedArticle.imageUrl);
   await db.exec('reset role');
   assert.ok((await db.query("select count(*)::int n from audit_logs where new_values->'article_edits'->0->>'imageStoragePath'=$1",[uploadedArticle.imageStoragePath])).rows[0].n>0);
+  await db.exec(`set role authenticated; select set_config('request.jwt.claim.sub','${admin}',false);`);
+  const school={label:'Fixture Community College',color:'#152238',logo:'https://college.example.com/scraped.png',logoStoragePath:uploadedProduct.imageStoragePath,jerseyNumbers:['20'],jerseyStatus:'reviewed'};
+  await db.query('update preview_lockers set schools=$1 where id=$2',[JSON.stringify([school]),id]);
+  assert.deepEqual((await read()).rows[0].schools,[school]);
+  for(const logoStoragePath of [`${other}/photos/00000000-0000-4000-8000-000000000007.png`,`${id}/videos/00000000-0000-4000-8000-000000000007.mp4`,'../foreign.png',42]) {
+    await assert.rejects(db.query('update preview_lockers set schools=$1 where id=$2',[JSON.stringify([{...school,logoStoragePath}]),id]));
+  }
+  await db.query('update preview_lockers set schools=$1 where id=$2',[JSON.stringify([{...school,logoStoragePath:null}]),id]);
+  assert.equal((await read()).rows[0].schools[0].logo,school.logo);
+  await db.exec('reset role');
+  assert.equal((await db.query("select has_function_privilege('anon','private.preview_school_logos_owned(uuid,jsonb)','execute') allowed")).rows[0].allowed,false);
+  assert.equal((await db.query("select has_schema_privilege('authenticated','private','usage') allowed")).rows[0].allowed,false);
   if (process.argv.includes('--generate-types')) {
     const columns = (await db.query("select column_name,data_type,is_nullable,column_default from information_schema.columns where table_schema='public' and table_name='preview_lockers' order by column_name")).rows;
     const fields = mode => columns.map(column => {

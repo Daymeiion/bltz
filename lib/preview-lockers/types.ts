@@ -39,7 +39,8 @@ export type PreviewNflInfo = {
   draftPick: number | null;
   draftTeam: string | null;
 } | null;
-export type PreviewTeamPill = { label: string; name?: string; color: string; logo: string | null; jerseyNumbers?: string[]; jerseySourceUrl?: string | null; jerseySources?: string[]; jerseyStatus?: "single_source" | "corroborated" | "conflict" | "reviewed"; jerseyColor?: string; jerseyBorderColor?: string };
+export type PreviewTeamPill = { label: string; name?: string; color: string; logo: string | null;
+  logoStoragePath?: string | null; jerseyNumbers?: string[]; jerseySourceUrl?: string | null; jerseySources?: string[]; jerseyStatus?: "single_source" | "corroborated" | "conflict" | "reviewed"; jerseyColor?: string; jerseyBorderColor?: string };
 
 export interface PreviewLockerRow {
   player_id?: string | null;

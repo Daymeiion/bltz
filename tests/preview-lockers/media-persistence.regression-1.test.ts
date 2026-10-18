@@ -44,6 +44,17 @@ it("persists an owned existing object through the revision guard", async () => {
   expect(response.status).toBe(200); expect(mocks.eq).toHaveBeenCalledWith("revision", 1);
 });
 
+it("rejects foreign or missing school logo uploads and saves an owned existing logo separately from its default",async()=>{
+ const school={label:"Fixture Community College",color:"#152238",logo:"https://college.example.com/default.png",logoStoragePath:path};
+ const payload=previewContent.parse({...content,photos:[],schools:[school]});
+ const foreign=previewContent.parse({...payload,schools:[{...school,logoStoragePath:path.replace(id,"00000000-0000-4000-8000-000000000099")}]});
+ expect((await PATCH(request(foreign),{params:Promise.resolve({id})})).status).toBe(400);expect(mocks.storageFrom).not.toHaveBeenCalled();
+ mocks.list.mockResolvedValueOnce({data:[],error:null});expect((await PATCH(request(payload),{params:Promise.resolve({id})})).status).toBe(400);expect(mocks.update).not.toHaveBeenCalled();
+ mocks.list.mockResolvedValue({data:[{name:path.split('/').at(-1)}],error:null});
+ mocks.maybeSingle.mockResolvedValueOnce({data:{id,slug:payload.slug,revision:2},error:null}).mockResolvedValueOnce({data:null,error:null});
+ expect((await PATCH(request(payload),{params:Promise.resolve({id})})).status).toBe(200);expect(mocks.update).toHaveBeenCalledWith(expect.objectContaining({schools:[school]}));
+});
+
 it("verifies many draft items with one bounded folder listing per media kind", async () => {
   const secondPath = `${id}/photos/00000000-0000-4000-8000-000000000003.jpg`;
   const multiple = previewContent.parse({ ...content, photos: [...content.photos, { id: "photo-2", title: "Second", storagePath: secondPath, mimeType: "image/jpeg", credits: null, sourceUrl: null, level: "cfb", season: null }] });

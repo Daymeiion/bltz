@@ -15,7 +15,7 @@ export async function enrichPreviewSchoolBranding<T extends PreviewBrandingSourc
     schools: (row.schools?.length ? row.schools : primary ? [{ label: primary.abbr, color: primary.primaryColor, logo: primary.logoUrl }] : []).map(team => {
       const brand = matchSchoolBrand(team.label, data);
       const directory = brand && matchSchoolRow(team.label, data);
-      return brand ? { ...team, label: brand.abbr, name: schoolHistoryName(brand.name, directory?.mascot), color: brand.primaryColor, logo: brand.logoUrl || team.logo } : team;
+      return brand ? { ...team, label: brand.abbr, name: schoolHistoryName(brand.name, directory?.mascot), color: brand.primaryColor, logo: team.logoStoragePath ? team.logo : brand.logoUrl || team.logo } : team;
     }),
   } as T;
 }

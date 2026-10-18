@@ -8,6 +8,14 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 const cal = { display_name: "California Golden Bears", abbreviation: "CAL", primary_color: "003262", logo_url: "/cal.png", logo_dark_url: null };
 
 describe("preview team branding", () => {
+  it("preserves an uploaded primary school logo through directory enrichment and display branding", async () => {
+    const uploaded="https://storage.example.com/signed.png";
+    const row={school:"CAL",schools:[{label:"CAL",color:"#003262",logo:uploaded,logoStoragePath:"private-path"}]};
+    const client={from:()=>({select:()=>({limit:async()=>({data:[cal],error:null})})})} as unknown as SupabaseClient;
+    const enriched=await enrichPreviewSchoolBranding(client,row);
+    expect(previewTeamBranding(enriched).schools[0].logo).toBe(uploaded);
+    expect(previewTeamBranding({...enriched,schools:[{...enriched.schools[0],logoStoragePath:null}]}).schools[0].logo).toBe(cal.logo_url);
+  });
   it("resolves full NFL names and historical codes without invalid CDN paths", () => {
     expect(nflTeamCode(" Indianapolis Colts ")).toBe("IND");
     expect(nflTeamCode("San Diego Chargers")).toBe("SD");

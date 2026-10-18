@@ -1,8 +1,8 @@
 // @vitest-environment node
 import { beforeEach, expect, it, vi } from "vitest";
 import { previewContent } from "@/lib/preview-lockers/validation";
-const mocks = vi.hoisted(() => ({ auth: vi.fn(), rpc: vi.fn(), from: vi.fn(), select: vi.fn(), eq: vi.fn(), maybeSingle: vi.fn(), storageFrom: vi.fn(), signed: vi.fn() }));
-const service = vi.hoisted(() => ({ rpc: vi.fn(), from: vi.fn(), select: vi.fn(), eq: vi.fn(), maybeSingle: vi.fn(), storageFrom: vi.fn() }));
+const mocks = vi.hoisted(() => ({ auth: vi.fn(), rpc: vi.fn(), from: vi.fn(), select: vi.fn(), limit: vi.fn(), eq: vi.fn(), maybeSingle: vi.fn(), storageFrom: vi.fn(), signed: vi.fn() }));
+const service = vi.hoisted(() => ({ rpc: vi.fn(), from: vi.fn(), select: vi.fn(), limit: vi.fn(), eq: vi.fn(), maybeSingle: vi.fn(), storageFrom: vi.fn() }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: async () => ({ auth: { getUser: mocks.auth }, rpc: mocks.rpc, from: mocks.from, storage: { from: mocks.storageFrom } }) }));
 vi.mock("@/lib/supabase/service", () => ({ createServiceClient: () => ({ ...service, storage: { from: service.storageFrom } }) }));
 import { readPrivatePreview } from "@/lib/preview-lockers/server";
@@ -13,7 +13,7 @@ const path = `${id}/videos/00000000-0000-4000-8000-000000000002.mp4`;
 const content = previewContent.parse({ slug: "fixture-player", full_name: "Fixture Player", videos: [{ id: "video-1", title: "Private film", storagePath: path, mimeType: "video/mp4", thumb: null }] });
 const row = { ...content, id, revision: 1, created_at: "", updated_at: "" };
 beforeEach(() => {
-  vi.resetAllMocks(); mocks.rpc.mockImplementation(async (name: string) => ({data:name === "is_internal_admin" ? false : 900,error:null})); mocks.auth.mockResolvedValue({ data: { user: { id: "viewer" } }, error: null });
+  vi.resetAllMocks(); mocks.limit.mockResolvedValue({data:[],error:null}); service.limit.mockResolvedValue({data:[],error:null}); mocks.rpc.mockImplementation(async (name: string) => ({data:name === "is_internal_admin" ? false : 900,error:null})); mocks.auth.mockResolvedValue({ data: { user: { id: "viewer" } }, error: null });
   for (const key of ["from", "select", "eq"] as const) service[key].mockReturnValue(service);
   service.maybeSingle.mockResolvedValue({ data: row, error: null });
   service.rpc.mockResolvedValue({ data: { state: "unavailable", remaining_seconds: 0 }, error: null });
@@ -57,6 +57,18 @@ it("resolves an uploaded news image into the Locker article card without publish
 it("fails closed when a private read URL cannot be signed", async () => {
   mocks.signed.mockResolvedValue({ data: null, error: { message: "private detail" } });
   await expect(readPrivatePreview("fixture-player")).rejects.toMatchObject({ code: "preview_media_unavailable", status: 503 });
+});
+
+it("signs a community college logo only after admission and uses it in Locker branding",async()=>{
+ const logoStoragePath=`${id}/photos/00000000-0000-4000-8000-000000000003.png`;
+ const school={label:"Fixture Community College",color:"#152238",logo:"https://college.example.com/scraped.png",logoStoragePath};
+ const saved={...row,videos:[],schools:[school]};
+ service.maybeSingle.mockResolvedValue({data:saved,error:null});mocks.maybeSingle.mockResolvedValue({data:saved,error:null});
+ mocks.signed.mockResolvedValue({data:[{signedUrl:"https://storage.example.com/logo.png"}],error:null});
+ const result=await readPrivatePreview("fixture-player");
+ expect(mocks.signed).toHaveBeenCalledWith([logoStoragePath],900);
+ expect(previewLockerData(result!).schools[0].logo).toBe("https://storage.example.com/logo.png");
+ expect(result?.photos).toEqual([]);expect(school.logo).toBe("https://college.example.com/scraped.png");
 });
 
 it("caps signing at the remaining grant lifetime and rejects expired grants", async () => {
