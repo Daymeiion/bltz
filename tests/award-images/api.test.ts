@@ -36,3 +36,11 @@ it("records a duplicate file's first known basename without replacing existing f
  expect(mock.update).toHaveBeenCalledWith({original_filename:"Award-StarIcon.png"});expect(mock.is).toHaveBeenCalledWith("original_filename",null);
  expect((await POST(request({...claim,original_filename:"folder/image.png"}))).status).toBe(400);
 });
+it("restores a missing canonical object from verified duplicate bytes without another image record",async()=>{
+ mock.maybeSingle.mockResolvedValue({data:{id:"existing",storage_path:`images/${sha256}.png`}});
+ mock.upload.mockResolvedValue({error:null});
+ const details={title:"Star trophy",image_source_url:null,image_license:null,attribution:null,asset_status:"placeholder",active:true};
+ expect(await(await PATCH(request({...claim,details}))).json()).toEqual({id:"existing",duplicate:true});
+ expect(mock.upload).toHaveBeenCalledWith(`images/${sha256}.png`,expect.any(Uint8Array),expect.objectContaining({upsert:false}));
+ expect(mock.insert).not.toHaveBeenCalled();
+});

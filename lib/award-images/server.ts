@@ -51,12 +51,12 @@ export async function storeAwardBytes(client:SupabaseClient, bytes:Uint8Array, t
  try {const metadata=await sharp(bytes,{limitInputPixels:40000000}).metadata();if(!metadata.width || !metadata.height || !["png","jpeg","webp"].includes(metadata.format))throw new Error();}
  catch {throw new PreviewError("invalid_award_image",400);}
  const hash=createHash("sha256").update(bytes).digest("hex");
- const existing=await client.from("award_image_assets").select("id,original_filename").eq("sha256",hash).maybeSingle();
+ const existing=await client.from("award_image_assets").select("id,original_filename,storage_path").eq("sha256",hash).maybeSingle();
  if(existing.error) throw new PreviewError("award_library_unavailable",503);
- if(existing.data) {await rememberAwardFilename(client,existing.data.id,typeof extra.original_filename==="string"?extra.original_filename:undefined);return json({id:existing.data.id,duplicate:true});}
  const path=`images/${hash}.${type.ext}`;
  const upload=await client.storage.from(AWARD_IMAGE_BUCKET).upload(path,bytes,{contentType:type.mime,upsert:false});
  if(upload.error && !/already exists|duplicate/i.test(upload.error.message)) throw new PreviewError("award_upload_failed",503);
+ if(existing.data) {await rememberAwardFilename(client,existing.data.id,typeof extra.original_filename==="string"?extra.original_filename:undefined);return json({id:existing.data.id,duplicate:true});}
  const inserted=await client.from("award_image_assets").insert({...extra,title,storage_path:path,sha256:hash,mime_type:type.mime,byte_size:bytes.length}).select("id").single();
  if(inserted.error?.code==="23505") {const saved=await client.from("award_image_assets").select("id").eq("sha256",hash).maybeSingle();if(saved.data)return json({id:saved.data.id,duplicate:true});}
  if(inserted.error) throw new PreviewError("award_image_not_saved",503);

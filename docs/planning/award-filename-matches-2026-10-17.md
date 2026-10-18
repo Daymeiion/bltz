@@ -20,3 +20,6 @@ CamelCase, separators, extensions, image-export suffixes and years normalize; im
 
 ## File plan
 New pure filename matcher, review component, bulk API and migration. Extend the existing upload path, library composition, scoped types and PostgreSQL proof; keep existing public rendering and permissions unchanged.
+
+## Existing bucket uploads
+Production inspection found 21 named image objects uploaded directly into award-library/images without library records. Include an Admin-only bucket discovery/import control: validate bounded private source bytes, copy to immutable SHA paths, register original filenames as pending artwork, deduplicate repeat scans, and leave originals in place. No additional schema is required.

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { AwardImage, AwardImageLibrary } from "./model";
 
-const exportWords = new Set(["bltz", "img", "image", "images", "icon", "graphic", "art", "artwork", "transparent", "background", "logo", "final", "copy", "download", "vector", "render", "small", "large", "hd"]);
+const exportWords = new Set(["bltz", "img", "image", "images", "icon", "graphic", "art", "artwork", "illustration", "medallion", "transparent", "background", "logo", "final", "copy", "download", "vector", "render", "small", "large", "hd"]);
 const containers = new Set(["award", "awards", "trophy", "trophies", "winner"]);
 /** Preserve meaningful award qualifiers; remove only image-export noise. */
 export function filenameWords(value: string): string[] {
