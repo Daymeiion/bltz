@@ -242,6 +242,7 @@ function toCachedResult(row: CfbPlayerRow, directory: SchoolBrandRow[]): Scraper
   if (row.weight_lbs !== null) facts.weight_lbs = row.weight_lbs;
   if (row.team) {
     facts.school = row.team;
+    if (row.jersey != null) facts.jersey_history = [{ team: row.team, number: String(row.jersey), sourceUrl: CFBD_SOURCE_URL }];
     facts.schools = [affiliation(row.team, directory, null, { startYear: row.first_season, endYear: row.last_season })];
   }
   if (row.home_city && row.home_state) facts.hometown = `${row.home_city}, ${row.home_state}`;

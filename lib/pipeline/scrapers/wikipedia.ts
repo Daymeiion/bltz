@@ -4,6 +4,10 @@ import { evaluateSource, requireSourceAction } from "@/lib/source-policy/policy"
 import { fetchHtml, stripHtml } from "../fetch";
 import type { PlayerIdentityInput, ScraperResult, ScrapedAward } from "../types";
 import { NFL_FULL_NAMES } from "../teams";
+import { extractJerseyHistory, discoverWikipediaJerseys } from "./jersey-history";
+import { fetchPfrJerseyHistory } from "@/lib/enrichment/safe-fetch";
+import { corroborateJerseys } from "@/lib/player/jersey-history";
+import { decodeHTML } from "entities";
 
 /**
  * Wikipedia scraper. We use the public REST API — no auth required and
@@ -399,6 +403,13 @@ export async function scrapeWikipedia(
     const articleHtml = await fetchHtml(articleUrl, { timeoutMs: 7000 });
     const fullText = articleHtml.ok ? stripHtml(articleHtml.html) : summary.extract;
     const infoboxTeams = articleHtml.ok ? extractCareerHistory(articleHtml.html, summary.url) : [];
+    const proTeams = infoboxTeams.length ? infoboxTeams : extractProTeams(fullText);
+    const pfrUrl = articleHtml.ok ? [...articleHtml.html.matchAll(/href=["'](https:\/\/(?:www\.)?pro-football-reference\.com\/players\/[A-Z]\/[A-Za-z0-9]+\.htm)["']/g)][0]?.[1] : undefined;
+    const [rosterJerseys, referenceJerseys] = articleHtml.ok ? await Promise.all([
+      discoverWikipediaJerseys(articleHtml.html, proTeams, summary.url),
+      pfrUrl ? fetchPfrJerseyHistory(decodeHTML(pfrUrl), identity.full_name, proTeams, AbortSignal.timeout(4000)).catch(() => []) : Promise.resolve([]),
+    ]) : [[], []];
+    const jerseyHistory = corroborateJerseys(referenceJerseys, [...rosterJerseys, ...(articleHtml.ok ? extractJerseyHistory(articleHtml.html, identity.full_name, proTeams, summary.url) : [])]);
 
     return {
       source: "wikipedia",
@@ -409,7 +420,8 @@ export async function scrapeWikipedia(
         height_in: parseHeightInches(fullText),
         weight_lbs: parseWeight(fullText),
         hometown: extractHometown(fullText),
-        pro_teams: infoboxTeams.length ? infoboxTeams : extractProTeams(fullText),
+        pro_teams: proTeams,
+        jersey_history: jerseyHistory,
         awards: extractAwards(fullText, summary.url, articleHtml.ok ? articleHtml.html : undefined),
         photos: summary.thumbnail
           ? [{ url: summary.thumbnail, credits: "Wikipedia" }]

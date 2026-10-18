@@ -6,6 +6,7 @@ import { isPreviewUrl } from "@/lib/preview-lockers/validation";
 import { requireSourceAction } from "@/lib/source-policy/policy";
 import { extractArticleMetadata } from "./article-metadata";
 import { extractProductMetadata } from "./product-metadata";
+import { extractPfrJerseys } from "@/lib/pipeline/scrapers/pfr-jerseys";
 
 /** Deliberately restrict outbound metadata fetches to globally routable IPv4. */
 export function isPublicAddress(address: string): boolean {
@@ -27,13 +28,13 @@ async function publicAddress(hostname: string, signal: AbortSignal) {
     return result[0].address;
   } finally { signal.removeEventListener("abort", onAbort); }
 }
-async function fetchArticleHtml(input: string, parentSignal: AbortSignal): Promise<{ html: string; url: string }> {
+async function fetchArticleHtml(input: string, parentSignal: AbortSignal, action: "EXTRACT_METADATA" | "EXTRACT_JERSEY_HISTORY" = "EXTRACT_METADATA"): Promise<{ html: string; url: string }> {
   const signal = AbortSignal.any([parentSignal, AbortSignal.timeout(7000)]);
   let url = input;
   for (let redirects = 0; redirects <= 3; redirects++) {
     if (!isPreviewUrl(url) || signal.aborted) throw new Error("unsafe_destination");
     // Every redirected destination is a separate permission decision, before DNS.
-    requireSourceAction(url, "EXTRACT_METADATA");
+    requireSourceAction(url, action);
     requireSourceAction(url, "PERSIST_METADATA");
     const parsed = new URL(url);
     const address = await publicAddress(parsed.hostname, signal);
@@ -75,4 +76,10 @@ export async function fetchArticleMetadata(url: string, signal: AbortSignal) {
 export async function fetchProductMetadata(url: string, signal: AbortSignal) {
   const page = await fetchArticleHtml(url, signal);
   return extractProductMetadata(page.html, page.url);
+}
+
+/** Bounded adapter returns this player's jersey pairs, never PFR page HTML. */
+export async function fetchPfrJerseyHistory(url: string, fullName: string, teams: string[], signal: AbortSignal) {
+  const page = await fetchArticleHtml(url, signal, "EXTRACT_JERSEY_HISTORY");
+  return extractPfrJerseys(page.html, fullName, teams, page.url);
 }

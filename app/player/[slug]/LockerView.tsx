@@ -14,6 +14,7 @@ import { trackPreviewEvent } from "@/lib/analytics/preview-client";
 import { VideoPreview } from "@/components/player/VideoPreview";
 import { StructuredStats } from "@/components/player/StructuredStats";
 import { SpotifyPreviewBadge } from "@/components/player/SpotifyPreviewBadge";
+import { JerseyNumberRow } from "@/components/player/JerseyNumberRow";
 
 type LockerNews = Pick<import("@/lib/enrichment/news").NewsResult, "articles" | "status">;
 
@@ -38,6 +39,7 @@ export type LockerData = {
   position: string;
   jersey: string;
   jerseyNumbers?: string[];
+  jerseyHistory?: import("@/lib/player/jersey-history").JerseyBadge[];
   levelLabel: string;
   headshotUrl: string;
   headshotYear?: string | null;
@@ -1292,7 +1294,7 @@ export default function LockerView({
                       <div className="basic-info-grid">
                         <IdRow className="basic-info-hometown" label="HOMETOWN" value={displayHometown} />
                         <IdRow className="basic-info-birthdate" label="BIRTHDATE" value={displayDob} />
-                        <JerseyNumberRow values={displayJerseyNumbers} fallback={unknownText} />
+                        <JerseyNumberRow history={data.jerseyHistory} values={displayJerseyNumbers} fallback={unknownText} />
                         <IdRow label="POSITION" value={displayPosition} />
                         <IdRow className="basic-info-high-school" label="HIGH SCHOOL" value={displayHighSchool} />
                       </div>
@@ -2061,31 +2063,6 @@ function IdRow({ label, value, className }: { label: string; value: string; clas
     <div className={className} style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 0 }}>
       <span title={label} style={{ fontFamily: mono, fontSize: 9.5, letterSpacing: ".12em", color: "rgba(255,255,255,.4)", textTransform: "uppercase", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{label}</span>
       <span className="basic-info-value" title={value} style={{ fontFamily: disp, fontWeight: 700, fontSize: 15, lineHeight: 1, textTransform: "uppercase", color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{value}</span>
-    </div>
-  );
-}
-
-function JerseyNumberRow({ values, fallback }: { values: string[]; fallback: string }) {
-  const normalized = values.map((value) => value.replace(/^#\s*/, "").trim()).filter(Boolean);
-  const accessibleValue = normalized.length ? normalized.map((value) => `#${value}`).join(" - ") : fallback;
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 0 }}>
-      <span style={{ fontFamily: mono, fontSize: 9.5, letterSpacing: ".12em", color: "rgba(255,255,255,.4)", textTransform: "uppercase", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>JERSEY NUMBERS</span>
-      <span
-        className="basic-info-value"
-        title={accessibleValue}
-        aria-label={accessibleValue}
-        style={{ display: "flex", alignItems: "baseline", gap: 7, minWidth: 0, overflow: "hidden", fontFamily: disp, fontWeight: 700, fontSize: 15, lineHeight: 1, color: "#fff", whiteSpace: "nowrap" }}
-      >
-        {normalized.length ? normalized.map((value, index) => (
-          <span key={`${value}-${index}`} style={{ display: "inline-flex", alignItems: "baseline", gap: 1, flex: "none" }}>
-            {index > 0 ? <span aria-hidden="true" style={{ marginRight: 6, color: "rgba(255,255,255,.45)", fontSize: ".7em" }}>-</span> : null}
-            <span aria-hidden="true" style={{ fontSize: ".72em", color: "rgba(255,255,255,.62)" }}>#</span>
-            <span aria-hidden="true">{value}</span>
-          </span>
-        )) : fallback}
-      </span>
     </div>
   );
 }

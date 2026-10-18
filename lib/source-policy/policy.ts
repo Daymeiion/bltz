@@ -1,7 +1,7 @@
 /** Application policy, not a statement that public access grants a license. */
-export const POLICY_VERSION = "2026-09-29.1";
+export const POLICY_VERSION = "2026-10-17.1";
 export type SourceType = "licensed_provider" | "official_league" | "official_team" | "official_school" | "official_athlete" | "reference_database" | "encyclopedic" | "news_publisher" | "social_platform" | "media_asset_provider" | "unknown";
-export const ACTIONS = ["DISCOVERY", "VERIFY", "EXTRACT_METADATA", "EXTRACT_FACTS", "CRAWL", "BULK_INGEST", "PERSIST_METADATA", "PERSIST_FACTS", "ASSET_REFERENCE", "ASSET_DOWNLOAD"] as const;
+export const ACTIONS = ["DISCOVERY", "VERIFY", "EXTRACT_METADATA", "EXTRACT_FACTS", "EXTRACT_JERSEY_HISTORY", "CRAWL", "BULK_INGEST", "PERSIST_METADATA", "PERSIST_FACTS", "ASSET_REFERENCE", "ASSET_DOWNLOAD"] as const;
 export type SourceAction = typeof ACTIONS[number];
 export interface SourceDecision {
   domain: string; source_type: SourceType; decision: "ALLOW" | "RESTRICT" | "REFERENCE_ONLY" | "DENY";
@@ -38,6 +38,12 @@ export function evaluateSource(input: string): SourceDecision {
     type = "reference_database"; id = "sports-reference-family"; decision = "REFERENCE_ONLY";
     allowed = ["DISCOVERY", "VERIFY", "PERSIST_METADATA"]; status = "active";
     reason = "Reference links only. No automated extraction, crawl, bulk population or asset copying; specific-page verification requires a separately approved adapter.";
+    if (domainMatches(host, "pro-football-reference.com") && /^\/players\/[A-Z]\/[A-Za-z0-9]+\.htm$/.test(url.pathname) && !url.search) {
+      // User-approved, bounded uniform-history adapter. This does not enable
+      // general page/stat extraction or change the manual statistics importer.
+      allowed = [...allowed, "EXTRACT_JERSEY_HISTORY"];
+      reason = "Player-page jersey badges only through the bounded uniform-history adapter; other facts, statistics, crawl and assets remain blocked.";
+    }
   } else if (domainMatches(host, "wikipedia.org")) {
     type = "encyclopedic"; id = "wikipedia-player"; allowed = facts; status = "active";
     reason = "Existing bounded single-player biography and award adapter; retain attribution. No site crawl or assets.";
@@ -69,7 +75,7 @@ export function evaluateSource(input: string): SourceDecision {
     crawl_allowed: false, bulk_ingestion_allowed: false, persistent_storage_allowed: single ? "single_player_facts" : allowed.includes("PERSIST_METADATA") ? "limited_metadata" : "none",
     asset_download_allowed: false, attribution_required: true, rate_limit: null,
     allowed_actions: [...allowed], blocked_actions: ACTIONS.filter(action => !allowed.includes(action)),
-    reason, usage_notes: reason, policy_status: status, policy_id: id, policy_version: POLICY_VERSION, updated_at: "2026-09-29" };
+    reason, usage_notes: reason, policy_status: status, policy_id: id, policy_version: POLICY_VERSION, updated_at: "2026-10-17" };
 }
 export class SourcePolicyError extends Error {
   constructor(readonly policy: SourceDecision, readonly action: SourceAction) { super(`source_policy_blocked:${action}:${policy.policy_id}`); }

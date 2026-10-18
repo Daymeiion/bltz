@@ -9,6 +9,12 @@ import { combineCfbImports } from "./cfb-csv";
 import { combinePfrImports } from "./pfr-csv";
 import { previewStatLabels, type PreviewRecord, type ResolvedPreviewRecord } from "./validation";
 import { curatedArticles, lockerMerchandise } from "./media";
+import { jerseyBadge, uniqueJerseys } from "@/lib/player/jersey-history";
+
+function previewJerseyHistory(row: Pick<PreviewLockerRow, "schools" | "pro_teams">) {
+  const teams = [...(row.schools ?? []), ...(row.pro_teams ?? [])];
+  return uniqueJerseys(teams.flatMap(team => team.jerseyStatus === "conflict" ? [] : (team.jerseyNumbers ?? []).map(number => ({ team: team.name || team.label, number, sourceUrl: team.jerseySourceUrl, color: team.jerseyColor, borderColor: team.jerseyBorderColor })))).map(item => jerseyBadge(item, teams.find(team => (team.name || team.label) === item.team)?.color));
+}
 
 export function previewHeadshot(row: { headshot_url: string | null; photos?: Array<{ isHeadshot?: boolean; url?: string | null }> }) {
   return row.photos?.find(photo => photo.isHeadshot && photo.url)?.url || row.headshot_url || "/images/black-headshot-fallback.svg";
@@ -41,6 +47,7 @@ export function previewLockerData(row: PreviewRecord | ResolvedPreviewRecord, pu
     merch: lockerMerchandise(row.merchandise),
     structuredStats: [...combinePfrImports(row.pfr_stats ?? []), ...combineCfbImports(row.cfb_stats ?? [])],
     hometown: row.hometown || "", position: row.position || "", jersey: row.jersey || "",
+    jerseyHistory: previewJerseyHistory(row),
     levelLabel: row.level || "Athlete", headshotUrl: previewHeadshot(row),
     // Only direct playback sources enter the hero; provider pages stay in the Film Room.
     heroVideoUrl: null,
@@ -80,6 +87,7 @@ export function toLockerData(row: PreviewLockerRow): LockerData {
     position: row.position || "",
     jersey: row.jersey || "",
     jerseyNumbers: row.jersey ? [row.jersey] : [],
+    jerseyHistory: previewJerseyHistory(row),
     levelLabel: row.level ? (LEVEL_LABEL[row.level] ?? "—") : "—",
     headshotUrl: previewHeadshot(row),
     headshotYear: null,

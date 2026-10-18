@@ -120,6 +120,7 @@ export interface ScraperResult {
     schools: ScrapedAffiliation[];
     hometown: string;
     pro_teams: string[];
+    jersey_history: import("@/lib/player/jersey-history").JerseyHistory[];
     bio_text: string;
     awards: ScrapedAward[];
     youtube_urls: string[];
@@ -152,6 +153,7 @@ export interface PipelineDraft {
   schools?: ScrapedAffiliation[];
   hometown?: string | null;
   pro_teams?: string[];
+  jersey_history?: import("@/lib/player/jersey-history").JerseyHistory[];
   /**
    * Optional NFL Game Stats and Information System ID. Populated by the
    * nflverse scraper for athletes that match the cached roster snapshot;

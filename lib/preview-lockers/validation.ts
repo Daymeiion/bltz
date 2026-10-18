@@ -29,7 +29,14 @@ export const previewIdentity = z.object({
   level: z.enum(["hs", "college", "pro", "former"]).nullable().default(null),
   cohort_year: z.number().int().min(1950).max(2100).nullable().default(null),
 }).strict();
-const team = z.object({ label: text(80).min(1), color: z.string().regex(/^#[0-9a-fA-F]{6}$/), logo: asset }).strict();
+const team = z.object({ label: text(80).min(1), color: z.string().regex(/^#[0-9a-fA-F]{6}$/), logo: asset,
+  jerseyNumbers: z.array(z.string().regex(/^(?:\d|[1-9]\d|00)$/)).max(10).refine(values => new Set(values).size === values.length, "Keep each number once per team.").optional(),
+  jerseySourceUrl: previewUrl.nullable().optional(),
+  jerseySources: z.array(previewUrl).max(16).optional(),
+  jerseyStatus: z.enum(["single_source", "corroborated", "conflict", "reviewed"]).optional(),
+  jerseyColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+  jerseyBorderColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+}).strict();
 const award = z.object({ imageUrl: previewUrl.nullable().optional(), photoId: id.nullable().optional(), year: text(20), label: text(200).min(1), description: text(160).nullable().optional(), sourceUrl: previewUrl.nullable().optional() }).strict();
 const storagePath = z.string().min(1).max(240).regex(/^[0-9a-f-]{36}\/(photos|videos)\/[0-9a-f-]{36}\.(jpg|png|webp|mp4|webm|mov)$/);
 export const previewMediaMimeTypes = ["image/jpeg", "image/png", "image/webp", "video/mp4", "video/webm", "video/quicktime"] as const;

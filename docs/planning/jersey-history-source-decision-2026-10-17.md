@@ -1,0 +1,11 @@
+# Bounded jersey-history discovery
+
+The user explicitly requested both PFR's team-number badges and an independent roster method on October 17, 2026. This supersedes the reference-only policy for one adapter: a single matched PFR player page's uniform links. General PFR facts/statistics extraction, crawling, bulk ingestion and asset copying remain blocked. A dedicated `EXTRACT_JERSEY_HISTORY` action enforces that boundary. The existing manual statistics import is unchanged.
+
+The PFR adapter accepts only HTTPS player-detail pages, validates the player's name, projects only number/team uniform links matching already established career teams, and returns no page HTML. It uses the existing pinned-DNS, redirect, content-type, size and timeout protections. A blocked PFR request remains unavailable; no bypass is attempted.
+
+Independent historical lookup uses the teams and years in the matched Wikipedia football biography's career history. It reads at most twelve corresponding team-season pages within a four-second shared budget and extracts only that athlete's exact biography link in the roster section. Existing nflverse and college roster cache numbers retain their team association. Sources are retained with the suggestions.
+
+Exact team-number pairs in PFR and the independent history are marked corroborated. One available source is labeled single-source. Disjoint number sets for the same team are flagged for review; conflicting team numbers are withheld from the public preview until an operator confirms or corrects them. Discovery preserves existing manually reviewed numbers and explicit removals. The normal preview review/save workflow persists the optional fields on existing team JSON; no new identity, Moment, media or rights schema is introduced.
+
+The shared Locker badge row uses PFR's validated SVG background/border colors when available, then existing team branding, with accessible team/number labels and wrapping on narrow screens. Legacy unassociated numbers remain neutral rather than being assigned to every team. Preview team history exposes editable number/source fields, a jersey lookup action and a bounded paste/import fallback for PFR badges when HTTP access is unavailable. Pasted HTML is discarded. This work does not backfill canonical athlete-team-season records or infer historical numbers from the latest roster number.

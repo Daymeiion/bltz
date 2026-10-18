@@ -2,6 +2,7 @@ import { awardDescription } from "./award-descriptions";
 import type { PipelineDraft, PlayerIdentityInput } from "@/lib/pipeline/types";
 import { nflLogo, nflTeamCode, nflTeamColor } from "@/lib/player/locker-format";
 import { previewContent, previewUrl, previewPhoto, previewVideo, slugify, youtubeEmbed, type PreviewContent } from "./validation";
+import { jerseyTeamKey, uniqueJerseys } from "@/lib/player/jersey-history";
 
 const OTHER_PRO_TEAM_COLORS: Record<string, string> = {
   "bc lions": "#F15A22",
@@ -22,10 +23,20 @@ export function discoveryDraft(identity: PlayerIdentityInput, draft?: PipelineDr
   const name = (draft?.full_name || identity.full_name).slice(0, 120);
   const school = (draft?.school || identity.school || "").slice(0, 160) || null;
   const validColor = (value: string | undefined) => /^#[\da-f]{6}$/i.test(value ?? "") ? value! : "#1A3DCC";
+  const jerseys = uniqueJerseys(draft?.jersey_history ?? []);
+  const teamJerseys = (team: string) => {
+    const matched = jerseys.filter(item => jerseyTeamKey(item.team) === jerseyTeamKey(team));
+    return matched.length ? { jerseyNumbers: matched.map(item => item.number).slice(0, 10), jerseySourceUrl: matched.find(item => previewUrl.safeParse(item.sourceUrl).success)?.sourceUrl ?? null,
+      jerseySources: [...new Set(matched.flatMap(item => [...(item.sourceUrls ?? []), ...(item.sourceUrl ? [item.sourceUrl] : [])]))].filter(url => previewUrl.safeParse(url).success).slice(0, 16),
+      jerseyStatus: matched.some(item => item.status === "conflict") ? "conflict" as const : matched.every(item => item.status === "corroborated") ? "corroborated" as const : "single_source" as const,
+      ...(matched.find(item => item.color)?.color ? { jerseyColor: matched.find(item => item.color)!.color } : {}),
+      ...(matched.find(item => item.borderColor)?.borderColor ? { jerseyBorderColor: matched.find(item => item.borderColor)!.borderColor } : {}),
+    } : {};
+  };
   const schools = (draft?.schools?.length ? draft.schools : school ? [{ label: school }] : [])
     .slice(0, 32)
     .filter(item => typeof item.label === "string" && item.label.trim())
-    .map(item => ({ label: (item.name || item.label).trim().slice(0, 80), color: validColor(item.color), logo: item.logo || null }));
+    .map(item => ({ label: (item.name || item.label).trim().slice(0, 80), color: validColor(item.color), logo: item.logo || null, ...teamJerseys(item.name || item.label) }));
   const candidate = {
     slug: slugify(name) || "private-preview", full_name: name,
     school,
@@ -39,7 +50,7 @@ export function discoveryDraft(identity: PlayerIdentityInput, draft?: PipelineDr
     pro_teams: (draft?.pro_teams || []).slice(0, 32).filter(team => typeof team === "string" && team.trim()).map(team => {
       const label = team.trim().slice(0, 80);
       const code = nflTeamCode(label);
-      return { label, color: code ? nflTeamColor(code) : OTHER_PRO_TEAM_COLORS[label.toLocaleLowerCase("en-US")] || "#1A3DCC", logo: code ? nflLogo(code) : null };
+      return { label, color: code ? nflTeamColor(code) : OTHER_PRO_TEAM_COLORS[label.toLocaleLowerCase("en-US")] || "#1A3DCC", logo: code ? nflLogo(code) : null, ...teamJerseys(label) };
     }),
     videos: (draft?.youtube_urls || []).slice(0, 24).flatMap((url, i) => {
       if (!youtubeEmbed(url)) return [];

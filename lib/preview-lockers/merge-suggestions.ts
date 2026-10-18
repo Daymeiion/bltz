@@ -16,10 +16,20 @@ function mergeTeams(current: Team[], suggestions: Team[], kind: "school" | "pro"
       continue;
     }
     const existing = merged[match];
+    const sameNumbers = existing.jerseyNumbers?.length && suggestion.jerseyNumbers?.length
+      && existing.jerseyNumbers.length === suggestion.jerseyNumbers.length
+      && existing.jerseyNumbers.every(number => suggestion.jerseyNumbers!.includes(number));
+    const enrichJerseys = suggestion.jerseyNumbers !== undefined && (existing.jerseyNumbers === undefined || sameNumbers && existing.jerseyStatus !== "reviewed");
     merged[match] = {
       ...existing,
       color: PLACEHOLDER_COLORS.has(existing.color.toUpperCase()) && !PLACEHOLDER_COLORS.has(suggestion.color.toUpperCase()) ? suggestion.color : existing.color,
       logo: existing.logo || suggestion.logo,
+      jerseyNumbers: existing.jerseyNumbers ?? suggestion.jerseyNumbers,
+      jerseySourceUrl: enrichJerseys ? suggestion.jerseySourceUrl ?? existing.jerseySourceUrl : existing.jerseySourceUrl,
+      jerseySources: enrichJerseys ? [...new Set([...(existing.jerseySources ?? []), ...(suggestion.jerseySources ?? [])])].slice(0, 16) : existing.jerseySources,
+      jerseyStatus: enrichJerseys ? suggestion.jerseyStatus ?? existing.jerseyStatus : existing.jerseyStatus,
+      jerseyColor: existing.jerseyColor ?? suggestion.jerseyColor,
+      jerseyBorderColor: existing.jerseyBorderColor ?? suggestion.jerseyBorderColor,
     };
   }
   return merged;

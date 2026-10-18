@@ -3,6 +3,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { beforeEach, afterEach, expect, it, vi } from "vitest";
 import PreviewLockerForm from "@/app/admin/preview-lockers/PreviewLockerForm";
 import { previewContent } from "@/lib/preview-lockers/validation";
+import { readFileSync } from "node:fs";
 const discovery = vi.hoisted(() => ({ read: vi.fn() }));
 vi.mock("@/lib/preview-lockers/stream-client", () => ({ readDiscovery: discovery.read }));
 let host: HTMLDivElement; let root: Root; let fetcher: ReturnType<typeof vi.fn>;
@@ -10,6 +11,33 @@ beforeEach(() => { host = document.createElement("div"); document.body.append(ho
 afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.unstubAllGlobals(); });
 async function fill(label: string, value: string) { const input = host.querySelector<HTMLInputElement | HTMLTextAreaElement>(`[aria-label="${label}"]`)!; await act(async () => { Object.getOwnPropertyDescriptor(input.tagName === "TEXTAREA" ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype, "value")!.set!.call(input, value); input.dispatchEvent(new Event("input", { bubbles: true })); }); }
 async function click(text: string) { const button = [...host.querySelectorAll("button")].find(b => b.textContent === text)!; expect(button).toBeTruthy(); await act(async () => button.click()); }
+it("compares PFR badges with saved roster numbers and persists per-team colors without storing HTML", async () => {
+  const source = "https://en.wikipedia.org/wiki/2012_San_Diego_Chargers_season";
+  const record = { ...previewContent.parse({ slug: "antoine-cason", full_name: "Antoine Cason", pro_teams: [
+    {label:"San Diego Chargers",color:"#0080C6",jerseyNumbers:["20"],jerseySourceUrl:source,jerseySources:[source],jerseyStatus:"single_source"},
+    {label:"Carolina Panthers",color:"#0085CA"},
+  ] }), id: "00000000-0000-4000-8000-000000000001", revision: 3, created_at: "", updated_at: "" };
+  await act(async () => root.render(<PreviewLockerForm record={record} />));
+  await fill("PFR jersey source URL", "https://www.pro-football-reference.com/players/C/CasoAn99.htm");
+  await fill("PFR jersey badge HTML", readFileSync("tests/pipeline/antoine-cason-jersey-badges.html", "utf8"));
+  await click("Compare PFR jersey badges");
+  expect(host.textContent).toContain("PFR and roster sources agree.");
+  expect(host.textContent).toContain("Single-source result: review before saving.");
+  expect(host.querySelector<HTMLTextAreaElement>('[aria-label="PFR jersey badge HTML"]')!.value).toBe("");
+  expect(fetcher).not.toHaveBeenCalled();
+  await fill("pro_teams 2 jersey numbers", "20,");
+  expect(host.querySelector<HTMLInputElement>('[aria-label="pro_teams 2 jersey numbers"]')!.value).toBe("20, ");
+  await fill("pro_teams 2 jersey numbers", "20, 21");
+  fetcher.mockResolvedValueOnce(Response.json({id:record.id,slug:record.slug,revision:4}));
+  await click("Save draft");
+  const body = JSON.parse(fetcher.mock.calls[0][1].body);
+  expect(body.content.pro_teams[0]).toMatchObject({jerseyNumbers:["20"],jerseyStatus:"corroborated",jerseyColor:"#000080",jerseyBorderColor:"#FFD700"});
+  expect(body.content.pro_teams[0].jerseySources).toContain(source);
+  expect(body.content.pro_teams[1]).toMatchObject({jerseyNumbers:["20","21"],jerseyStatus:"reviewed",jerseyColor:"#1C86EE"});
+  expect(JSON.stringify(body)).not.toContain("<svg");
+  await act(async () => root.render(<PreviewLockerForm key="jersey-reload" record={{...record,...body.content,revision:4}} />));
+  expect(host.querySelector<HTMLInputElement>('[aria-label="pro_teams 2 jersey numbers"]')!.value).toBe("20, 21");
+});
 it("reviews a college CSV, saves only to the private preview, and reloads the import", async () => {
   const record = { ...previewContent.parse({ slug: "synthetic-preview", full_name: "Synthetic Preview" }), id: "00000000-0000-4000-8000-000000000001", revision: 3, created_at: "", updated_at: "" };
   await act(async () => root.render(<PreviewLockerForm record={record} />));

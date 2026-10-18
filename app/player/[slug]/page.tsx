@@ -1,4 +1,5 @@
 import { previewVideoSource } from "@/lib/preview-lockers/video";
+import { jerseyBadge } from "@/lib/player/jersey-history";
 import type { NewsIdentity } from "@/lib/enrichment/news";
 import { notFound } from "next/navigation";
 import { readStructuredStats } from "@/lib/player/structured-stats";
@@ -345,7 +346,7 @@ export default async function PlayerLocker({ params }: { params: Promise<{ slug:
     player.bio ||
     `${playerFullName} hasn't written their story yet. Check back soon.`;
 
-  const jersey = nflPlayer?.jersey_number ? `#${nflPlayer.jersey_number}` : "";
+  const jersey = nflPlayer?.jersey_number != null ? `#${nflPlayer.jersey_number}` : "";
   const schoolName =
     player.school ||
     cfbTeam?.display_name ||
@@ -383,6 +384,7 @@ export default async function PlayerLocker({ params }: { params: Promise<{ slug:
     position: player.position || nflPlayer?.position || "",
     jersey,
     jerseyNumbers: jersey ? [jersey] : [],
+    jerseyHistory: jersey && nflPlayer?.latest_team ? [jerseyBadge({ team: nflPlayer.latest_team, number: String(nflPlayer.jersey_number) })] : [],
     levelLabel,
     headshotUrl,
     headshotYear: null,

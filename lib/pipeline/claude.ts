@@ -17,6 +17,7 @@
 
 import type { PipelineDraft, PlayerIdentityInput, ScrapedAffiliation, ScraperResult, ScraperSource } from "./types";
 import { canonicalizeTeams } from "./teams";
+import { uniqueJerseys } from "@/lib/player/jersey-history";
 
 /**
  * Sources whose facts we treat as authoritative. Fields supplied by these
@@ -39,7 +40,7 @@ function pickFacts(
   results: ScraperResult[],
 ): Pick<
   PipelineDraft,
-  "dob" | "height_in" | "weight_lbs" | "games_played" | "position" | "school" | "schools" | "hometown" | "pro_teams" | "awards" | "youtube_urls" | "photos" | "gsis_id"
+  "dob" | "height_in" | "weight_lbs" | "games_played" | "position" | "school" | "schools" | "hometown" | "pro_teams" | "awards" | "youtube_urls" | "photos" | "gsis_id" | "jersey_history"
 > & { _origin: FieldOrigin } {
   // First-non-null wins per field — high-trust structured sources (nflverse)
   // are registered first in SCRAPERS, so their values seed the facts before
@@ -58,6 +59,7 @@ function pickFacts(
   const awards: PipelineDraft["awards"] = [];
   const youtube_urls: string[] = [];
   const photos: PipelineDraft["photos"] = [];
+  const jerseyHistory: NonNullable<PipelineDraft["jersey_history"]> = [];
   const origin: FieldOrigin = {};
   for (const r of results) {
     if (!r.ok || !r.facts) continue;
@@ -89,6 +91,7 @@ function pickFacts(
     if (r.facts.awards) awards.push(...r.facts.awards);
     if (r.facts.youtube_urls) youtube_urls.push(...r.facts.youtube_urls);
     if (r.facts.photos) photos.push(...r.facts.photos);
+    if (r.facts.jersey_history) jerseyHistory.push(...r.facts.jersey_history);
   }
   return {
     dob: dob ?? null,
@@ -112,6 +115,7 @@ function pickFacts(
     youtube_urls: Array.from(new Set(youtube_urls)).slice(0, 8),
     photos: photos.slice(0, 12),
     gsis_id: gsis_id ?? null,
+    jersey_history: uniqueJerseys(jerseyHistory),
     _origin: origin,
   };
 }
@@ -264,6 +268,7 @@ export async function synthesize(opts: SynthesizeOptions): Promise<PipelineDraft
     schools: factual.schools,
     hometown: factual.hometown,
     pro_teams: factual.pro_teams,
+    jersey_history: factual.jersey_history,
     awards: factual.awards,
     youtube_urls: factual.youtube_urls,
     photos: factual.photos,

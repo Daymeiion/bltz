@@ -27,10 +27,11 @@ interface NflPlayerRow {
   latest_team: string | null;
   espn_id: string | null;
   pfr_id: string | null;
+  jersey_number?: number | null;
 }
 
 const SELECT_COLS =
-  "gsis_id,display_name,birth_date,position,position_group,height_in,weight_lbs,headshot_url,college_name,latest_team,espn_id,pfr_id";
+  "gsis_id,display_name,birth_date,position,position_group,height_in,weight_lbs,headshot_url,college_name,latest_team,espn_id,pfr_id,jersey_number";
 
 const NFLVERSE_SOURCE_URL =
   "https://github.com/nflverse/nflverse-data/releases/tag/players";
@@ -163,6 +164,7 @@ function toResult(row: NflPlayerRow): ScraperResult {
       weight_lbs: row.weight_lbs ?? undefined,
       school: row.college_name ?? undefined,
       pro_teams: proTeams,
+      jersey_history: row.latest_team && row.jersey_number != null ? [{ team: row.latest_team, number: String(row.jersey_number), sourceUrl: NFLVERSE_SOURCE_URL }] : [],
       photos,
       gsis_id: row.gsis_id,
     },
