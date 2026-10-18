@@ -16,6 +16,8 @@ import { VideoPreview } from "@/components/player/VideoPreview";
 import { StructuredStats } from "@/components/player/StructuredStats";
 import { SpotifyPreviewBadge } from "@/components/player/SpotifyPreviewBadge";
 import { JerseyNumberRow } from "@/components/player/JerseyNumberRow";
+import { CombineResults } from "@/components/player/CombineResults";
+import { combineEventLabel, combineValue } from "@/lib/player/combine";
 
 type LockerNews = Pick<import("@/lib/enrichment/news").NewsResult, "articles" | "status">;
 
@@ -57,6 +59,7 @@ export type LockerData = {
   age?: number;
   gamesPlayed: number | null;
   structuredStats?: import("@/lib/player/structured-stats-types").StoredStats[];
+  combineResults?: import("@/lib/player/combine").CombineResult[];
   careerStats?: {
     key: string;
     label: string;
@@ -676,26 +679,22 @@ export default function LockerView({
     ? data.athleteQuoteAuthor!.trim()
     : data.fullName;
 
-  // Real: height + weight. Fallbacks are intentionally marked pending until verified data exists.
+  const firstCombineEvent = data.combineResults?.find(event => event.measurements.length > 0);
+  const measurementSummary = (metric: import("@/lib/player/combine").CombineMetric) => {
+    const result = firstCombineEvent?.measurements.find(item => item.metric === metric);
+    return result ? combineValue(metric, result.value) : pendingMetric;
+  };
   const measure = [
     [data.heightDisplay.replace(/([′'])\s+(?=\d)/g, "$1") || pendingMetric, "HEIGHT"],
     [data.weightLbs ? String(data.weightLbs) : pendingMetric, "WEIGHT · LBS"],
-    [pendingMetric, "40-YARD"],
-    [pendingMetric, "WINGSPAN"],
-    [pendingMetric, "VERTICAL"],
-    [pendingMetric, "BENCH · REPS"],
+    [measurementSummary("forty"), firstCombineEvent ? `40-YARD · ${combineEventLabel(firstCombineEvent)}` : "40-YARD"],
+    [measurementSummary("shuttle"), "20-YARD SHUTTLE"],
+    [measurementSummary("vertical"), "VERTICAL"],
+    [measurementSummary("bench"), "BENCH · REPS"],
   ].map(([value, label]) => ({
     cat: "measurables", isStat: true, value, label,
     style: { flex: "none", width: 128, scrollSnapAlign: "start", borderRadius: 16, border: "1px solid #1E2640", background: "#131829" } as React.CSSProperties,
   }));
-  const combineMetrics = [
-    { label: "40-YARD", value: pendingMetric, unit: "PENDING", tone: lockerAccent },
-    { label: "10-YARD SPLIT", value: pendingMetric, unit: "PENDING", tone: "#7DD3FC" },
-    { label: "VERTICAL", value: pendingMetric, unit: "PENDING", tone: "#A7F3D0" },
-    { label: "BROAD JUMP", value: pendingMetric, unit: "PENDING", tone: "#FDE68A" },
-    { label: "3-CONE", value: pendingMetric, unit: "PENDING", tone: "#C4B5FD" },
-    { label: "BENCH", value: pendingMetric, unit: "PENDING", tone: "#FCA5A5" },
-  ];
 
   const story = [{
     cat: "story", isStory: true, text: data.bio,
@@ -1324,17 +1323,7 @@ export default function LockerView({
                         </div>
                       </div>
                       <div style={{ padding: "14px 14px 16px" }}>
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 8 }}>
-                          {combineMetrics.map((metric) => (
-                            <div key={metric.label} style={{ minHeight: 96, borderRadius: 12, padding: "13px 10px", background: "#0F1424", border: "1px solid #1E2640", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", gap: 8 }}>
-                              <div>
-                                <div style={{ fontFamily: disp, fontWeight: 900, fontSize: 27, lineHeight: ".85", color: "#fff" }}>{metric.value}</div>
-                                <div style={{ fontFamily: mono, fontSize: 8, letterSpacing: ".11em", color: metric.tone, marginTop: 4 }}>{metric.unit}</div>
-                              </div>
-                              <div style={{ fontFamily: mono, fontSize: 7.5, letterSpacing: ".1em", color: "rgba(255,255,255,.42)", textTransform: "uppercase", lineHeight: 1.15 }}>{metric.label}</div>
-                            </div>
-                          ))}
-                        </div>
+                        <CombineResults results={data.combineResults ?? []} displayFont={disp} monoFont={mono} accent={lockerAccent} />
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginTop: 12, padding: "10px 12px", borderRadius: 12, background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.07)" }}>
                           <span style={{ fontFamily: mono, fontSize: 8.5, letterSpacing: ".13em", color: "rgba(255,255,255,.46)", textTransform: "uppercase" }}>Combine board</span>
                           <span style={{ fontFamily: mono, fontSize: 8.5, letterSpacing: ".13em", color: lockerAccent, textTransform: "uppercase" }}>Awaiting verified data</span>

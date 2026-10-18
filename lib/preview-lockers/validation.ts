@@ -6,6 +6,7 @@ import { pfrImports, combinePfrImports } from "./pfr-csv";
 import { isNewsArticleUrl } from "@/lib/enrichment/news-classification";
 import { evaluateSource } from "@/lib/source-policy/policy";
 import { birthdateSchema, highSchoolSchema } from "@/lib/player/bio-fields";
+import { combineMetricKeys, combineMetricInfo } from "@/lib/player/combine";
 
 // Display references only; the preview server never downloads these URLs.
 export function isPreviewUrl(value: string): boolean {
@@ -91,6 +92,21 @@ export const previewSocial = z.object({
   format: z.enum(["portrait", "square"]), sourceUrl: previewUrl, caption: text(2000).default(""), handle: text(120).default(""),
   photoId: id.nullable().optional(), videoId: id.nullable().optional(),
 }).strict().refine(item => socialPlatformMatches(item.platform, item.sourceUrl), "Use a link from the selected social platform.");
+export const previewCombineResult = z.object({
+  id, eventType: z.enum(["combine", "pro_day"]), year: z.number().int().min(1950).max(2100).nullable().default(null),
+  sourceUrl: asset, timing: z.enum(["not_recorded", "official", "unofficial"]).default("not_recorded"),
+  measurements: z.array(z.object({ metric: z.enum(combineMetricKeys), value: z.number().finite(), sourceUrl: asset }).strict()
+    .superRefine((item, context) => {
+      const field = combineMetricInfo[item.metric];
+      if (item.value < field.min || item.value > field.max || item.metric === "bench" && !Number.isInteger(item.value)) {
+        context.addIssue({ code: "custom", path: ["value"], message: `${field.label} must be ${field.min}–${field.max} ${field.unit.toLowerCase()}${item.metric === "bench" ? " in whole repetitions" : ""}.` });
+      }
+    })).max(combineMetricKeys.length).refine(items => new Set(items.map(item => item.metric)).size === items.length, "Keep one value per measurement in each event."),
+}).strict().superRefine((event, context) => {
+  event.measurements.forEach((item, index) => {
+    if (!item.sourceUrl && !event.sourceUrl) context.addIssue({ code: "custom", path: ["measurements", index, "sourceUrl"], message: "Add an event source or an individual source for this measurement." });
+  });
+});
 export const previewContent = z.object({
   slug: previewSlug, full_name: text(120).min(2), position: nullableText(60),
   level: z.enum(["hs", "college", "pro", "former"]).nullable().default(null),
@@ -114,6 +130,8 @@ export const previewContent = z.object({
   cfb_stats: cfbImports.refine(items => { try { combineCfbImports(items); return true; } catch { return false; } }, "College tables contain conflicting season values.").default([]),
   pfr_stats: pfrImports.refine(items => { try { combinePfrImports(items); return true; } catch { return false; } }, "NFL tables contain conflicting season values.").default([]),
   career_stats: z.array(careerStat).max(previewStatKeys.length).refine(items => new Set(items.map(item => item.key)).size === items.length, "Statistic keys must be unique.").default([]),
+  combine_results: z.array(previewCombineResult).max(10).refine(uniqueIds, "Combine event IDs must be unique.")
+    .refine(items => new TextEncoder().encode(JSON.stringify(items)).length <= 32000, "Combine metadata is too large.").default([]),
   videos: z.array(previewVideo).max(24).refine(uniqueIds, "Video IDs must be unique.").refine(items => ["mobile", "desktop"].every(device => items.filter(item => item.heroDevice === device).length <= 1), "Choose only one hero video for each device.").default([]),
   photos: z.array(previewPhoto).max(40).refine(uniqueIds, "Photo IDs must be unique.").refine(items => items.filter(photo => photo.isHeadshot).length <= 1, "Choose only one headshot.").default([]),
 }).strict();

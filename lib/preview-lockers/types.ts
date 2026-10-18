@@ -43,6 +43,7 @@ export type PreviewTeamPill = { label: string; name?: string; color: string; log
   logoStoragePath?: string | null; jerseyNumbers?: string[]; jerseySourceUrl?: string | null; jerseySources?: string[]; jerseyStatus?: "single_source" | "corroborated" | "conflict" | "reviewed"; jerseyColor?: string; jerseyBorderColor?: string };
 
 export interface PreviewLockerRow {
+  combine_results?: import("@/lib/player/combine").CombineResult[];
   player_id?: string | null;
   id: string;
   slug: string;

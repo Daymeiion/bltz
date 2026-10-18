@@ -67,6 +67,9 @@ function appendUnique<T extends object>(current: T[], suggestions: T[], keys: (i
 export function mergeSuggestions(current: PreviewContent, suggestion: PreviewContent): PreviewContent {
   const merged = {
     ...current,
+    // Manual event results are authoritative. Discovery cannot add, replace or
+    // clear them; a future suggestions workflow must require explicit review.
+    combine_results: current.combine_results,
     schools: mergeTeams(current.schools, suggestion.schools, "school"),
     pro_teams: mergeTeams(current.pro_teams, suggestion.pro_teams, "pro"),
   };

@@ -1,3 +1,4 @@
+// combine_results regenerated from isolated PostgreSQL information_schema by scripts/verify-preview-combine.mjs.
 // Preview table regenerated from isolated PostgreSQL information_schema by scripts/verify-preview-media.mjs; remaining declarations retain their Supabase CLI provenance.
 // Scoped additive extract; released database.generated.ts remains unchanged.
 // Short-link/inquiry fields regenerated from disposable PostgreSQL by verify-preview-access-window.mjs; hosted schema regeneration remains a release check.
@@ -11,6 +12,7 @@ export type PreviewDatabase = { public: { Tables: { preview_lockers: {
           bio: string
           career_stats: Json
           cfb_stats: Json
+          combine_results: Json
           created_at: string
           created_by: string
           dob: string | null
@@ -49,6 +51,7 @@ export type PreviewDatabase = { public: { Tables: { preview_lockers: {
           bio?: string
           career_stats?: Json
           cfb_stats?: Json
+          combine_results?: Json
           created_at?: string
           created_by?: string
           dob?: string | null
@@ -87,6 +90,7 @@ export type PreviewDatabase = { public: { Tables: { preview_lockers: {
           bio?: string
           career_stats?: Json
           cfb_stats?: Json
+          combine_results?: Json
           created_at?: string
           created_by?: string
           dob?: string | null

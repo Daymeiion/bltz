@@ -30,6 +30,7 @@ import type { PlayerArticle } from "@/lib/enrichment/news";
 import { newsReviewSchema, newsReviewArticleSchema, type NewsReview } from "@/lib/preview-lockers/news-review";
 import { searchErrorMessage } from "@/lib/search/errors";
 import CfbCsvImport from "./CfbCsvImport";
+import CombineResultsForm from "./CombineResultsForm";
 import StatsCsvImport from "./StatsCsvImport";
 import { BuilderSection } from "./BuilderSection";
 import { previewVideoCategories, previewVideoLevel } from "@/lib/preview-lockers/video";
@@ -39,7 +40,7 @@ import { parseYouTubeBatch } from "@/lib/preview-lockers/youtube-bulk";
 
 const initial = () => previewContent.parse({ slug: "private-preview", full_name: "".padEnd(2, "_") });
 const merchandiseIdentity = (content: PreviewContent) => JSON.stringify([content.full_name, content.school, content.position, content.schools.map(item => item.label), content.pro_teams.map(item => item.label)]);
-type Scalar = Exclude<keyof PreviewContent, "schools" | "pro_teams" | "awards" | "social" | "article_edits" | "merchandise" | "career_stats" | "cfb_stats" | "pfr_stats" | "videos" | "photos">;
+type Scalar = Exclude<keyof PreviewContent, "schools" | "pro_teams" | "awards" | "social" | "article_edits" | "merchandise" | "career_stats" | "cfb_stats" | "pfr_stats" | "combine_results" | "videos" | "photos">;
 
 export default function PreviewLockerForm({
   record,
@@ -451,6 +452,7 @@ export default function PreviewLockerForm({
       </section>
       <section id="locker-panel-stats" role="tabpanel" aria-labelledby="locker-tab-stats" tabIndex={0} hidden={activeFolder !== "stats"} className={styles.folderPanel}>
       <h2 className={styles.folderHeading}>Statistics & imports</h2>
+      <CombineResultsForm value={draft.combine_results} onChange={combine_results => change({ combine_results })} />
       <CfbCsvImport athleteName={draft.full_name} value={draft.cfb_stats} onChange={cfb_stats => change({ cfb_stats })} />
       <StatsCsvImport league="nfl" athleteName={draft.full_name} value={draft.pfr_stats} onChange={pfr_stats => change({ pfr_stats })} disabled={busy !== null || statsNeedReload} />
       <section className="space-y-3" aria-label="Stats-only update">

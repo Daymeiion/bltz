@@ -47,6 +47,14 @@ it("never writes schema defaults over fields omitted by an older or partial edit
   expect(response.status).toBe(200);
   expect(mock.update.mock.calls[0][0]).toEqual({slug:content.slug,full_name:content.full_name,bio:"New biography"});
 });
+it("persists sourced Combine results through revision-protected saves and permits explicit clearing", async () => {
+  const combine_results=[{id:"combine-2008",eventType:"combine",year:2008,timing:"official",sourceUrl:"https://league.example.com/fixture",measurements:[{metric:"forty",value:4.55,sourceUrl:null}]}];
+  mock.maybeSingle.mockResolvedValue({data:{id,slug:content.slug,revision:2},error:null});
+  expect((await PATCH(request({revision:1,content:{...content,combine_results}},"PATCH"),{params:Promise.resolve({id})})).status).toBe(200);
+  expect(mock.update.mock.calls[0][0]).toMatchObject({combine_results});
+  expect((await PATCH(request({revision:2,content:{...content,combine_results:[]}},"PATCH"),{params:Promise.resolve({id})})).status).toBe(200);
+  expect(mock.update.mock.calls[1][0]).toMatchObject({combine_results:[]});
+});
 const nfl = [{ category: "defense", sourceUrl: "https://www.pro-football-reference.com/players/F/FixtPl00.htm", importedAt: "2026-10-11T00:00:00.000Z", seasons: [{ year: 2024, team: "AAA", gamesPlayed: 17, gamesStarted: null, statistics: { sacks: 2.5 } }], careerTotals: { seasonCount: 1, gamesPlayed: 17, gamesStarted: null, statistics: { sacks: 2.5, passesDefended: 4 } } }];
 it("passes validated NFL tables through admin create and revision-protected update", async () => {
   const imported = { ...content, pfr_stats: nfl };

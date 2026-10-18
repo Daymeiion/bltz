@@ -55,6 +55,7 @@ export function previewLockerData(row: PreviewRecord | ResolvedPreviewRecord, pu
     articles: curatedArticles("enrichment" in row ? row.enrichment?.articles ?? [] : [], row.article_edits, row.updated_at),
     merch: lockerMerchandise(row.merchandise),
     structuredStats: [...combinePfrImports(row.pfr_stats ?? []), ...combineCfbImports(row.cfb_stats ?? [])],
+    combineResults: row.combine_results ?? [],
     hometown: row.hometown || "", position: row.position || "", jersey: row.jersey || "",
     jerseyHistory: previewJerseyHistory(row),
     levelLabel: row.level || "Athlete", headshotUrl: previewHeadshot(row),
@@ -86,6 +87,7 @@ export function previewPhotoData(row: PreviewRecord | ResolvedPreviewRecord, pub
 export function toLockerData(row: PreviewLockerRow): LockerData {
   const dob = row.dob ?? null;
   return {
+    combineResults: row.combine_results ?? [],
     merch: lockerMerchandise(row.merchandise),
     articles: curatedArticles([], row.article_edits, row.updated_at),
     athleteId: null,
