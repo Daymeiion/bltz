@@ -1,4 +1,5 @@
 "use client";
+import { useRef } from "react";
 import { BuilderSection } from "./BuilderSection";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +22,19 @@ export default function ArticlesSection({ articles, edits, onChange, onReload, o
   imageUrls?:Record<string,string>; imageError?:{id:string;message:string}|null;
   onUploadImage?:(item:ArticleEdit,file:File|undefined)=>void;
 }) {
+  const editors = useRef(new Map<string, HTMLDetailsElement>());
+  const registerEditor = (article: Parameters<typeof newsArticleKeys>[0], element: HTMLDetailsElement | null) => {
+    for (const key of newsArticleKeys(article)) {
+      if (element) editors.current.set(key, element); else editors.current.delete(key);
+    }
+  };
+  const editExisting = (article: PlayerArticle) => {
+    const editor = newsArticleKeys(article).map(key => editors.current.get(key)).find(Boolean);
+    if (!editor) return;
+    editor.open = true;
+    editor.scrollIntoView?.({ block: "start" });
+    editor.querySelector<HTMLInputElement>("input")?.focus({ preventScroll: true });
+  };
   const update = (id: string, patch: Partial<ArticleEdit>) => onChange(edits.map(item => item.id === id ? { ...item, ...patch } : item));
   const imageInput = (item:ArticleEdit,label:string) => <EditorialImageInput label={label} title={item.headline} kind="article" defaultUrl={item.imageUrl} storagePath={item.imageStoragePath} imageUrls={imageUrls} saved={saved} busy={busy} disabled={!item.id && edits.length>=40} error={imageError?.id===(item.sourceUrl??item.id)?imageError.message:undefined} onUpload={file=>onUploadImage?.({...item,id:item.id||crypto.randomUUID()},file)} onDefault={()=>update(item.id,{imageStoragePath:null})}/>;
   const fields = (item: ArticleEdit, label: string, showImage=true) => <div className="mt-4 grid gap-4 sm:grid-cols-2">
@@ -37,6 +51,8 @@ export default function ArticlesSection({ articles, edits, onChange, onReload, o
   const additional = edits.filter(item => !item.sourceUrl || !existingSources.has(item.sourceUrl));
   const draftKeys = new Set([...articles.flatMap(newsArticleKeys), ...edits.flatMap(item => newsArticleKeys({ article_url: item.articleUrl, canonical_url: item.sourceUrl ?? undefined, headline: item.headline }))]);
   const inDraft = (article: PlayerArticle) => newsArticleKeys(article).some(key => draftKeys.has(key));
+  const pendingCount = (review?.articles ?? []).filter(article => !inDraft(article)).length;
+  const addedCount = (review?.articles.length ?? 0) - pendingCount;
   const add = (urls: string[]) => {
     if (!identityCurrent || busy) return;
     const requested = new Set(urls), seen = new Set(draftKeys);
@@ -53,16 +69,17 @@ export default function ArticlesSection({ articles, edits, onChange, onReload, o
     {reviewError && <p role="alert" className="break-words text-sm text-red-400">{reviewError}</p>}
     {busy && <p role="status" className="text-sm">Updating saved news reviews…</p>}
     <section aria-label="News articles for review" className="space-y-4">
-      <h3 className="font-semibold" aria-live="polite">Articles for review · {review?.articles.length ?? 0}</h3>
+      <h3 className="font-semibold" aria-live="polite">Saved news suggestions · {review?.articles.length ?? 0}</h3>
+      <p role="status" className="text-sm">{pendingCount} awaiting review · {addedCount} already added to Locker articles.</p>
       {review?.searched_at && <p className="text-sm text-muted-foreground">Last search · <time dateTime={review.searched_at}>{new Date(review.searched_at).toISOString().replace("T", " ").slice(0, 16)} UTC</time>. Saved articles may be older. Dismissals are saved.</p>}
       {!identityCurrent && <p role="status" className="text-sm">The player identity changed or the saved version is stale. Save and search again before adding these articles.</p>}
       {!review?.articles.length && <p className="text-sm text-muted-foreground">No saved matching articles awaiting review. Search for more coverage or add a reviewed article manually below.</p>}
       {!!review?.articles.length && <BulkReviewControls key={`${reviewKey}:${identityCurrent}`} items={review.articles.map(article => ({ url: article.article_url, inDraft: inDraft(article) }))}
-        kind="articles" playerName={playerName} capacity={40 - edits.length} canAdd={identityCurrent} busy={busy} onAdd={add} onDismiss={onDismissSelected}>
-        {selection => review.articles.map(article => <NewsResultCard key={article.article_url} article={article} playerName={playerName}
+        kind="articles" playerName={playerName} showAddActions={pendingCount > 0} capacity={40 - edits.length} canAdd={identityCurrent} busy={busy} onAdd={add} onDismiss={onDismissSelected}>
+        {selection => review.articles.map(article => <NewsResultCard key={`${article.article_url}:${inDraft(article)}`} article={article} playerName={playerName}
           selected={selection.selected.has(article.article_url)} onSelect={() => selection.toggle(article.article_url)} selectionDisabled={selection.disabled}
           inDraft={inDraft(article)} canAdd={identityCurrent && !busy && edits.length < 40} dismissDisabled={busy}
-          onAdd={() => add([article.article_url])} onDismiss={() => onDismiss(article.article_url)} />)}
+          onAdd={() => add([article.article_url])} onEdit={() => editExisting(article)} onDismiss={() => onDismiss(article.article_url)} />)}
       </BulkReviewControls>}
     </section>
     <DismissedReviewList reviewKey={reviewKey} onRestoreSelected={onRestoreSelected} kind="articles" items={(review?.dismissed_articles ?? []).map(article => ({ url: article.article_url, title: article.headline, source: article.publisher }))} busy={busy} canRestore={identityCurrent && !!onRestore} onRestore={url => onRestore?.(url)} offset={review?.dismissed_offset} hasMore={review?.dismissed_has_more} onPage={onDismissedPage} canPage={canLoad} />
@@ -70,7 +87,7 @@ export default function ArticlesSection({ articles, edits, onChange, onReload, o
     {!articles.length && <p className="text-sm text-muted-foreground">No saved matching articles loaded.</p>}
     {articles.map((article, index) => {
       const edit = edits.find(item => item.sourceUrl === article.article_url);
-      return <details key={article.article_url} className="rounded-lg border p-4">
+      return <details ref={element => registerEditor(article, element)} key={article.article_url} className="rounded-lg border p-4">
         <summary className="cursor-pointer break-words font-medium">{edit?.headline || article.headline} · {edit?.visible === false ? "Hidden" : "Shown"}</summary>
         <p className="mt-3 text-sm text-muted-foreground">Discovered from {article.publisher}</p>
         <a className="mt-2 block break-all text-sm underline" href={article.article_url} target="_blank" rel="noopener noreferrer">Original scraped article ↗</a>
@@ -82,7 +99,7 @@ export default function ArticlesSection({ articles, edits, onChange, onReload, o
       </details>;
     })}
     <h3 className="font-semibold">Added articles & retained edits</h3>
-    {additional.map((item, index) => <details key={item.id} open className="rounded-lg border p-4">
+    {additional.map((item, index) => <details ref={element => registerEditor({article_url:item.articleUrl,canonical_url:item.sourceUrl??undefined,headline:item.headline}, element)} key={item.id} open className="rounded-lg border p-4">
       <summary className="cursor-pointer break-words font-medium">{item.headline || `Added article ${index + 1}`} · {item.visible ? "Shown" : "Hidden"}</summary>
       {item.sourceUrl && <p className="mt-3 text-sm text-muted-foreground">Retained edit of a previously scraped article.</p>}
       {fields(item, `Added article ${index + 1}`)}

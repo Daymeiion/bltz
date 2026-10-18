@@ -3,9 +3,9 @@ import { useId, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 
 /** Mounted with the queue/identity key so a refreshed queue requires fresh intent. */
-export default function BulkReviewControls({ items, kind, playerName, capacity, canAdd, busy, onAdd, onDismiss, children }: {
+export default function BulkReviewControls({ items, kind, playerName, capacity, canAdd, busy, showAddActions = true, onAdd, onDismiss, children }: {
   items: { url: string; inDraft: boolean }[]; kind: "articles" | "listings"; playerName: string;
-  capacity: number; canAdd: boolean; busy: boolean;
+  capacity: number; canAdd: boolean; busy: boolean; showAddActions?: boolean;
   onAdd: (urls: string[]) => void; onDismiss: (urls: string[]) => Promise<boolean>;
   children: (selection: { selected: Set<string>; toggle: (url: string) => void; disabled: boolean }) => ReactNode;
 }) {
@@ -22,10 +22,10 @@ export default function BulkReviewControls({ items, kind, playerName, capacity, 
         <Button type="button" variant="outline" disabled={busy || !chosen.length} onClick={clear}>Clear selection</Button>
         <p role="status" className="text-sm">{chosen.length} selected · {addable.length} ready to add</p>
       </div>
-      <label htmlFor={reviewId} className="flex min-h-11 items-start gap-3 text-sm"><input id={reviewId} className="mt-1" type="checkbox" checked={reviewed} disabled={busy || !canAdd || !addable.length} onChange={event => setReviewed(event.target.checked)} />I reviewed the selected {kind} for {playerName}.</label>
+      {showAddActions && <label htmlFor={reviewId} className="flex min-h-11 items-start gap-3 text-sm"><input id={reviewId} className="mt-1" type="checkbox" checked={reviewed} disabled={busy || !canAdd || !addable.length} onChange={event => setReviewed(event.target.checked)} />I reviewed the selected {kind} for {playerName}.</label>}
       {overflow && <p role="status" className="text-sm">This draft can hold {capacity} more {capacity === 1 ? "item" : "items"}. Select fewer new {kind}.</p>}
       <div className="flex flex-wrap gap-3">
-        <Button type="button" disabled={busy || !canAdd || !reviewed || !addable.length || overflow} onClick={() => { onAdd(addable.map(item => item.url)); clear(); }}>Add selected to draft</Button>
+        {showAddActions && <Button type="button" disabled={busy || !canAdd || !reviewed || !addable.length || overflow} onClick={() => { onAdd(addable.map(item => item.url)); clear(); }}>Add selected to draft</Button>}
         <Button type="button" variant="outline" disabled={busy || !chosen.length} onClick={async () => { if (await onDismiss(chosen.map(item => item.url))) clear(); }}>Dismiss selected</Button>
       </div>
       <p className="text-xs text-muted-foreground">Save draft to show added items in the Locker. Dismissing only removes suggestions from this review queue.</p>

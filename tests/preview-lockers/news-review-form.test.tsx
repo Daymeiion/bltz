@@ -18,7 +18,7 @@ it("reopens saved pending articles without searching and requires review, Add an
  expect(fetcher).not.toHaveBeenCalled();expect(queue().textContent).toContain(article.headline);expect(queue().textContent).toContain("Last search");
  expect(button("Add to draft",queue()).disabled).toBe(true);expect(host.querySelector('[aria-label="Added article 1 headline"]')).toBeNull();
  await act(async()=>queue().querySelector<HTMLInputElement>('input[aria-label^="I reviewed this"]')!.click());await click("Add to draft",queue());
- expect(button("In draft",queue()).disabled).toBe(true);expect(host.querySelector<HTMLInputElement>('[aria-label="Added article 1 headline"]')?.value).toBe(article.headline);
+ expect(button("Edit article",queue()).disabled).toBe(false);expect(queue().querySelector('input[aria-label^="I reviewed this"]')).toBeNull();expect(queue().textContent).toContain("0 awaiting review");expect(host.querySelector<HTMLInputElement>('[aria-label="Added article 1 headline"]')?.value).toBe(article.headline);
  expect(fetcher).not.toHaveBeenCalled();
  fetcher.mockResolvedValueOnce(Response.json({id:record.id,slug:record.slug,revision:4}));await click("Save draft");
  const payload=JSON.parse(fetcher.mock.calls[0][1].body);expect(payload.content.article_edits).toEqual([expect.objectContaining({articleUrl:article.article_url,sourceUrl:article.article_url,visible:true})]);
@@ -38,7 +38,7 @@ it("accepts accumulated search results above twelve without adding them to the L
 it("persists dismissal only after success, keeps edited Locker articles separate and retains failed dismissals",async()=>{
  const edit={id:"reviewed",sourceUrl:article.article_url,articleUrl:article.article_url,headline:article.headline,publisher:article.publisher,visible:true,imageUrl:null,summary:article.summary,publishedAt:null};
  await act(async()=>root.render(<PreviewLockerForm record={{...record,article_edits:[edit]}} initialNewsReview={review} />));
- expect(button("In draft",queue()).disabled).toBe(true);
+ expect(button("Edit article",queue()).disabled).toBe(false);expect(queue().querySelector('input[aria-label^="I reviewed this"]')).toBeNull();expect(queue().textContent).toContain("0 awaiting review");
  fetcher.mockResolvedValueOnce(Response.json({error:"preview_conflict"},{status:409}));await click("Dismiss article",queue());expect(queue().querySelectorAll('article')).toHaveLength(1);expect(host.textContent).toContain("queue changed");
  fetcher.mockResolvedValueOnce(Response.json({revision:3,review:{...review,version:3,articles:[]}}));await click("Dismiss article",queue());
  expect(JSON.parse(fetcher.mock.calls[1][1].body)).toEqual({revision:3,version:2,url:article.article_url});expect(fetcher.mock.calls[1][1].method).toBe("PATCH");
@@ -51,4 +51,16 @@ it("does not overwrite saved reviews with malformed, unsafe or stale responses",
  expect(queue().textContent).toContain(article.headline);expect(host.querySelector('a[href^="javascript:"]')).toBeNull();
  await act(async()=>root.render(<PreviewLockerForm key="changed" record={record} initialNewsReview={review} newsReviewCurrent={false} />));
  expect(button("Add to draft",queue()).disabled).toBe(true);expect(queue().textContent).toContain("identity changed");
+});
+
+it("opens the existing article editor and saves changes without adding duplicate articles",async()=>{
+ const edit={id:"saved-article",sourceUrl:article.article_url,articleUrl:article.article_url,headline:article.headline,publisher:article.publisher,visible:true,imageUrl:null,summary:article.summary,publishedAt:null};
+ await act(async()=>root.render(<PreviewLockerForm record={{...record,article_edits:[edit]}} initialNewsReview={review} />));
+ expect(queue().querySelector('input[aria-label^="I reviewed this"]')).toBeNull();expect(button("Add selected to draft",queue())).toBeUndefined();
+ const input=host.querySelector<HTMLInputElement>('[aria-label="Added article 1 headline"]')!;
+ const editor=input.closest('details')!;editor.open=false;
+ await click("Edit article",queue());expect(editor.open).toBe(true);expect(document.activeElement).toBe(input);
+ await act(async()=>{Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value')!.set!.call(input,'Reviewed career story');input.dispatchEvent(new Event('input',{bubbles:true}));});
+ fetcher.mockResolvedValueOnce(Response.json({id:record.id,slug:record.slug,revision:4}));await click("Save draft");
+ const payload=JSON.parse(fetcher.mock.calls[0][1].body);expect(payload.content.article_edits).toEqual([{...edit,headline:'Reviewed career story'}]);
 });

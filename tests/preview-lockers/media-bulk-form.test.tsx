@@ -28,7 +28,7 @@ it("adds selected news and merchandise together without stale state, duplicates 
  expect(host.querySelectorAll('[aria-label^="Added article "][aria-label$=" headline"]')).toHaveLength(2);
  expect(host.querySelectorAll('[aria-label^="Merchandise "][aria-label$=" title"]')).toHaveLength(3);
  expect(fetcher).not.toHaveBeenCalled();
- await click("Select all",actions("news"));expect(actions("news").textContent).toContain("0 ready to add");expect(button("Add selected to draft",actions("news")).disabled).toBe(true);
+ await click("Select all",actions("news"));expect(actions("news").textContent).toContain("0 ready to add");expect(button("Add selected to draft",actions("news"))).toBeUndefined();
  fetcher.mockResolvedValueOnce(Response.json({id:record.id,slug:record.slug,revision:4}));await click("Save draft");
  const payload=JSON.parse(fetcher.mock.calls[0][1].body);expect(payload.content.article_edits).toHaveLength(2);expect(payload.content.merchandise).toHaveLength(3);expect(payload.content.pfr_stats).toEqual(record.pfr_stats);
 });
