@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Eye, ExternalLink, KeyRound, Pause, Play, X } from "lucide-react";
 import { Dialog, DialogClose, DialogDescription, DialogPortal, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -21,6 +21,16 @@ export function RelatedMediaStrip({ images, athleteName, athleteSlug, activeImag
   const [failed, setFailed] = useState<string[]>([]);
   const [ratios, setRatios] = useState<Record<string, number>>({});
   const { rowRef, paused, togglePaused, setModalOpen, rowEvents } = useFilmRowScroll();
+  useEffect(() => {
+    // Cached SSR images can finish loading before React attaches onLoad.
+    const loaded = [...(rowRef.current?.querySelectorAll<HTMLImageElement>('button[aria-label^="Show related photo:"] img') ?? [])]
+      .filter(image => image.complete && image.naturalWidth && image.naturalHeight);
+    setRatios(current => {
+      const updates = loaded.filter(image => current[image.getAttribute("src")!] !== image.naturalWidth / image.naturalHeight);
+      if (!updates.length) return current;
+      return { ...current, ...Object.fromEntries(updates.map(image => [image.getAttribute("src")!, image.naturalWidth / image.naturalHeight])) };
+    });
+  }, [images, rowRef]);
   const available = images.filter(image => !failed.includes(image.url));
   const searchName = athleteName.trim().toLowerCase().replace(/\s+/g, "-");
   const gettySearchUrl = `https://www.gettyimages.com/photos/${encodeURIComponent(searchName)}`;

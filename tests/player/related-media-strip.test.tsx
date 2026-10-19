@@ -47,6 +47,13 @@ it("sizes each loaded container to its source image proportions", async () => {
   expect(host.querySelector('[aria-label="Pause photo row"]')).not.toBeNull();
 });
 
+it("sizes cached server-rendered images whose load event preceded hydration", async () => {
+  const photo = host.querySelector<HTMLImageElement>('button[aria-label^="Show related photo:"] img')!;
+  Object.defineProperties(photo, { complete: { value: true }, naturalWidth: { value: 400 }, naturalHeight: { value: 800 } });
+  await act(async () => root.render(<RelatedMediaStrip images={[...images]} athleteName="Keith Rivers" athleteSlug="keith-rivers" onSelect={select} />));
+  expect(parseFloat(photo.closest<HTMLDivElement>('div[style]')!.style.aspectRatio)).toBeCloseTo(0.5);
+});
+
 it("opens the corresponding licensing preview without selecting a slideshow photo", async () => {
   const trigger = host.querySelector<HTMLButtonElement>('[aria-label="Explore Getty Images licensing: Professional game"]')!;
   await act(async () => trigger.click());
