@@ -61,6 +61,7 @@ export interface PreviewLockerRow {
   headshot_url: string | null;
   hero_video_url: string | null;
   bio: string;
+  story?: string;
   athlete_quote: string | null;
   athlete_quote_author: string | null;
   school_info: PreviewSchoolInfo;
@@ -99,6 +100,7 @@ export interface CreatePreviewLockerInput {
   headshot_url?: string | null;
   hero_video_url?: string | null;
   bio?: string;
+  story?: string;
   athlete_quote?: string | null;
   athlete_quote_author?: string | null;
   school_info?: PreviewSchoolInfo;

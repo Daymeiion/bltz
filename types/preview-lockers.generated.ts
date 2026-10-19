@@ -1,3 +1,4 @@
+// story regenerated from disposable PostgreSQL information_schema by scripts/verify-preview-story.mjs.
 // School display-name migration verified by scripts/verify-preview-school-display.mjs: schools remains Json; function signature and grants unchanged.
 // combine_results regenerated from isolated PostgreSQL information_schema by scripts/verify-preview-combine.mjs.
 // Preview table regenerated from isolated PostgreSQL information_schema by scripts/verify-preview-media.mjs; remaining declarations retain their Supabase CLI provenance.
@@ -11,6 +12,7 @@ export type PreviewDatabase = { public: { Tables: { preview_lockers: {
           athlete_quote_author: string | null
           awards: Json
           bio: string
+          story: string
           career_stats: Json
           cfb_stats: Json
           combine_results: Json
@@ -50,6 +52,7 @@ export type PreviewDatabase = { public: { Tables: { preview_lockers: {
           athlete_quote_author?: string | null
           awards?: Json
           bio?: string
+          story?: string
           career_stats?: Json
           cfb_stats?: Json
           combine_results?: Json
@@ -89,6 +92,7 @@ export type PreviewDatabase = { public: { Tables: { preview_lockers: {
           athlete_quote_author?: string | null
           awards?: Json
           bio?: string
+          story?: string
           career_stats?: Json
           cfb_stats?: Json
           combine_results?: Json

@@ -670,7 +670,7 @@ export default function LockerView({
   }));
 
   const story = [{
-    cat: "story", isStory: true, text: data.bio,
+    cat: "story", isStory: true, text: data.story || "",
     style: { flex: "none", width: 272, scrollSnapAlign: "start", borderRadius: 16, border: "1px solid #1E2640", background: "linear-gradient(150deg,#12183a,#131829)" } as React.CSSProperties,
   }];
 
@@ -816,12 +816,7 @@ export default function LockerView({
       : "Bio has not been added yet. BLTZ will show an athlete-written summary or a verified profile snippet once signup, scraped source, school, or team data is available.";
   const formattedHometown = formatHometown(data.hometown);
   const displayHometown = hasKnownText(formattedHometown) ? formattedHometown : unknownText;
-  const displayStory =
-    hasKnownText(data.story)
-      ? data.story!
-      : hasBio
-      ? `Early Life: ${data.bio}\n\nCollege: BLTZ will expand this section with scraped school history, roster context, awards, and career milestones from verified sources.\n\nProfessional: Pro team, draft, media, and post-college details will appear here when available from organization/team data.`
-      : `Early Life: Verified early-life details have not been added yet.\n\nCollege: School history, roster context, awards, and major performances will appear here once signup, scraped source, school, or team data is available.\n\nProfessional: Draft notes, pro affiliations, media coverage, and career milestones will populate here as verified organization and league data becomes available.`;
+  const displayStory = hasKnownText(data.story) ? data.story! : "Life story has not been added yet.";
   const displayDob = hasKnownText(data.dobDisplay) ? `${data.dobDisplay}${data.age ? ` (${data.age})` : ""}` : unknownText;
   const knownJerseyNumbers = (data.jerseyNumbers ?? []).filter(hasKnownText);
   const displayJerseyNumbers = knownJerseyNumbers.length

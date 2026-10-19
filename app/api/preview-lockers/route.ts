@@ -1,6 +1,6 @@
 import { assertAwardReferences } from "@/lib/award-images/server";
 import { createPreview, previewRecord, equivalentPreview, previewMediaBelongsTo } from "@/lib/preview-lockers/validation";
-import { assertPreviewMediaExists, previewAdmin, readBody, json, failure, PreviewError, PREVIEW_COLUMNS } from "@/lib/preview-lockers/server";
+import { assertPreviewMediaExists, previewAdmin, readBody, json, failure, PreviewError, PREVIEW_COLUMNS, PREVIEW_CONTENT_BODY_LIMIT } from "@/lib/preview-lockers/server";
 import { previewEnrollment } from "@/lib/preview-lockers/conversion";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ConversionDatabase } from "@/types/preview-conversion.generated";
@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 export async function POST(req: Request) {
   try {
     const { client } = await previewAdmin();
-    const parsed = createPreview.extend({ enrollment: previewEnrollment.optional() }).safeParse(await readBody(req));
+    const parsed = createPreview.extend({ enrollment: previewEnrollment.optional() }).safeParse(await readBody(req, PREVIEW_CONTENT_BODY_LIMIT));
     if (!parsed.success) throw new PreviewError("invalid_input", 400);
     const { id, content, enrollment } = parsed.data;
     if (enrollment && process.env.PREVIEW_CONVERSION_ENABLED !== "true") throw new PreviewError("conversion_unavailable", 503);

@@ -81,3 +81,21 @@ it("rejects conflicting or unsupported career totals before database access", as
     expect(mock.from).not.toHaveBeenCalled();
   }
 });
+
+it("persists separate Story edits and preserves Story omitted by an older editor",async()=>{
+ mock.maybeSingle.mockResolvedValue({data:{id,slug:content.slug,revision:2},error:null});
+ const {story:_story,...legacy}=content;
+ expect((await PATCH(request({revision:1,content:legacy},"PATCH"),{params:Promise.resolve({id})})).status).toBe(200);
+ expect(mock.update.mock.calls[0][0]).not.toHaveProperty("story");
+ expect((await PATCH(request({revision:2,content:{...content,bio:"Short bio",story:"Detailed life story"}},"PATCH"),{params:Promise.resolve({id})})).status).toBe(200);
+ expect(mock.update.mock.calls[1][0]).toMatchObject({bio:"Short bio",story:"Detailed life story"});
+ expect((await PATCH(request({revision:3,content:{...content,story:""}},"PATCH"),{params:Promise.resolve({id})})).status).toBe(200);
+ expect(mock.update.mock.calls[2][0]).toHaveProperty("story","");
+});
+it("accepts a full-length Unicode Story alongside existing media within the bounded save payload",async()=>{
+ const full=previewContent.parse({...content,story:"界".repeat(20000),photos:Array.from({length:40},(_,i)=>({id:`photo-${i}`,title:`Photo ${i}`,url:`https://image.example.com/${"a".repeat(1800)}${i}.jpg`,level:"cfb"}))});
+ expect(new TextEncoder().encode(JSON.stringify({id,content:full})).length).toBeGreaterThan(128*1024);
+ mock.single.mockResolvedValue({data:{id,slug:content.slug,revision:1},error:null});
+ expect((await POST(request({id,content:full}))).status).toBe(201);
+ expect(mock.insert.mock.calls[0][0]).toHaveProperty("story",full.story);
+});

@@ -64,7 +64,7 @@ export function previewLockerData(row: PreviewRecord | ResolvedPreviewRecord, pu
     heroVideos: {
       mobile: previewHeroVideo(row, "mobile"),
       desktop: previewHeroVideo(row, "desktop") ?? previewVideoSource(row.hero_video_url).playbackUrl,
-    }, logoSrc: "/images/preview-nav-logo.png", bio: row.bio,
+    }, logoSrc: "/images/preview-nav-logo.png", bio: row.bio, story: row.story || "",
     athleteQuote: row.athlete_quote, athleteQuoteAuthor: row.athlete_quote_author,
     heightDisplay: row.height_in ? `${Math.floor(row.height_in / 12)}′ ${row.height_in % 12}″` : "",
     weightLbs: row.weight_lbs, dobDisplay: formatDob(row.dob), age: calcAge(row.dob), gamesPlayed: row.games_played,
@@ -105,6 +105,7 @@ export function toLockerData(row: PreviewLockerRow): LockerData {
     heroVideoUrl: row.hero_video_url,
     logoSrc: "/bltz-white-logo.svg",
     bio: row.bio || `${row.full_name} hasn't written their story yet. Check back soon.`,
+    story: row.story || "",
     athleteQuote: row.athlete_quote,
     athleteQuoteAuthor: row.athlete_quote_author,
     heightDisplay: heightDisplay(row.height_in),

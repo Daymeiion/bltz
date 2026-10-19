@@ -70,6 +70,8 @@ export function mergeSuggestions(current: PreviewContent, suggestion: PreviewCon
     // Manual event results are authoritative. Discovery cannot add, replace or
     // clear them; a future suggestions workflow must require explicit review.
     combine_results: current.combine_results,
+    // Life Story is authored manually, independently of the scraped short bio.
+    story: current.story,
     schools: mergeTeams(current.schools, suggestion.schools, "school"),
     pro_teams: mergeTeams(current.pro_teams, suggestion.pro_teams, "pro"),
   };
@@ -87,7 +89,7 @@ export function mergeSuggestions(current: PreviewContent, suggestion: PreviewCon
   append("cfb_stats", item => [item.category]);
   append("pfr_stats", item => [item.category]);
   for (const key of Object.keys(current) as (keyof PreviewContent)[]) {
-    if (key === "schools" || key === "pro_teams" || Array.isArray(current[key])) continue;
+    if (key === "story" || key === "schools" || key === "pro_teams" || Array.isArray(current[key])) continue;
     const value = current[key];
     if (value === null || value === "") {
       Object.assign(merged, { [key]: suggestion[key] });

@@ -2,7 +2,7 @@ import { assertAwardReferences } from "@/lib/award-images/server";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { updatePreview, previewMediaBelongsTo } from "@/lib/preview-lockers/validation";
-import { assertPreviewMediaExists, previewAdmin, readBody, json, failure, PreviewError, PREVIEW_COLUMNS } from "@/lib/preview-lockers/server";
+import { assertPreviewMediaExists, previewAdmin, readBody, json, failure, PreviewError, PREVIEW_COLUMNS, PREVIEW_CONTENT_BODY_LIMIT } from "@/lib/preview-lockers/server";
 import type { PreviewDatabase } from "@/types/preview-lockers.generated";
 
 import { tryEnrichSavedPreview } from "@/lib/preview-lockers/enrichment";
@@ -14,7 +14,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const { client } = await previewAdmin();
     const { id } = await params;
     if (!z.uuid().safeParse(id).success) throw new PreviewError("invalid_input", 400);
-    const input = await readBody(req);
+    const input = await readBody(req, PREVIEW_CONTENT_BODY_LIMIT);
     const parsed = updatePreview.safeParse(input);
     if (!parsed.success) throw new PreviewError("invalid_input", 400);
     const { revision, content } = parsed.data;
