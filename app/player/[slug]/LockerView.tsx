@@ -117,7 +117,7 @@ export type LockerData = {
   articlesLoading?: boolean;
   articlesUnavailable?: boolean;
   timeline?: { year: string; tag: string; title: string; note: string }[];
-  videos: { id: string; title: string; thumb: string | null; playbackUrl?: string | null; embedUrl?: string | null }[];
+  videos: { id: string; title: string; thumb: string | null; lockerPlacement?: "podcast" | "social" | "both"; playbackUrl?: string | null; embedUrl?: string | null }[];
   podcastAppearances?: {
     id: string;
     type: "podcast" | "interview";
@@ -192,6 +192,16 @@ function keepHeroVideoSilent(video: HTMLVideoElement | null) {
 
 type LockerViewerMode = "public" | "athlete";
 type LockerPresentation = "page" | "embedded";
+
+function LockerMediaVideoCard({ video, lockerHref }: { video: LockerData["videos"][number]; lockerHref: string }) {
+  return <a className="locker-media-video-card" href={`${lockerHref}/videos/${encodeURIComponent(video.id)}`}>
+    <span className="locker-media-video-thumbnail">
+      <span aria-hidden="true" style={{ fontSize: 28 }}>▶</span>
+      <VideoPreview title={video.title} thumbnailUrl={video.thumb} playbackUrl={video.playbackUrl} embedUrl={video.embedUrl} previewOnHover={false} />
+    </span>
+    <span className="locker-media-video-title">{video.title}</span>
+  </a>;
+}
 
 export default function LockerView({
   data,
@@ -749,6 +759,9 @@ export default function LockerView({
     return () => window.clearTimeout(timeout);
   }, [modalShortCount, modalShortHasVideo, shortModalIndex]);
   const mediaPodcast = data.podcastAppearances ?? [];
+  const podcastVideos = data.videos.filter(video => video.lockerPlacement === "podcast" || video.lockerPlacement === "both");
+  const socialVideos = data.videos.filter(video => video.lockerPlacement === "social" || video.lockerPlacement === "both");
+  const mediaVideoLockerHref = data.lockerHref ?? `/player/${data.slug}`;
   const mediaSocial: Array<{ platform: string; handle: string; meta: string; img: string | null; format: string; published: string; caption: string; originalUrl?: string; videoUrl?: string | null; embedUrl?: string | null }> = isPrivatePreview ? (data.social ?? []).filter(item => item.kind === "post").map(item => ({ platform: item.platform === "X" ? "X / Twitter" : item.platform, handle: item.handle || item.title, meta: item.title, img: item.imageUrl, format: item.format, published: "", caption: item.caption, originalUrl: item.sourceUrl, videoUrl: item.videoUrl, embedUrl: socialEmbedUrl(item.platform, item.sourceUrl, item.kind) })) : [
     { platform: "Instagram", handle: "@athlete", meta: "12.4K LIKES", img: poolAt(4), format: "square", published: "OCT 18, 2025", caption: "Game day with the people who make every rep count." },
     { platform: "X", handle: "@athlete", meta: "4.8K REPOSTS", img: poolAt(0), format: "portrait", published: "SEP 29, 2025", caption: "The work travels. Another week, another opportunity to raise the standard." },
@@ -1372,8 +1385,9 @@ export default function LockerView({
                   </section>
                 ) : mediaSort === "podcast" ? (
                   <div style={{ padding: "14px 18px 10px", display: "flex", flexDirection: "column", gap: 10 }}>
-                    {mediaPodcast.length ? (
+                    {mediaPodcast.length || podcastVideos.length ? (
                       <div className="locker-podcast-grid">
+                        {podcastVideos.map(video => <LockerMediaVideoCard key={`video-${video.id}`} video={video} lockerHref={mediaVideoLockerHref} />)}
                         {mediaPodcast.map((m) => (
                           <div key={m.id} style={{ minWidth: 0, height: 188, borderRadius: 14, overflow: "hidden", border: "1px solid #1E2640", background: "#131829" }}>
                             <div style={{ display: "flex", flexDirection: "column", height: "100%", padding: 14, background: "linear-gradient(150deg,#12183a,#131829)" }}>
@@ -1416,7 +1430,10 @@ export default function LockerView({
                         onScroll={handleSocialScroll}
                         style={{ height: isPrivatePreview ? "auto" : 408, overflowY: isPrivatePreview ? "visible" : "auto", overscrollBehavior: "auto" }}
                       >
-                        {!mediaSocial.length && <p style={{ color: "rgba(255,255,255,.6)" }}>No social posts added yet.</p>}
+                        {!mediaSocial.length && !socialVideos.length && <p style={{ color: "rgba(255,255,255,.6)" }}>No social posts added yet.</p>}
+                        {socialVideos.length > 0 && <div className="locker-media-video-grid">
+                          {socialVideos.map(video => <LockerMediaVideoCard key={video.id} video={video} lockerHref={mediaVideoLockerHref} />)}
+                        </div>}
                         <div className="locker-social-layout locker-social-layout--mobile">
                           {[0, 1].map((column) => (
                             <div className="locker-social-column" key={column}>
@@ -2087,6 +2104,11 @@ const styleSheet = `
 .locker-short-modal-arrow--down{bottom:12px}
 .locker-short-modal-arrow:disabled{opacity:.28;cursor:default}
 .locker-short-modal-arrow:focus-visible{outline:2px solid ${lockerAccent};outline-offset:1px}
+.locker-media-video-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:14px}
+.locker-media-video-card{display:flex;flex-direction:column;min-width:0;overflow:hidden;border:1px solid #1E2640;border-radius:14px;background:#131829;color:#fff;text-decoration:none}
+.locker-media-video-card:focus-visible{outline:2px solid #ffbb00;outline-offset:3px}
+.locker-media-video-thumbnail{position:relative;display:flex;align-items:center;justify-content:center;width:100%;aspect-ratio:16/9;overflow:hidden;background:#0B1020;color:#ffbb00}
+.locker-media-video-title{display:block;padding:12px;font-family:${disp};font-size:16px;font-weight:700;line-height:1.15;overflow-wrap:anywhere}
 .locker-podcast-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .locker-social-scroll{padding-right:6px}
 .locker-social-layout{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}

@@ -12,7 +12,8 @@ export type PreviewCareerSeason = {
   level: "cfb" | "pro" | string;
   team: string | null;
 };
-export type PreviewVideo = { level?: "pro" | "cfb" | "hs" | "off-field"; id: string; title: string; thumb: string | null; url: string | null };
+export type PreviewVideo = {
+  lockerPlacement?: "podcast" | "social" | "both"; level?: "pro" | "cfb" | "hs" | "off-field"; id: string; title: string; thumb: string | null; url: string | null };
 export type PreviewPhoto = {
   isHeadshot?: boolean;
   inHeroSlideshow?: boolean;

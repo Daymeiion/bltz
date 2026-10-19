@@ -123,7 +123,7 @@ export function toLockerData(row: PreviewLockerRow): LockerData {
     ...previewTeamBranding(row),
     awards: previewAwards(row),
     social: previewSocialItems(row),
-    videos: (row.videos ?? []).map((video) => ({ id: video.id, title: video.title, thumb: video.thumb, ...previewVideoSource(video.url) })),
+    videos: (row.videos ?? []).map((video) => ({ id: video.id, title: video.title, thumb: video.thumb, lockerPlacement: video.lockerPlacement, ...previewVideoSource(video.url) })),
     photos: (row.photos ?? []).map((photo) => ({
       id: photo.id,
       isHeadshot: photo.isHeadshot,

@@ -1,3 +1,4 @@
+// Video placement migration verified by scripts/verify-preview-video-placement.mjs: videos remains Json; function signature and grants unchanged.
 // story regenerated from disposable PostgreSQL information_schema by scripts/verify-preview-story.mjs.
 // School display-name migration verified by scripts/verify-preview-school-display.mjs: schools remains Json; function signature and grants unchanged.
 // combine_results regenerated from isolated PostgreSQL information_schema by scripts/verify-preview-combine.mjs.
