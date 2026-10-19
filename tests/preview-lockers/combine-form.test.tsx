@@ -14,11 +14,11 @@ async function fill(label:string,value:string){const input=host.querySelector<HT
 async function select(label:string,value:string){const input=host.querySelector<HTMLSelectElement>(`[aria-label="${label}"]`)!;await act(async()=>{input.value=value;input.dispatchEvent(new Event('change',{bubbles:true}));});}
 it("saves two separately sourced events, survives scraper replacement/fallback and reload, and supports explicit removal",async()=>{
   await act(async()=>root.render(<PreviewLockerForm record={record} gtmLinked/>));
-  await click('Stats');await click('Add Combine or Pro Day event');
+  await click('Stats');await click('Add Combine event');
   await fill('Event 1 year','2008');await fill('Event 1 source','https://league.example.com/fixture');await select('Event 1 timing','official');
   await fill('Event 1 40-yard dash','4.55');await fill('Event 1 Bench press','0');await fill('Event 1 broad jump feet','10');await fill('Event 1 broad jump inches','2');
   await fill('Event 1 Broad jump source','https://school.example.com/fixture-jump');
-  await click('Add Combine or Pro Day event');await select('Event 2 type','pro_day');await fill('Event 2 year','2008');await fill('Event 2 source','https://school.example.com/pro-day');await fill('Event 2 40-yard dash','4.49');
+  await click('Add Combine event');await fill('Event 2 year','2009');await fill('Event 2 source','https://school.example.com/combine');await fill('Event 2 40-yard dash','4.49');
   fetcher.mockResolvedValueOnce(Response.json({id:record.id,slug:record.slug,revision:4}));await click('Save draft');
   const saved=JSON.parse(fetcher.mock.calls.at(-1)![1].body).content;
   expect(saved.combine_results).toHaveLength(2);
@@ -37,16 +37,26 @@ it("saves two separately sourced events, survives scraper replacement/fallback a
   expect(JSON.parse(fetcher.mock.calls.at(-1)![1].body).content.combine_results).toEqual([saved.combine_results[0]]);
 });
 it("blocks saving unsourced results and invalid bench repetitions while retaining the draft",async()=>{
-  await act(async()=>root.render(<PreviewLockerForm record={record}/>));await click('Add Combine or Pro Day event');await fill('Event 1 Bench press','1.5');
+  await act(async()=>root.render(<PreviewLockerForm record={record}/>));await click('Add Combine event');await fill('Event 1 Bench press','1.5');
   await click('Save draft');expect(fetcher).not.toHaveBeenCalled();expect(host.textContent).toContain('whole repetitions');expect(host.textContent).toContain('Add an event source');
   expect(host.querySelector<HTMLInputElement>('[aria-label="Event 1 Bench press"]')!.value).toBe('1.5');
+});
+it("hides legacy Pro Day entries and retains them when editing and saving Combine results",async()=>{
+ const legacy={id:'legacy-pro',eventType:'pro_day' as const,year:2008,timing:'unofficial' as const,sourceUrl:'https://school.example.com/pro-day',measurements:[{metric:'forty' as const,value:4.49,sourceUrl:null}]};
+ const combine={...legacy,id:'combine',eventType:'combine' as const,measurements:[{metric:'forty' as const,value:4.55,sourceUrl:null}]};
+ await act(async()=>root.render(<PreviewLockerForm record={{...record,combine_results:[legacy,combine]}}/>));
+ expect(host.textContent).not.toContain('Pro Day');expect(host.querySelector('option[value="pro_day"]')).toBeNull();
+ expect(host.querySelector<HTMLInputElement>('[aria-label="Event 1 40-yard dash"]')!.value).toBe('4.55');
+ await fill('Event 1 Bench press','12');fetcher.mockResolvedValueOnce(Response.json({id:record.id,slug:record.slug,revision:4}));await click('Save draft');
+ const saved=JSON.parse(fetcher.mock.calls.at(-1)![1].body).content.combine_results;
+ expect(saved[0]).toEqual(legacy);expect(saved[1].measurements).toContainEqual({metric:'bench',value:12,sourceUrl:null});
 });
 it("keeps discovery separate from saving and persists only explicitly reviewed blank measurements",async()=>{
  const manual={id:'manual',eventType:'combine',year:2008,timing:'not_recorded',sourceUrl:'https://school.example.com/manual',measurements:[{metric:'forty',value:4.6,sourceUrl:null},{metric:'bench',value:0,sourceUrl:null}]} as const;
  await act(async()=>root.render(<PreviewLockerForm record={{...record,combine_results:[{...manual,measurements:[...manual.measurements]}]}}/>));
  const event={...manual,id:'source',sourceUrl:'https://en.wikipedia.org/wiki/Fixture_Player',measurements:[{metric:'forty',value:4.45,sourceUrl:null},{metric:'vertical',value:35.5,sourceUrl:null}]};
  fetcher.mockResolvedValueOnce(Response.json({revision:3,result:{status:'complete',sources:[],suggestions:[{id:'candidate',sourceLabel:'Wikipedia',event}]}}));
- await click('Search Combine & Pro Day results');expect(fetcher).toHaveBeenCalledTimes(1);
+ await click('Search Combine results');expect(fetcher).toHaveBeenCalledTimes(1);
  const checkbox=host.querySelector<HTMLInputElement>('[aria-label="Review Vertical jump 35.5 from Wikipedia combine 2008"]')!;await act(async()=>checkbox.click());
  await click('Add selected measurements to draft');expect(fetcher).toHaveBeenCalledTimes(1);
  fetcher.mockResolvedValueOnce(Response.json({id:record.id,slug:record.slug,revision:4}));await click('Save draft');

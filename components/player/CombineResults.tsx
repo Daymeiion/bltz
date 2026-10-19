@@ -1,7 +1,7 @@
 import { combineEventLabel, combineMetricInfo, combineMetricKeys, combineValue, type CombineResult } from "@/lib/player/combine";
 
 export function CombineResults({ results, displayFont, monoFont, accent }: { results: CombineResult[]; displayFont: string; monoFont: string; accent: string }) {
-  const recorded = results.filter(event => event.measurements.length > 0);
+  const recorded = results.filter(event => event.eventType === "combine" && event.measurements.length > 0);
   const events = recorded.length ? recorded : [null];
   const safeSource = (value?: string | null) => {
     try { const url = new URL(value ?? ""); return url.protocol === "https:" && !url.username && !url.password ? url.href : null; } catch { return null; }

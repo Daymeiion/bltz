@@ -22,6 +22,7 @@ export function addReviewedCombine(current: CombineResult[], suggestions: Combin
   const selected = new Set(choices);
   for (const suggestion of suggestions) {
     const candidate = suggestion.event;
+    if (candidate.eventType !== "combine") continue;
     let target = next.find(event => event.eventType === candidate.eventType && (
       candidate.year !== null ? event.year === candidate.year : event.year === null && event.sourceUrl === candidate.sourceUrl));
     const measurements = candidate.measurements.filter(item => selected.has(combineChoiceKey(suggestion, item.metric)));

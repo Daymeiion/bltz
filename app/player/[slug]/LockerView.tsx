@@ -679,7 +679,7 @@ export default function LockerView({
     ? data.athleteQuoteAuthor!.trim()
     : data.fullName;
 
-  const firstCombineEvent = data.combineResults?.find(event => event.measurements.length > 0);
+  const firstCombineEvent = data.combineResults?.find(event => event.eventType === "combine" && event.measurements.length > 0);
   const measurementSummary = (metric: import("@/lib/player/combine").CombineMetric) => {
     const result = firstCombineEvent?.measurements.find(item => item.metric === metric);
     return result ? combineValue(metric, result.value) : pendingMetric;

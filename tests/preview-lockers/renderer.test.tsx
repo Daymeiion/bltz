@@ -17,21 +17,24 @@ beforeEach(() => {
 });
 afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.unstubAllGlobals(); });
 const record = { ...previewContent.parse({ slug: "canonical-slug-collision", full_name: "Synthetic Preview", bio: "Entered career story", schools: [{ label: "Fixture College", color: "#152238" }], awards: [{ year: "2001", label: "Synthetic honor" }], headshot_url: "https://custom.example.com/portrait.jpg", photos: [{ id: "photo", title: "Career photo", url: "https://custom.example.com/career.jpg", level: "cfb" }] }), id: "00000000-0000-4000-8000-000000000001", revision: 1, created_at: "", updated_at: "" };
-it("displays saved Combine and Pro Day results separately with per-measurement source links", async () => {
+it("displays Combine results with source links and hides saved Pro Day results", async () => {
   const content=previewContent.parse({slug:record.slug,full_name:record.full_name,combine_results:[
     {id:"combine",eventType:"combine",year:2008,timing:"official",sourceUrl:"https://league.example.com/fixture",measurements:[{metric:"forty",value:4.55},{metric:"bench",value:0},{metric:"broad_jump",value:122,sourceUrl:"https://school.example.com/jump"}]},
     {id:"pro-day",eventType:"pro_day",year:2008,timing:"unofficial",sourceUrl:"https://school.example.com/pro-day",measurements:[{metric:"forty",value:4.49}]},
   ]});
+  content.combine_results.reverse();
   const data=previewLockerData({...record,...content});
   expect(data.combineResults).toEqual(content.combine_results);
   await act(async()=>root.render(<LockerView data={data}/>));
+  expect(host.textContent).not.toContain("4.49");
   await act(async()=>[...host.querySelectorAll<HTMLButtonElement>('.locker-filter-pill')].find(button=>button.textContent==='MEASURABLES')!.click());
   const combine=host.querySelector('[aria-label="Combine · 2008 results"]')!,proDay=host.querySelector('[aria-label="Pro Day · 2008 results"]')!;
   expect(combine.textContent).toContain('4.55');expect(combine.textContent).not.toContain('4.49');
-  expect(proDay.textContent).toContain('4.49');expect(proDay.textContent).not.toContain('4.55');
+  expect(proDay).toBeNull();
   expect(combine.textContent).toContain('10′ 2″');expect(combine.textContent).toContain('0');expect(combine.textContent).toContain('PENDING');
   expect(combine.querySelector('a[aria-label="Broad jump source for Combine · 2008"]')?.getAttribute('href')).toBe('https://school.example.com/jump');
-  expect(proDay.textContent).toContain('Unofficial timing');
+  expect(host.textContent).not.toContain('Pro Day');
+  expect(host.textContent).not.toContain('4.49');
 });
 it.each(["Long Beach, California", "Stockton, California", "Lake Mary, FL"])("uses the same state abbreviation in the hero and Bio for %s", async hometown => {
   const expected = hometown.replace(/California$/, "CA");

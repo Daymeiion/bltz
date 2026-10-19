@@ -6,7 +6,7 @@ import type { CombineResult } from "@/lib/player/combine";
 export function combineSearchPlan(identity: NewsIdentity) {
   const terms = identitySearchTerms(identity).slice(0, 2);
   return ["wikipedia.org", "pro-football-reference.com", "nfl.com", "draftscout.com"].flatMap(domain => terms.map(term => ({
-    query: `${term} ${domain === "wikipedia.org" ? '"pre-draft measurables"' : domain === "nfl.com" ? '"pro day"' : 'combine results'}`, includeDomains: [domain],
+    query: `${term} ${domain === "wikipedia.org" ? '"pre-draft measurables"' : 'combine results'}`, includeDomains: [domain],
   })));
 }
 /** Search is read-only. Review and the existing draft save remain explicit. */
@@ -44,7 +44,7 @@ export async function discoverCombine(identity: NewsIdentity, provider: SearchPr
     const batch = await Promise.all(candidates.slice(index, index + 4).map(async (url, offset) => {
       const label = new URL(url).hostname.replace(/^www\./, "");
       try {
-        const events = await extract(url, identity, signal);
+        const events = (await extract(url, identity, signal)).filter(event => event.eventType === "combine");
         return { source: { url, label, status: events.length ? "results" as const : "no_match" as const }, suggestions: events.slice(0, 3).map((event, eventIndex) => ({
           id: `source-${index + offset}-${eventIndex}`, sourceLabel: label, event,
         })) };

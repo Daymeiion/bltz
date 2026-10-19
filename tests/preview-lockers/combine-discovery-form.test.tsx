@@ -12,7 +12,7 @@ async function click(text:string){const button=[...host.querySelectorAll('button
 it("requires selection and explicit add, keeps conflicts visible and preserves existing measurements",async()=>{
  let saved:CombineResult[]=[];
  function Harness(){const[value,setValue]=useState<CombineResult[]>([{...event,id:'manual',measurements:[{metric:'bench',value:0,sourceUrl:null}]}]);saved=value;return <CombineSearchReview value={value} onChange={setValue} preview={{id:'id',revision:3}} identityKey='fixture' searchDisabled={false} onBusyChange={()=>{}}/>;}
- await act(async()=>root.render(<Harness/>));fetcher.mockResolvedValueOnce(Response.json({revision:3,result}));await click('Search Combine & Pro Day results');
+ await act(async()=>root.render(<Harness/>));fetcher.mockResolvedValueOnce(Response.json({revision:3,result}));await click('Search Combine results');
  expect(saved[0].measurements).toHaveLength(1);expect(host.textContent).toContain('Sources disagree');
  const checkboxes=[...host.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')];expect(checkboxes[1].disabled).toBe(true);
  await act(async()=>checkboxes[0].click());await act(async()=>checkboxes[2].click());expect(checkboxes[0].checked).toBe(false);
@@ -21,8 +21,15 @@ it("requires selection and explicit add, keeps conflicts visible and preserves e
 });
 it("appends and deduplicates searches, retains review on failure and invalidates it for another identity",async()=>{
  const props={value:[],onChange:vi.fn(),preview:{id:'id',revision:3},identityKey:'fixture',searchDisabled:false,onBusyChange:vi.fn()};
- await act(async()=>root.render(<CombineSearchReview {...props}/>));fetcher.mockResolvedValueOnce(Response.json({revision:3,result}));await click('Search Combine & Pro Day results');
- fetcher.mockResolvedValueOnce(Response.json({revision:3,result}));await click('Search Combine & Pro Day results');expect(host.querySelectorAll('input[type="checkbox"]')).toHaveLength(3);
- fetcher.mockResolvedValueOnce(Response.json({error:'search_not_configured'},{status:503}));await click('Search Combine & Pro Day results');expect(host.querySelectorAll('input[type="checkbox"]')).toHaveLength(3);expect(host.textContent).toContain('retained');
+ await act(async()=>root.render(<CombineSearchReview {...props}/>));fetcher.mockResolvedValueOnce(Response.json({revision:3,result}));await click('Search Combine results');
+ fetcher.mockResolvedValueOnce(Response.json({revision:3,result}));await click('Search Combine results');expect(host.querySelectorAll('input[type="checkbox"]')).toHaveLength(3);
+ fetcher.mockResolvedValueOnce(Response.json({error:'search_not_configured'},{status:503}));await click('Search Combine results');expect(host.querySelectorAll('input[type="checkbox"]')).toHaveLength(3);expect(host.textContent).toContain('retained');
  await act(async()=>root.render(<CombineSearchReview {...props} identityKey='another'/>));expect(host.querySelectorAll('input[type="checkbox"]')).toHaveLength(0);
+});
+it("excludes Pro Day suggestions from an older response",async()=>{
+ const props={value:[],onChange:vi.fn(),preview:{id:'id',revision:3},identityKey:'fixture',searchDisabled:false,onBusyChange:vi.fn()};
+ await act(async()=>root.render(<CombineSearchReview {...props}/>));
+ fetcher.mockResolvedValueOnce(Response.json({revision:3,result:{...result,suggestions:[{id:'legacy-pro',sourceLabel:'NFL',event:{...event,eventType:'pro_day'}}]}}));
+ await click('Search Combine results');expect(host.querySelectorAll('input[type="checkbox"]')).toHaveLength(0);expect(host.textContent).not.toContain('Pro Day');
+ expect(props.onChange).not.toHaveBeenCalled();
 });

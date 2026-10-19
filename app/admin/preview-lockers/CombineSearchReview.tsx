@@ -18,7 +18,7 @@ export default function CombineSearchReview({ preview, identityKey, searchDisabl
   const controller = useRef<AbortController | null>(null), identity = useRef(identityKey);
   useEffect(() => { identity.current = identityKey; controller.current?.abort(); }, [identityKey]);
   useEffect(() => () => controller.current?.abort(), []);
-  const result = review?.identity === identityKey ? review.result : null;
+  const result = review?.identity === identityKey ? { ...review.result, suggestions: review.result.suggestions.filter(item => item.event.eventType === "combine") } : null;
   async function search() {
     if (!preview || searchDisabled || controller.current) return;
     const requestIdentity = identityKey;
@@ -33,18 +33,19 @@ export default function CombineSearchReview({ preview, identityKey, searchDisabl
         : body.error === "combine_identity_incomplete" ? "Add a college or team and save the draft before searching."
         : "Combine search is unavailable. Previous suggestions and your measurements are retained.");
       if (identity.current !== requestIdentity) return;
+      const available = parsed.data.suggestions.filter(item => item.event.eventType === "combine");
       // Append new evidence; failed/repeated searches cannot clear earlier review.
       setReview(current => {
         const previous = current?.identity === requestIdentity ? current.result : null;
         const suggestions = [...(previous?.suggestions ?? [])];
-        for (const candidate of parsed.data.suggestions) {
+        for (const candidate of available) {
           const key = JSON.stringify([candidate.event.sourceUrl, candidate.event.eventType, candidate.event.year, candidate.event.measurements]);
           if (!suggestions.some(item => JSON.stringify([item.event.sourceUrl, item.event.eventType, item.event.year, item.event.measurements]) === key) && suggestions.length < 24)
             suggestions.push({ ...candidate, id: crypto.randomUUID() });
         }
         return { identity: requestIdentity, result: { ...parsed.data, suggestions } };
       });
-      setMessage(parsed.data.status === "partial" ? "Some sources were unavailable. Review the available evidence below." : parsed.data.suggestions.length ? "Results ready for review. Nothing has been added or saved." : "No unambiguous testing results found. Check source links or enter results manually.");
+      setMessage(parsed.data.status === "partial" ? "Some sources were unavailable. Review the available evidence below." : available.length ? "Results ready for review. Nothing has been added or saved." : "No unambiguous testing results found. Check source links or enter results manually.");
     } catch (error) { if (!controller.current?.signal.aborted) setMessage(error instanceof Error ? error.message : "Search unavailable. Your measurements are retained."); }
     finally { controller.current = null; setBusy(false); onBusyChange(false); }
   }
@@ -59,9 +60,9 @@ export default function CombineSearchReview({ preview, identityKey, searchDisabl
     const competing = (result?.suggestions ?? []).filter(item => item.event.eventType === suggestion.event.eventType && item.event.year === suggestion.event.year).map(item => combineChoiceKey(item, metric));
     setChoices(current => [...current.filter(choice => !competing.includes(choice)), ...(checked ? [key] : [])]);
   }
-  return <section className="space-y-3 rounded-lg border p-3" aria-label="Search Combine and Pro Day results">
+  return <section className="space-y-3 rounded-lg border p-3" aria-label="Search Combine results">
     <p className="text-sm">Search Wikipedia, Pro Football Reference, NFL reports and Draft Scout using this player’s college and teams. Review each value and source. Existing measurements stay unchanged; approved results fill only blank fields in the same event. Keep unknown-year events separate until you confirm the year.</p>
-    <Button type="button" variant="outline" disabled={!preview || searchDisabled || busy} onClick={() => void search()}>{busy ? "Searching Combine & Pro Day…" : "Search Combine & Pro Day results"}</Button>
+    <Button type="button" variant="outline" disabled={!preview || searchDisabled || busy} onClick={() => void search()}>{busy ? "Searching Combine…" : "Search Combine results"}</Button>
     {(!preview || searchDisabled && !busy) && <p className="text-xs text-muted-foreground">Save the draft before searching with the current player information.</p>}
     {message && <p role="status" className="text-sm">{message}</p>}
     {result && <div className="space-y-4">

@@ -78,11 +78,18 @@ it("preserves manual measurements, source and timing while adding only reviewed 
   expect(addReviewedCombine(next,[candidate],choices)).toEqual(next); expect(manual.measurements).toHaveLength(2);
   expect(addReviewedCombine([manual],[candidate],[])).toEqual([manual]);
   const pro={...candidate,id:'pro',event:{...candidate.event,eventType:'pro_day' as const}};
-  expect(addReviewedCombine([manual],[pro],pro.event.measurements.map(item=>combineChoiceKey(pro,item.metric)))).toHaveLength(2);
+  expect(addReviewedCombine([manual],[pro],pro.event.measurements.map(item=>combineChoiceKey(pro,item.metric)))).toEqual([manual]);
 });
 it("limits source permissions to testing data without enabling general PFR extraction", () => {
   const allowed=evaluateSource('https://www.pro-football-reference.com/draft/2008-combine.htm').allowed_actions;
   expect(allowed).toContain('EXTRACT_COMBINE'); expect(allowed).not.toContain('EXTRACT_FACTS'); expect(allowed).not.toContain('CRAWL');
   expect(evaluateSource('https://www.pro-football-reference.com/years/2008/').allowed_actions).not.toContain('EXTRACT_COMBINE');
   expect(evaluateSource('https://nfl.com.evil.example.com/news/fixture').allowed_actions).not.toContain('EXTRACT_COMBINE');
+});
+it("searches for Combine and removes Pro Day events before returning discovery results",async()=>{
+ expect(combineSearchPlan(identity).every(item=>!item.query.includes('pro day'))).toBe(true);
+ const event=extractCombineResults(prefix+table,wiki,identity)[0];
+ const provider={name:'fixture',search:vi.fn(async()=>[{url:wiki}])};
+ const result=await discoverCombine(identity,provider,async()=>[event,{...event,id:'pro',eventType:'pro_day'}],AbortSignal.timeout(5000));
+ expect(result.suggestions.length).toBeGreaterThan(0);expect(result.suggestions.every(item=>item.event.eventType==='combine')).toBe(true);
 });
