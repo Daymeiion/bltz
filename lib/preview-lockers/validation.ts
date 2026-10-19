@@ -119,7 +119,7 @@ export const previewContent = z.object({
   photo_room_banner_url: asset, photo_room_banner_link: asset,
   photo_room_banner_storage_path: storagePath.nullable().default(null),
   bio: text(4000).default(""), athlete_quote: nullableText(600), athlete_quote_author: nullableText(160),
-  schools: z.array(team.extend({ logoStoragePath: storagePath.refine(path => /\/photos\/.*\.(jpg|png|webp)$/.test(path), "Use an uploaded image.").nullable().optional() })).max(32).default([]), pro_teams: z.array(team).max(32).default([]),
+  schools: z.array(team.extend({ desktopName: text(80).nullable().optional(), mobileName: text(40).nullable().optional(), logoStoragePath: storagePath.refine(path => /\/photos\/.*\.(jpg|png|webp)$/.test(path), "Use an uploaded image.").nullable().optional() })).max(32).default([]), pro_teams: z.array(team).max(32).default([]),
   awards: z.array(award).max(40).default([]),
   social: z.array(previewSocial).max(40).refine(uniqueIds, "Social IDs must be unique.").default([]),
   article_edits: z.array(previewArticleEdit).max(40).refine(uniqueIds, "Article IDs must be unique.")

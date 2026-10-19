@@ -25,9 +25,9 @@ export function shortTeamLabel(value: string): string {
 
 export function previewTeamBranding(row: PreviewBrandingSource) {
   const info = row.school_info;
-  const schools = (row.schools?.length ? row.schools : info?.name ? [{ label: info.abbr || info.name, color: info.primaryColor, logo: info.logoUrl }] : row.school ? [{ label: row.school, color: "#1A3DCC", logo: null }] : []).map(team => {
+  const schools = (row.schools?.length ? row.schools : info?.name ? [{ label: info.abbr || info.name, color: info.primaryColor, logo: info.logoUrl }] : row.school ? [{ label: row.school, color: "#1A3DCC", logo: null }] : []).map((team: PreviewTeamPill) => {
     const isPrimary = info?.name && [info.name, info.abbr, row.school].some(name => name && schoolsMatch(name, team.label));
-    return { label: shortTeamLabel(isPrimary ? info.abbr || team.label : team.label), name: schoolHistoryName(team.name || (isPrimary ? info.name : team.label)), color: brandColor(isPrimary ? info.primaryColor : team.color), logo: team.logoStoragePath ? team.logo : isPrimary ? info.logoUrl || team.logo : team.logo };
+    return { ...(team.desktopName !== undefined ? { desktopName: team.desktopName } : {}), ...(team.mobileName !== undefined ? { mobileName: team.mobileName } : {}), label: shortTeamLabel(isPrimary ? info.abbr || team.label : team.label), name: schoolHistoryName(team.name || (isPrimary ? info.name : team.label)), color: brandColor(isPrimary ? info.primaryColor : team.color), logo: team.logoStoragePath ? team.logo : isPrimary ? info.logoUrl || team.logo : team.logo };
   });
   const proTeams = (row.pro_teams ?? []).map(team => {
     const code = nflTeamCode(team.label);

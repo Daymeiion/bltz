@@ -109,7 +109,7 @@ export type LockerData = {
   // Rotating hero pills. `schools` cycles the player's colleges (exact school
   // colors); `proTeams` cycles their pro teams. When proTeams is empty (never
   // made the NFL), the right pill falls back to level/status.
-  schools: { label: string; name?: string; color: string; logo: string | null }[];
+  schools: { label: string; name?: string; desktopName?: string | null; mobileName?: string | null; color: string; logo: string | null }[];
   proTeams: { label: string; name?: string; color: string; logo: string | null }[];
   social?: LockerSocial[];
   awards: { evidenceStatus?: "unverified" | "verified"; imageUrl?: string | null; year: string; label: string; description?: string | null; sourceUrl?: string | null; attribution?: string | null }[];
@@ -1947,13 +1947,15 @@ function readableText(hex: string): string {
   return lum > 0.62 ? "#0B0E1A" : "#fff";
 }
 
-type PillItem = { label: string; name?: string; color: string; logo?: string | null };
+type PillItem = { label: string; name?: string; desktopName?: string | null; mobileName?: string | null; color: string; logo?: string | null };
 const PILL_H = 44;
 
 // One row of a rotating pill: colored background + optional logo + label.
 // Logo + abbreviation center together as one group; with no logo
 // (level/status fallback) the label centers alone.
 function PillContent({ item, historyName }: { item: PillItem; historyName?: string }) {
+  const desktopName = item.desktopName?.trim() || historyName;
+  const mobileName = item.mobileName?.trim() || item.label;
   const fg = readableText(item.color);
   const hasLogo = !!item.logo;
   return (
@@ -1962,7 +1964,7 @@ function PillContent({ item, historyName }: { item: PillItem; historyName?: stri
         <img src={item.logo!} alt="" style={{ height: 22, width: 22, objectFit: "contain", flex: "none", filter: "drop-shadow(0 0 1px rgba(255,255,255,.8)) drop-shadow(0 2px 3px rgba(0,0,0,.65))" }} />
       ) : null}
       <span style={{ maxWidth: "100%", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", fontFamily: disp, fontWeight: 700, fontSize: 19, letterSpacing: ".05em", textTransform: "uppercase", color: fg, textShadow: "0 1px 2px rgba(0,0,0,.45)" }}>
-        {historyName ? <><span className="team-history-abbreviation">{item.label}</span><span className="team-history-full-name">{historyName}</span></> : item.label}
+        {desktopName || item.mobileName?.trim() ? <><span className="team-history-abbreviation">{mobileName}</span><span className="team-history-full-name">{desktopName || item.label}</span></> : item.label}
       </span>
     </div>
   );

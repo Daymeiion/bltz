@@ -1,0 +1,61 @@
+// Disposable PostgreSQL only: no hosted connection or athlete data.
+import {PGlite} from '@electric-sql/pglite';
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+const db=new PGlite();
+const admin='00000000-0000-4000-8000-000000000001',viewer='00000000-0000-4000-8000-000000000002',other='00000000-0000-4000-8000-000000000003',id='00000000-0000-4000-8000-000000000004';
+const migration='20261019184548_preview_school_display_names.sql';
+const apply=async file=>db.exec(fs.readFileSync(`supabase/migrations/${file}`,'utf8'));
+try {
+ await db.exec(`create role anon;create role authenticated;create role service_role bypassrls;
+ create schema auth;create schema private;create table auth.users(id uuid primary key,email text);
+ create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
+ grant usage on schema auth to authenticated;
+ create function public.is_internal_admin() returns boolean language sql stable as $$select auth.uid()='${admin}'::uuid$$;
+ create table public.audit_logs(id bigserial primary key,actor_user_id uuid,action text,entity_type text,entity_id text,actor_role_scope text,risk_level text,previous_values jsonb,new_values jsonb,request_metadata jsonb);
+ insert into auth.users values('${admin}','admin@example.test'),('${viewer}','viewer@example.test'),('${other}','other@example.test');`);
+ await apply('20260831161831_private_preview_lockers.sql');
+ await apply('20260901184112_private_preview_assigned_viewer.sql');
+ const baseline=fs.readFileSync('supabase/migrations/20260915010000_locker_hero_devices.sql','utf8');
+ await db.exec(baseline.match(/create or replace function private\.preview_items_valid[\s\S]*?\$\$;/)[0].replace('max_items := 12;', 'max_items := 32;'));
+ await apply('20261018015519_preview_team_jersey_numbers.sql');
+ await apply('20261018191834_preview_school_logo_uploads.sql');
+ const before=(await db.query("select proacl,prosecdef from pg_proc where oid='private.preview_items_valid(text,jsonb)'::regprocedure")).rows[0];
+ const team={label:'City College (SF)',color:'#152238',logo:null,jerseyNumbers:['20'],jerseyStatus:'reviewed'};
+ await db.exec(`set role authenticated;select set_config('request.jwt.claim.sub','${admin}',false)`);
+ await db.query('insert into preview_lockers(id,slug,full_name,schools) values($1,$2,$3,$4)',[id,'school-fixture','School Fixture',JSON.stringify([team])]);
+ await db.exec('reset role');
+ await apply(migration);
+ assert.deepEqual((await db.query("select proacl,prosecdef from pg_proc where oid='private.preview_items_valid(text,jsonb)'::regprocedure")).rows[0],before);
+ assert.deepEqual((await db.query('select schools from preview_lockers where id=$1',[id])).rows[0].schools,[team]);
+ const names={...team,desktopName:'City College of San Francisco',mobileName:'CCSF',logoStoragePath:null};
+ const valid=async value=>(await db.query("select private.preview_items_valid('team',$1) ok",[JSON.stringify(value)])).rows[0].ok;
+ assert.equal(await valid([names]),true);
+ assert.equal(await valid([{...names,desktopName:null,mobileName:''}]),true);
+ for(const invalid of [{desktopName:42},{mobileName:false},{desktopName:'x'.repeat(81)},{mobileName:'x'.repeat(41)},{desktopName:'bad\u0001name'},{extra:'no'},{jerseyNumbers:['100']},{logoStoragePath:'other/path.png'}])assert.equal(await valid([{...names,...invalid}]),false);
+ assert.equal(await valid(Array(33).fill(names)),false);
+ await db.exec(`set role authenticated;select set_config('request.jwt.claim.sub','${admin}',false)`);
+ await db.query('update preview_lockers set schools=$1 where id=$2',[JSON.stringify([names]),id]);
+ assert.deepEqual((await db.query('select schools from preview_lockers where id=$1',[id])).rows[0].schools,[names]);
+ await assert.rejects(db.query('update preview_lockers set schools=$1 where id=$2',[JSON.stringify([{...names,mobileName:'x'.repeat(41)}]),id]),/check constraint/);
+ await db.exec('reset role');
+ const audit=(await db.query('select previous_values,new_values from audit_logs order by id desc limit 1')).rows[0];
+ assert.equal(audit.new_values.revision,audit.previous_values.revision+1);
+ await db.query('insert into preview_locker_viewer_grants(preview_locker_id,viewer_user_id) values($1,$2)',[id,viewer]);
+ await db.exec('set role anon');await assert.rejects(db.query('select schools from preview_lockers'),/permission denied/);await db.exec('reset role');
+ await db.exec(`set role authenticated;select set_config('request.jwt.claim.sub','${other}',false)`);
+ assert.equal((await db.query('select schools from preview_lockers')).rows.length,0);
+ await db.exec(`select set_config('request.jwt.claim.sub','${viewer}',false)`);
+ assert.deepEqual((await db.query('select schools from preview_lockers')).rows[0].schools,[names]);
+ assert.equal((await db.query("update preview_lockers set schools='[]' returning id")).rows.length,0);
+ await db.exec('reset role');
+ const column=(await db.query("select data_type,is_nullable from information_schema.columns where table_schema='public' and table_name='preview_lockers' and column_name='schools'")).rows[0];
+ assert.equal(column.data_type,'jsonb');assert.equal(column.is_nullable,'NO');
+ if(process.argv.includes('--generate-types')){
+  const path='types/preview-lockers.generated.ts';let source=fs.readFileSync(path,'utf8');
+  assert.match(source,/schools: Json/);assert.match(source,/schools\?: Json/);
+  const note='// School display-name migration verified by scripts/verify-preview-school-display.mjs: schools remains Json; function signature and grants unchanged.\n';
+  if(!source.startsWith(note))fs.writeFileSync(path,note+source);
+ }
+ console.log('PASS: migration, legacy records, save/reload, limits, prior validators, unchanged grants, admin write, viewer read-only, outsider/anonymous denial, and audit history.');
+} finally {await db.close();}

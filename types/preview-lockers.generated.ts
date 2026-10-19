@@ -1,3 +1,4 @@
+// School display-name migration verified by scripts/verify-preview-school-display.mjs: schools remains Json; function signature and grants unchanged.
 // combine_results regenerated from isolated PostgreSQL information_schema by scripts/verify-preview-combine.mjs.
 // Preview table regenerated from isolated PostgreSQL information_schema by scripts/verify-preview-media.mjs; remaining declarations retain their Supabase CLI provenance.
 // Scoped additive extract; released database.generated.ts remains unchanged.
