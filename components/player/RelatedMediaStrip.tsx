@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { Eye, ExternalLink, KeyRound, Play, X } from "lucide-react";
+import { Eye, ExternalLink, KeyRound, Pause, Play, X } from "lucide-react";
 import { Dialog, DialogClose, DialogDescription, DialogPortal, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import styles from "./related-media-strip.module.css";
+import { useFilmRowScroll } from "./use-film-row-scroll";
 
 export type RelatedMediaImage = { id: string; url: string; title: string; credits?: string | null };
 
@@ -18,20 +19,26 @@ export function RelatedMediaStrip({ images, athleteName, athleteSlug, activeImag
   onResume?: () => void;
 }) {
   const [failed, setFailed] = useState<string[]>([]);
+  const [ratios, setRatios] = useState<Record<string, number>>({});
+  const { rowRef, paused, togglePaused, setModalOpen, rowEvents } = useFilmRowScroll();
   const available = images.filter(image => !failed.includes(image.url));
   const searchName = athleteName.trim().toLowerCase().replace(/\s+/g, "-");
   const gettySearchUrl = `https://www.gettyimages.com/photos/${encodeURIComponent(searchName)}`;
   return <section className={styles.strip} aria-label="Related media" data-athlete-slug={athleteSlug} data-media-source="preview_upload" data-demo="true" data-context-image-id={activeImageId}>
     <div className={styles.stripHeader}>
       <p className={styles.powered}>Powered by Getty Images</p>
+      {available.length > 0 && <button type="button" className={styles.scrollToggle} onClick={togglePaused} aria-label={paused ? "Play photo row" : "Pause photo row"} title={paused ? "Play photo row" : "Pause photo row"} aria-pressed={paused}>{paused ? <Play aria-hidden="true" /> : <Pause aria-hidden="true" />}</button>}
       {onResume && <button type="button" className={styles.resume} onClick={onResume} aria-label="Resume slideshow" title="Resume slideshow"><Play aria-hidden="true" fill="currentColor" /></button>}
     </div>
-    <div className={styles.row} tabIndex={0} aria-label={`Related photos of ${athleteName}`}>
+    <div ref={rowRef} {...rowEvents} className={styles.row} tabIndex={0} aria-label={`Related photos of ${athleteName}`}>
       {available.map(image => (
-        <Dialog key={image.id}>
-          <div className={`${styles.image} ${image.id === activeImageId ? styles.imageActive : ""}`}>
+        <Dialog key={image.id} onOpenChange={setModalOpen}>
+          <div style={{ aspectRatio: ratios[image.url] || 280 / 172 }} className={`${styles.image} ${ratios[image.url] < 1.1 ? styles.imageNarrow : ""} ${image.id === activeImageId ? styles.imageActive : ""}`}>
             <button type="button" className={styles.imageSelect} aria-label={`Show related photo: ${image.title || athleteName}`} aria-pressed={image.id === activeImageId} title={[image.title, image.credits].filter(Boolean).join(" · ")} onClick={() => onSelect(image)}>
-              <img src={image.url} alt={image.title || `${athleteName} career photo`} loading="lazy" onError={() => setFailed(current => current.includes(image.url) ? current : [...current, image.url])} />
+              <img src={image.url} alt={image.title || `${athleteName} career photo`} loading="lazy" onLoad={event => {
+                const { naturalWidth, naturalHeight } = event.currentTarget;
+                if (naturalWidth && naturalHeight) setRatios(current => ({ ...current, [image.url]: naturalWidth / naturalHeight }));
+              }} onError={() => setFailed(current => current.includes(image.url) ? current : [...current, image.url])} />
             </button>
             <button type="button" className={`${styles.imageAction} ${styles.viewAction}`} aria-label={`View in slideshow: ${image.title || athleteName}`} title="View in slideshow" onClick={() => onSelect(image)}>
               <Eye aria-hidden="true" />

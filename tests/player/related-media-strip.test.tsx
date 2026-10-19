@@ -39,6 +39,14 @@ it("puts the Getty credit above the row and preserves selection and photographer
   expect(document.querySelector('[role="dialog"]')).toBeNull();
 });
 
+it("sizes each loaded container to its source image proportions", async () => {
+  const photo = host.querySelector<HTMLImageElement>('button[aria-label^="Show related photo:"] img')!;
+  Object.defineProperties(photo, { naturalWidth: { value: 600 }, naturalHeight: { value: 900 } });
+  await act(async () => photo.dispatchEvent(new Event("load", { bubbles: true })));
+  expect(parseFloat(photo.closest<HTMLDivElement>('div[style]')!.style.aspectRatio)).toBeCloseTo(600 / 900);
+  expect(host.querySelector('[aria-label="Pause photo row"]')).not.toBeNull();
+});
+
 it("opens the corresponding licensing preview without selecting a slideshow photo", async () => {
   const trigger = host.querySelector<HTMLButtonElement>('[aria-label="Explore Getty Images licensing: Professional game"]')!;
   await act(async () => trigger.click());
