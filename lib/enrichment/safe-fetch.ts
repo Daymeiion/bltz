@@ -7,6 +7,8 @@ import { requireSourceAction } from "@/lib/source-policy/policy";
 import { extractArticleMetadata } from "./article-metadata";
 import { extractProductMetadata } from "./product-metadata";
 import { extractPfrJerseys } from "@/lib/pipeline/scrapers/pfr-jerseys";
+import { extractCombineResults } from "./combine-extraction";
+import type { NewsIdentity } from "./news";
 
 /** Deliberately restrict outbound metadata fetches to globally routable IPv4. */
 export function isPublicAddress(address: string): boolean {
@@ -28,7 +30,7 @@ async function publicAddress(hostname: string, signal: AbortSignal) {
     return result[0].address;
   } finally { signal.removeEventListener("abort", onAbort); }
 }
-async function fetchArticleHtml(input: string, parentSignal: AbortSignal, action: "EXTRACT_METADATA" | "EXTRACT_JERSEY_HISTORY" = "EXTRACT_METADATA"): Promise<{ html: string; url: string }> {
+async function fetchArticleHtml(input: string, parentSignal: AbortSignal, action: "EXTRACT_METADATA" | "EXTRACT_JERSEY_HISTORY" | "EXTRACT_COMBINE" = "EXTRACT_METADATA"): Promise<{ html: string; url: string }> {
   const signal = AbortSignal.any([parentSignal, AbortSignal.timeout(7000)]);
   let url = input;
   for (let redirects = 0; redirects <= 3; redirects++) {
@@ -82,4 +84,10 @@ export async function fetchProductMetadata(url: string, signal: AbortSignal) {
 export async function fetchPfrJerseyHistory(url: string, fullName: string, teams: string[], signal: AbortSignal) {
   const page = await fetchArticleHtml(url, signal, "EXTRACT_JERSEY_HISTORY");
   return extractPfrJerseys(page.html, fullName, teams, page.url);
+}
+
+/** Uses the existing pinned DNS/redirect/size boundary; returns measurements only. */
+export async function fetchCombineResults(url: string, identity: NewsIdentity, signal: AbortSignal) {
+  const page = await fetchArticleHtml(url, signal, "EXTRACT_COMBINE");
+  return extractCombineResults(page.html, page.url, identity);
 }

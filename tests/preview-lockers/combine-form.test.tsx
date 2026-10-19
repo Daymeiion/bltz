@@ -41,3 +41,16 @@ it("blocks saving unsourced results and invalid bench repetitions while retainin
   await click('Save draft');expect(fetcher).not.toHaveBeenCalled();expect(host.textContent).toContain('whole repetitions');expect(host.textContent).toContain('Add an event source');
   expect(host.querySelector<HTMLInputElement>('[aria-label="Event 1 Bench press"]')!.value).toBe('1.5');
 });
+it("keeps discovery separate from saving and persists only explicitly reviewed blank measurements",async()=>{
+ const manual={id:'manual',eventType:'combine',year:2008,timing:'not_recorded',sourceUrl:'https://school.example.com/manual',measurements:[{metric:'forty',value:4.6,sourceUrl:null},{metric:'bench',value:0,sourceUrl:null}]} as const;
+ await act(async()=>root.render(<PreviewLockerForm record={{...record,combine_results:[{...manual,measurements:[...manual.measurements]}]}}/>));
+ const event={...manual,id:'source',sourceUrl:'https://en.wikipedia.org/wiki/Fixture_Player',measurements:[{metric:'forty',value:4.45,sourceUrl:null},{metric:'vertical',value:35.5,sourceUrl:null}]};
+ fetcher.mockResolvedValueOnce(Response.json({revision:3,result:{status:'complete',sources:[],suggestions:[{id:'candidate',sourceLabel:'Wikipedia',event}]}}));
+ await click('Search Combine & Pro Day results');expect(fetcher).toHaveBeenCalledTimes(1);
+ const checkbox=host.querySelector<HTMLInputElement>('[aria-label="Review Vertical jump 35.5 from Wikipedia combine 2008"]')!;await act(async()=>checkbox.click());
+ await click('Add selected measurements to draft');expect(fetcher).toHaveBeenCalledTimes(1);
+ fetcher.mockResolvedValueOnce(Response.json({id:record.id,slug:record.slug,revision:4}));await click('Save draft');
+ const saved=JSON.parse(fetcher.mock.calls.at(-1)![1].body).content;
+ expect(saved.combine_results[0]).toMatchObject({id:'manual',sourceUrl:manual.sourceUrl});
+ expect(saved.combine_results[0].measurements).toEqual([...manual.measurements,{metric:'vertical',value:35.5,sourceUrl:event.sourceUrl}]);
+});

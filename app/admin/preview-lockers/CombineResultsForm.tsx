@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { BuilderSection } from "./BuilderSection";
 import { combineEventLabel, combineMetricInfo, combineMetricKeys, type CombineMetric, type CombineResult } from "@/lib/player/combine";
+import CombineSearchReview, { type CombineDiscoveryProps } from "./CombineSearchReview";
 
-export default function CombineResultsForm({ value, onChange }: { value: CombineResult[]; onChange: (value: CombineResult[]) => void }) {
+export default function CombineResultsForm({ value, onChange, discovery }: { value: CombineResult[]; onChange: (value: CombineResult[]) => void; discovery?: CombineDiscoveryProps }) {
   const update = (id: string, patch: Partial<CombineResult>) => onChange(value.map(event => event.id === id ? { ...event, ...patch } : event));
   function measurement(event: CombineResult, metric: CombineMetric, input: string) {
     const existing = event.measurements.find(item => item.metric === metric);
@@ -14,6 +15,7 @@ export default function CombineResultsForm({ value, onChange }: { value: Combine
         : [...event.measurements, { metric, value: Number(input), sourceUrl: null }] });
   }
   return <BuilderSection title="Combine & Pro Day results" count={value.length} description="Enter sourced measurements. Saved results stay intact during scraper refreshes.">
+    {discovery && <CombineSearchReview {...discovery} value={value} onChange={onChange} />}
     <p className="text-sm text-muted-foreground">Keep Combine and Pro Day results in separate events. Leave unknown measurements blank. An event source can cover every measurement; add individual sources below when they differ. Save the draft to display these results in the Locker’s Measurables section.</p>
     {!value.length && <p className="text-sm">No results recorded yet.</p>}
     {value.map((event, index) => <section key={event.id} className="min-w-0 space-y-4 rounded-lg border p-4" aria-label={`Measurement event ${index + 1}`}>

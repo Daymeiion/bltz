@@ -86,7 +86,7 @@ export default function PreviewLockerForm({
   const [enroll, setEnroll] = useState(enrollmentEnabled && !record && !reservedId);
   const [enrollment, setEnrollment] = useState({contact_id:"",campaign:"",source:"",channel:"email",relationship:"warm",is_test:false});
   const [draft, setDraft] = useState<PreviewContent>(() => record ? previewContent.parse(Object.fromEntries(Object.keys(previewContent.shape).map(k => [k, record[k as keyof PreviewRecord]]))) : { ...initial(), full_name: referralName ?? "", slug: "" });
-  const [busy, setBusy] = useState<"discovery" | "upload" | "save" | "complete" | "stats" | "awards" | "news" | "merchandise" | null>(null);
+  const [busy, setBusy] = useState<"discovery" | "upload" | "save" | "complete" | "stats" | "combine" | "awards" | "news" | "merchandise" | null>(null);
   const [awardsReport, setAwardsReport] = useState<AwardEnrichmentReport | null>(() => initialEnrichmentReport?.last_awards_attempt !== undefined ? initialEnrichmentReport.last_awards_attempt : initialEnrichmentReport && initialEnrichmentRevision ? {
     status: initialEnrichmentReport.errors.includes("awards_unavailable") ? "unavailable" : "complete",
     awards_discovered: initialEnrichmentReport.awards_discovered, awards_normalized: initialEnrichmentReport.awards_normalized,
@@ -452,7 +452,7 @@ export default function PreviewLockerForm({
       </section>
       <section id="locker-panel-stats" role="tabpanel" aria-labelledby="locker-tab-stats" tabIndex={0} hidden={activeFolder !== "stats"} className={styles.folderPanel}>
       <h2 className={styles.folderHeading}>Statistics & imports</h2>
-      <CombineResultsForm value={draft.combine_results} onChange={combine_results => change({ combine_results })} />
+      <CombineResultsForm value={draft.combine_results} onChange={combine_results => change({ combine_results })} discovery={{ preview: saved, identityKey: JSON.stringify([draft.full_name, draft.school, draft.schools, draft.pro_teams]), searchDisabled: dirty || !!busy || statsNeedReload, onBusyChange: active => { pending.current = active; setBusy(active ? "combine" : null); } }} />
       <CfbCsvImport athleteName={draft.full_name} value={draft.cfb_stats} onChange={cfb_stats => change({ cfb_stats })} />
       <StatsCsvImport league="nfl" athleteName={draft.full_name} value={draft.pfr_stats} onChange={pfr_stats => change({ pfr_stats })} disabled={busy !== null || statsNeedReload} />
       <section className="space-y-3" aria-label="Stats-only update">

@@ -1,7 +1,7 @@
 /** Application policy, not a statement that public access grants a license. */
-export const POLICY_VERSION = "2026-10-17.1";
+export const POLICY_VERSION = "2026-10-18.1";
 export type SourceType = "licensed_provider" | "official_league" | "official_team" | "official_school" | "official_athlete" | "reference_database" | "encyclopedic" | "news_publisher" | "social_platform" | "media_asset_provider" | "unknown";
-export const ACTIONS = ["DISCOVERY", "VERIFY", "EXTRACT_METADATA", "EXTRACT_FACTS", "EXTRACT_JERSEY_HISTORY", "CRAWL", "BULK_INGEST", "PERSIST_METADATA", "PERSIST_FACTS", "ASSET_REFERENCE", "ASSET_DOWNLOAD"] as const;
+export const ACTIONS = ["DISCOVERY", "VERIFY", "EXTRACT_METADATA", "EXTRACT_FACTS", "EXTRACT_JERSEY_HISTORY", "EXTRACT_COMBINE", "PERSIST_COMBINE", "CRAWL", "BULK_INGEST", "PERSIST_METADATA", "PERSIST_FACTS", "ASSET_REFERENCE", "ASSET_DOWNLOAD"] as const;
 export type SourceAction = typeof ACTIONS[number];
 export interface SourceDecision {
   domain: string; source_type: SourceType; decision: "ALLOW" | "RESTRICT" | "REFERENCE_ONLY" | "DENY";
@@ -69,13 +69,25 @@ export function evaluateSource(input: string): SourceDecision {
     id = "official-metadata"; status = "active";
     reason = "Configured official source: bounded metadata only. Official status does not grant bulk or asset rights.";
   }
+  // User-authorized, bounded testing-results adapter only. This does not permit
+  // season-stat ingestion, arbitrary page extraction, crawling or asset copying.
+  const combinePage = url && (
+    domainMatches(host, "pro-football-reference.com") && (/^\/players\/[A-Z]\/[A-Za-z0-9]+\.htm$/.test(url.pathname) || /^\/draft\/(19|20)\d{2}-combine\.htm$/.test(url.pathname)) && !url.search
+    || host === "en.wikipedia.org" && /^\/wiki\/[^/]+$/.test(url.pathname) && !url.search
+    || domainMatches(host, "nfl.com") && /^\/(news|prospects)\/[^/]+/.test(url.pathname)
+    || host.replace(/^www\./, "") === "draftscout.com" && url.pathname === "/dsprofile.php" && /^\d{4}$/.test(url.searchParams.get("DraftYear") ?? "") && /^\d+$/.test(url.searchParams.get("PlayerId") ?? "") && [...url.searchParams.keys()].every(key => ["DraftYear", "PlayerId"].includes(key))
+  );
+  if (combinePage && decision !== "DENY") {
+    allowed = [...allowed, "EXTRACT_COMBINE", "PERSIST_COMBINE"];
+    reason += " Single-player Combine/Pro Day measurements may be extracted by the bounded testing-results adapter for explicit Admin review.";
+  }
   const single = allowed.includes("EXTRACT_FACTS");
   return { domain: host, source_type: type, decision, discovery_allowed: allowed.includes("DISCOVERY"),
     extract_allowed: single ? "single_player_facts" : decision === "REFERENCE_ONLY" ? "limited_verification" : allowed.includes("EXTRACT_METADATA") ? "metadata_only" : "none",
     crawl_allowed: false, bulk_ingestion_allowed: false, persistent_storage_allowed: single ? "single_player_facts" : allowed.includes("PERSIST_METADATA") ? "limited_metadata" : "none",
     asset_download_allowed: false, attribution_required: true, rate_limit: null,
     allowed_actions: [...allowed], blocked_actions: ACTIONS.filter(action => !allowed.includes(action)),
-    reason, usage_notes: reason, policy_status: status, policy_id: id, policy_version: POLICY_VERSION, updated_at: "2026-10-17" };
+    reason, usage_notes: reason, policy_status: status, policy_id: id, policy_version: POLICY_VERSION, updated_at: "2026-10-18" };
 }
 export class SourcePolicyError extends Error {
   constructor(readonly policy: SourceDecision, readonly action: SourceAction) { super(`source_policy_blocked:${action}:${policy.policy_id}`); }
