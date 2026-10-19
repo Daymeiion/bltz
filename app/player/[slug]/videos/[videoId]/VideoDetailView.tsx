@@ -1,6 +1,7 @@
 "use client";
 
 import { YouTubePlayer } from "@/components/player/YouTubePlayer";
+import { VideoPreview } from "@/components/player/VideoPreview";
 import PreviewRoomNav from "@/components/preview-lockers/PreviewRoomNav";
 import type { SearchResult } from "@/components/ui/search-modal";
 import roomStyles from "../film-room.module.css";
@@ -102,7 +103,7 @@ function teammateInitials(name: string): string {
     .toUpperCase();
 }
 
-function VideoListItem({ video, lockerHref, current }: { video: PublicVideo; lockerHref: string; current: boolean }) {
+export function VideoListItem({ video, lockerHref, current }: { video: PublicVideo; lockerHref: string; current: boolean }) {
   return (
     <Link
       href={`${lockerHref}/videos/${video.id}`}
@@ -110,11 +111,8 @@ function VideoListItem({ video, lockerHref, current }: { video: PublicVideo; loc
       aria-current={current ? "page" : undefined}
     >
       <span className={styles.episodeThumb}>
-        {video.thumbnailUrl ? (
-          <Image src={video.thumbnailUrl} alt="" fill sizes="110px" />
-        ) : (
-          <span className={styles.episodeFallback}><Play aria-hidden="true" fill="currentColor" /></span>
-        )}
+        <span className={styles.episodeFallback}><Play aria-hidden="true" fill="currentColor" /></span>
+        <VideoPreview title={video.title} thumbnailUrl={video.thumbnailUrl} playbackUrl={video.playbackUrl} embedUrl={video.embedUrl} previewOnHover={false} />
       </span>
       <span className={styles.episodeCopy}>
         <strong>{video.title}</strong>

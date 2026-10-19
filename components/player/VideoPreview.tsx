@@ -3,10 +3,10 @@
 import { normalizeYouTubeUrl } from "@/lib/player/youtube";
 import { useEffect, useRef, useState } from "react";
 
-type Props = { title: string; thumbnailUrl?: string | null; playbackUrl?: string | null; embedUrl?: string | null };
+type Props = { title: string; thumbnailUrl?: string | null; playbackUrl?: string | null; embedUrl?: string | null; previewOnHover?: boolean };
 
 // The surrounding card owns clicks; previews are silent, decorative media.
-export function VideoPreview({ title, thumbnailUrl, playbackUrl, embedUrl }: Props) {
+export function VideoPreview({ title, thumbnailUrl, playbackUrl, embedUrl, previewOnHover = true }: Props) {
   const host = useRef<HTMLSpanElement>(null);
   const video = useRef<HTMLVideoElement>(null);
   const [hovering, setHovering] = useState(false);
@@ -17,7 +17,7 @@ export function VideoPreview({ title, thumbnailUrl, playbackUrl, embedUrl }: Pro
 
   useEffect(() => {
     const parent = host.current?.parentElement;
-    if (!parent) return;
+    if (!parent || !previewOnHover) return;
     const desktop = window.matchMedia("(min-width: 768px) and (hover: hover) and (pointer: fine)");
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
     const stop = () => {
@@ -45,11 +45,11 @@ export function VideoPreview({ title, thumbnailUrl, playbackUrl, embedUrl }: Pro
       reducedMotion.removeEventListener("change", stop);
       document.removeEventListener("visibilitychange", visibility);
     };
-  }, [playbackUrl, embedUrl]);
+  }, [playbackUrl, embedUrl, previewOnHover]);
 
   const mediaStyle = { position: "absolute" as const, inset: 0, width: "100%", height: "100%", objectFit: "cover" as const };
   return <span ref={host} aria-hidden="true" style={{ ...mediaStyle, display: "block", pointerEvents: "none" }}>
-    {playbackUrl ? <video key={playbackUrl} ref={video} src={playbackUrl} muted playsInline loop preload={poster ? "metadata" : "auto"} onLoadedMetadata={event => { if (!hovering) event.currentTarget.currentTime = 0.001; }} style={mediaStyle} /> : null}
+    {playbackUrl ? <video key={playbackUrl} ref={video} src={playbackUrl} muted playsInline loop preload={poster || !previewOnHover ? "metadata" : "auto"} onLoadedMetadata={event => { if (!hovering) event.currentTarget.currentTime = 0.001; }} style={mediaStyle} /> : null}
     {image && !(hovering && (playbackUrl || embedUrl)) ? <img src={image} alt="" onError={() => setImageFailed(true)} style={mediaStyle} /> : null}
     {hovering && youtubeId ? <iframe src={`${embedUrl}?autoplay=1&mute=1&controls=1&playsinline=1&loop=1&playlist=${youtubeId}`} title={`${title} preview`} tabIndex={-1} referrerPolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen style={{ ...mediaStyle, border: 0 }} /> : null}
   </span>;

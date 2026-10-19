@@ -46,6 +46,25 @@ describe("video card previews", () => {
     expect(play).not.toHaveBeenCalled();
   });
 
+  it("keeps sidebar YouTube thumbnails static on desktop hover", () => {
+    act(() => root.render(<div><VideoPreview title="Film" embedUrl="https://www.youtube-nocookie.com/embed/abcdefghijk" previewOnHover={false} /></div>));
+    act(() => container.firstElementChild!.dispatchEvent(pointer("pointerenter")));
+    expect(container.querySelector("img")?.getAttribute("src")).toBe("https://i.ytimg.com/vi/abcdefghijk/hqdefault.jpg");
+    expect(container.querySelector("iframe")).toBeNull();
+    expect(play).not.toHaveBeenCalled();
+  });
+
+  it("loads a static uploaded frame using metadata without starting playback", () => {
+    act(() => root.render(<div><VideoPreview title="Film" playbackUrl="/film.mp4" previewOnHover={false} /></div>));
+    const element = container.querySelector("video")!;
+    act(() => element.dispatchEvent(new Event("loadedmetadata")));
+    act(() => container.firstElementChild!.dispatchEvent(pointer("pointerenter")));
+    expect(element.getAttribute("preload")).toBe("metadata");
+    expect(element.currentTime).toBe(0.001);
+    expect(element.autoplay).toBe(false);
+    expect(play).not.toHaveBeenCalled();
+  });
+
   it("mounts a muted YouTube preview only during desktop hover", () => {
     act(() => root.render(<div><VideoPreview title="Film" embedUrl="https://www.youtube-nocookie.com/embed/abcdefghijk" /></div>));
     expect(container.querySelector("iframe")).toBeNull();
