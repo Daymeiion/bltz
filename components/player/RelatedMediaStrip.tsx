@@ -20,7 +20,7 @@ export function RelatedMediaStrip({ images, athleteName, athleteSlug, activeImag
 }) {
   const [failed, setFailed] = useState<string[]>([]);
   const [ratios, setRatios] = useState<Record<string, number>>({});
-  const { rowRef, paused, togglePaused, setModalOpen, rowEvents } = useFilmRowScroll();
+  const { rowRef, groupRef, looping, paused, togglePaused, setModalOpen, rowEvents } = useFilmRowScroll();
   useEffect(() => {
     // Cached SSR images can finish loading before React attaches onLoad.
     const loaded = [...(rowRef.current?.querySelectorAll<HTMLImageElement>('button[aria-label^="Show related photo:"] img') ?? [])]
@@ -41,20 +41,21 @@ export function RelatedMediaStrip({ images, athleteName, athleteSlug, activeImag
       {onResume && <button type="button" className={styles.resume} onClick={onResume} aria-label="Resume slideshow" title="Resume slideshow"><Play aria-hidden="true" fill="currentColor" /></button>}
     </div>
     <div ref={rowRef} {...rowEvents} className={styles.row} tabIndex={0} aria-label={`Related photos of ${athleteName}`}>
+      {[false, true].map(repeated => <div key={String(repeated)} ref={repeated ? undefined : groupRef} className={styles.sequence} hidden={repeated && !looping} role="group" aria-label={repeated ? "Repeated photos for continuous scrolling" : "Career photos"}>
       {available.map(image => (
         <Dialog key={image.id} onOpenChange={setModalOpen}>
           <div style={{ aspectRatio: ratios[image.url] || 280 / 172 }} className={`${styles.image} ${ratios[image.url] < 1.1 ? styles.imageNarrow : ""} ${image.id === activeImageId ? styles.imageActive : ""}`}>
-            <button type="button" className={styles.imageSelect} aria-label={`Show related photo: ${image.title || athleteName}`} aria-pressed={image.id === activeImageId} title={[image.title, image.credits].filter(Boolean).join(" · ")} onClick={() => onSelect(image)}>
+            <button type="button" tabIndex={repeated ? -1 : undefined} className={styles.imageSelect} aria-label={`Show related photo: ${image.title || athleteName}${repeated ? " (loop)" : ""}`} aria-pressed={image.id === activeImageId} title={[image.title, image.credits].filter(Boolean).join(" · ")} onClick={() => onSelect(image)}>
               <img src={image.url} alt={image.title || `${athleteName} career photo`} loading="lazy" onLoad={event => {
                 const { naturalWidth, naturalHeight } = event.currentTarget;
                 if (naturalWidth && naturalHeight) setRatios(current => ({ ...current, [image.url]: naturalWidth / naturalHeight }));
               }} onError={() => setFailed(current => current.includes(image.url) ? current : [...current, image.url])} />
             </button>
-            <button type="button" className={`${styles.imageAction} ${styles.viewAction}`} aria-label={`View in slideshow: ${image.title || athleteName}`} title="View in slideshow" onClick={() => onSelect(image)}>
+            <button type="button" tabIndex={repeated ? -1 : undefined} className={`${styles.imageAction} ${styles.viewAction}`} aria-label={`View in slideshow: ${image.title || athleteName}${repeated ? " (loop)" : ""}`} title="View in slideshow" onClick={() => onSelect(image)}>
               <Eye aria-hidden="true" />
             </button>
             <DialogTrigger asChild>
-              <button type="button" className={`${styles.imageAction} ${styles.licenseAction}`} aria-label={`Explore Getty Images licensing: ${image.title || athleteName}`} title="Explore licensing on Getty Images">
+              <button type="button" tabIndex={repeated ? -1 : undefined} className={`${styles.imageAction} ${styles.licenseAction}`} aria-label={`Explore Getty Images licensing: ${image.title || athleteName}${repeated ? " (loop)" : ""}`} title="Explore licensing on Getty Images">
                 <img className={styles.gettyLogo} src="/images/getty-images-logo.svg" alt="" aria-hidden="true" />
                 <KeyRound aria-hidden="true" />
               </button>
@@ -84,6 +85,7 @@ export function RelatedMediaStrip({ images, athleteName, athleteSlug, activeImag
           </DialogPortal>
         </Dialog>
       ))}
+      </div>)}
       {!available.length && <p>Related photos will appear here when available.</p>}
     </div>
   </section>;

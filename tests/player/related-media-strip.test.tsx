@@ -71,6 +71,15 @@ it("opens the corresponding licensing preview without selecting a slideshow phot
   expect(host.querySelector("button button")).toBeNull();
 });
 
+it("keeps repeated photos interactive without adding duplicate keyboard stops", async () => {
+  const repeat = host.querySelector<HTMLElement>('[aria-label="Repeated photos for continuous scrolling"]')!;
+  expect([...repeat.querySelectorAll("button")].every(button => button.tabIndex === -1)).toBe(true);
+  await act(async () => repeat.querySelector<HTMLButtonElement>('[aria-label="Show related photo: Professional game (loop)"]')!.click());
+  expect(select.mock.calls[0][0].id).toBe("two");
+  await act(async () => repeat.querySelector<HTMLButtonElement>('[aria-label="Explore Getty Images licensing: College game (loop)"]')!.click());
+  expect(document.querySelector('[role="dialog"] img[src="https://example.com/one.jpg"]')).not.toBeNull();
+});
+
 it("closes with Escape or its close control and restores focus to the triggering image", async () => {
   const trigger = host.querySelector<HTMLButtonElement>('[aria-label="Explore Getty Images licensing: College game"]')!;
   await act(async () => { trigger.focus(); trigger.click(); });
