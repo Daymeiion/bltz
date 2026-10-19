@@ -2066,7 +2066,7 @@ const styleSheet = `
 }
 .bio-headshot-card{height:250px;overflow:hidden;border:1px solid #1E2640;border-radius:14px;background:#131829;display:flex;flex-direction:column}
 .bio-headshot-image{position:relative;height:216px;flex:0 0 216px;overflow:hidden;background:${GRAD_FIELD}}
-.bio-headshot-photo{object-fit:cover;object-position:50% 12%}
+.bio-headshot-photo{object-fit:contain;object-position:center bottom}
 .bio-headshot-year{height:34px;flex:0 0 34px;display:flex;align-items:center;justify-content:center;border-top:1px solid #1E2640;color:${lockerAccent};font-family:${mono};font-size:11px;font-weight:700;letter-spacing:.12em;line-height:1;text-align:center;white-space:nowrap}
 .team-history-full-name{display:none}
 @media(min-width:900px){.team-history-full-name{display:inline}.team-history-abbreviation{display:none}}
