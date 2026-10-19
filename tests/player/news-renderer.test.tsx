@@ -29,10 +29,13 @@ it.each(["public", "preview"])("renders discovered metadata and the actual artic
   expect(host.textContent).toContain(article.headline);
   expect(host.textContent).not.toMatch(/DRAFT STOCK RISING|CONFERENCE'S BEST COVER MAN|LOCKER ROOM STANDARD SETTER|FROM FRIDAY NIGHTS TO FEATURE FILM/);
   expect(host.textContent).not.toContain("View all articles");
-  const read = [...host.querySelectorAll("button")].find(button => button.textContent?.startsWith("Read article"))!;
-  await act(async () => read.click());
-  expect(host.querySelector('[role="alertdialog"]')?.textContent).toContain("Career Press");
-  expect(host.querySelector('[role="alertdialog"]')?.textContent).toContain(article.headline);
+  const read = host.querySelector<HTMLAnchorElement>('a[aria-label^="Read article about"]')!;
+  expect(read.getAttribute("href")).toBe(article.article_url);
+  expect(read.target).toBe("_blank");
+  expect(read.rel).toBe("noopener noreferrer");
+  expect(read.getAttribute("aria-label")).toContain("opens in a new tab");
+  expect(host.querySelector('[role="alertdialog"]')).toBeNull();
+  expect(host.textContent).not.toContain("Leaving BLTZ");
 });
 it.each([
   [{}, "No matching news articles found for this player yet."],

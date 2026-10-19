@@ -228,8 +228,6 @@ export default function LockerView({
   const [statsSort, setStatsSort] = useState("career");
   const [gameLogOpen, setGameLogOpen] = useState<Record<string, boolean>>({ cfb: true, pro: false });
   const [articleModalOpen, setArticleModalOpen] = useState(false);
-  const [pendingArticleRedirect, setPendingArticleRedirect] = useState<{ source: string; title: string; url: string } | null>(null);
-  const [externalRedirectCountdown, setExternalRedirectCountdown] = useState(5);
   const [selectedSocialIndex, setSelectedSocialIndex] = useState<number | null>(null);
   const [shortModalIndex, setShortModalIndex] = useState<number | null>(null);
   const [activeShortIndex, setActiveShortIndex] = useState(0);
@@ -450,31 +448,6 @@ export default function LockerView({
       document.removeEventListener("keydown", onKeyDown);
     };
   }, [selectedSocialIndex]);
-
-  useEffect(() => {
-    if (!pendingArticleRedirect) return;
-    const startedAt = Date.now();
-    const previousOverflow = document.body.style.overflow;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setPendingArticleRedirect(null);
-    };
-    setExternalRedirectCountdown(5);
-    document.body.style.overflow = "hidden";
-    document.addEventListener("keydown", onKeyDown);
-    const interval = window.setInterval(() => {
-      const elapsedSeconds = Math.floor((Date.now() - startedAt) / 1000);
-      setExternalRedirectCountdown(Math.max(0, 5 - elapsedSeconds));
-    }, 250);
-    const timeout = window.setTimeout(() => {
-      window.location.assign(pendingArticleRedirect.url);
-    }, 5000);
-    return () => {
-      window.clearInterval(interval);
-      window.clearTimeout(timeout);
-      document.body.style.overflow = previousOverflow;
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  }, [pendingArticleRedirect]);
 
   // ---- Spotify "now playing" (live) ----
   // Polls the athlete's currently-playing track. Stays null until we confirm a
@@ -1374,7 +1347,7 @@ export default function LockerView({
                     <div className={isPrivatePreview ? "preview-articles-grid grid grid-cols-[repeat(auto-fit,260px)] justify-center gap-3" : "grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"}>
                       {!mediaArticles.length && <p role="status" className="col-span-full py-8 text-center text-sm text-white/60">{articlesLoading ? "Searching for matching news articles…" : articlesUnavailable ? "News articles are temporarily unavailable. Please check back later." : "No matching news articles found for this player yet."}</p>}
                       {(isPrivatePreview ? mediaArticles : mediaArticles.slice(0, 3)).map((article) => (
-                        <EditorialCard imageFit="contain" compactMobile={isPrivatePreview} key={article.originalUrl} title={article.title} image={article.img} description={article.dek} meta={[article.source, article.meta].filter(Boolean).join(' · ')} onClick={safeExternalUrl(article.originalUrl) ? () => { const url = safeExternalUrl(article.originalUrl); if (url) setPendingArticleRedirect({ source: article.source, title: article.title, url }); } : undefined} />
+                        <EditorialCard imageFit="contain" compactMobile={isPrivatePreview} key={article.originalUrl} title={article.title} image={article.img} description={article.dek} meta={[article.source, article.meta].filter(Boolean).join(' · ')} href={safeExternalUrl(article.originalUrl)} />
                       ))}
                       {!isPrivatePreview && mediaArticles.length > 3 && <button type="button" onClick={() => setArticleModalOpen(true)} style={{ alignSelf: "center", marginTop: 2, border: "1px solid rgba(255,185,64,.45)", borderRadius: 9999, background: "rgba(255,185,64,.08)", color: lockerAccent, padding: "9px 13px", fontFamily: mono, fontWeight: 700, fontSize: 9, letterSpacing: ".12em", textTransform: "uppercase", cursor: "pointer" }}>
                         View all articles
@@ -1619,25 +1592,8 @@ export default function LockerView({
                       </div>
                       <div className={isPrivatePreview ? "locker-modal-scroll preview-article-list" : "locker-modal-scroll"} style={{ overflowY: "auto", padding: "12px 18px 22px", display: "flex", flexDirection: "column", gap: 10 }}>
                         {mediaArticles.map((article) => (
-                          <EditorialCard imageFit="contain" compactMobile={isPrivatePreview} key={article.title} title={article.title} image={article.img} description={article.dek} meta={[article.source, article.meta].filter(Boolean).join(' · ')} onClick={safeExternalUrl(article.originalUrl) ? () => { const url = safeExternalUrl(article.originalUrl); if (url) setPendingArticleRedirect({ source: article.source, title: article.title, url }); } : undefined} />
+                          <EditorialCard imageFit="contain" compactMobile={isPrivatePreview} key={article.title} title={article.title} image={article.img} description={article.dek} meta={[article.source, article.meta].filter(Boolean).join(' · ')} href={safeExternalUrl(article.originalUrl)} />
                         ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-                {pendingArticleRedirect && (
-                  <div role="alertdialog" aria-modal="true" aria-label="External article warning" style={{ position: "fixed", inset: 0, zIndex: 10000, background: "rgba(5,7,15,.88)", backdropFilter: "blur(16px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }}>
-                    <div style={{ width: "min(100%, 430px)", border: "1px solid #1E2640", borderRadius: 18, background: "#0B0E1A", boxShadow: "0 28px 100px rgba(0,0,0,.7)", padding: "24px 20px 20px", textAlign: "center" }}>
-                      <div style={{ width: 58, height: 58, margin: "0 auto 18px", borderRadius: 9999, border: `1px solid ${lockerAccent}`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: mono, fontWeight: 800, fontSize: 20, color: lockerAccent }}>{externalRedirectCountdown}</div>
-                      <div style={{ fontFamily: mono, fontSize: 8.5, letterSpacing: ".16em", color: lockerAccent, textTransform: "uppercase", marginBottom: 8 }}>Leaving BLTZ</div>
-                      <h3 style={{ margin: "0 0 10px", fontFamily: disp, fontWeight: 900, fontSize: 25, lineHeight: .95, color: "#fff", textTransform: "uppercase" }}>Continue to the original article?</h3>
-                      <p style={{ margin: "0 auto", maxWidth: 350, fontFamily: body, fontSize: 14, lineHeight: 1.5, color: "rgba(255,255,255,.66)" }}>
-                        You will leave this Player Locker and be redirected to {pendingArticleRedirect.source} in {externalRedirectCountdown} seconds.
-                      </p>
-                      <div style={{ marginTop: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontFamily: mono, fontSize: 8, letterSpacing: ".08em", color: "rgba(255,255,255,.36)", textTransform: "uppercase" }}>{pendingArticleRedirect.title}</div>
-                      <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 10, marginTop: 22 }}>
-                        <button type="button" onClick={() => setPendingArticleRedirect(null)} style={{ minHeight: 46, border: "1px solid rgba(255,255,255,.16)", borderRadius: 10, background: "rgba(255,255,255,.06)", color: "#fff", fontFamily: disp, fontWeight: 800, fontSize: 14, textTransform: "uppercase", cursor: "pointer" }}>Stay in BLTZ</button>
-                        <button type="button" onClick={() => window.location.assign(pendingArticleRedirect.url)} style={{ minHeight: 46, border: "none", borderRadius: 10, background: lockerAccent, color: "#0A0800", fontFamily: disp, fontWeight: 900, fontSize: 14, textTransform: "uppercase", cursor: "pointer" }}>Continue now</button>
                       </div>
                     </div>
                   </div>
