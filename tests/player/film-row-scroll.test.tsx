@@ -44,14 +44,14 @@ afterEach(async () => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
-it("moves at 45 pixels per second and crosses the seam without losing progress", () => {
+it("moves at 75 pixels per second and crosses the seam without losing progress", () => {
   frame(100); frame(150);
-  expect(row.scrollLeft).toBeCloseTo(2.25);
+  expect(row.scrollLeft).toBeCloseTo(3.75);
   row.scrollLeft = 611.4;
   frame(200);
-  expect(row.scrollLeft).toBeCloseTo(1.65);
+  expect(row.scrollLeft).toBeCloseTo(3.15);
   frame(250);
-  expect(row.scrollLeft).toBeCloseTo(3.9);
+  expect(row.scrollLeft).toBeCloseTo(6.9);
 });
 it("pauses on hover and resumes after leaving", async () => {
   frame(100); frame(150);
@@ -107,7 +107,7 @@ it("remeasures fractional sequence widths after images load or the viewport chan
   await act(async () => measure());
   row.scrollLeft = 612;
   frame(100); frame(150);
-  expect(row.scrollLeft).toBeCloseTo(1.875);
+  expect(row.scrollLeft).toBeCloseTo(3.375);
 });
 it("releases touch dragging even when the pointer ends outside the row", async () => {
   frame(100);

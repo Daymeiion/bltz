@@ -53,7 +53,7 @@ export function useFilmRowScroll() {
       if (!reducedMotion.matches && !document.hidden && !state.hover && !state.focus && !state.pointer && !state.modal && now >= state.idleUntil && cycle > 0) {
         // Retain fractional progress even in browsers that round scrollLeft.
         if (Math.abs(row.scrollLeft - expectedScroll.current) > 1) position = row.scrollLeft;
-        position += elapsed * 0.045;
+        position += elapsed * 0.075;
         // Both sequences have identical geometry. Preserve the fractional
         // overshoot when switching to the equivalent point in the first copy.
         if (position >= cycle) position %= cycle;
