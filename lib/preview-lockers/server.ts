@@ -10,7 +10,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 export const PRIVATE_HEADERS = { "Cache-Control": "private, no-store", "Referrer-Policy": "no-referrer", "X-Robots-Tag": "noindex, nofollow, noarchive, noimageindex" };
 export const PREVIEW_CONTENT_BODY_LIMIT = 192 * 1024;
 export const PREVIEW_MEDIA_BUCKETS = { photo: "preview-locker-photos", video: "preview-locker-videos" } as const;
-export const PREVIEW_COLUMNS = "id,slug,full_name,position,level,school,dob,high_school,hometown,jersey,height_in,weight_lbs,games_played,headshot_url,hero_video_url,photo_room_banner_url,photo_room_banner_link,photo_room_banner_storage_path,bio,story,athlete_quote,athlete_quote_author,schools,pro_teams,awards,social,article_edits,merchandise,career_stats,cfb_stats,pfr_stats,combine_results,videos,photos,revision,created_at,updated_at";
+export const PREVIEW_COLUMNS = "id,slug,full_name,position,level,school,dob,high_school,hometown,jersey,height_in,weight_lbs,games_played,headshot_url,headshot_storage_path,bio_headshot_url,bio_headshot_storage_path,hero_video_url,photo_room_banner_url,photo_room_banner_link,photo_room_banner_storage_path,bio,story,athlete_quote,athlete_quote_author,schools,pro_teams,awards,social,article_edits,merchandise,career_stats,cfb_stats,pfr_stats,combine_results,videos,photos,revision,created_at,updated_at";
 export class PreviewError extends Error {
   constructor(public code: string, public status: number) { super(code); }
 }
@@ -63,7 +63,7 @@ export async function readBody(req: Request, limit = 128 * 1024): Promise<unknow
 }
 async function resolvePrivateMedia(client: Awaited<ReturnType<typeof createClient>>, row: PreviewRecord, publicLink = false, signer = client): Promise<ResolvedPreviewRecord> {
   const groups = [
-    { bucket: PREVIEW_MEDIA_BUCKETS.photo, items: [...row.photos.filter((item): item is typeof item & { storagePath: string } => "storagePath" in item), ...row.schools.flatMap(team => team.logoStoragePath ? [{storagePath:team.logoStoragePath}] : []), ...[...row.merchandise,...row.article_edits].flatMap(item => item.imageStoragePath ? [{storagePath:item.imageStoragePath}] : []), ...(row.photo_room_banner_storage_path ? [{ storagePath: row.photo_room_banner_storage_path }] : [])] },
+    { bucket: PREVIEW_MEDIA_BUCKETS.photo, items: [...[row.headshot_storage_path, row.bio_headshot_storage_path].flatMap(path => path ? [{storagePath:path}] : []), ...row.photos.filter((item): item is typeof item & { storagePath: string } => "storagePath" in item), ...row.schools.flatMap(team => team.logoStoragePath ? [{storagePath:team.logoStoragePath}] : []), ...[...row.merchandise,...row.article_edits].flatMap(item => item.imageStoragePath ? [{storagePath:item.imageStoragePath}] : []), ...(row.photo_room_banner_storage_path ? [{ storagePath: row.photo_room_banner_storage_path }] : [])] },
     { bucket: PREVIEW_MEDIA_BUCKETS.video, items: row.videos.filter((item): item is typeof item & { storagePath: string } => "storagePath" in item) },
   ];
   const urls = new Map<string, string>();
@@ -91,6 +91,8 @@ async function resolvePrivateMedia(client: Awaited<ReturnType<typeof createClien
   }
   return {
     ...row,
+    headshot_resolved_url: row.headshot_storage_path ? urls.get(row.headshot_storage_path) : null,
+    bio_headshot_resolved_url: row.bio_headshot_storage_path ? urls.get(row.bio_headshot_storage_path) : null,
     photo_room_banner_resolved_url: row.photo_room_banner_storage_path ? urls.get(row.photo_room_banner_storage_path) : null,
     photos: row.photos.map(item => "storagePath" in item ? { ...item, url: urls.get(item.storagePath)! } : item),
     schools: row.schools.map(team => team.logoStoragePath ? {...team,logo:urls.get(team.logoStoragePath) ?? null} : team),
@@ -100,7 +102,7 @@ async function resolvePrivateMedia(client: Awaited<ReturnType<typeof createClien
   } as ResolvedPreviewRecord;
 }
 export async function assertPreviewMediaExists(client: Awaited<ReturnType<typeof createClient>>, content: PreviewContent) {
-  for (const [kind, items] of [["photo", [...content.photos, ...content.schools.flatMap(team => team.logoStoragePath ? [{storagePath:team.logoStoragePath}] : []), ...[...content.merchandise,...content.article_edits].flatMap(item => item.imageStoragePath ? [{storagePath:item.imageStoragePath}] : []), ...(content.photo_room_banner_storage_path ? [{ storagePath: content.photo_room_banner_storage_path }] : [])]], ["video", content.videos]] as const) {
+  for (const [kind, items] of [["photo", [...[content.headshot_storage_path, content.bio_headshot_storage_path].flatMap(path => path ? [{storagePath:path}] : []), ...content.photos, ...content.schools.flatMap(team => team.logoStoragePath ? [{storagePath:team.logoStoragePath}] : []), ...[...content.merchandise,...content.article_edits].flatMap(item => item.imageStoragePath ? [{storagePath:item.imageStoragePath}] : []), ...(content.photo_room_banner_storage_path ? [{ storagePath: content.photo_room_banner_storage_path }] : [])]], ["video", content.videos]] as const) {
     const stored = items.filter((item): item is typeof item & { storagePath: string } => "storagePath" in item);
     if (!stored.length) continue;
     const folder = stored[0].storagePath.split("/").slice(0, -1).join("/");

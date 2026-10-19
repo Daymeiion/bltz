@@ -45,6 +45,7 @@ export type LockerData = {
   jerseyHistory?: import("@/lib/player/jersey-history").JerseyBadge[];
   levelLabel: string;
   headshotUrl: string;
+  bioHeadshotUrl?: string | null;
   headshotYear?: string | null;
   heroVideoUrl: string | null;
   heroVideos?: { mobile: string | null; desktop: string | null };
@@ -1260,7 +1261,7 @@ export default function LockerView({
                       <div className="bio-headshot-image">
                         <img
                           className="bio-headshot-photo"
-                          src={data.headshotUrl}
+                          src={data.bioHeadshotUrl || data.headshotUrl}
                           alt={`${data.fullName} headshot`}
                           onError={(event) => {
                             if (event.currentTarget.src.endsWith(HEADSHOT_FALLBACK)) return;

@@ -1,5 +1,6 @@
 "use client";
 import EditorialImageInput from "./EditorialImageInput";
+import HeadshotFields, { type HeadshotTarget } from "./HeadshotFields";
 import { PreviewSavedContext } from "./PreviewSavedContext";
 import { PfrJerseyImport } from "./PfrJerseyImport";
 import { reviewPfrJerseys } from "@/lib/preview-lockers/jersey-review";
@@ -316,7 +317,7 @@ export default function PreviewLockerForm({
     } catch (cause) { setMerchandiseError(cause instanceof Error ? cause.message : "The dismissal could not be saved."); return false; }
     finally { pending.current = false; setBusy(null); setDismissingMerchandise(false); }
   }
-  async function uploadFiles(kind: "photo" | "video", files: FileList | null, asHeadshot = false, placement?: { award?: number; social?: string }) {
+  async function uploadFiles(kind: "photo" | "video", files: FileList | null, placement?: { award?: number; social?: string }) {
     if (!files?.length || !saved || pending.current) return;
     const limit = kind === "photo" ? 40 : 24;
     const names = new Set((kind === "photo" ? draft.photos : draft.videos).map(item => item.title.trim().toLocaleLowerCase()));
@@ -336,7 +337,7 @@ export default function PreviewLockerForm({
     const retainUploaded = () => {
       if (!uploaded.length) return;
       const attachment: Partial<PreviewContent> = placement?.award !== undefined ? { awards: draft.awards.map((award, i) => i === placement.award ? { ...award, photoId: uploaded[0].id, imageAssetId: null, imageMode: "custom" as const } : award) } : placement?.social ? { social: draft.social.map(item => item.id === placement.social ? { ...item, [kind === "photo" ? "photoId" : "videoId"]: uploaded[0].id } : item) } : {};
-      if (kind === "photo") change({ ...attachment, photos: [...draft.photos.map(photo => asHeadshot ? { ...photo, isHeadshot: false } : photo), ...uploaded.map((item, index) => ({ ...item, ...(asHeadshot ? { isHeadshot: index === 0, inHeroSlideshow: false } : placement ? { inHeroSlideshow: false } : {}), credits: null, sourceUrl: null, level: "off-field" as const, season: null }))] });
+      if (kind === "photo") change({ ...attachment, photos: [...draft.photos, ...uploaded.map(item => ({ ...item, ...(placement ? { inHeroSlideshow: false } : {}), credits: null, sourceUrl: null, level: "off-field" as const, season: null }))] });
       else change({ ...attachment, videos: [...draft.videos, ...uploaded.map(item => ({ ...item, thumb: null }))] });
     };
     try {
@@ -381,6 +382,29 @@ export default function PreviewLockerForm({
       });
       setMessage(`${kind === "school_logo" ? "School logo" : kind === "article" ? "Article image" : "Merchandise image"} uploaded. Save the draft to keep it. The default image is retained.`);
     } catch (cause) { setEditorialImageError({kind,id,message:cause instanceof Error ? cause.message : "Image upload failed."}); }
+    finally { pending.current = false; setBusy(null); }
+  }
+  async function uploadHeadshot(target: HeadshotTarget, file: File | undefined) {
+    if (!file || !saved || pending.current) return;
+    if (!["image/jpeg","image/png","image/webp"].includes(file.type) || !file.size || file.size > 10 * 1024 * 1024) {
+      setError("Choose a PNG, JPG or WebP headshot up to 10 MB."); return;
+    }
+    pending.current = true; setBusy("upload"); setError("");
+    try {
+      const response = await fetch(`/api/preview-lockers/${saved.id}/uploads`, {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({kind:"headshot",mimeType:file.type,size:file.size})});
+      if (!response.ok) throw new Error("Could not prepare this headshot upload. Your selected images are unchanged.");
+      const ticket = await response.json() as {path:string;token:string;bucket:string};
+      const bucket = createClient().storage.from(ticket.bucket);
+      const upload = await bucket.uploadToSignedUrl(ticket.path,ticket.token,file,{contentType:file.type});
+      if (upload.error) throw new Error("Headshot upload failed. Your selected images are unchanged.");
+      change(current => target === "hero" ? {headshot_storage_path:ticket.path,photos:current.photos.map(photo => ({...photo,isHeadshot:false}))} : {bio_headshot_storage_path:ticket.path});
+      // A thumbnail failure must not discard an otherwise completed upload.
+      try {
+        const preview = await bucket.createSignedUrl(ticket.path,900);
+        if (preview.data?.signedUrl) setEditorialImages(current => ({...current,[ticket.path]:preview.data.signedUrl}));
+      } catch { /* Saved path can still be reviewed after reloading. */ }
+      setMessage(`${target === "hero" ? "Hero" : "Bio"} headshot uploaded privately. Save the draft to apply it.`);
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Headshot upload failed."); }
     finally { pending.current = false; setBusy(null); }
   }
   async function uploadBanner(file: File | undefined) {
@@ -431,15 +455,17 @@ export default function PreviewLockerForm({
         {field("hometown", "Hometown")}{field("jersey", "Jersey", 10)}{field("height_in", "Height (inches)", 2, true)}{field("weight_lbs", "Weight (lbs)", 3, true)}{field("games_played", "Games played", 4, true)}
       </div>
       {(!saved || gtmLinked) && <section className="space-y-3 rounded-lg border p-4" aria-labelledby="preview-scraper-heading"><div className="space-y-1"><h2 id="preview-scraper-heading" className="font-semibold">Build with web scraper</h2><p className="text-sm">Searches nflverse NFL roster data, cfbverse college roster data, Wikipedia, ESPN, and YouTube. Suggestions fill only blank fields and remain editable; they are not identity, accuracy, copyright, or rights verification.</p><p className="text-sm">Google Images is not queried. A future image-search provider requires an approved adapter. You can cancel, continue manually, or replace every suggestion before saving.</p><p className="text-sm font-medium">Scraped and manual changes are retained while this editor remains open, until you explicitly review and save. Preview pages open the last saved version in a new tab so the editor stays open. A previously closed unsaved draft cannot be recovered.</p></div><div className="flex flex-wrap gap-3"><Button type="button" variant="outline" onClick={() => { void discover(); }}>Build with web scraper</Button><Button type="button" variant="outline" onClick={() => setMessage("Manual mode: complete the fields below, review, then save privately.")}>Continue manually</Button></div></section>}
-      <section className="space-y-3 rounded-lg border p-4" aria-label="Headshot">
-        <h2 className="font-semibold">Headshot</h2>
-        <label className="grid gap-2 text-sm">Headshot image<select aria-label="Headshot image" className="h-10 rounded-md border bg-background px-3" value={draft.photos.find(photo => photo.isHeadshot)?.id ?? ""} onChange={event => change({ photos: draft.photos.map(photo => ({ ...photo, isHeadshot: photo.id === event.target.value })) })}>
-          <option value="">Use headshot URL / default image</option>
-          {draft.photos.map((photo, index) => <option key={photo.id} value={photo.id}>{photo.title || `Untitled photo ${index + 1}`}</option>)}
-        </select></label>
-        {saved ? <label className="grid gap-2 text-sm">Upload headshot image<Input aria-label="Upload headshot image" type="file" accept="image/png,image/jpeg,image/webp" disabled={draft.photos.length >= 40} onChange={event => { void uploadFiles("photo", event.target.files, true); event.target.value = ""; }} /><span>PNG, JPG, or WebP, up to 10 MB. Transparent PNGs keep their transparency. Uploading selects this headshot; save the draft to apply it.</span></label> : <p className="text-sm">Save the draft once to upload a headshot.</p>}
-      </section>
-      <div className="grid gap-4 sm:grid-cols-2">{field("headshot_url", "Headshot HTTPS URL", 2048)}{field("hero_video_url", "Desktop landscape hero URL (legacy fallback)", 2048)}</div>
+      <div className="grid gap-4 md:grid-cols-2">{(["hero", "bio"] as const).map(target => <HeadshotFields key={target} target={target} photos={draft.photos} url={target === "hero" ? draft.headshot_url : draft.bio_headshot_url} storagePath={target === "hero" ? draft.headshot_storage_path : draft.bio_headshot_storage_path} imageUrls={editorialImages} heroImageUrl={draft.headshot_storage_path ? editorialImages[draft.headshot_storage_path] || "" : (() => { const photo = draft.photos.find(item => item.isHeadshot); return photo ? "storagePath" in photo ? editorialImages[photo.storagePath] || "" : photo.url : draft.headshot_url || "/images/black-headshot-fallback.svg"; })()} saved={!!saved} busy={!!busy}
+        onSelect={id => change(current => {
+          if (target === "hero") return {headshot_storage_path:null,photos:current.photos.map(photo => ({...photo,isHeadshot:photo.id === id,...(photo.id === id ? {inHeroSlideshow:false} : {})}))};
+          const photo=current.photos.find(item => item.id === id);
+          return {bio_headshot_storage_path:photo && "storagePath" in photo ? photo.storagePath : null,bio_headshot_url:photo && "url" in photo ? photo.url : null};
+        })}
+        onUrl={url => change(current => target === "hero" ? {headshot_url:url,headshot_storage_path:null,photos:current.photos.map(photo => ({...photo,isHeadshot:false}))} : {bio_headshot_url:url,bio_headshot_storage_path:null})}
+        onUpload={file => { void uploadHeadshot(target,file); }}
+        onReset={() => change(current => target === "hero" ? {headshot_storage_path:null,photos:current.photos.map(photo => ({...photo,isHeadshot:false}))} : {bio_headshot_url:null,bio_headshot_storage_path:null})}
+      />)}</div>
+      {field("hero_video_url", "Desktop landscape hero URL (legacy fallback)", 2048)}
       <label className="grid gap-2 text-sm">Bio (short overview)<Textarea aria-label="Biography" aria-describedby="preview-bio-help" rows={4} maxLength={4000} value={draft.bio} onChange={event => change({ bio: event.target.value })} /><span id="preview-bio-help" className="text-xs text-muted-foreground">A few sentences introducing the athlete and their career. Appears in the Locker’s Bio section.</span></label>
       <label className="grid gap-2 text-sm">Life story<Textarea aria-label="Life story" aria-describedby="preview-story-help" rows={12} maxLength={20000} value={draft.story} onChange={event => change({ story: event.target.value })} /><span id="preview-story-help" className="text-xs text-muted-foreground">A longer account of early life, school, career and life beyond sports. Appears only in Story. Paragraph breaks are preserved; scraper refreshes keep your edits.</span><span className="text-xs text-muted-foreground">{draft.story.length.toLocaleString()} / 20,000 characters</span></label>
       <div className="grid gap-4 sm:grid-cols-2">{field("athlete_quote", "Athlete quote", 600)}{field("athlete_quote_author", "Quote attribution")}</div>
@@ -513,7 +539,7 @@ export default function PreviewLockerForm({
       <h2 className={styles.folderHeading}>Media & merchandise</h2>
       <ArticlesSection imageUrls={editorialImages} imageError={editorialImageError?.kind === "article" ? editorialImageError : null} onUploadImage={(item,file) => { void uploadEditorialImage("article",item.sourceUrl??item.id,file,item); }} articles={newsArticles} edits={draft.article_edits} onChange={article_edits => change({ article_edits })} saved={!!saved} dirty={dirty} canLoad={!!saved && !dirty && !busy} onReload={() => { void loadNews(); }} onRefresh={() => { void loadNews(true); }} review={newsReview?.review ?? null} reviewKey={newsReview?.key ?? ""} identityCurrent={!!saved && newsReview?.identity === merchandiseIdentity(draft)} playerName={draft.full_name} onDismiss={url => { void dismissNews(url); }} onDismissSelected={dismissNews} onRestore={url => { void dismissNews(url, true); }} onRestoreSelected={urls => dismissNews(urls, true)} onDismissedPage={offset => { void loadNews(false, offset); }} busy={!!busy} reviewError={newsError} />
       <MerchandiseSection saved={!!saved} imageUrls={editorialImages} imageError={editorialImageError?.kind === "merchandise" ? editorialImageError : null} onUploadImage={(id,file) => { void uploadEditorialImage("merchandise",id,file); }} items={draft.merchandise} onChange={merchandise => change({ merchandise })} onSearch={() => { void searchMerchandise(); }} canSearch={!!saved && !dirty && !busy} searching={busy === "merchandise" && !dismissingMerchandise} savingReview={dismissingMerchandise} searchedAt={merchandiseSearch?.review?.searched_at} result={merchandiseSearch?.result ?? null} resultKey={merchandiseSearch?.key ?? ""} searchError={merchandiseError} playerName={draft.full_name} identityCurrent={merchandiseSearch?.identity === merchandiseIdentity(draft)} onDismiss={url => { void dismissMerchandise(url); }} onDismissSelected={dismissMerchandise} onRestore={url => { void dismissMerchandise(url, true); }} onRestoreSelected={urls => dismissMerchandise(urls, true)} dismissedItems={merchandiseSearch?.review ? dismissedMerchandiseItems(merchandiseSearch.review) : []} busy={!!busy} />
-      <SocialSection items={draft.social} photos={draft.photos} videos={draft.videos} saved={!!saved} onChange={social => change({ social })} onUpload={(kind, files, social) => { void uploadFiles(kind, files, false, { social }); }} />
+      <SocialSection items={draft.social} photos={draft.photos} videos={draft.videos} saved={!!saved} onChange={social => change({ social })} onUpload={(kind, files, social) => { void uploadFiles(kind, files, { social }); }} />
       </section>
       <label className="flex items-start gap-3"><input type="checkbox" checked={reviewed} onChange={e => setReviewed(e.target.checked)} className="mt-1 h-5 w-5" />I reviewed this draft for private demo use. This is not public publication or rights verification.</label>
       <div className="flex flex-wrap gap-3"><Button type="button" variant="outline" onClick={()=>void save(true)}>Save draft</Button><Button type="button" disabled={!reviewed} onClick={()=>void save()}>{saved ? "Save changes privately" : (!saved && enroll ? "Create and enroll preview" : "Save private preview")}</Button></div><p className="text-sm text-muted-foreground">Save draft keeps your progress without enrollment or completion review. Enter a name and valid URL slug; other sections can wait. Existing assigned viewers can still see saved changes.</p>

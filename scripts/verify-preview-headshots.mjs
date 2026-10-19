@@ -1,0 +1,62 @@
+// Disposable PostgreSQL only. No hosted connection, athlete data or network.
+import { PGlite } from '@electric-sql/pglite';
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+const db = new PGlite();
+const admin='00000000-0000-4000-8000-000000000001', viewer='00000000-0000-4000-8000-000000000002', other='00000000-0000-4000-8000-000000000003', id='00000000-0000-4000-8000-000000000004';
+try {
+  await db.exec(`create role anon; create role authenticated; create role service_role bypassrls;
+    create schema auth; create schema private; create table auth.users(id uuid primary key,email text);
+    create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
+    grant usage on schema auth to authenticated;
+    create function public.is_internal_admin() returns boolean language sql stable as $$select auth.uid()='${admin}'::uuid$$;
+    create table public.audit_logs(id bigserial primary key,actor_user_id uuid,action text,entity_type text,entity_id text,actor_role_scope text,risk_level text,previous_values jsonb,new_values jsonb,request_metadata jsonb);
+    insert into auth.users values('${admin}','admin@example.test'),('${viewer}','viewer@example.test'),('${other}','other@example.test');`);
+  const apply=async name=>db.exec(fs.readFileSync(`supabase/migrations/${name}`,'utf8'));
+  await apply('20260831161831_private_preview_lockers.sql');
+  await apply('20260901184112_private_preview_assigned_viewer.sql');
+  await db.exec(`alter table public.preview_lockers add column career_stats jsonb not null default '[]';
+    grant select(career_stats),insert(career_stats),update(career_stats) on public.preview_lockers to authenticated;
+    create function public.preview_conversion(uuid,text,uuid,uuid,jsonb) returns jsonb language sql as $$select '{}'::jsonb$$;`);
+  for(const name of ['20260914213500_preview_award_sources.sql','20260915003000_preview_award_descriptions.sql','20260916193000_private_preview_cfb_csv.sql','20260922190000_preview_awards_social.sql','20260929120000_preview_photo_room_banner.sql','20260929195816_preview_photo_room_banner_upload.sql','20261011170240_preview_pfr_csv.sql']) await apply(name);
+  await apply('20261018230222_preview_combine_results.sql');
+  await apply('20261019201124_preview_life_story.sql');
+  await db.exec(`set role authenticated; select set_config('request.jwt.claim.sub','${admin}',false)`);
+  await db.query('insert into preview_lockers(id,slug,full_name,headshot_url) values($1,$2,$3,$4)',[id,'headshot-fixture','Headshot Fixture','https://images.example.com/legacy.png']);
+  await db.exec('reset role');
+  const permissions=(await db.query("select oid::regprocedure::text as name,proacl,prosecdef from pg_proc where oid in ('public.preview_conversion_create(uuid,jsonb,jsonb)'::regprocedure,'private.audit_preview_change()'::regprocedure) order by 1")).rows;
+  await apply('20261019225710_preview_separate_headshots.sql');
+  assert.deepEqual((await db.query('select headshot_url,headshot_storage_path,bio_headshot_url,bio_headshot_storage_path from preview_lockers where id=$1',[id])).rows[0],{headshot_url:'https://images.example.com/legacy.png',headshot_storage_path:null,bio_headshot_url:null,bio_headshot_storage_path:null});
+  assert.deepEqual((await db.query("select oid::regprocedure::text as name,proacl,prosecdef from pg_proc where oid in ('public.preview_conversion_create(uuid,jsonb,jsonb)'::regprocedure,'private.audit_preview_change()'::regprocedure) order by 1")).rows,permissions);
+  const hero=`${id}/photos/00000000-0000-4000-8000-000000000005.png`,bio=`${id}/photos/00000000-0000-4000-8000-000000000006.webp`;
+  await db.exec(`set role authenticated; select set_config('request.jwt.claim.sub','${admin}',false)`);
+  await db.query('update preview_lockers set headshot_storage_path=$1,bio_headshot_storage_path=$2,bio_headshot_url=$3 where id=$4 and revision=1',[hero,bio,'https://images.example.com/bio.png',id]);
+  assert.deepEqual((await db.query('select headshot_storage_path,bio_headshot_storage_path from preview_lockers where id=$1',[id])).rows[0],{headshot_storage_path:hero,bio_headshot_storage_path:bio});
+  assert.equal((await db.query("update preview_lockers set bio_headshot_url=null where id=$1 and revision=1 returning id",[id])).rows.length,0);
+  for(const field of ['headshot_storage_path','bio_headshot_storage_path'])for(const value of [`${other}/photos/00000000-0000-4000-8000-000000000005.png`,`${id}/videos/00000000-0000-4000-8000-000000000005.mp4`,'../invalid.png'])await assert.rejects(db.query(`update preview_lockers set ${field}=$1 where id=$2`,[value,id]),/check constraint/);
+  await assert.rejects(db.query('update preview_lockers set bio_headshot_url=$1 where id=$2',['javascript:alert(1)',id]),/check constraint/);
+  await db.exec('reset role');
+  const audit=(await db.query("select previous_values,new_values from audit_logs where action='preview.updated' order by id limit 1")).rows[0];
+  assert.equal(audit.previous_values.headshot_storage_path,null);assert.equal(audit.new_values.headshot_storage_path,hero);assert.equal(audit.new_values.bio_headshot_storage_path,bio);
+  await db.query('insert into preview_locker_viewer_grants(preview_locker_id,viewer_user_id) values($1,$2)',[id,viewer]);
+  await db.exec('set role anon');await assert.rejects(db.query('select bio_headshot_url from preview_lockers'),/permission denied/);
+  await db.exec(`reset role;set role authenticated;select set_config('request.jwt.claim.sub','${other}',false)`);assert.equal((await db.query('select bio_headshot_url from preview_lockers')).rows.length,0);
+  await db.exec(`select set_config('request.jwt.claim.sub','${viewer}',false)`);assert.equal((await db.query('select bio_headshot_storage_path from preview_lockers')).rows[0].bio_headshot_storage_path,bio);assert.equal((await db.query("update preview_lockers set bio_headshot_url=null returning id")).rows.length,0);
+  await db.exec(`select set_config('request.jwt.claim.sub','${admin}',false)`);
+  const atomic='00000000-0000-4000-8000-000000000007';
+  const content={slug:'atomic-headshots',full_name:'Atomic Headshots',bio:'',headshot_url:'https://images.example.com/hero.png',headshot_storage_path:`${atomic}/photos/00000000-0000-4000-8000-000000000005.png`,bio_headshot_url:'https://images.example.com/bio.png',bio_headshot_storage_path:null,schools:[],pro_teams:[],awards:[],social:[],career_stats:[],cfb_stats:[],pfr_stats:[],combine_results:[],videos:[],photos:[]};
+  await db.query("select preview_conversion_create($1,$2,'{}')",[atomic,JSON.stringify(content)]);await db.query("select preview_conversion_create($1,$2,'{}')",[atomic,JSON.stringify(content)]);
+  assert.equal((await db.query('select headshot_storage_path from preview_lockers where id=$1',[atomic])).rows[0].headshot_storage_path,content.headshot_storage_path);
+  await assert.rejects(db.query("select preview_conversion_create($1,$2,'{}')",[atomic,JSON.stringify({...content,bio_headshot_url:'https://images.example.com/changed.png'})]),/preview conflict/);
+  const {headshot_storage_path:_h,bio_headshot_url:_b,bio_headshot_storage_path:_p,...legacy}=content;void _h;void _b;void _p;
+  const legacyId='00000000-0000-4000-8000-000000000008';await db.query("select preview_conversion_create($1,$2,'{}')",[legacyId,JSON.stringify({...legacy,slug:'legacy-headshots'})]);assert.equal((await db.query('select bio_headshot_url from preview_lockers where id=$1',[legacyId])).rows[0].bio_headshot_url,null);
+  await db.query('update preview_lockers set bio_headshot_url=null,bio_headshot_storage_path=null where id=$1',[id]);assert.equal((await db.query('select headshot_storage_path from preview_lockers where id=$1',[id])).rows[0].headshot_storage_path,hero);
+  await db.exec('reset role');
+  const columns=(await db.query("select column_name,data_type,is_nullable from information_schema.columns where table_schema='public' and table_name='preview_lockers' and column_name in ('headshot_storage_path','bio_headshot_url','bio_headshot_storage_path') order by column_name")).rows;assert.equal(columns.length,3);columns.forEach(column=>{assert.equal(column.data_type,'text');assert.equal(column.is_nullable,'YES');});
+  if(process.argv.includes('--generate-types')){
+    const file='types/preview-lockers.generated.ts';let source=fs.readFileSync(file,'utf8');
+    source=source.replace(/preview_lockers: \{[\s\S]*?Relationships: \[\]\s*\}/,block=>block.replace(/          (headshot_storage_path|bio_headshot_url|bio_headshot_storage_path)\??: string \| null\r?\n/g,'').replace(/(          headshot_url(\?)?: string \| null\r?\n)/g,(line,_all,optional)=>line+columns.map(column=>`          ${column.column_name}${optional??''}: string | null\n`).join('')));
+    fs.writeFileSync(file,source);
+  }
+  console.log('PASS: legacy preservation, independent headshots, nullable defaults, path/URL constraints, audit, revisions, atomic create/retry/conflict, legacy enrollment, unchanged function privileges, anonymous/outsider denial, assigned read-only access and generated types.');
+} finally {await db.close();}

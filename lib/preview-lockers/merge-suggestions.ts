@@ -89,7 +89,7 @@ export function mergeSuggestions(current: PreviewContent, suggestion: PreviewCon
   append("cfb_stats", item => [item.category]);
   append("pfr_stats", item => [item.category]);
   for (const key of Object.keys(current) as (keyof PreviewContent)[]) {
-    if (key === "story" || key === "schools" || key === "pro_teams" || Array.isArray(current[key])) continue;
+    if (key === "headshot_storage_path" || key === "bio_headshot_url" || key === "bio_headshot_storage_path" || key === "story" || key === "schools" || key === "pro_teams" || Array.isArray(current[key])) continue;
     const value = current[key];
     if (value === null || value === "") {
       Object.assign(merged, { [key]: suggestion[key] });

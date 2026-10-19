@@ -1,13 +1,13 @@
 // @vitest-environment node
 import { beforeEach, expect, it, vi } from "vitest";
-const mock = vi.hoisted(() => ({ auth: vi.fn(), rpc: vi.fn(), from: vi.fn(), insert: vi.fn(), update: vi.fn(), eq: vi.fn(), select: vi.fn(), single: vi.fn(), maybeSingle: vi.fn() }));
-vi.mock("@/lib/supabase/server", () => ({ createClient: async () => ({ auth: { getUser: mock.auth }, rpc: mock.rpc, from: mock.from }) }));
+const mock = vi.hoisted(() => ({ auth: vi.fn(), rpc: vi.fn(), from: vi.fn(), insert: vi.fn(), update: vi.fn(), eq: vi.fn(), select: vi.fn(), single: vi.fn(), maybeSingle: vi.fn(), storageFrom: vi.fn(), list: vi.fn() }));
+vi.mock("@/lib/supabase/server", () => ({ createClient: async () => ({ auth: { getUser: mock.auth }, rpc: mock.rpc, from: mock.from, storage:{from:mock.storageFrom} }) }));
 import { POST } from "@/app/api/preview-lockers/route";
 import { PATCH } from "@/app/api/preview-lockers/[id]/route";
 import { previewContent } from "@/lib/preview-lockers/validation";
 const id = "00000000-0000-4000-8000-000000000001"; const content = previewContent.parse({ slug: "synthetic-preview", full_name: "Synthetic Preview" });
 const request = (body: unknown, method = "POST") => new Request("http://localhost/api/preview-lockers", { method, headers: { origin: "http://localhost", "content-type": "application/json" }, body: JSON.stringify(body) });
-beforeEach(() => { vi.resetAllMocks(); mock.auth.mockResolvedValue({ data: { user: { id: "admin" } } }); mock.rpc.mockResolvedValue({ data: true }); for (const key of ["from","insert","update","eq","select"] as const) mock[key].mockReturnValue(mock); });
+beforeEach(() => { vi.resetAllMocks(); mock.storageFrom.mockReturnValue({list:mock.list}); mock.list.mockResolvedValue({data:[{name:"00000000-0000-4000-8000-000000000002.png"}],error:null}); mock.auth.mockResolvedValue({ data: { user: { id: "admin" } } }); mock.rpc.mockResolvedValue({ data: true }); for (const key of ["from","insert","update","eq","select"] as const) mock[key].mockReturnValue(mock); });
 it("denies unauthenticated and non-admin mutations before table access", async () => {
   mock.auth.mockResolvedValue({ data: { user: null } }); expect((await POST(request({id,content}))).status).toBe(401);
   mock.auth.mockResolvedValue({ data: { user: { id: "ordinary" } } }); mock.rpc.mockResolvedValue({ data: false }); expect((await PATCH(request({revision:1,content},"PATCH"),{params:Promise.resolve({id})})).status).toBe(403); expect(mock.from).not.toHaveBeenCalled();
@@ -98,4 +98,16 @@ it("accepts a full-length Unicode Story alongside existing media within the boun
  mock.single.mockResolvedValue({data:{id,slug:content.slug,revision:1},error:null});
  expect((await POST(request({id,content:full}))).status).toBe(201);
  expect(mock.insert.mock.calls[0][0]).toHaveProperty("story",full.story);
+});
+
+it("preserves omitted headshot fields for old editors and saves independent explicit headshot changes",async()=>{
+ mock.maybeSingle.mockResolvedValue({data:{id,slug:content.slug,revision:2},error:null});
+ const {headshot_storage_path:_hero,bio_headshot_url:_bio,bio_headshot_storage_path:_path,...legacy}=content;void _hero;void _bio;void _path;
+ expect((await PATCH(request({revision:1,content:legacy},"PATCH"),{params:Promise.resolve({id})})).status).toBe(200);
+ expect(mock.update.mock.calls[0][0]).not.toHaveProperty("headshot_storage_path");expect(mock.update.mock.calls[0][0]).not.toHaveProperty("bio_headshot_url");expect(mock.update.mock.calls[0][0]).not.toHaveProperty("bio_headshot_storage_path");
+ const path=`${id}/photos/00000000-0000-4000-8000-000000000002.png`;
+ expect((await PATCH(request({revision:2,content:{...content,headshot_storage_path:path,bio_headshot_url:"https://images.example.com/bio.png"}},"PATCH"),{params:Promise.resolve({id})})).status).toBe(200);
+ expect(mock.update.mock.calls[1][0]).toMatchObject({headshot_storage_path:path,bio_headshot_url:"https://images.example.com/bio.png"});
+ expect((await PATCH(request({revision:3,content:{...content,headshot_storage_path:path,bio_headshot_url:null,bio_headshot_storage_path:null}},"PATCH"),{params:Promise.resolve({id})})).status).toBe(200);
+ expect(mock.update.mock.calls[2][0]).toMatchObject({headshot_storage_path:path,bio_headshot_url:null,bio_headshot_storage_path:null});
 });

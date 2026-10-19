@@ -288,10 +288,10 @@ it("saves an incomplete private draft without review or enrollment and allows de
 it("retains draft edits when saving fails and still validates media", async () => {
   await act(async () => root.render(<PreviewLockerForm />));
   await fill("Full name", "Draft Failure Fixture");
-  await fill("Headshot HTTPS URL", "javascript:alert(1)");
+  await fill("Hero headshot HTTPS URL", "javascript:alert(1)");
   await click("Save draft");
   expect(fetcher).not.toHaveBeenCalled();
-  await fill("Headshot HTTPS URL", "");
+  await fill("Hero headshot HTTPS URL", "");
   fetcher.mockRejectedValueOnce(new Error("network failure"));
   await click("Save draft");
   expect(host.querySelector<HTMLInputElement>('[aria-label="Full name"]')!.value).toBe("Draft Failure Fixture");

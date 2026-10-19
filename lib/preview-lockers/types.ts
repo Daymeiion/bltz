@@ -60,6 +60,11 @@ export interface PreviewLockerRow {
   high_school?: string | null;
   games_played: number | null;
   headshot_url: string | null;
+  headshot_storage_path?: string | null;
+  bio_headshot_url?: string | null;
+  bio_headshot_storage_path?: string | null;
+  headshot_resolved_url?: string | null;
+  bio_headshot_resolved_url?: string | null;
   hero_video_url: string | null;
   bio: string;
   story?: string;

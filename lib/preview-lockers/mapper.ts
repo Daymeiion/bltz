@@ -25,7 +25,12 @@ function previewJerseyHistory(row: Pick<PreviewLockerRow, "schools" | "pro_teams
   return uniqueJerseys(teams.flatMap(team => team.jerseyStatus === "conflict" ? [] : (team.jerseyNumbers ?? []).map(number => ({ team: team.name || team.label, number, sourceUrl: team.jerseySourceUrl, color: team.jerseyColor, borderColor: team.jerseyBorderColor })))).map(item => jerseyBadge(item, teams.find(team => (team.name || team.label) === item.team)?.color));
 }
 
-export function previewHeadshot(row: { headshot_url: string | null; photos?: Array<{ isHeadshot?: boolean; url?: string | null }> }) {
+type HeadshotSources = { headshot_url: string | null; headshot_storage_path?: string | null; headshot_resolved_url?: string | null; bio_headshot_url?: string | null; bio_headshot_storage_path?: string | null; bio_headshot_resolved_url?: string | null; photos?: Array<{ isHeadshot?: boolean; url?: string | null }> };
+export function previewBioHeadshot(row: HeadshotSources) {
+  return row.bio_headshot_storage_path ? row.bio_headshot_resolved_url || previewHeadshot(row) : row.bio_headshot_url || previewHeadshot(row);
+}
+export function previewHeadshot(row: HeadshotSources) {
+  if (row.headshot_storage_path) return row.headshot_resolved_url || "/images/black-headshot-fallback.svg";
   return row.photos?.find(photo => photo.isHeadshot && photo.url)?.url || row.headshot_url || "/images/black-headshot-fallback.svg";
 }
 
@@ -58,7 +63,7 @@ export function previewLockerData(row: PreviewRecord | ResolvedPreviewRecord, pu
     combineResults: row.combine_results ?? [],
     hometown: row.hometown || "", position: row.position || "", jersey: row.jersey || "",
     jerseyHistory: previewJerseyHistory(row),
-    levelLabel: row.level || "Athlete", headshotUrl: previewHeadshot(row),
+    levelLabel: row.level || "Athlete", headshotUrl: previewHeadshot(row), bioHeadshotUrl: previewBioHeadshot(row),
     // Only direct playback sources enter the hero; provider pages stay in the Film Room.
     heroVideoUrl: null,
     heroVideos: {
@@ -100,7 +105,7 @@ export function toLockerData(row: PreviewLockerRow): LockerData {
     jerseyNumbers: row.jersey ? [row.jersey] : [],
     jerseyHistory: previewJerseyHistory(row),
     levelLabel: row.level ? (LEVEL_LABEL[row.level] ?? "—") : "—",
-    headshotUrl: previewHeadshot(row),
+    headshotUrl: previewHeadshot(row), bioHeadshotUrl: previewBioHeadshot(row),
     headshotYear: null,
     heroVideoUrl: row.hero_video_url,
     logoSrc: "/bltz-white-logo.svg",

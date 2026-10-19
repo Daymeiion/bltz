@@ -60,7 +60,7 @@ it("issues a private photo-bucket ticket for an ad image without using a gallery
   expect(body.path).toMatch(new RegExp(`^${id}/photos/[0-9a-f-]{36}\\.png$`));
   expect((await POST(request({ kind: "banner", mimeType: "video/mp4", size: 1024 }, "http://localhost"), { params: Promise.resolve({ id }) })).status).toBe(400);
 });
-it.each(["merchandise","article","school_logo"])("uploads %s replacements without consuming a photo slot and rejects non-images", async kind => {
+it.each(["merchandise","article","school_logo","headshot"])("uploads %s replacements without consuming a photo slot and rejects non-images", async kind => {
   mocks.maybeSingle.mockResolvedValue({data:{photos:Array(40).fill({}),videos:[]},error:null});
   const response=await POST(request({kind,mimeType:"image/webp",size:1024},"http://localhost"),{params:Promise.resolve({id})});
   expect(response.status).toBe(200);

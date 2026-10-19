@@ -117,6 +117,9 @@ export const previewContent = z.object({
   weight_lbs: z.number().int().min(60).max(450).nullable().default(null),
   games_played: z.number().int().min(0).max(1000).nullable().default(null),
   headshot_url: asset, hero_video_url: asset,
+  headshot_storage_path: storagePath.refine(path => /\/photos\/.*\.(jpg|png|webp)$/.test(path), "Use an uploaded image.").nullable().default(null),
+  bio_headshot_url: asset,
+  bio_headshot_storage_path: storagePath.refine(path => /\/photos\/.*\.(jpg|png|webp)$/.test(path), "Use an uploaded image.").nullable().default(null),
   photo_room_banner_url: asset, photo_room_banner_link: asset,
   photo_room_banner_storage_path: storagePath.nullable().default(null),
   bio: text(4000).default(""), story: text(20000).default(""), athlete_quote: nullableText(600), athlete_quote_author: nullableText(160),
@@ -144,6 +147,8 @@ export type PreviewContent = z.infer<typeof previewContent>;
 export type PreviewRecord = z.infer<typeof previewRecord>;
 export type ResolvedPreviewRecord = Omit<PreviewRecord, "videos" | "photos"> & {
   photo_room_banner_resolved_url?: string | null;
+  headshot_resolved_url?: string | null;
+  bio_headshot_resolved_url?: string | null;
   enrichment_identity_key?: string;
   enrichment?: {
     awards: import("./types").PreviewAward[];
@@ -153,7 +158,8 @@ export type ResolvedPreviewRecord = Omit<PreviewRecord, "videos" | "photos"> & {
   photos: Array<z.infer<typeof previewPhoto> & { url: string }>;
 };
 export function previewMediaBelongsTo(recordId: string, content: PreviewContent): boolean {
-  return (!content.photo_room_banner_storage_path || content.photo_room_banner_storage_path.startsWith(`${recordId}/photos/`))
+  return [content.headshot_storage_path, content.bio_headshot_storage_path].every(path => !path || path.startsWith(`${recordId}/photos/`))
+    && (!content.photo_room_banner_storage_path || content.photo_room_banner_storage_path.startsWith(`${recordId}/photos/`))
     && content.schools.every(team => !team.logoStoragePath || team.logoStoragePath.startsWith(`${recordId}/photos/`))
     && [...content.merchandise,...content.article_edits].every(item => !item.imageStoragePath || item.imageStoragePath.startsWith(`${recordId}/photos/`))
     && [...content.photos, ...content.videos].every(item => !("storagePath" in item) || item.storagePath.startsWith(`${recordId}/`));

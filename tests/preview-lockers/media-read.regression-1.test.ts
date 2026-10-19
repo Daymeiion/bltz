@@ -90,3 +90,14 @@ it("bounds public media signing to remaining database lifetime and fails closed 
   await expect(readPrivatePreview("fixture-player")).rejects.toMatchObject({ code: "preview_expired" });
   expect(mocks.signed).not.toHaveBeenCalled();
 });
+
+it("signs independent headshots only after access and keeps paths out of resolved image URLs",async()=>{
+ const hero=`${id}/photos/00000000-0000-4000-8000-000000000004.png`,bio=`${id}/photos/00000000-0000-4000-8000-000000000005.webp`;
+ const saved={...row,videos:[],headshot_storage_path:hero,bio_headshot_storage_path:bio};
+ service.maybeSingle.mockResolvedValue({data:saved,error:null});mocks.maybeSingle.mockResolvedValue({data:saved,error:null});
+ mocks.signed.mockResolvedValue({data:[{signedUrl:"https://storage.example.com/hero.png"},{signedUrl:"https://storage.example.com/bio.webp"}],error:null});
+ const result=await readPrivatePreview("fixture-player");
+ expect(mocks.signed).toHaveBeenCalledWith([hero,bio],900);expect(result?.photos).toEqual([]);
+ expect(result?.headshot_storage_path).toBe(hero);expect(result?.bio_headshot_storage_path).toBe(bio);
+ expect(previewLockerData(result!)).toMatchObject({headshotUrl:"https://storage.example.com/hero.png",bioHeadshotUrl:"https://storage.example.com/bio.webp"});
+});

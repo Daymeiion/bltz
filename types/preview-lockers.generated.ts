@@ -23,6 +23,9 @@ export type PreviewDatabase = { public: { Tables: { preview_lockers: {
           full_name: string
           games_played: number | null
           headshot_url: string | null
+          bio_headshot_storage_path: string | null
+          bio_headshot_url: string | null
+          headshot_storage_path: string | null
           height_in: number | null
           hero_video_url: string | null
           high_school: string | null
@@ -63,6 +66,9 @@ export type PreviewDatabase = { public: { Tables: { preview_lockers: {
           full_name: string
           games_played?: number | null
           headshot_url?: string | null
+          bio_headshot_storage_path?: string | null
+          bio_headshot_url?: string | null
+          headshot_storage_path?: string | null
           height_in?: number | null
           hero_video_url?: string | null
           high_school?: string | null
@@ -103,6 +109,9 @@ export type PreviewDatabase = { public: { Tables: { preview_lockers: {
           full_name?: string
           games_played?: number | null
           headshot_url?: string | null
+          bio_headshot_storage_path?: string | null
+          bio_headshot_url?: string | null
+          headshot_storage_path?: string | null
           height_in?: number | null
           hero_video_url?: string | null
           high_school?: string | null
