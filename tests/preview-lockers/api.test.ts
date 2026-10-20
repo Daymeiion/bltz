@@ -22,6 +22,16 @@ it("returns unchanged idempotent create and rejects later-version retries", asyn
 it("uses revision compare-and-set and returns conflict rather than overwriting", async () => {
   mock.maybeSingle.mockResolvedValue({data:null,error:null}); expect((await PATCH(request({revision:7,content},"PATCH"),{params:Promise.resolve({id})})).status).toBe(409); expect(mock.eq).toHaveBeenCalledWith("revision",7);
 });
+it("distinguishes a duplicate Locker URL from an out-of-date editor", async () => {
+  mock.maybeSingle.mockResolvedValueOnce({ data: null, error: { code: "23505" } });
+  const duplicate = await PATCH(request({ revision: 7, content }, "PATCH"), { params: Promise.resolve({ id }) });
+  expect(duplicate.status).toBe(409);
+  expect(await duplicate.json()).toMatchObject({ error: "slug_conflict" });
+  mock.maybeSingle.mockResolvedValueOnce({ data: null, error: null });
+  const stale = await PATCH(request({ revision: 7, content }, "PATCH"), { params: Promise.resolve({ id }) });
+  expect(stale.status).toBe(409);
+  expect(await stale.json()).toMatchObject({ error: "preview_conflict" });
+});
 it("preserves biography fields omitted by older editors and persists explicit edits or clears", async () => {
   const {dob:_dob,high_school:_highSchool,...legacy}=content;
   mock.maybeSingle.mockResolvedValue({data:{id,slug:content.slug,revision:2},error:null});

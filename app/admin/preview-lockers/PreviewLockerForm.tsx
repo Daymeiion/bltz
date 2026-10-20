@@ -107,6 +107,7 @@ export default function PreviewLockerForm({
   const [statsNeedReload, setStatsNeedReload] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [saveVersionConflict, setSaveVersionConflict] = useState(false);
   const [reviewed, setReviewed] = useState(false);
   const [completionReviewed, setCompletionReviewed] = useState(false);
   const [completed, setCompleted] = useState(gtmCompleted);
@@ -201,7 +202,7 @@ export default function PreviewLockerForm({
     if (!parsed.success) { setError(parsed.error.issues.map(issue => `${issue.path.join(".")}: ${issue.message}`).slice(0, 5).join("; ")); return; }
     const enrollmentData = !asDraft && !saved && enroll ? previewEnrollment.safeParse(enrollment) : null;
     if (enrollmentData && !enrollmentData.success) { setError("Choose a GTM contact and enter campaign and source codes (letters, numbers, hyphens or underscores)."); return; }
-    pending.current = true; setBusy("save"); setError("");
+    pending.current = true; setBusy("save"); setError(""); setSaveVersionConflict(false);
     createId.current ??= crypto.randomUUID();
     try {
       const response = await fetch(saved ? `/api/preview-lockers/${saved.id}` : "/api/preview-lockers", {
@@ -211,7 +212,15 @@ export default function PreviewLockerForm({
       if (!response.ok) {
         const failure = await response.json().catch(() => null);
         if (failure?.error === "source_policy_blocked") throw new Error("This statistics source is reference-only. Keep or remove previously saved imports; new or changed imports cannot be saved. Your draft is retained.");
-        throw new Error(response.status === 409 ? "Save conflict: this slug or GTM contact may already be linked, enrollment details changed, or the record changed. Your draft is retained. Open the saved list before retrying." : response.status === 401 || response.status === 403 ? "Your Admin session is no longer authorized. Sign in again before saving." : "Save failed. Your draft is retained; retry is safe.");
+        if (response.status === 409) {
+          if (failure?.error === "slug_conflict") throw new Error("Save conflict: that private URL slug is already used by another Locker. Choose a different slug and save again. Your draft is retained.");
+          if (saved) {
+            setSaveVersionConflict(true);
+            throw new Error("Save conflict: A newer version of this Locker is already saved. Open the latest saved version in a new tab, review it, and copy over your unsaved changes before saving there. Keep this tab open until your changes are saved.");
+          }
+          throw new Error("Save conflict: this slug or GTM contact may already be linked, or enrollment details changed. Your draft is retained. Open the saved list in a new tab to find the existing Locker before retrying.");
+        }
+        throw new Error(response.status === 401 || response.status === 403 ? "Your Admin session is no longer authorized. Sign in again before saving." : "Save failed. Your draft is retained; retry is safe.");
       }
       const data = await response.json(); savedDraft.current = JSON.stringify(parsed.data); setSaved(data); onPreviewSaved?.(data.slug); revision.current = data.revision; setReviewed(false); setCompletionReviewed(false); setDirty(false);
       if (gtmLinked) setCompleted(data.complete === true);
@@ -435,7 +444,7 @@ export default function PreviewLockerForm({
     <AlertDialog open={removalKind !== null} onOpenChange={open => { if (!open) setRemovalKind(null); }}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Remove selected {removalKind === "photo" ? "photos" : "videos"}?</AlertDialogTitle><AlertDialogDescription>This removes {removalKind === "photo" ? selectedPhotos.length : selectedVideos.length} items from the draft and clears their award or social attachments. Save the draft to apply it. Uploaded files are not deleted from storage.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Keep items</AlertDialogCancel><AlertDialogAction onClick={() => { if (removalKind) removeMedia(removalKind, removalKind === "photo" ? selectedPhotos : selectedVideos); }}>Remove from draft</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
     <p className="text-sm">Private demo only. Media suggestions are unverified; saving does not grant rights or create an Athlete Career ID.</p>
     {message && <p role="status" className="rounded-lg border p-3">{message}</p>}
-    {error && <p role="alert" className="rounded-lg border border-red-500 p-3">{error}</p>}
+    {error && <div role="alert" className="rounded-lg border border-red-500 p-3"><p>{error}</p>{saveVersionConflict && saved && <a href={`/admin/preview-lockers/${saved.id}/edit`} target="_blank" rel="noopener noreferrer" aria-label="Open latest saved version in a new tab" className="mt-2 inline-flex min-h-11 items-center underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#ffbb00]">Open latest saved version in a new tab</a>}</div>}
     <div className={styles.folderTabs} role="tablist" aria-label="Locker editing sections">{["info", "career", "stats", "images", "videos", "media"].map((key, index, tabs) => <button key={key} type="button" role="tab" id={`locker-tab-${key}`} aria-controls={`locker-panel-${key}`} aria-selected={activeFolder === key} tabIndex={activeFolder === key ? 0 : -1} className={styles.folderTab} onClick={() => setActiveFolder(key)} onKeyDown={event => {
       const next = event.key === "ArrowRight" ? (index + 1) % tabs.length : event.key === "ArrowLeft" ? (index + tabs.length - 1) % tabs.length : event.key === "Home" ? 0 : event.key === "End" ? tabs.length - 1 : null;
       if (next === null) return;

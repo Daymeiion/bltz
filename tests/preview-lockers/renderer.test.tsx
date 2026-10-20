@@ -109,6 +109,18 @@ it("restores portrait and landscape gallery proportions when cached images load 
     expect(analytics).not.toHaveBeenCalled();
   } finally { complete.mockRestore(); width.mockRestore(); height.mockRestore(); }
 });
+it.each([true, false])("keeps award years without the unverified-evidence label (private: %s)", async isPrivate => {
+  const data = previewLockerData(record);
+  data.awards = [{ year: "2007", label: "Synthetic honor", evidenceStatus: "unverified" }];
+  if (!isPrivate) delete data.lockerHref;
+  await act(async () => root.render(<LockerView data={data} />));
+  await act(async () => [...host.querySelectorAll('button')].find(b => b.textContent?.trim() === "CAREER")!.dispatchEvent(new MouseEvent("mousedown", { button: 0, bubbles: true })));
+  await act(async () => [...host.querySelectorAll('button')].find(b => b.textContent?.trim() === "AWARDS")!.click());
+  const card = host.querySelector('article')!;
+  expect(card.textContent).toContain("Synthetic honor");
+  expect(card.textContent).toContain("2007");
+  expect(card.textContent).not.toContain("Unverified evidence");
+});
 it("keeps full private Locker tabs without telemetry or canonical links", async () => {
   await act(async () => root.render(<LockerView data={previewLockerData(record)} />));
   const tab = [...host.querySelectorAll('button')].find(b => b.textContent?.trim() === "CAREER")!;

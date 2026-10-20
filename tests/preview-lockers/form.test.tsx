@@ -157,7 +157,24 @@ it("requires review, retains create id on retry and exposes full saved navigatio
 it("retains a conflicted edit draft and supplies a full document reload link", async () => {
   const record = { ...previewContent.parse({ slug: "synthetic-preview", full_name: "Synthetic Preview" }), id: "00000000-0000-4000-8000-000000000001", revision: 3, created_at: "", updated_at: "" };
   await act(async () => root.render(<PreviewLockerForm record={record} />)); await fill("Biography", "Unsaved edit"); await act(async () => host.querySelector<HTMLInputElement>('input[type="checkbox"]')!.click()); fetcher.mockResolvedValue(new Response("{}", { status: 409 })); await click("Save changes privately");
+  expect(host.textContent).toContain("A newer version of this Locker is already saved");
+  const latest = host.querySelector<HTMLAnchorElement>('a[aria-label="Open latest saved version in a new tab"]')!;
+  expect(latest.getAttribute("href")).toBe(`/admin/preview-lockers/${record.id}/edit`);
+  expect(latest.target).toBe("_blank"); expect(latest.rel).toBe("noopener noreferrer");
+  expect(host.textContent).not.toContain("GTM contact may already be linked");
   expect(host.textContent).toContain("Save conflict"); expect(host.querySelector<HTMLTextAreaElement>('[aria-label="Biography"]')!.value).toBe("Unsaved edit"); expect(host.textContent).toContain("Reload saved version (discards unsaved draft)"); expect(JSON.parse(fetcher.mock.calls[0][1].body).revision).toBe(3);
+});
+it("asks for a different slug on a duplicate URL and keeps the editable draft", async () => {
+  const record = { ...previewContent.parse({ slug: "original-slug", full_name: "Synthetic Preview" }), id: "00000000-0000-4000-8000-000000000001", revision: 3, created_at: "", updated_at: "" };
+  await act(async () => root.render(<PreviewLockerForm record={record} />));
+  await fill("Private URL slug", "taken-slug");
+  fetcher.mockResolvedValueOnce(Response.json({ error: "slug_conflict" }, { status: 409 }));
+  await click("Save draft");
+  expect(host.textContent).toContain("Choose a different slug and save again");
+  expect(host.textContent).not.toContain("A newer version");
+  expect(host.querySelector('a[aria-label="Open latest saved version in a new tab"]')).toBeNull();
+  expect(host.querySelector<HTMLInputElement>('[aria-label="Private URL slug"]')!.value).toBe("taken-slug");
+  expect(JSON.parse(fetcher.mock.calls[0][1].body).revision).toBe(3);
 });
 it("keeps dirty drafts mounted by guarding same-tab navigation and opening saved previews in new tabs", async () => {
   const record = { ...previewContent.parse({ slug: "synthetic-preview", full_name: "Synthetic Preview" }), id: "00000000-0000-4000-8000-000000000001", revision: 3, created_at: "", updated_at: "" };

@@ -26,7 +26,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const submitted = (input as { content: Record<string, unknown> }).content;
     const update: PreviewDatabase["public"]["Tables"]["preview_lockers"]["Update"] = Object.fromEntries(Object.entries(content).filter(([key]) => Object.hasOwn(submitted, key)));
     const { data, error } = await client.from("preview_lockers").update(update).eq("id", id).eq("revision", revision).select(PREVIEW_COLUMNS).maybeSingle();
-    if (error?.code === "23505") throw new PreviewError("preview_conflict", 409);
+    if (error?.code === "23505") throw new PreviewError("slug_conflict", 409);
     if (error) throw new PreviewError("could_not_update", 503);
     if (!data) throw new PreviewError("preview_conflict", 409);
     const relationship = await (client as unknown as SupabaseClient)
