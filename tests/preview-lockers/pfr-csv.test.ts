@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { inspectPfrCsv, reviewPfrCsv, combinePfrImports, pfrImport } from "@/lib/preview-lockers/pfr-csv";
+import { inspectPfrCsv, reviewPfrCsv, combinePfrImports, pfrImport, pfrSourcePage } from "@/lib/preview-lockers/pfr-csv";
 import { careerTotals } from "@/lib/sportradar/types";
 import { previewContent } from "@/lib/preview-lockers/validation";
 import { previewLockerData } from "@/lib/preview-lockers/mapper";
@@ -12,6 +12,19 @@ const parse = (csv: string, category: CfbCategory = "defense") => {
 };
 
 describe("preview NFL CSV", () => {
+  it("accepts dotted PFR player IDs through review and saved-content validation", () => {
+    const sourceUrl = "https://www.pro-football-reference.com/players/A/ArriJ.00.htm";
+    expect(pfrSourcePage.safeParse(sourceUrl).success).toBe(true);
+    expect(pfrSourcePage.safeParse(sourceUrl.replace("www.", "")).success).toBe(true);
+    const table = inspectPfrCsv("Season,Team,G,GS,Att,Yds,TD\n2005,ARI,15,5,112,370,2", "rushing");
+    const { imported } = reviewPfrCsv(table, table.mapping, "rushing", sourceUrl);
+    expect(imported.sourceUrl).toBe(sourceUrl);
+    expect(imported.seasons[0].statistics.rushingYards).toBe(370);
+    expect(previewContent.parse({ slug: "j-j-arrington", full_name: "J.J. Arrington", pfr_stats: [imported] }).pfr_stats[0].sourceUrl).toBe(sourceUrl);
+    for (const path of ["ArriJ..00.htm", ".htm", "...htm", "ArriJ.00/gamelog/2005/"]) {
+      expect(pfrSourcePage.safeParse(`https://www.pro-football-reference.com/players/A/${path}`).success).toBe(false);
+    }
+  });
   it("maps grouped defense, legacy Tm, award markers, and skips PFR summaries", () => {
     const result = parse('--- Cite Pro Football Reference\n,,,,,,,Def Interceptions,,,,,Fumbles,,,,,,Tackles,,,,,,\nSeason,Age,Team,Lg,Pos,G,GS,Int,Yds,IntTD,Lng,PD,FF,Fmb,FR,Yds,FRTD,Sk,Comb,Solo,Ast,TFL,QBHits,Sfty,AV,Awards\n2023*,23,GNB,NFL,DL,16,10,1,12,0,12,4,2,0,1,0,0,2.5,30,20,10,3,4,0,5,\n2024+,24,GNB,NFL,DL,17,12,0,0,0,0,5,1,0,0,0,0,3.0,40,25,15,4,6,0,6,\n2 Yrs,,,NFL,,33,22,1,12,0,12,9,3,0,1,0,0,5.5,70,45,25,7,10,0,11,\n17 Game Avg,,,NFL,,17,11,0,6,0,6,5,2,0,1,0,0,2.8,36,23,13,4,5,0,,\nGNB (2 Yrs),,,NFL,,33,22,1,12,0,12,9,3,0,1,0,0,5.5,70,45,25,7,10,0,11,');
     expect(result.imported.seasons).toHaveLength(2);

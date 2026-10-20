@@ -21,13 +21,24 @@ async function click(text: string, scope: Element = section()) {
   expect(button).toBeTruthy();
   await act(async () => button.click());
 }
-async function review(csv = "Season,Team,G,Sk\n2024,AAA,17,2.5") {
-  await fill("NFL player source URL", "https://www.pro-football-reference.com/players/F/FixtPl00.htm");
+async function review(csv = "Season,Team,G,Sk\n2024,AAA,17,2.5", sourceUrl = "https://www.pro-football-reference.com/players/F/FixtPl00.htm") {
+  await fill("NFL player source URL", sourceUrl);
   await fill("NFL statistics CSV", csv);
   await click("Read CSV columns"); await click("Review NFL statistics");
 }
 async function approve() { await act(async () => section().querySelector<HTMLInputElement>('input[type="checkbox"]')!.click()); }
 
+it("reviews and saves a valid player URL whose PFR ID contains a period", async () => {
+  const sourceUrl = "https://www.pro-football-reference.com/players/A/ArriJ.00.htm";
+  await act(async () => root.render(<PreviewLockerForm record={record()} />));
+  await review("Season,Team,G,Sk\n2005,ARI,15,0", sourceUrl);
+  expect(section().querySelector('[role="alert"]')).toBeNull();
+  expect(section().textContent).toContain("season/team rows");
+  await approve(); await click("Add reviewed statistics to draft");
+  fetcher.mockResolvedValueOnce(Response.json({ id, slug: "synthetic-preview", revision: 4 }));
+  await click("Save draft", host);
+  expect(JSON.parse(fetcher.mock.calls[0][1].body).content.pfr_stats[0].sourceUrl).toBe(sourceUrl);
+});
 it("reviews, saves, reloads, replaces and removes NFL tables through the existing draft workflow", async () => {
   await act(async () => root.render(<PreviewLockerForm record={record()} />));
   await review("Season,Team,G,Sk\n2024,AAA,17,2.5\nCareer,,17,2.5");

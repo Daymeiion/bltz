@@ -8,7 +8,7 @@ export const pfrSourcePage = z.string().max(2048).url().refine(value => {
     const url = new URL(value);
     return url.protocol === "https:" && !url.username && !url.password && !url.port
       && ["pro-football-reference.com", "www.pro-football-reference.com"].includes(url.hostname)
-      && /^\/players\/[A-Z]\/[A-Za-z0-9]+\.htm$/.test(url.pathname);
+      && /^\/players\/[A-Z]\/[A-Za-z0-9]+(?:\.[A-Za-z0-9]+)*\.htm$/.test(url.pathname);
   } catch { return false; }
 }, "Use the athlete's HTTPS Pro Football Reference player page.");
 
