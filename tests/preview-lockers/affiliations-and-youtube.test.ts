@@ -41,3 +41,12 @@ describe("private ad banner", () => {
     expect(previewPhotoData({ ...content, id, revision: 1, created_at: "now", updated_at: "now", photo_room_banner_link: "https://advertiser.example", photo_room_banner_storage_path: path, photo_room_banner_resolved_url: "https://private.example/signed" }).adBanner).toEqual({ imageUrl: "https://private.example/signed", linkUrl: "https://advertiser.example" });
   });
 });
+
+it("does not invent a combined school when each semicolon-separated school is already listed",()=>{
+ const record=previewRecord.parse({id:"11111111-1111-4111-8111-111111111111",revision:1,created_at:"now",updated_at:"now",slug:"j-j-arrington",full_name:"J.J. Arrington",school:"California; College of the Canyons",schools:[{label:"College of the Canyons",color:"#152238"},{label:"California",color:"#152238"}]});
+ const result=suggestPreviewAffiliations(record,{},[]);
+ expect(result.schools.map(s=>s.label)).toEqual(["College of the Canyons","California"]);
+ expect(record.schools).toHaveLength(2);
+ const missing=suggestPreviewAffiliations({...record,schools:record.schools.slice(0,1)},{},[]);
+ expect(missing.schools.map(s=>s.label)).toEqual(["College of the Canyons","California"]);
+});

@@ -8,7 +8,7 @@ const record = { ...previewContent.parse({ slug: "fixture-player", full_name: "F
 const article = { headline: "Fixture Player's Cal football career", article_url: "https://press.example.com/story", canonical_url: "https://press.example.com/story", publisher: "Press", source_domain: "press.example.com", author: null, published_at: null, thumbnail_url: null, summary: "Football at Cal", metadata: { extraction: "NewsArticle" }, discovery_source: "fixture", discovered_at: "2020-01-01", confidence: 0.95, relevance_score: 0.95, featured: false };
 const review = newsReviewSchema.parse({ articles: [article], version: 2, searched_at: "2026-10-17T00:00:00Z", identity_key: "a".repeat(64) });
 let host: HTMLDivElement, root: Root, fetcher: ReturnType<typeof vi.fn>;
-beforeEach(() => { host=document.createElement("div");document.body.append(host);root=createRoot(host);fetcher=vi.fn();vi.stubGlobal("fetch",fetcher); });
+beforeEach(() => { vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true); host=document.createElement("div");document.body.append(host);root=createRoot(host);fetcher=vi.fn();vi.stubGlobal("fetch",fetcher); });
 afterEach(async () => { await act(async()=>root.unmount());host.remove();vi.unstubAllGlobals(); });
 const queue=()=>host.querySelector<HTMLElement>('section[aria-label="News articles for review"]')!;
 const button=(text: string, scope: ParentNode=host)=>[...scope.querySelectorAll<HTMLButtonElement>('button')].find(x=>x.textContent===text)!;
@@ -63,4 +63,53 @@ it("opens the existing article editor and saves changes without adding duplicate
  await act(async()=>{Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value')!.set!.call(input,'Reviewed career story');input.dispatchEvent(new Event('input',{bubbles:true}));});
  fetcher.mockResolvedValueOnce(Response.json({id:record.id,slug:record.slug,revision:4}));await click("Save draft");
  const payload=JSON.parse(fetcher.mock.calls[0][1].body);expect(payload.content.article_edits).toEqual([{...edit,headline:'Reviewed career story'}]);
+});
+
+async function fillIdentity(label: string, value: string) {
+ const input=host.querySelector<HTMLInputElement>(`[aria-label="${label}"]`)!;
+ await act(async()=>{Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,"value")!.set!.call(input,value);input.dispatchEvent(new Event("input",{bubbles:true}));});
+}
+it.each(["individual","bulk"])("keeps %s article review usable after removing a duplicate school and saving",async(mode)=>{
+ const original={...record,school:"California; College of the Canyons",schools:previewContent.shape.schools.parse([{label:"College of the Canyons",color:"#152238"},{label:"California",color:"#152238"},{label:"California; College of the Canyons",color:"#152238"}])};
+ await act(async()=>root.render(<PreviewLockerForm record={original} initialNewsReview={review} />));
+ const duplicate=host.querySelector('[aria-label="schools 3 label"]')!.parentElement!;
+ await click("Remove from draft",duplicate);
+ expect(queue().querySelector<HTMLInputElement>('input[aria-label^="I reviewed this"]')!.disabled).toBe(false);
+ expect(queue().textContent).toContain("School, position or team details changed");
+ fetcher.mockResolvedValueOnce(Response.json({id:record.id,slug:record.slug,revision:4}));await click("Save draft");
+ expect(queue().querySelector<HTMLInputElement>('input[aria-label^="I reviewed this"]')!.disabled).toBe(false);
+ if(mode==="bulk") {
+  await click("Select all",queue());
+  const bulk=queue().querySelector<HTMLElement>('[role="group"]')!;
+  expect(bulk.querySelector<HTMLInputElement>('input[type="checkbox"]')!.disabled).toBe(false);
+  await act(async()=>bulk.querySelector<HTMLInputElement>('input[type="checkbox"]')!.click());await click("Add selected to draft",queue());
+ } else {
+  await act(async()=>queue().querySelector<HTMLInputElement>('input[aria-label^="I reviewed this"]')!.click());await click("Add to draft",queue());
+ }
+ expect(host.querySelector<HTMLInputElement>('[aria-label="Added article 1 headline"]')!.value).toBe(article.headline);
+ expect(queue().textContent).toContain("0 awaiting review");
+ fetcher.mockResolvedValueOnce(Response.json({id:record.id,slug:record.slug,revision:5}));await click("Save draft");
+ const saved=JSON.parse(fetcher.mock.calls[1][1].body);
+ expect(saved.revision).toBe(4);expect(saved.content.schools.map((s:{label:string})=>s.label)).toEqual(["College of the Canyons","California"]);
+ expect(saved.content.article_edits).toHaveLength(1);expect(saved.content.article_edits[0].articleUrl).toBe(article.article_url);
+ expect(saved.content.pfr_stats).toEqual(original.pfr_stats);expect(fetcher).toHaveBeenCalledTimes(2);
+});
+it("requires fresh intent when the athlete name changes and keeps saved-version conflicts locked",async()=>{
+ await act(async()=>root.render(<PreviewLockerForm record={record} initialNewsReview={review} />));
+ await act(async()=>queue().querySelector<HTMLInputElement>('input[aria-label^="I reviewed this"]')!.click());
+ await fillIdentity("Full name","Another Athlete");
+ expect(queue().querySelector<HTMLInputElement>('input[aria-label^="I reviewed this"]')!.disabled).toBe(true);
+ await fillIdentity("Full name",record.full_name);
+ expect(queue().querySelector<HTMLInputElement>('input[aria-label^="I reviewed this"]')!.checked).toBe(false);
+ expect(button("Add to draft",queue()).disabled).toBe(true);
+ fetcher.mockResolvedValueOnce(Response.json({articles:[],revision:4,review}));await click("Reload saved articles");
+ expect(queue().querySelector<HTMLInputElement>('input[aria-label^="I reviewed this"]')!.disabled).toBe(true);
+ await fillIdentity("Full name","");
+ expect(queue().querySelector<HTMLInputElement>('input[aria-label^="I reviewed this"]')!.disabled).toBe(true);
+ await fillIdentity("Full name",record.full_name);
+ await fillIdentity("School","Another College");await fillIdentity("School",record.school!);
+ expect(queue().querySelector<HTMLInputElement>('input[aria-label^="I reviewed this"]')!.disabled).toBe(true);
+ fetcher.mockResolvedValueOnce(Response.json({articles:[],revision:3,review}));await click("Reload saved articles");
+ expect(queue().querySelector<HTMLInputElement>('input[aria-label^="I reviewed this"]')!.disabled).toBe(false);
+ expect(fetcher.mock.calls.every(call=>call[1]?.method!=="POST")).toBe(true);
 });

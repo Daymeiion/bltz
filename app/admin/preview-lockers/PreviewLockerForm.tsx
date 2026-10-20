@@ -40,6 +40,8 @@ import { createClient } from "@/lib/supabase/client";
 import { parseYouTubeBatch } from "@/lib/preview-lockers/youtube-bulk";
 
 const initial = () => previewContent.parse({ slug: "private-preview", full_name: "".padEnd(2, "_") });
+// Career search context can change without changing the athlete in this editor.
+const newsAthleteIdentity = (content: PreviewContent) => content.full_name.trim().toLowerCase();
 const merchandiseIdentity = (content: PreviewContent) => JSON.stringify([content.full_name, content.school, content.position, content.schools.map(item => item.label), content.pro_teams.map(item => item.label)]);
 type Scalar = Exclude<keyof PreviewContent, "schools" | "pro_teams" | "awards" | "social" | "article_edits" | "merchandise" | "career_stats" | "cfb_stats" | "pfr_stats" | "combine_results" | "videos" | "photos">;
 
@@ -101,7 +103,7 @@ export default function PreviewLockerForm({
   const [editorialImageError, setEditorialImageError] = useState<{kind:"article"|"merchandise"|"school_logo";id:string;message:string}|null>(null);
   const [dismissingMerchandise, setDismissingMerchandise] = useState(false);
   const [newsArticles, setNewsArticles] = useState(initialArticles);
-  const [newsReview, setNewsReview] = useState<{ review: NewsReview; identity: string; key: string } | null>(() => initialNewsReview ? { review: initialNewsReview, identity: record && newsReviewCurrent ? merchandiseIdentity(record) : "", key: "saved-" + initialNewsReview.version } : null);
+  const [newsReview, setNewsReview] = useState<{ review: NewsReview; identity: string; searchContext: string; key: string } | null>(() => initialNewsReview ? { review: initialNewsReview, identity: record && newsReviewCurrent ? newsAthleteIdentity(record) : "", searchContext: record ? merchandiseIdentity(record) : "", key: "saved-" + initialNewsReview.version } : null);
   const [newsError, setNewsError] = useState(newsReviewError);
   const [showStats, setShowStats] = useState(false);
   const [statsNeedReload, setStatsNeedReload] = useState(false);
@@ -275,7 +277,7 @@ export default function PreviewLockerForm({
       const articles = z.array(newsReviewArticleSchema).max(24).safeParse(body.articles), review = newsReviewSchema.safeParse(body.review);
       if (!articles.success || !review.success) throw new Error("The article list was unavailable. Your draft and previous reviews are retained.");
       setNewsArticles(articles.data);
-      setNewsReview({ review: review.data, identity: merchandiseIdentity(draft), key: crypto.randomUUID() });
+      setNewsReview({ review: review.data, identity: newsAthleteIdentity(draft), searchContext: merchandiseIdentity(draft), key: crypto.randomUUID() });
       setMessage(`Loaded ${body.articles.length} saved matching articles. Your manual additions, edits and hidden choices are unchanged.`);
       if (refreshError) setNewsError(refreshError);
     } catch (cause) { setNewsError(cause instanceof Error ? cause.message : "News could not be loaded. Your draft is retained."); }
@@ -546,7 +548,7 @@ export default function PreviewLockerForm({
       </section>
       <section id="locker-panel-media" role="tabpanel" aria-labelledby="locker-tab-media" tabIndex={0} hidden={activeFolder !== "media"} className={styles.folderPanel}>
       <h2 className={styles.folderHeading}>Media & merchandise</h2>
-      <ArticlesSection imageUrls={editorialImages} imageError={editorialImageError?.kind === "article" ? editorialImageError : null} onUploadImage={(item,file) => { void uploadEditorialImage("article",item.sourceUrl??item.id,file,item); }} articles={newsArticles} edits={draft.article_edits} onChange={article_edits => change({ article_edits })} saved={!!saved} dirty={dirty} canLoad={!!saved && !dirty && !busy} onReload={() => { void loadNews(); }} onRefresh={() => { void loadNews(true); }} review={newsReview?.review ?? null} reviewKey={newsReview?.key ?? ""} identityCurrent={!!saved && newsReview?.identity === merchandiseIdentity(draft)} playerName={draft.full_name} onDismiss={url => { void dismissNews(url); }} onDismissSelected={dismissNews} onRestore={url => { void dismissNews(url, true); }} onRestoreSelected={urls => dismissNews(urls, true)} onDismissedPage={offset => { void loadNews(false, offset); }} busy={!!busy} reviewError={newsError} />
+      <ArticlesSection imageUrls={editorialImages} imageError={editorialImageError?.kind === "article" ? editorialImageError : null} onUploadImage={(item,file) => { void uploadEditorialImage("article",item.sourceUrl??item.id,file,item); }} articles={newsArticles} edits={draft.article_edits} onChange={article_edits => change({ article_edits })} saved={!!saved} dirty={dirty} canLoad={!!saved && !dirty && !busy} onReload={() => { void loadNews(); }} onRefresh={() => { void loadNews(true); }} review={newsReview?.review ?? null} reviewKey={newsReview?.key ?? ""} identityCurrent={!!saved && !!newsReview?.identity && newsReview.identity === newsAthleteIdentity(draft)} searchContextChanged={!!newsReview && newsReview.searchContext !== merchandiseIdentity(draft)} playerName={draft.full_name} onDismiss={url => { void dismissNews(url); }} onDismissSelected={dismissNews} onRestore={url => { void dismissNews(url, true); }} onRestoreSelected={urls => dismissNews(urls, true)} onDismissedPage={offset => { void loadNews(false, offset); }} busy={!!busy} reviewError={newsError} />
       <MerchandiseSection saved={!!saved} imageUrls={editorialImages} imageError={editorialImageError?.kind === "merchandise" ? editorialImageError : null} onUploadImage={(id,file) => { void uploadEditorialImage("merchandise",id,file); }} items={draft.merchandise} onChange={merchandise => change({ merchandise })} onSearch={() => { void searchMerchandise(); }} canSearch={!!saved && !dirty && !busy} searching={busy === "merchandise" && !dismissingMerchandise} savingReview={dismissingMerchandise} searchedAt={merchandiseSearch?.review?.searched_at} result={merchandiseSearch?.result ?? null} resultKey={merchandiseSearch?.key ?? ""} searchError={merchandiseError} playerName={draft.full_name} identityCurrent={merchandiseSearch?.identity === merchandiseIdentity(draft)} onDismiss={url => { void dismissMerchandise(url); }} onDismissSelected={dismissMerchandise} onRestore={url => { void dismissMerchandise(url, true); }} onRestoreSelected={urls => dismissMerchandise(urls, true)} dismissedItems={merchandiseSearch?.review ? dismissedMerchandiseItems(merchandiseSearch.review) : []} busy={!!busy} />
       <SocialSection items={draft.social} photos={draft.photos} videos={draft.videos} saved={!!saved} onChange={social => change({ social })} onUpload={(kind, files, social) => { void uploadFiles(kind, files, { social }); }} />
       </section>

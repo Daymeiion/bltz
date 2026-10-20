@@ -12,10 +12,10 @@ import DismissedReviewList from "./DismissedReviewList";
 import BulkReviewControls from "./BulkReviewControls";
 import EditorialImageInput from "./EditorialImageInput";
 
-export default function ArticlesSection({ articles, edits, onChange, onReload, onRefresh, canLoad, dirty, saved, review, reviewKey, identityCurrent = true, playerName, onDismiss, onDismissSelected, onRestore, onRestoreSelected, onDismissedPage, busy = false, reviewError = "", imageUrls = {}, imageError, onUploadImage }: {
+export default function ArticlesSection({ articles, edits, onChange, onReload, onRefresh, canLoad, dirty, saved, review, reviewKey, identityCurrent = true, searchContextChanged = false, playerName, onDismiss, onDismissSelected, onRestore, onRestoreSelected, onDismissedPage, busy = false, reviewError = "", imageUrls = {}, imageError, onUploadImage }: {
   articles: PlayerArticle[]; edits: ArticleEdit[]; onChange: (items: ArticleEdit[]) => void;
   onReload: () => void; onRefresh: () => void; canLoad: boolean; dirty: boolean; saved: boolean;
-  review: NewsReview | null; reviewKey: string; identityCurrent?: boolean; playerName: string;
+  review: NewsReview | null; reviewKey: string; identityCurrent?: boolean; searchContextChanged?: boolean; playerName: string;
   onDismiss: (url: string) => void; busy?: boolean; reviewError?: string;
   onRestoreSelected?: (urls: string[]) => Promise<boolean>; onRestore?: (url: string) => void; onDismissedPage?: (offset: number) => void;
   onDismissSelected: (urls: string[]) => Promise<boolean>;
@@ -73,6 +73,7 @@ export default function ArticlesSection({ articles, edits, onChange, onReload, o
       <p role="status" className="text-sm">{pendingCount} awaiting review · {addedCount} already added to Locker articles.</p>
       {review?.searched_at && <p className="text-sm text-muted-foreground">Last search · <time dateTime={review.searched_at}>{new Date(review.searched_at).toISOString().replace("T", " ").slice(0, 16)} UTC</time>. Saved articles may be older. Dismissals are saved.</p>}
       {!identityCurrent && <p role="status" className="text-sm">The player identity changed or the saved version is stale. Save and search again before adding these articles.</p>}
+      {identityCurrent && searchContextChanged && <p role="status" className="text-sm">School, position or team details changed. You can still review and add these saved articles for {playerName}. Save your draft before refreshing news with the updated career details.</p>}
       {!review?.articles.length && <p className="text-sm text-muted-foreground">No saved matching articles awaiting review. Search for more coverage or add a reviewed article manually below.</p>}
       {!!review?.articles.length && <BulkReviewControls key={`${reviewKey}:${identityCurrent}`} items={review.articles.map(article => ({ url: article.article_url, inDraft: inDraft(article) }))}
         kind="articles" playerName={playerName} showAddActions={pendingCount > 0} capacity={40 - edits.length} canAdd={identityCurrent} busy={busy} onAdd={add} onDismiss={onDismissSelected}>

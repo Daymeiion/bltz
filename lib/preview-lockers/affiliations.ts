@@ -11,14 +11,18 @@ export function suggestPreviewAffiliations(
   directory: SchoolBrandRow[],
 ): PreviewRecord {
   const school = record.school || source.college?.trim() || null;
-  const brand = school ? matchSchoolBrand(school, directory) : null;
   const schools = record.schools.map(item => {
     const matched = matchSchoolBrand(item.label, directory);
     return matched && ["#152238", "#1A3DCC"].includes(item.color.toUpperCase())
       ? { ...item, color: matched.primaryColor, logo: item.logo || matched.logoUrl } : item;
   });
-  if (school && !schools.some(item => [school.toLowerCase(), brand?.abbr.toLowerCase()].includes(item.label.toLowerCase()))) {
-    schools.push({ label: brand?.abbr || school, color: brand?.primaryColor || "#1A3DCC", logo: brand?.logoUrl || null });
+  // A source may list several colleges in one field. Suggest each school once,
+  // rather than inventing an extra combined school row every time the editor opens.
+  for (const name of (school ?? "").split(";").map(value => value.trim()).filter(Boolean)) {
+    const brand = matchSchoolBrand(name, directory);
+    if (!schools.some(item => [name.toLowerCase(), brand?.abbr.toLowerCase()].includes(item.label.toLowerCase()))) {
+      schools.push({ label: brand?.abbr || name, color: brand?.primaryColor || "#1A3DCC", logo: brand?.logoUrl || null });
+    }
   }
   const pro_teams = record.pro_teams.map(item => {
     const code = nflTeamCode(item.label);
