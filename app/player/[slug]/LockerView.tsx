@@ -2067,7 +2067,7 @@ const styleSheet = `
 }
 .bio-headshot-card{height:250px;overflow:hidden;border:1px solid #1E2640;border-radius:14px;background:#131829;display:flex;flex-direction:column}
 .bio-headshot-image{position:relative;height:216px;flex:0 0 216px;overflow:hidden;background:${GRAD_FIELD}}
-.bio-headshot-photo{object-fit:contain;object-position:center bottom}
+.bio-headshot-photo{object-fit:cover;object-position:50% 12%}
 .bio-headshot-year{height:34px;flex:0 0 34px;display:flex;align-items:center;justify-content:center;border-top:1px solid #1E2640;color:${lockerAccent};font-family:${mono};font-size:11px;font-weight:700;letter-spacing:.12em;line-height:1;text-align:center;white-space:nowrap}
 .team-history-full-name{display:none}
 @media(min-width:900px){.team-history-full-name{display:inline}.team-history-abbreviation{display:none}}
@@ -2134,7 +2134,7 @@ const styleSheet = `
 .locker-photo-more{position:absolute;right:9px;bottom:9px;top:auto;display:inline-flex;width:max-content;height:max-content;white-space:nowrap;line-height:1;padding:5px 7px;border-radius:999px;background:rgba(5,7,15,.82);color:#fff;font-size:9px;font-weight:700;letter-spacing:.12em;text-shadow:0 1px 6px rgba(0,0,0,.8)}
 .locker-photo-empty{position:relative;min-height:228px;grid-column:1/-1;overflow:hidden;border:1px solid #1E2640;border-radius:14px}
 @media (min-width:640px){.bltz-frame{border-radius:28px}}
-@media (min-width:641px){.bio-headshot-card{height:216px}.bio-headshot-image{height:178px;flex-basis:178px}.bio-headshot-photo{object-fit:contain;object-position:center bottom}.bio-headshot-year{height:38px;flex-basis:38px}.basic-info-grid>div{grid-column:auto}.basic-info-grid>.basic-info-high-school{grid-column:1/-1}}
+@media (min-width:641px){.bio-headshot-card{height:216px}.bio-headshot-image{height:178px;flex-basis:178px}.bio-headshot-year{height:38px;flex-basis:38px}.basic-info-grid>div{grid-column:auto}.basic-info-grid>.basic-info-high-school{grid-column:1/-1}}
 @media (min-width:641px){.locker-photo-contact-sheet{height:420px;grid-template-columns:repeat(12,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr));gap:10px}.locker-photo-tile{grid-column:span var(--photo-desktop-span,4)}}
 .locker-photo-row{display:contents}
 @media (max-width:640px){
