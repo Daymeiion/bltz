@@ -19,13 +19,14 @@ export function EditorialCard({ title, image, description, meta, award = false, 
 }) {
   const [failedImage, setFailedImage] = useState<string | null>(null);
   const visibleImage = image && image !== failedImage ? image : null;
+  const displayAttribution = /^BLTZ-provided reference artwork(?:;\s*original creator not recorded)?\.?$/i.test(attribution?.trim() ?? "") ? null : attribution;
   if (award) return <article className="flex w-[260px] flex-none self-start flex-col overflow-hidden rounded-[28px] bg-black p-2 text-center text-white">
     {visibleImage ? <img src={visibleImage} onError={() => setFailedImage(visibleImage)} onLoad={event => { if (event.currentTarget.naturalWidth <= 1 || event.currentTarget.naturalHeight <= 1) setFailedImage(visibleImage); }} referrerPolicy="no-referrer" alt="" loading="lazy" className="h-[180px] w-full shrink-0 rounded-[21px] object-contain p-3" /> : <div className="grid h-[180px] w-full shrink-0 place-items-center rounded-[21px] bg-[#121923] text-4xl text-[#ffbb00]" aria-hidden="true">★</div>}
     <div className="flex min-h-0 flex-col items-center px-3 pb-1 pt-2">
       <p className="text-xs text-[#ffbb00]">{meta || "unknown"}</p>
       <h3 title={title} className="mt-1 line-clamp-2 text-lg font-semibold leading-tight">{title}</h3>
       {description && <p className="mt-2 text-xs leading-4 text-white/60">{description}</p>}
-      {visibleImage && attribution && <p className="mt-2 text-xs text-white/50">{attribution}</p>}
+      {visibleImage && displayAttribution && <p className="mt-2 text-xs text-white/50">{displayAttribution}</p>}
       {visibleImage === SUPER_BOWL_REFERENCE.canonical_image_url && <p className="mt-2 text-xs text-white/50">Illustration by <a href={SUPER_BOWL_REFERENCE.image_source_url} target="_blank" rel="noopener noreferrer" className="underline">Teo’s89</a> · <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener noreferrer" className="underline">CC BY-SA 4.0</a> · unchanged</p>}
       {href ? <a href={href} target="_blank" rel="noopener noreferrer" aria-label={`Read article about ${title} (opens in a new tab)`} className="mt-3 flex min-h-11 shrink-0 items-center gap-4 rounded-full bg-white/10 py-1.5 pl-4 pr-1.5 text-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#ffbb00]">Read article<span aria-hidden="true" className="grid size-8 place-items-center rounded-full bg-white text-lg text-black">↗</span></a> : <p className="mt-3 text-xs text-white/60">unknown</p>}
     </div>
