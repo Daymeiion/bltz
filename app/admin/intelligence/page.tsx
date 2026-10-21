@@ -2,7 +2,8 @@ import { redirect } from "next/navigation";
 import { IntelligenceAccessError } from "@/lib/intelligence/lab-server";
 import { loadIntelligenceWorkspace } from "@/lib/intelligence/workspace-server";
 import { loadIntelligenceResearch } from "@/lib/intelligence/research-server";
-import { CareerWorkspace } from "./CareerWorkspace";
+import { LabWorkspace } from "./lab/LabWorkspace";
+import { loadLockerMedia } from "./lab/locker-media";
 import { ResearchView } from "./ResearchView";
 import { IntelligenceWorkspace } from "./Workspace";
 
@@ -14,7 +15,10 @@ export default async function IntelligenceLabPage({ searchParams }: { searchPara
   const clean = { q: typeof params.q === "string" ? params.q : undefined, athlete: typeof params.athlete === "string" ? params.athlete : undefined, asOf: typeof params.asOf === "string" ? params.asOf : undefined };
   const content = await (async () => {
     if (params.view === "findings") return <IntelligenceWorkspace view="findings" context={clean}><ResearchView data={await loadIntelligenceResearch()} /></IntelligenceWorkspace>;
-    return <CareerWorkspace initial={await loadIntelligenceWorkspace(clean)} initialMomentId={typeof params.moment === "string" ? params.moment : null} />;
+    // The workspace load runs the internal-admin gate before any Locker media read.
+    const data = await loadIntelligenceWorkspace(clean);
+    const locker = data.result.selected ? await loadLockerMedia(data.profile?.lockerHref) : { state: "none" as const, slug: null, photos: [], videos: [] };
+    return <LabWorkspace data={data} locker={locker} initialMomentId={typeof params.moment === "string" ? params.moment : null} />;
   })().catch(error => {
     if (error instanceof IntelligenceAccessError && (error.status === 401 || error.status === 403)) redirect("/auth/admin?error=not_admin");
     return null;
