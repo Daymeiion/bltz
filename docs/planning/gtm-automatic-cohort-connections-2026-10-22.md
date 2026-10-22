@@ -57,6 +57,7 @@ Automatic workflow files:
 
 - `app/admin/gtm/players/actions.ts`
 - `components/admin/gtm/GtmPlayerProspectsWorkspace.tsx`
+- `lib/gtm/preview-career-links.ts`, plus the contact/prospect read models: server-only, Admin-authorized lookup of the server-managed preview identity column.
 - The two migrations above and `types/database.generated.ts`
 - `tests/admin/gtm-cohort-actions.test.ts`, `tests/database/gtm-cohort-connections.test.ts`
 - Updated existing workflow/reference contract tests and this report.
@@ -67,7 +68,7 @@ Existing routes affected: `/admin/gtm/players`, `/admin/gtm/contacts`, `/admin/g
 
 ## Validation
 
-- Full suite: **230 files passed, 2 skipped; 1,852 tests passed, 24 existing opt-in hosted tests skipped**.
+- Final full suite: **231 files passed, 2 skipped; 1,856 tests passed, 24 existing opt-in hosted tests skipped**.
 - Database regression tests exercise anonymous/non-admin denial, private creation, exact identity reuse, account/publication preservation, repeated selection, name-only review, duplicate/conflicting identities, archived contacts, transaction rollback, revision preservation, normal content edits, and the exact nine-player backfill including repeat execution.
 - Server-action tests verify validation/authorization, one atomic RPC, destination refresh, review-required results, missing migrations, and uncertain transport outcomes.
 - TypeScript: passed after adding explicit SQL test result types. No runtime or application behavior changed in that correction.
@@ -75,6 +76,8 @@ Existing routes affected: `/admin/gtm/players`, `/admin/gtm/contacts`, `/admin/g
 - Next.js 16.3.6 production webpack build: passed.
 - Production-schema dry run: passed and rolled back before application. Persisted post-migration query independently verified all nine distinct connections.
 - Security advisors: 19 existing findings before and after, **0 new findings**.
+- Hosted authenticated-role test: a genuinely new cohort selection and repeat request both passed, with the entire test rolled back. Anonymous/service-role RPC execution is denied.
+- Initial authenticated production canary caught a column-level permission restriction that anonymous HTTP smoke checks could not exercise. The previous frontend was restored while the lookup was moved to an existing Admin-authorized, server-only service-client boundary. Ordinary client queries now use their original column grants; no grant was broadened. Four boundary regression tests cover authorization, explicit ID scope, batching, and lookup errors.
 
 ## Release and verification
 

@@ -10,6 +10,7 @@ import {
 } from "@/lib/gtm/player-prospect-contract";
 import { requireInternalAdmin } from "@/lib/rbac";
 import { createClient } from "@/lib/supabase/server";
+import { readGtmPreviewCareerLinks } from "@/lib/gtm/preview-career-links";
 
 const orderColumns: Record<GtmPlayerProspectSort, string> = {
   name: "display_name",
@@ -91,7 +92,7 @@ export async function getGtmPlayerProspects(
       gtm.from("gtm_contacts").select("id,player_master_gsis_id").eq("archived", false).in("player_master_gsis_id", gsisIds),
       gtm
         .from("gtm_player_preview_lockers")
-        .select("gsis_id,completed_revision,preview_lockers!inner(id,slug,revision,player_id)")
+        .select("gsis_id,completed_revision,preview_lockers!inner(id,slug,revision)")
         .in("gsis_id", gsisIds),
     ]);
     if (selectionsError && !isMissingRelation(selectionsError)) {
@@ -121,12 +122,14 @@ export async function getGtmPlayerProspects(
       previewsByGsis.set(String(relationship.gsis_id), {
         id: String(row.id),
         slug: String(row.slug),
-        playerId: row.player_id == null ? null : String(row.player_id),
+        playerId: null,
         state: Number(relationship.completed_revision) === revision ? "complete" : "draft",
       });
     }
   }
 
+  const careerLinks = await readGtmPreviewCareerLinks([...previewsByGsis.values()].map(preview => preview.id));
+  for (const preview of previewsByGsis.values()) preview.playerId = careerLinks.get(preview.id) ?? null;
   const total = count ?? sourceRows.length;
   const pageCount = Math.max(1, Math.ceil(total / GTM_PLAYER_PROSPECT_PAGE_SIZE));
   return {

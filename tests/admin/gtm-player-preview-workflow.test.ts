@@ -16,7 +16,8 @@ describe("GTM cohort private preview workflow", () => {
   it("loads preview state in a bounded batch and derives completion from the current revision", () => {
     const reader = readFileSync("lib/gtm/player-prospects.ts", "utf8");
     expect(reader).toContain('.from("gtm_player_preview_lockers")');
-    expect(reader).toContain('select("gsis_id,completed_revision,preview_lockers!inner(id,slug,revision,player_id)")');
+    expect(reader).toContain('select("gsis_id,completed_revision,preview_lockers!inner(id,slug,revision)")');
+    expect(reader).toContain("readGtmPreviewCareerLinks");
     expect(reader).toContain('Number(relationship.completed_revision) === revision ? "complete" : "draft"');
   });
 

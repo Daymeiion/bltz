@@ -3,6 +3,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireInternalAdmin } from "@/lib/rbac";
 import { createClient } from "@/lib/supabase/server";
+import { readGtmPreviewCareerLinks } from "@/lib/gtm/preview-career-links";
 
 export interface GtmContactNote {
   id: string;
@@ -286,7 +287,7 @@ export async function getGtmContacts(): Promise<GtmContactsReadModel> {
   const ambiguousPreviewContacts = new Set<string>();
   const masterPreviews = new Map<string, { id: string; slug: string; player_id?: string | null }>();
   for (const ids of chunks(playerMasterIds, GTM_CONTACT_ID_CHUNK_SIZE)) {
-    const result = await gtm.from("gtm_player_preview_lockers").select("gsis_id,preview_lockers(id,slug,player_id)").in("gsis_id", ids);
+    const result = await gtm.from("gtm_player_preview_lockers").select("gsis_id,preview_lockers(id,slug)").in("gsis_id", ids);
     if (result.error) throw new Error(`gtm_preview_links_query_failed:${result.error.code}`);
     for (const row of result.data ?? []) {
       const preview = row.preview_lockers as unknown as { id: string; slug: string; player_id?: string | null } | null;
@@ -298,7 +299,7 @@ export async function getGtmContacts(): Promise<GtmContactsReadModel> {
     if (preview) previewsByContact.set(String(contact.id), preview);
   }
   if (contactIds.length > 0) {
-    const campaigns = await fetchContactChildren(gtm, "preview_conversion_campaigns", "contact_id,preview_id,preview_lockers(id,slug,player_id)", contactIds, "created_at");
+    const campaigns = await fetchContactChildren(gtm, "preview_conversion_campaigns", "contact_id,preview_id,preview_lockers(id,slug)", contactIds, "created_at");
     for (const campaign of campaigns) {
       const preview = campaign.preview_lockers as { id: string; slug: string; player_id?: string | null } | null;
       if (preview && !ambiguousPreviewContacts.has(String(campaign.contact_id))) {
@@ -388,6 +389,8 @@ export async function getGtmContacts(): Promise<GtmContactsReadModel> {
     }
   }
 
+  const previewCareerLinks = await readGtmPreviewCareerLinks([...previewsByContact.values()].map(preview => preview.id));
+  for (const preview of previewsByContact.values()) preview.player_id = previewCareerLinks.get(preview.id) ?? null;
   const contacts: GtmContactRow[] = rawContacts.map((contact) => {
     const playerMaster = contact.player_master_gsis_id
       ? (playerMasterByGsis.get(String(contact.player_master_gsis_id)) ?? null)
