@@ -93,12 +93,13 @@ function touchdowns(row: WeeklyRow): number {
     .reduce((total, key) => total + number(row[key]), 0);
 }
 
-const FIRSTS: Array<{ statistic: string; label: string; minimum: number }> = [
+/** `positions` limits a first to the groups for which it is a real milestone; unknown groups never qualify. */
+const FIRSTS: Array<{ statistic: string; label: string; minimum: number; positions?: string[] }> = [
   { statistic: "touchdowns", label: "first NFL touchdown", minimum: 1 },
   { statistic: "interceptions", label: "first NFL interception", minimum: 1 },
   { statistic: "sacks", label: "first NFL sack", minimum: 0.5 },
   { statistic: "forcedFumbles", label: "first NFL forced fumble", minimum: 1 },
-  { statistic: "receptions", label: "first NFL reception", minimum: 1 },
+  { statistic: "receptions", label: "first NFL reception", minimum: 1, positions: ["RB", "WR", "TE"] },
   { statistic: "rushingYards", label: "first 100-yard rushing game", minimum: 100 },
   { statistic: "receivingYards", label: "first 100-yard receiving game", minimum: 100 },
 ];
@@ -141,7 +142,7 @@ export function careerFullyCovered(coverage: CareerCoverage): boolean {
  * Regular-season and postseason games only. Returns one entry per game that
  * carries at least one milestone, ordered by date.
  */
-export function detectGameMilestones(rows: WeeklyRow[], schedule: Map<string, ScheduleGame>, coverage: CareerCoverage): GameMoment[] {
+export function detectGameMilestones(rows: WeeklyRow[], schedule: Map<string, ScheduleGame>, coverage: CareerCoverage, positionGroup: string | null = null): GameMoment[] {
   if (!careerFullyCovered(coverage)) return [];
   const games = rows.flatMap(row => {
     const game = schedule.get(row.game_id);
@@ -153,6 +154,7 @@ export function detectGameMilestones(rows: WeeklyRow[], schedule: Map<string, Sc
   const add = (gameId: string, milestone: GameMilestone) => found.set(gameId, [...(found.get(gameId) ?? []), milestone]);
   add(games[0].game.gameId, { kind: "debut", label: "first NFL game with recorded stats", statistic: null, value: null });
   for (const first of FIRSTS) {
+    if (first.positions && !(positionGroup && first.positions.includes(positionGroup))) continue;
     const game = games.find(item => (item.statistics[first.statistic] ?? 0) >= first.minimum);
     if (game) add(game.game.gameId, { kind: "career_first", label: first.label, statistic: first.statistic, value: game.statistics[first.statistic] });
   }

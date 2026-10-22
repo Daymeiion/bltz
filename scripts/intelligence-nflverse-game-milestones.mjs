@@ -9,6 +9,7 @@
  *   node scripts/intelligence-nflverse-game-milestones.mjs                 # dry run, .env.local
  *   node scripts/intelligence-nflverse-game-milestones.mjs --env .env.staging.local
  *   node scripts/intelligence-nflverse-game-milestones.mjs --apply
+ *   node scripts/intelligence-nflverse-game-milestones.mjs --apply --skip 00-0023459
  */
 import { createClient } from "@supabase/supabase-js";
 import dotenv from "dotenv";
@@ -28,6 +29,8 @@ const CACHE = path.join(os.tmpdir(), "bltz-nflverse");
 const args = process.argv.slice(2);
 const apply = args.includes("--apply");
 const envFile = args.includes("--env") ? args[args.indexOf("--env") + 1] : ".env.local";
+// Repeatable: --skip <NFL gsis_id> leaves that athlete out of this run.
+const skipped = new Set(args.flatMap((arg, index) => arg === "--skip" && args[index + 1] ? [args[index + 1]] : []));
 const env = dotenv.parse(await fs.readFile(envFile, "utf8"));
 const db = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
 
@@ -54,11 +57,12 @@ const cohort = [];
 for (const preview of previews) {
   const gsis = [...new Set(links.filter(link => link.preview_locker_id === preview.id).map(link => link.gsis_id))];
   if (gsis.length !== 1) { console.log(`skip ${preview.full_name}: ${gsis.length} NFL IDs on the prospect record`); continue; }
+  if (skipped.has(gsis[0])) { console.log(`skip ${preview.full_name}: excluded with --skip`); continue; }
   // Dry runs preview unlinked athletes; writes need the canonical player record.
   if (!preview.player_id && apply) { console.log(`skip ${preview.full_name}: not linked to a player record`); continue; }
   const player = preview.player_id ? (await must(db.from("players").select("id,gsis_id").eq("id", preview.player_id), "players"))[0] : null;
   if (preview.player_id && player?.gsis_id !== gsis[0]) { console.log(`skip ${preview.full_name}: player record NFL ID does not match the prospect`); continue; }
-  const master = (await must(db.from("nfl_players").select("gsis_id,display_name,rookie_season,last_season").eq("gsis_id", gsis[0]), "nfl_players"))[0];
+  const master = (await must(db.from("nfl_players").select("gsis_id,display_name,rookie_season,last_season,position_group").eq("gsis_id", gsis[0]), "nfl_players"))[0];
   if (!master) { console.log(`skip ${preview.full_name}: no NFL master record`); continue; }
   cohort.push({ preview, playerId: player?.id ?? null, gsis: gsis[0], master });
 }
@@ -84,7 +88,7 @@ if (apply) {
 for (const { preview, playerId, gsis, master } of cohort) {
   const loaded = [...weekly.keys()].filter(season => season >= master.rookie_season && season <= master.last_season);
   const rows = loaded.flatMap(season => weekly.get(season).filter(row => row.player_id === gsis));
-  const games = detectGameMilestones(rows, schedule, { rookieSeason: master.rookie_season, lastSeason: master.last_season, seasonsLoaded: loaded });
+  const games = detectGameMilestones(rows, schedule, { rookieSeason: master.rookie_season, lastSeason: master.last_season, seasonsLoaded: loaded }, master.position_group);
   const name = preview.full_name;
   console.log(`\n${name} (${gsis}, ${master.rookie_season}-${master.last_season}): ${games.length} game Moment${games.length === 1 ? "" : "s"}${playerId ? "" : " (link the player record before importing)"}`);
   if (!games.length && (master.rookie_season ?? 0) < 1999) console.log("  career starts before nflverse weekly coverage (1999); firsts and highs are not claimed");
