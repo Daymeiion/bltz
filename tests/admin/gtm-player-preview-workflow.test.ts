@@ -2,13 +2,14 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 describe("GTM cohort private preview workflow", () => {
-  it("keeps preview actions separate from cohort and contact promotion", () => {
+  it("automatically connects the cohort while preserving preview editing", () => {
     const workspace = readFileSync("components/admin/gtm/GtmPlayerProspectsWorkspace.tsx", "utf8");
     expect(workspace).toContain("Create preview Locker");
     expect(workspace).toContain("Open preview draft");
     expect(workspace).toContain("Preview complete");
     expect(workspace).toContain("Draft / incomplete");
-    expect(workspace).toContain("Add to Contacts");
+    expect(workspace).toContain("Connect records");
+    expect(workspace).toContain("create or reuse their contact, private preview, and Career ID together");
     expect(workspace).toContain("pageHref(data");
   });
 

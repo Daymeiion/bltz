@@ -1,5 +1,7 @@
 # GTM live cohort audit and connection fixes
 
+The findings below describe the initial audit. The subsequent user-authorized automatic connection and nine-player repair are documented in `gtm-automatic-cohort-connections-2026-10-22.md`.
+
 ## Objective and scope
 
 Check the deployed GTM funnel against the selected Player Master prospects, preview activity, invitations, responses, and Intelligence Lab identity links. Reference: the user's live audit request and `docs/product/BLTZ_PRODUCT_DOCTRINE.md` (persistent identity and connected discovery signals).

@@ -11,7 +11,7 @@ describe("reference-only GTM Player prospects", () => {
     expect(migration).toContain("enable row level security");
     expect(migration).toContain("public.is_internal_admin()");
     expect(migration).not.toContain("insert into public.gtm_contacts");
-    expect(action).toContain('.from("gtm_player_prospects")');
+    expect(action).toContain('rpc("connect_gtm_player_cohort"');
     expect(action).not.toContain("display_name");
     expect(action).not.toContain("first_name");
     expect(action).not.toContain("last_name");

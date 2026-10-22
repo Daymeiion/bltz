@@ -4866,6 +4866,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      connect_gtm_player_cohort: {
+        Args: { p_gsis_ids: string[]; p_select?: boolean }
+        Returns: Json
+      }
       review_preview_athlete_identity: {
         Args: { p_preview_id: string; p_gsis_id: string; p_existing_player_id?: string | null }
         Returns: string

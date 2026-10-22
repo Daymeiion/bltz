@@ -15,7 +15,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { openPlayerMasterPreview, promotePlayerMasterProspects, selectPlayerMasterProspects } from "@/app/admin/gtm/players/actions";
+import { openPlayerMasterPreview, selectPlayerMasterProspects } from "@/app/admin/gtm/players/actions";
 import { GtmNavigation } from "@/components/admin/gtm/GtmNavigation";
 import { GtmPlayerConnections } from "@/components/admin/gtm/GtmPlayerConnections";
 import {
@@ -76,7 +76,7 @@ export function GtmPlayerProspectsWorkspace({ data }: { data: GtmPlayerProspects
   const [notice, setNotice] = useState<string | null>(null);
 
   const availableIds = data.state === "ready"
-    ? data.rows.filter((row) => data.filters.view === "selected" ? !row.contactId : !row.selectedAt).map((row) => row.gsisId)
+    ? data.rows.filter((row) => data.filters.view === "selected" ? (!row.contactId || !row.previewId || !row.careerPlayerId) : !row.selectedAt).map((row) => row.gsisId)
     : [];
   const allAvailableSelected = availableIds.length > 0 && availableIds.every((id) => selected.has(id));
 
@@ -102,28 +102,9 @@ export function GtmPlayerProspectsWorkspace({ data }: { data: GtmPlayerProspects
         return;
       }
       setSelected(new Set());
-      setNotice(`${result.selectedCount.toLocaleString()} player${result.selectedCount === 1 ? "" : "s"} selected for the GTM prospect cohort${result.existingCount ? `; ${result.existingCount.toLocaleString()} already selected` : ""}.`);
+      setNotice(`${result.selectedCount.toLocaleString()} player${result.selectedCount === 1 ? "" : "s"} selected; ${result.linkedPlayerCount.toLocaleString()} connected to Contacts, a preview, and their Career ID.${result.reviewCount ? ` ${result.reviewCount} identity connection${result.reviewCount === 1 ? " needs" : "s need"} review. Open the preview's Career ID review link.` : ""}`);
       router.refresh();
     });
-  };
-
-  const promoteProspects = (gsisIds: string[]) => {
-    setNotice(null);
-    startPromotion(async () => {
-      const result = await promotePlayerMasterProspects({ gsisIds });
-      if (!result.ok) {
-        setNotice(result.message);
-        return;
-      }
-      setSelected(new Set());
-      setNotice(`${result.createdCount.toLocaleString()} contact${result.createdCount === 1 ? "" : "s"} added to GTM${result.existingCount ? `; ${result.existingCount.toLocaleString()} already existed` : ""}. ${result.linkedPlayerCount.toLocaleString()} exact canonical Player match${result.linkedPlayerCount === 1 ? "" : "es"} verified.`);
-      router.refresh();
-    });
-  };
-
-  const runPrimaryAction = (gsisIds: string[]) => {
-    if (data.state === "ready" && data.filters.view === "selected") promoteProspects(gsisIds);
-    else selectProspects(gsisIds);
   };
 
   const openPreview = (gsisId: string) => {
@@ -152,7 +133,7 @@ export function GtmPlayerProspectsWorkspace({ data }: { data: GtmPlayerProspects
           <p className="text-xs font-semibold uppercase tracking-[0.12em] text-neutral-500">Canonical athlete discovery</p>
           <h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em] sm:text-4xl">Player prospecting</h1>
           <p className="mt-3 max-w-3xl text-sm leading-6 text-neutral-600 dark:text-neutral-300">
-            Filter the Player Master, build a focused cohort, and select a private GTM prospect cohort without copying Player Master identity into contacts. No LinkedIn connection or public Locker is required.
+            Add players to a focused cohort to create or reuse their contact, private preview, and Career ID together. Existing identity conflicts require review. Selection does not publish a Locker, verify ownership, or send invitations.
           </p>
         </div>
         <GtmNavigation />
@@ -197,10 +178,10 @@ export function GtmPlayerProspectsWorkspace({ data }: { data: GtmPlayerProspects
             <div className="flex flex-col gap-3 border-b border-neutral-200 p-4 sm:flex-row sm:items-center sm:justify-between dark:border-neutral-800">
               {data.filters.view !== "contacts" && <label className="inline-flex min-h-11 items-center gap-3 text-sm font-semibold">
                 <input type="checkbox" checked={allAvailableSelected} disabled={availableIds.length === 0 || pending} onChange={(event) => togglePage(event.target.checked)} className="h-4 w-4" />
-                {data.filters.view === "selected" ? "Select prospects to add to Contacts" : "Select available players on this page"}
+                {data.filters.view === "selected" ? "Select prospects to connect records" : "Select available players on this page"}
               </label>}
-              {data.filters.view !== "contacts" ? <button type="button" onClick={() => runPrimaryAction([...selected])} disabled={selected.size === 0 || pending} className={primaryButton}>
-                <IconUserPlus className="h-4 w-4" />{pending ? "Saving…" : data.filters.view === "selected" ? `Add ${selected.size || "players"} to Contacts` : `Add ${selected.size || "players"} to prospect cohort`}
+              {data.filters.view !== "contacts" ? <button type="button" onClick={() => selectProspects([...selected])} disabled={selected.size === 0 || pending} className={primaryButton}>
+                <IconUserPlus className="h-4 w-4" />{pending ? "Saving…" : data.filters.view === "selected" ? `Connect ${selected.size || "players"} selected players` : `Add ${selected.size || "players"} to prospect cohort`}
               </button> : <Link href="/admin/gtm/contacts" className={primaryButton}><IconAddressBook className="h-4 w-4" />Open Contacts</Link>}
             </div>
 
@@ -218,7 +199,7 @@ export function GtmPlayerProspectsWorkspace({ data }: { data: GtmPlayerProspects
                     {data.rows.map((player) => {
                       const added = Boolean(player.selectedAt);
                       const promoted = Boolean(player.contactId);
-                      const selectable = data.filters.view === "selected" ? !promoted : !added;
+                      const selectable = data.filters.view === "selected" ? (!promoted || !player.previewId || !player.careerPlayerId) : !added;
                       return (
                         <tr key={player.gsisId} className="hover:bg-neutral-50/80 dark:hover:bg-neutral-800/50">
                           <td className="px-4 py-3">{data.filters.view !== "contacts" && <input type="checkbox" aria-label={`Select ${player.displayName}`} checked={selected.has(player.gsisId)} disabled={!selectable || pending} onChange={(event) => togglePlayer(player.gsisId, event.target.checked)} className="h-4 w-4" />}</td>
@@ -245,7 +226,7 @@ export function GtmPlayerProspectsWorkspace({ data }: { data: GtmPlayerProspects
                             )}
                           </td>
                           <td className="px-4 py-3 text-right">
-                            {promoted ? <Link href={`/admin/gtm/contacts?contact=${player.contactId}`} className={secondaryButton}><IconCheck className="h-4 w-4" />Open contact</Link> : added ? <button type="button" onClick={() => promoteProspects([player.gsisId])} disabled={pending} className={secondaryButton}><IconUserPlus className="h-4 w-4" />Add to Contacts</button> : <button type="button" onClick={() => selectProspects([player.gsisId])} disabled={pending} className={secondaryButton}><IconAddressBook className="h-4 w-4" />Add to cohort</button>}
+                            {promoted ? <Link href={`/admin/gtm/contacts?contact=${player.contactId}`} className={secondaryButton}><IconCheck className="h-4 w-4" />Open contact</Link> : added ? <button type="button" onClick={() => selectProspects([player.gsisId])} disabled={pending} className={secondaryButton}><IconUserPlus className="h-4 w-4" />Connect records</button> : <button type="button" onClick={() => selectProspects([player.gsisId])} disabled={pending} className={secondaryButton}><IconAddressBook className="h-4 w-4" />Add to cohort</button>}
                           </td>
                         </tr>
                       );
