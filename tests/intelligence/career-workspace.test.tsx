@@ -15,7 +15,7 @@ const MOMENT = "00000000-0000-4000-8000-000000000021";
 const EVIDENCE = "00000000-0000-4000-8000-000000000031";
 const SOURCE = "00000000-0000-4000-8000-000000000041";
 function summary(id = ATHLETE, name = "Test Athlete"): WorkspaceAthleteSummary {
-  return { id, name, slug: "test-athlete", school: "Test School", position: "LB", teamLabel: null, portraitUrl: null, priority: null, priorityLabel: "Awaiting review", hasIntelligence: false, intelligenceState: "ready" };
+  return { id, name, slug: "test-athlete", school: "Test School", position: "LB", teamLabel: null, portraitUrl: null, priority: null, priorityLabel: "Awaiting review", hasIntelligence: false, intelligenceState: "ready", next: null, pendingReview: 0, link: null, cohort: false };
 }
 function fixture(id = ATHLETE, name = "Test Athlete"): WorkspaceResult {
   const section = <T,>(rows: T[] = []) => ({ state: "ready" as const, rows, truncated: false });
@@ -145,7 +145,7 @@ describe("Career workspace interaction", () => {
   });
   it("opens cards natively with metrics centered in the signal body and real evidence", async () => {
     const data = fixture();
-    data.result.selected!.intelligence.signals = [{ key: "signal-test", type: "historical_anniversary", ruleVersion: "v1", playerId: ATHLETE, momentId: MOMENT, score: 92, scoreScale: "Editorial review priority; not probability or earnings", confidence: .99, explanation: "A reviewed anniversary is approaching.", evidence: [{ id: EVIDENCE, sourceId: SOURCE, sourceLabel: "Test Publisher", sourceProvider: "public_web", sourceLocator: null, sourceUrl: "https://example.com/game", fetchedAt: "2026-10-01T12:00:00Z", assertion: "The exact test game date is sourced.", confidence: .99 }], sourceEntities: [{ type: "moment", id: MOMENT }], detectedAt: "2026-10-04T12:00:00Z", asOf: "2026-10-04T12:00:00Z", targetDate: "2026-10-07", data: {}, status: "candidate" }];
+    data.result.selected!.intelligence.signals = [{ key: "signal-test", type: "historical_anniversary", ruleVersion: "v1", playerId: ATHLETE, momentId: MOMENT, verdict: "act_now", daysUntil: 3, score: 92, scoreScale: "Editorial review priority; not probability or earnings", confidence: .99, explanation: "A reviewed anniversary is approaching.", evidence: [{ id: EVIDENCE, sourceId: SOURCE, sourceLabel: "Test Publisher", sourceProvider: "public_web", sourceLocator: null, sourceUrl: "https://example.com/game", fetchedAt: "2026-10-01T12:00:00Z", assertion: "The exact test game date is sourced.", confidence: .99 }], sourceEntities: [{ type: "moment", id: MOMENT }], detectedAt: "2026-10-04T12:00:00Z", asOf: "2026-10-04T12:00:00Z", targetDate: "2026-10-07", data: {}, status: "candidate" }];
     await render(data);
     const signal = host.querySelector('section[aria-label="Signals"] details') as HTMLDetailsElement;
     expect(signal.open).toBe(false); expect(signal.querySelector('div[aria-label="Review priority: High"]')).not.toBeNull();

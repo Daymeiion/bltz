@@ -7,7 +7,8 @@ import type { GraphEvidence, GraphMoment } from "./contracts";
 import type { LabSection } from "./lab-types";
 import { safeSourceUrl } from "./lab-format";
 import { isSafeSourceLocator } from "./ingestion/contracts";
-import { evaluateGraphIntelligence } from "./signals";
+import { evaluateGraphIntelligence, evaluateIntelligenceSignals } from "./signals";
+import { birthdayFromPreview, LAB_LOOKAHEAD_DAYS, signalHeadline } from "./signal-copy";
 import { projectGraphEvidenceData } from "./evidence-projection";
 import type { WorkspaceAthleteSummary, WorkspaceMedia, WorkspaceProfile, WorkspaceResult } from "./workspace-types";
 
@@ -68,10 +69,108 @@ export function workspacePriority(scores: number[]): Pick<WorkspaceAthleteSummar
   return { priority, priorityLabel: priority >= 71 ? "High" : priority >= 41 ? "Mid" : "Low", hasIntelligence: true };
 }
 
-function summary(row: z.infer<typeof playerSchema>, scores: number[] = [], complete = true): WorkspaceAthleteSummary {
+type Evaluation = ReturnType<typeof evaluateGraphIntelligence>;
+
+function summary(row: z.infer<typeof playerSchema>, evaluated: Pick<Evaluation, "signals" | "opportunities"> | null = null, complete = true): WorkspaceAthleteSummary {
+  const ready = complete && evaluated ? evaluated : null;
+  const scores = ready ? [...ready.signals.map(item => item.score), ...ready.opportunities.map(item => item.strength)] : [];
+  const first = ready?.signals[0];
   return { id: row.id, name: row.full_name || row.name, slug: row.slug, school: row.school, position: row.position,
-    teamLabel: row.team, portraitUrl: null, ...workspacePriority(complete ? scores : []), intelligenceState: complete ? "ready" : "incomplete" };
+    teamLabel: row.team, portraitUrl: null, ...workspacePriority(scores), intelligenceState: complete ? "ready" : "incomplete",
+    next: first ? { type: first.type, targetDate: first.targetDate, daysUntil: first.daysUntil, verdict: first.verdict, headline: signalHeadline(first) } : null,
+    pendingReview: 0, link: null, cohort: false };
 }
+
+type Join = z.infer<typeof joinSchema>;
+type GraphRead = { state: "ready" | "unavailable"; truncated: boolean; graph: GraphMoment[] };
+
+/** Bounded moment, evidence and provenance reads for a set of athlete/Moment joins. */
+async function readGraph(db: Db, joins: LabSection<Join>): Promise<GraphRead> {
+  const momentIds = [...new Set(joins.rows.map(row => row.moment_id))];
+  const [moments, evidence] = await Promise.all([
+    momentIds.length ? read(db.from("moments").select(momentColumns).in("id", momentIds).order("id").limit(201), momentSchema, 200) : Promise.resolve(empty<z.infer<typeof momentSchema>>()),
+    momentIds.length ? read(db.from("intelligence_evidence").select("id,player_id,moment_id,source_id,ingestion_id,fact_type,statement,structured_data,status,confidence").in("moment_id", momentIds).order("id").limit(501), evidenceSchema, 500) : Promise.resolve(empty<z.infer<typeof evidenceSchema>>()),
+  ]);
+  const sourceIds = [...new Set(evidence.rows.map(row => row.source_id))];
+  const ingestionIds = [...new Set(evidence.rows.flatMap(row => row.ingestion_id ? [row.ingestion_id] : []))];
+  const [sources, ingestions] = await Promise.all([
+    sourceIds.length ? read(db.from("intelligence_sources").select("id,name,provider").in("id", sourceIds).order("id").limit(501), sourceSchema, 500) : Promise.resolve(empty<z.infer<typeof sourceSchema>>()),
+    ingestionIds.length ? read(db.from("intelligence_ingestions").select("id,locator,fetched_at").in("id", ingestionIds).order("id").limit(501), ingestionSchema, 500) : Promise.resolve(empty<z.infer<typeof ingestionSchema>>()),
+  ]);
+  const sections = [joins, moments, evidence, sources, ingestions];
+  const truncated = sections.some(section => section.truncated);
+  if (sections.some(section => section.state !== "ready") || truncated) return { state: "unavailable", truncated, graph: [] };
+  const graphEvidence: GraphEvidence[] = evidence.rows.map(row => {
+    const source = sources.rows.find(item => item.id === row.source_id);
+    const ingestion = ingestions.rows.find(item => item.id === row.ingestion_id);
+    return { id: row.id, athleteId: row.player_id, momentId: row.moment_id, factType: row.fact_type, statement: row.statement, data: projectGraphEvidenceData(row.fact_type, row.structured_data), status: row.status, confidence: row.confidence, ingestionId: row.ingestion_id,
+      source: { id: source?.id ?? null, name: source?.name ?? "Source unavailable", provider: source?.provider ?? "unknown", fetchedAt: ingestion?.fetched_at ?? null, locator: ingestion?.locator && isSafeSourceLocator(ingestion.locator) ? ingestion.locator : safeSourceUrl(ingestion?.locator) } };
+  });
+  return { state: "ready", truncated: false, graph: moments.rows.map(row => ({ id: row.id, title: row.title, occurredOn: row.occurred_on, occurredYear: row.occurred_year, datePrecision: row.date_precision, sport: row.sport, eventId: row.event_id, status: row.status, confidence: row.confidence,
+    athletes: joins.rows.filter(join => join.moment_id === row.id).map(join => ({ athleteId: join.player_id, relationshipType: join.relationship_type, status: join.status, confidence: join.confidence })), evidence: graphEvidence.filter(item => item.momentId === row.id) })) };
+}
+
+const cohortPreviewSchema = z.object({ id: uuid, player_id: uuid.nullable(), full_name: z.string(), school: nullable, position: nullable, dob: nullable, updated_at: z.string(), headshot_url: nullable });
+const gtmLinkSchema = z.object({ preview_locker_id: uuid, gsis_id: z.string() });
+const gsisPlayerSchema = playerSchema.extend({ gsis_id: nullable });
+
+/** Soonest signal first; athletes with nothing dated sort last, then by name. */
+function bySoonest(a: WorkspaceAthleteSummary, b: WorkspaceAthleteSummary) {
+  return (a.next ? Math.max(a.next.daysUntil, 0) : Infinity) - (b.next ? Math.max(b.next.daysUntil, 0) : Infinity)
+    || (b.priority ?? -1) - (a.priority ?? -1) || a.name.localeCompare(b.name) || a.id.localeCompare(b.id);
+}
+
+/**
+ * Every preview-Locker athlete, whether or not anything qualifies yet. A preview
+ * needs a canonical player link or exactly one GTM NFL identity to appear, so
+ * stray drafts and internal test Lockers stay out.
+ */
+async function cohortDirectory(db: Db, asOf: string): Promise<LabSection<WorkspaceAthleteSummary>> {
+  const [previews, links] = await Promise.all([
+    read(db.from("preview_lockers").select("id,player_id,full_name,school,position,dob,updated_at,headshot_url").order("full_name").order("id").limit(201), cohortPreviewSchema, 200),
+    read(db.from("gtm_player_preview_lockers").select("preview_locker_id,gsis_id").order("preview_locker_id").limit(401), gtmLinkSchema, 400),
+  ]);
+  if (previews.state !== "ready" || links.state !== "ready" || previews.truncated || links.truncated) return { state: "unavailable", rows: [], truncated: previews.truncated || links.truncated };
+  const gsisFor = (previewId: string) => [...new Set(links.rows.filter(row => row.preview_locker_id === previewId).map(row => row.gsis_id))];
+  const members = previews.rows.filter(row => row.player_id || gsisFor(row.id).length === 1);
+  const linkedIds = [...new Set(members.flatMap(row => row.player_id ? [row.player_id] : []))];
+  const unlinkedGsis = [...new Set(members.filter(row => !row.player_id).map(row => gsisFor(row.id)[0]))];
+  const unlinkedNames = [...new Set(members.filter(row => !row.player_id).map(row => namePattern(row.full_name)).filter(Boolean))];
+  const [players, joins, byGsis, byName] = await Promise.all([
+    linkedIds.length ? read(db.from("players").select(playerColumns).in("id", linkedIds).order("id").limit(201), playerSchema, 200) : Promise.resolve(empty<z.infer<typeof playerSchema>>()),
+    linkedIds.length ? read(db.from("moment_athletes").select(joinColumns).in("player_id", linkedIds).order("id").limit(401), joinSchema, 400) : Promise.resolve(empty<Join>()),
+    unlinkedGsis.length ? read(db.from("players").select(`${playerColumns},gsis_id`).in("gsis_id", unlinkedGsis).order("id").limit(101), gsisPlayerSchema, 100) : Promise.resolve(empty<z.infer<typeof gsisPlayerSchema>>()),
+    unlinkedNames.length ? read(db.from("players").select(`${playerColumns},gsis_id`).or(unlinkedNames.map(name => `name.ilike.${name}`).join(",")).order("id").limit(101), gsisPlayerSchema, 100) : Promise.resolve(empty<z.infer<typeof gsisPlayerSchema>>()),
+  ]);
+  const graph = await readGraph(db, joins);
+  const complete = graph.state === "ready" && players.state === "ready" && !players.truncated;
+  const rows = members.flatMap((preview): WorkspaceAthleteSummary[] => {
+    if (preview.player_id) {
+      const player = players.rows.find(row => row.id === preview.player_id);
+      if (!player) return [];
+      const birthday = birthdayFromPreview(preview, player.id);
+      const evaluated = evaluateGraphIntelligence(complete ? graph.graph : [], player.id, { asOf, anniversaryWindowDays: LAB_LOOKAHEAD_DAYS, birthdays: birthday ? [birthday] : [] });
+      const pendingReview = complete ? graph.graph.filter(moment => moment.status === "candidate" && moment.athletes.some(athlete => athlete.athleteId === player.id && athlete.status === "candidate")).length : 0;
+      return [{ ...summary(player, evaluated, complete), pendingReview, cohort: true, portraitUrl: safeWorkspaceUrl(preview.headshot_url) }];
+    }
+    // Unlinked: the preview ID stands in until the audited identity link exists.
+    const gsisId = gsisFor(preview.id)[0];
+    const exact = byGsis.rows.filter(row => row.gsis_id === gsisId);
+    const named = byName.rows.filter(row => (row.full_name || row.name).trim().toLowerCase() === preview.full_name.trim().toLowerCase() && (!row.gsis_id || row.gsis_id === gsisId));
+    const existing = exact.length === 1 ? exact[0] : exact.length === 0 && named.length === 1 ? named[0] : null;
+    const birthday = birthdayFromPreview(preview, preview.id);
+    const evaluated = evaluateIntelligenceSignals([], { asOf, anniversaryWindowDays: LAB_LOOKAHEAD_DAYS, birthdays: birthday ? [birthday] : [] });
+    const base = summary({ id: preview.id, name: preview.full_name, full_name: preview.full_name, slug: preview.id, school: preview.school, position: preview.position, team: null }, evaluated);
+    return [{ ...base, cohort: true, portraitUrl: safeWorkspaceUrl(preview.headshot_url),
+      link: { previewId: preview.id, gsisId, existingPlayerId: existing?.id ?? null, existingPlayerName: existing ? existing.full_name || existing.name : null } }];
+  });
+  // Duplicate Lockers for one athlete collapse to a single row.
+  const unique = [...new Map(rows.map(row => [row.id, row])).values()].sort(bySoonest);
+  return { state: complete ? "ready" : "unavailable", rows: unique, truncated: false };
+}
+
+/** Exact-name ilike pattern: punctuation becomes the single-character wildcard, so PostgREST grammar is never interpolated. */
+function namePattern(name: string) { return name.trim().replace(/[^\p{L}\p{N} '-]/gu, "_").slice(0, 120); }
 
 /** .or() uses PostgREST syntax: restrict the search operand, never interpolate its grammar. */
 function searchOperand(query: string) { return query.replace(/[^\p{L}\p{N}\s'-]/gu, " ").trim().slice(0, 120); }
@@ -93,38 +192,27 @@ async function searchPlayers(db: Db, query: string): Promise<LabSection<z.infer<
   return { state: [players, matches, joins, related].every(section => section.state === "ready") ? "ready" : "unavailable", rows: rows.slice(0, 25), truncated: rows.length > 25 || [players, matches, joins, related].some(section => section.truncated) };
 }
 
-/** Bounded, complete reviewed graph reads determine the initial priority directory. */
+/** Athletes outside the cohort still appear when reviewed graph facts give them a signal. */
 async function priorityDirectory(db: Db, asOf: string): Promise<LabSection<WorkspaceAthleteSummary>> {
   const joins = await read(db.from("moment_athletes").select(joinColumns).eq("status", "verified").order("id").limit(201), joinSchema, 200);
-  const momentIds = [...new Set(joins.rows.map(row => row.moment_id))];
   const playerIds = [...new Set(joins.rows.map(row => row.player_id))];
-  const [moments, evidence, players] = await Promise.all([
-    momentIds.length ? read(db.from("moments").select(momentColumns).in("id", momentIds).order("id").limit(201), momentSchema, 200) : Promise.resolve(empty<z.infer<typeof momentSchema>>()),
-    momentIds.length ? read(db.from("intelligence_evidence").select("id,player_id,moment_id,source_id,ingestion_id,fact_type,statement,structured_data,status,confidence").in("moment_id", momentIds).order("id").limit(501), evidenceSchema, 500) : Promise.resolve(empty<z.infer<typeof evidenceSchema>>()),
+  const [graph, players] = await Promise.all([
+    readGraph(db, joins),
     playerIds.length ? read(db.from("players").select(playerColumns).in("id", playerIds).order("name").order("id").limit(201), playerSchema, 200) : Promise.resolve(empty<z.infer<typeof playerSchema>>()),
   ]);
-  const sourceIds = [...new Set(evidence.rows.map(row => row.source_id))];
-  const ingestionIds = [...new Set(evidence.rows.flatMap(row => row.ingestion_id ? [row.ingestion_id] : []))];
-  const [sources, ingestions] = await Promise.all([
-    sourceIds.length ? read(db.from("intelligence_sources").select("id,name,provider").in("id", sourceIds).order("id").limit(501), sourceSchema, 500) : Promise.resolve(empty<z.infer<typeof sourceSchema>>()),
-    ingestionIds.length ? read(db.from("intelligence_ingestions").select("id,locator,fetched_at").in("id", ingestionIds).order("id").limit(501), ingestionSchema, 500) : Promise.resolve(empty<z.infer<typeof ingestionSchema>>()),
-  ]);
-  const sections = [joins, moments, evidence, players, sources, ingestions];
-  const truncated = sections.some(section => section.truncated);
-  if (sections.some(section => section.state !== "ready") || truncated) return { state: "unavailable", rows: [], truncated };
-  const graphEvidence: GraphEvidence[] = evidence.rows.map(row => {
-    const source = sources.rows.find(item => item.id === row.source_id);
-    const ingestion = ingestions.rows.find(item => item.id === row.ingestion_id);
-    return { id: row.id, athleteId: row.player_id, momentId: row.moment_id, factType: row.fact_type, statement: row.statement, data: projectGraphEvidenceData(row.fact_type, row.structured_data), status: row.status, confidence: row.confidence, ingestionId: row.ingestion_id,
-      source: { id: source?.id ?? null, name: source?.name ?? "Source unavailable", provider: source?.provider ?? "unknown", fetchedAt: ingestion?.fetched_at ?? null, locator: ingestion?.locator && isSafeSourceLocator(ingestion.locator) ? ingestion.locator : safeSourceUrl(ingestion?.locator) } };
-  });
-  const graph: GraphMoment[] = moments.rows.map(row => ({ id: row.id, title: row.title, occurredOn: row.occurred_on, occurredYear: row.occurred_year, datePrecision: row.date_precision, sport: row.sport, eventId: row.event_id, status: row.status, confidence: row.confidence,
-    athletes: joins.rows.filter(join => join.moment_id === row.id).map(join => ({ athleteId: join.player_id, relationshipType: join.relationship_type, status: join.status, confidence: join.confidence })), evidence: graphEvidence.filter(item => item.momentId === row.id) }));
-  const rows = players.rows.map(player => {
-    const evaluated = evaluateGraphIntelligence(graph, player.id, { asOf });
-    return summary(player, [...evaluated.signals.map(item => item.score), ...evaluated.opportunities.map(item => item.strength)]);
-  }).filter(row => row.hasIntelligence).sort((a, b) => (b.priority ?? -1) - (a.priority ?? -1) || a.name.localeCompare(b.name) || a.id.localeCompare(b.id));
+  const truncated = graph.truncated || players.truncated;
+  if (graph.state !== "ready" || players.state !== "ready" || truncated) return { state: "unavailable", rows: [], truncated };
+  const rows = players.rows.map(player => summary(player, evaluateGraphIntelligence(graph.graph, player.id, { asOf, anniversaryWindowDays: LAB_LOOKAHEAD_DAYS })))
+    .filter(row => row.hasIntelligence).sort(bySoonest);
   return { state: "ready", rows: rows.slice(0, 25), truncated: rows.length > 25 };
+}
+
+/** Cohort first, then any other athlete with a signal, soonest first. */
+async function directoryFor(db: Db, asOf: string): Promise<LabSection<WorkspaceAthleteSummary>> {
+  const [cohort, priority] = await Promise.all([cohortDirectory(db, asOf), priorityDirectory(db, asOf)]);
+  const known = new Set(cohort.rows.map(row => row.id));
+  return { state: cohort.state === "ready" && priority.state === "ready" ? "ready" : "unavailable",
+    rows: [...cohort.rows, ...priority.rows.filter(row => !known.has(row.id))], truncated: cohort.truncated || priority.truncated };
 }
 
 function validDay(value: unknown): string | null {
@@ -189,20 +277,22 @@ export async function loadIntelligenceWorkspace(params: { q?: string; athlete?: 
   const now = new Date().toISOString();
   const day = validDay(params.asOf) ?? now.slice(0, 10);
   const evaluatedAt = new Date(Math.min(Date.parse(`${day}T23:59:59.999Z`), Date.parse(now))).toISOString();
-  const [directory, search] = await Promise.all([priorityDirectory(db, evaluatedAt), searchPlayers(db, query)]);
-  const selection = params.athlete || (query ? search.rows[0]?.id : directory.rows[0]?.id ?? search.rows[0]?.id);
+  const [directory, search] = await Promise.all([directoryFor(db, evaluatedAt), searchPlayers(db, query)]);
+  // Default to the soonest linked athlete; an unlinked preview cannot be opened yet.
+  const selection = params.athlete || (query ? search.rows[0]?.id : directory.rows.find(row => !row.link)?.id ?? search.rows[0]?.id);
   // Reuse the existing selected-graph read and its completeness/authentication gates.
   const lab = await loadIntelligenceLab({ athlete: selection, asOf: day });
   const selected = lab.selected;
   const rows = search.rows.map(row => {
     const prioritized = directory.rows.find(item => item.id === row.id);
     if (prioritized) return prioritized;
-    if (selected?.id === row.id) return summary(row, [...selected.intelligence.signals.map(item => item.score), ...selected.intelligence.opportunities.map(item => item.strength)], selected.intelligenceState === "ready");
-    return summary(row, [], false);
+    if (selected?.id === row.id) return summary(row, selected.intelligence, selected.intelligenceState === "ready");
+    return summary(row, null, false);
   });
   const portraitIds = [...new Set([...directory.rows, ...rows].map(row => row.id))];
   const portraitRows = portraitIds.length ? await read(db.from("preview_lockers").select("id,player_id,headshot_url").in("player_id", portraitIds).order("id").limit(101), directoryPortraitSchema, 100) : empty<z.infer<typeof directoryPortraitSchema>>();
   if (portraitRows.state === "ready" && !portraitRows.truncated) for (const row of [...directory.rows, ...rows]) {
+    if (row.link) continue;
     const links = portraitRows.rows.filter(item => item.player_id === row.id);
     row.portraitUrl = links.length === 1 ? safeWorkspaceUrl(links[0].headshot_url) : null;
   }

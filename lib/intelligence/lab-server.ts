@@ -8,19 +8,21 @@ import { safeSourceUrl } from "./lab-format";
 import { isSafeSourceLocator } from "./ingestion/contracts";
 import { evaluateGraphIntelligence } from "./signals";
 import { projectGraphEvidenceData } from "./evidence-projection";
+import { birthdayFromPreview, LAB_LOOKAHEAD_DAYS } from "./signal-copy";
 
 export class IntelligenceAccessError extends Error {
   constructor(public status: 401 | 403 | 503) { super("Intelligence access unavailable"); }
 }
 
-/** Authenticate before any service-role construction or graph read. */
-export async function authorizeIntelligenceLab() {
+/** Authenticate before any service-role construction or graph read. Returns the admin's user ID. */
+export async function authorizeIntelligenceLab(): Promise<string> {
   const session = await createClient();
   const { data, error } = await session.auth.getUser();
   if (error || !data.user) throw new IntelligenceAccessError(401);
   const permission = await session.rpc("is_internal_admin");
   if (permission.error) throw new IntelligenceAccessError(503);
   if (permission.data !== true) throw new IntelligenceAccessError(403);
+  return data.user.id;
 }
 
 const id = z.string().uuid();
@@ -42,7 +44,8 @@ const statSchema = z.object({ id: z.number(), season: z.number(), season_type: t
 const rosterStatSchema = z.object({ id, athlete_team_season_id: id, source: text, season_phase: text, stats: z.record(text, z.unknown()) });
 const mediaSchema = z.object({ id, title: nullable, kind: text, provenance: text });
 const videoSchema = z.object({ id, title: nullable });
-const externalSchema = z.object({ id, provider: text, provider_player_id: text, sport: text, league: text, match_method: text, match_confidence: confidence, verified_at: text });
+const previewDobSchema = z.object({ id, dob: nullable, updated_at: text });
+const externalSchema =z.object({ id, provider: text, provider_player_id: text, sport: text, league: text, match_method: text, match_confidence: confidence, verified_at: text });
 
 type QueryResult = { data: unknown; error: unknown };
 async function read<T>(request: PromiseLike<QueryResult>, schema: z.ZodType<T>, cap = 100): Promise<LabSection<T>> {
@@ -126,8 +129,13 @@ export async function loadIntelligenceLab(params: { q?: string; athlete?: string
   });
   if (joins.state !== "ready" || graphEvidence.state !== "ready") graphMoments.state = "unavailable";
   graphMoments.truncated ||= joins.truncated || graphEvidence.truncated;
-  const completeGraph = [joins, evidence, sources, ingestions, momentRows].every(section => section.state === "ready" && !section.truncated);
-  const intelligence = evaluateGraphIntelligence(completeGraph ? graphMoments.rows : [], playerId, { asOf: evaluatedAt });
+  // One linked preview Locker supplies the reviewed date of birth; several would be an identity conflict.
+  const previews = await read(db.from("preview_lockers").select("id,dob,updated_at").eq("player_id", playerId).order("id").limit(2), previewDobSchema, 1);
+  const birthdays = previews.state === "ready" && !previews.truncated
+    ? previews.rows.flatMap(row => birthdayFromPreview(row, playerId) ?? []) : [];
+  const completeGraph = [joins, evidence, sources, ingestions, momentRows, previews].every(section => section.state === "ready" && !section.truncated);
+  const intelligence = evaluateGraphIntelligence(completeGraph ? graphMoments.rows : [], playerId,
+    { asOf: evaluatedAt, anniversaryWindowDays: LAB_LOOKAHEAD_DAYS, birthdays: completeGraph ? birthdays : [] });
   const relationships = mapped(rosters, row => {
     const ts = teamSeasons.rows.find(item => item.id === row.team_season_id);
     return { id: row.id, team: teams.rows.find(item => item.id === ts?.team_id)?.name ?? "Team unavailable", season: seasons.rows.find(item => item.id === ts?.season_id)?.season_code ?? "Season unavailable", organization: organizations.rows.find(item => item.id === row.organization_id)?.name ?? "Organization unavailable", startsOn: row.starts_on, endsOn: row.ends_on, status: row.roster_status };

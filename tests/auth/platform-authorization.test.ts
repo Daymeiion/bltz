@@ -83,11 +83,11 @@ describe("platform assignment authorization", () => {
         expect(gate).toContain('permission.data !== true');
         continue;
       }
-      if (file.includes(join("admin", "intelligence", "getty")) || file.includes(join("admin", "intelligence", "share"))) {
+      if (file.includes(join("admin", "intelligence", "getty")) || file.includes(join("admin", "intelligence", "share")) || file.includes(join("admin", "intelligence", "review"))) {
         // Lab integrations reuse the Intelligence assignment gate before any configuration or provider call.
         const gate = route.indexOf("await authorizeIntelligenceLab()");
         expect(gate).toBeGreaterThanOrEqual(0);
-        for (const operation of ["process.env", "fetch("]) {
+        for (const operation of ["process.env", "fetch(", "createServiceClient("]) {
           let at = route.indexOf(operation);
           while (at >= 0) {
             const handler = route.lastIndexOf("export async function", at);
