@@ -1,4 +1,5 @@
 const BLOCKED_AUTH_DESTINATIONS = ["/auth/login", "/auth/sign-up"];
+export const ADMIN_DEFAULT_PATH = "/admin/gtm/funnel";
 
 export function getSafeInternalPath(next: string | null | undefined): string | null {
   if (!next || !next.startsWith("/") || next.startsWith("//")) return null;
@@ -17,7 +18,7 @@ export function getSafeInternalNext(search: string): string | null {
 }
 
 export function getDefaultAuthenticatedPath(role: string | null | undefined) {
-  if (role === "admin") return "/admin/beta";
+  if (role === "admin") return ADMIN_DEFAULT_PATH;
   if (role === "player") return "/dashboard";
   return "/";
 }

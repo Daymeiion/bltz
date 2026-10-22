@@ -30,7 +30,7 @@ describe("AdminSidebar GTM destination", () => {
     document.body.innerHTML = "";
   });
 
-  it("preserves the existing destinations and adds GTM", () => {
+  it("keeps GTM as the preview tracking destination and removes Beta Intelligence", () => {
     renderSidebar();
 
     const expectedHrefs = [
@@ -39,7 +39,6 @@ describe("AdminSidebar GTM destination", () => {
       "/admin/messages",
       "/admin/moderation",
       "/admin/analytics",
-      "/admin/beta",
       "/admin/gtm",
       "/admin/settings",
     ];
@@ -47,6 +46,8 @@ describe("AdminSidebar GTM destination", () => {
     for (const href of expectedHrefs) {
       expect(document.querySelector(`a[href="${href}"]`)).not.toBeNull();
     }
+    expect(document.querySelector('a[href="/admin/beta"]')).toBeNull();
+    expect(document.body.textContent).not.toContain("Beta Intelligence");
   });
 
   it("marks GTM current for nested GTM routes without activating Dashboard", () => {

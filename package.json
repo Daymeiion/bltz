@@ -109,7 +109,8 @@
     "typescript": "^5",
     "vitest": "^4.1.11",
     "@types/nodemailer": "8.0.2",
-    "@types/mailparser": "3.9.0"
+    "@types/mailparser": "3.9.0",
+    "@electric-sql/pglite": "0.5.11"
   },
   "overrides": {
     "brace-expansion@<2.0.0": "1.1.21"

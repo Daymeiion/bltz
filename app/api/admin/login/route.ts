@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextRequest, NextResponse } from "next/server";
 import { expireAdminSessionCookies } from "@/lib/auth/admin-session-cookies";
 import { TEST_AUTH_COOKIE } from "@/lib/onboarding/test-auth";
+import { ADMIN_DEFAULT_PATH } from "@/lib/auth/redirects";
 
 function classifySignInError(error: unknown) {
   if (!error || typeof error !== "object") return "authentication_unavailable";
@@ -103,7 +104,7 @@ export async function POST(request: NextRequest) {
   if (authorizationError) return rejectSignIn("authorization_unavailable");
   if (isAdmin !== true) return rejectSignIn("not_admin");
 
-  const response = NextResponse.redirect(new URL("/admin/beta", request.url), 303);
+  const response = NextResponse.redirect(new URL(ADMIN_DEFAULT_PATH, request.url), 303);
   response.headers.set("Cache-Control", "private, no-store");
   cookieResponse.cookies.getAll().forEach((cookie) => response.cookies.set(cookie));
   response.cookies.delete(TEST_AUTH_COOKIE);
