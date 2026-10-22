@@ -107,7 +107,7 @@ Status: **Implementation complete locally on August 18, 2026; production promoti
 - Development-only preview states for later workstreams so navigation and hierarchy
   can be validated without presenting fixture data as live organization data
 
-Status: **In progress.** Phase 3 adds the protected responsive shell, authenticated organization entry and switching, server-supplied team and season filters, complete planned-workspace information architecture, and dashboard loading, empty, error, and access-denied states. Later workflows may appear in the development preview but remain locked in authenticated tenant routes until their server contracts and permissions exist. Roster, media, rights, approval, campaign, intelligence, analytics, revenue, settings, and member-management behavior remain in their scheduled phases.
+Status: **Paused — partially built.** Since August 2026, active effort has moved to the work recorded under [Work Shipped Outside the Phase Sequence](#work-shipped-outside-the-phase-sequence). What exists today: the authenticated organization entry and selection routes (`app/organization`, `app/organization/select`), the tenant dashboard (`app/organization/[organizationId]/dashboard`), and the development-only CRM navigation preview (`app/organization/preview`). The intended scope of the phase is unchanged: Phase 3 adds the protected responsive shell, authenticated organization entry and switching, server-supplied team and season filters, complete planned-workspace information architecture, and dashboard loading, empty, error, and access-denied states. Later workflows may appear in the development preview but remain locked in authenticated tenant routes until their server contracts and permissions exist. Roster, media, rights, approval, campaign, intelligence, analytics, revenue, settings, and member-management behavior remain in their scheduled phases.
 
 ## Phase 4 — Roster and Athlete Records
 
@@ -267,11 +267,39 @@ For every task:
 8. Report changed files, database changes, tests, limitations, and manual verification steps.
 9. Do not claim completion when acceptance criteria are unmet.
 
+## Work Shipped Outside the Phase Sequence
+
+Recorded October 22, 2026. Between August 19 and October 21, 2026, nearly all shipped
+work fell outside Phase 3. None of it starts a later phase, and none of it
+authorizes Phase 5 Media Graph or Phase 6 rights tables.
+
+- **Preview Lockers and the Locker builder** (extends Phase 1). Private, pre-claim
+  Lockers for prospective athletes, plus an admin builder (`app/admin/preview-lockers`)
+  with reviewed imports for Pro Football Reference, college and Sportradar statistics;
+  news and merchandise review queues; the shared award image library
+  (`app/admin/award-images`); Combine results; jersey history; school logos and display
+  names; the Photo Room and Film Room; and Getty showcase rows.
+- **Athlete invite and conversion funnel** (supports athlete beta and go-to-market).
+  Personalized short invite links, sign-in-free preview access, claim inquiries,
+  referral and response tracking, reviewed invitation email delivery, and the GTM
+  admin center (`app/admin/gtm`). Released to production October 9–13, 2026.
+- **Intelligence Lab** (an early, internal-only slice of Phase 11A, delivered through
+  Admin routes ahead of Phase 8). `/admin/intelligence` was first published October 5,
+  2026. The redesigned workspace shipped October 21, 2026 (PR #17): signals, Moments,
+  linked media and activation drafts. It is limited to internal admins. Signals,
+  activation drafts and media links are not persisted. Getty search and Slack sharing
+  stay inactive until their server configuration exists. It does not satisfy the Phase
+  11A contracts for persisted scans, the Digital Presence Score, reports or
+  organization-facing intelligence.
+
 ## Current Priority
 
-`Phase 3 — School/Team CRM Shell`.
+As of October 22, 2026, active work is the **preview Locker builder, the athlete invite
+funnel and the Intelligence Lab** listed above. Formally, `Phase 3 — School/Team CRM
+Shell` remains the next phase in the sequence, but it is paused rather than complete.
 
-Phase 1 and Phase 1.5 are complete. Phase 2 is implemented locally with production
-promotion deferred behind its documented release gates. Continue Phase 3 without
-designing Phase 5 Media Graph tables or presenting later-phase preview fixtures as
-live organization data.
+Phase 0, Phase 1 and Phase 1.5 are complete. Phase 2 is implemented locally. Its
+production promotion is still deferred behind the release gates documented in
+`docs/platform/PHASE-2-DEPLOYMENT-RUNBOOK.md`, and no production promotion has been
+performed. When Phase 3 resumes, continue it without designing Phase 5 Media Graph
+tables or presenting later-phase preview fixtures as live organization data.
