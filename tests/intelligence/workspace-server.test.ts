@@ -134,6 +134,44 @@ describe("Priority directory and real search", () => {
   });
 });
 
+describe("Preview-Locker cohort", () => {
+  const UNLINKED = "00000000-0000-4000-8000-000000000021";
+  const STRAY = "00000000-0000-4000-8000-000000000022";
+  beforeEach(() => {
+    mocks.tables.players = { data: [{ ...athlete, gsis_id: "00-0000001" }, { ...athlete, id: OTHER, name: "J.J. Example", full_name: "J.J. Example", slug: "jj-example", gsis_id: null }], error: null };
+    mocks.tables.preview_lockers = { data: [
+      { id: PREVIEW, player_id: PLAYER, full_name: "Synthetic Athlete", school: "Synthetic University", position: "LB", dob: "1986-10-12", updated_at: "2026-09-01T00:00:00+00:00", headshot_url: portrait },
+      { id: UNLINKED, player_id: null, full_name: "J.J. Example", school: "Example State", position: "RB", dob: "1983-10-20", updated_at: "2026-09-01T00:00:00+00:00", headshot_url: null },
+      { id: STRAY, player_id: null, full_name: "Internal Test Locker", school: null, position: null, dob: null, updated_at: "2026-09-01T00:00:00+00:00", headshot_url: null },
+    ], error: null };
+    mocks.tables.gtm_player_preview_lockers = { data: [{ preview_locker_id: PREVIEW, gsis_id: "00-0000001" }, { preview_locker_id: UNLINKED, gsis_id: "00-0000002" }], error: null };
+  });
+
+  it("lists every linked or NFL-identified Locker, soonest signal first, and leaves stray Lockers out", async () => {
+    const result = await loadIntelligenceWorkspace({ asOf: "2026-10-02" });
+    expect(result.directory.state).toBe("ready");
+    expect(result.directory.rows.map(row => row.name)).toEqual(["Synthetic Athlete", "J.J. Example"]);
+    expect(result.directory.rows[0]).toMatchObject({ cohort: true, link: null, next: { type: "birthday", targetDate: "2026-10-12", verdict: "prepare", headline: "Turns 40" } });
+    expect(result.directory.rows[1]).toMatchObject({ id: UNLINKED, next: { type: "birthday", targetDate: "2026-10-20", headline: "Turns 43" },
+      link: { previewId: UNLINKED, gsisId: "00-0000002", existingPlayerId: OTHER, existingPlayerName: "J.J. Example" } });
+    // The default selection is the soonest athlete that can actually be opened.
+    expect(result.result.selected?.id).toBe(PLAYER);
+    expect(result.result.selected?.intelligence.signals[0]).toMatchObject({ type: "birthday", data: { age: 40 } });
+    const nameQuery = mocks.queries.find(query => query.table === "players" && query.filters.some(([key]) => key === "or"));
+    expect(nameQuery?.filters).toContainEqual(["or", "name.ilike.J_J_ Example"]);
+  });
+
+  it("counts imported candidate Moments awaiting review without signalling them", async () => {
+    reviewedGraph();
+    mocks.tables.moments.data = [{ ...(mocks.tables.moments.data as Record<string, unknown>[])[0], status: "candidate" }];
+    mocks.tables.moment_athletes.data = [{ ...(mocks.tables.moment_athletes.data as Record<string, unknown>[])[0], status: "candidate" }];
+    const result = await loadIntelligenceWorkspace({ asOf: "2026-10-02" });
+    const row = result.directory.rows.find(item => item.id === PLAYER)!;
+    expect(row.pendingReview).toBe(1);
+    expect(row.next?.type).toBe("birthday");
+  });
+});
+
 describe("Media, profile and unavailable sections", () => {
   it("projects source performance to statistics without leaking review actors through either client graph path", async () => {
     reviewedGraph();

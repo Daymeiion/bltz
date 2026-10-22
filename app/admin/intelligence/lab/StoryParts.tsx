@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { DndContext, DragOverlay, KeyboardSensor, PointerSensor, pointerWithin, rectIntersection, useDraggable, useDroppable, useSensor, useSensors, type CollisionDetection, type DragEndEvent } from "@dnd-kit/core";
 import { ArrowUpRight, Camera, ChevronDown, ChevronLeft, ChevronRight, Megaphone, Mic, Minus, PenLine, Plus, Video, X, Zap } from "lucide-react";
 import type { LabGraphMoment } from "@/lib/intelligence/lab-types";
 import type { IntelligenceSignal } from "@/lib/intelligence/signals";
 import { safeSourceUrl } from "@/lib/intelligence/lab-format";
+import { signalHeadline, VERDICT_ACTION, VERDICT_LABEL } from "@/lib/intelligence/signal-copy";
 import { confidencePercent, momentDate, reviewPriority } from "../CareerWorkspace";
 import { MediaCard } from "./MediaCard";
 import { GettyPicker, LockerPicker } from "./SourcePickers";
@@ -49,13 +51,30 @@ function statLine(moment: LabGraphMoment): string | null {
   return parts.length > 1 ? `${parts.slice(0, -1).join(", ")} and ${parts.at(-1)}` : parts[0];
 }
 
+function ordinal(value: number): string {
+  const suffix = value % 100 >= 11 && value % 100 <= 13 ? "th" : ["th", "st", "nd", "rd"][value % 10] ?? "th";
+  return `${value}${suffix}`;
+}
+
 /** Context sentences are assembled only from recorded evidence, dates and linked references. */
-function contextFor(signal: IntelligenceSignal, moment: LabGraphMoment, m: Model): string[] {
+function contextFor(signal: IntelligenceSignal, moment: LabGraphMoment | null, m: Model): string[] {
   const lines: string[] = [];
   const name = m.athlete?.name.split(" ")[0] ?? "The athlete";
-  const span = years(moment, signal);
   const target = dayLabel(signal.targetDate);
-  if (signal.type === "historical_anniversary" && span) lines.push(`${target} marks ${span} years since this game${span % 5 === 0 ? ", a milestone anniversary that fans and the program tend to revisit" : ""}.`);
+  if (!moment) {
+    const age = signal.data.age;
+    if (signal.type === "birthday" && typeof age === "number") {
+      lines.push(`${name} turns ${age} on ${target}${age % 10 === 0 ? ", a round-number birthday worth a bigger moment" : age % 5 === 0 ? ", a milestone birthday" : ""}.`);
+      lines.push("The date of birth comes from the admin-reviewed preview Locker, so the greeting can go out on the exact day.");
+      const photos = m.media.filter(item => item.kind === "photo" || item.kind === "media").length;
+      if (photos) lines.push(`${photos} photo${photos === 1 ? "" : "s"} on file for a throwback post.`);
+    }
+    return lines;
+  }
+  const span = years(moment, signal);
+  const label = typeof signal.data.milestoneLabel === "string" ? signal.data.milestoneLabel : null;
+  if (label && span) lines.push(`${target} marks ${span} years since ${name}'s ${label}${span % 5 === 0 ? ", a round anniversary fans and former teams tend to revisit" : ""}.`);
+  else if (signal.type === "historical_anniversary" && span) lines.push(`${target} marks ${span} years since this game${span % 5 === 0 ? ", a milestone anniversary that fans and the program tend to revisit" : ""}.`);
   if (signal.type === "career_milestone") lines.push(`A reviewed career milestone lands on ${target}.`);
   const stats = statLine(moment);
   if (stats) lines.push(`${name} was credited with ${stats} in this game, per the reviewed source.`);
@@ -66,10 +85,38 @@ function contextFor(signal: IntelligenceSignal, moment: LabGraphMoment, m: Model
   return lines;
 }
 
+function birthdaySuggestions(signal: IntelligenceSignal, m: Model, hasContact: boolean): Suggestion[] {
+  const name = m.athlete?.name ?? "the athlete";
+  const first = name.split(" ")[0];
+  const age = typeof signal.data.age === "number" ? signal.data.age : null;
+  const day = dayLabel(signal.targetDate) ?? "the birthday";
+  const photos = m.media.filter(item => item.kind === "photo" || item.kind === "media");
+  const videos = m.media.filter(item => item.kind === "video");
+  return [
+    { kind: "social", title: `Birthday post for ${first}`, why: `Schedule for ${day}${photos.length ? " with a career photo" : ""}.`, ready: true, status: "Ready to draft", brief: `Happy ${age ? `${ordinal(age)} ` : ""}birthday to ${name}. Pair with a career photo cleared for this use.` },
+    { kind: "gallery", title: "Throwback photo gallery", why: photos.length ? `${photos.length} photo${photos.length === 1 ? "" : "s"} on file to choose from.` : "Add photos to the Locker first.", ready: photos.length > 0, status: photos.length ? "Photos on file" : "Needs photos", brief: `Birthday throwback gallery for ${name}, ${day}. Use only photos cleared for this use.` },
+    { kind: "video", title: "Birthday highlight reel", why: videos.length ? `${videos.length} video${videos.length === 1 ? "" : "s"} to cut from.` : "No video on file yet.", ready: videos.length > 0, status: videos.length ? "Footage on file" : "Needs footage", brief: `Short birthday highlight reel for ${name}, posted ${day}.` },
+    { kind: "interview", title: `Ask ${first} for a birthday Q&A`, why: "A short where-are-they-now conversation timed to the day.", ready: hasContact, status: hasContact ? "Contact on file" : "Contact not on file", brief: `Birthday Q&A request: ${name}, timed for ${day}.` },
+  ];
+}
+
 function suggestionsFor(signal: IntelligenceSignal, moment: LabGraphMoment, m: Model, linked: MediaItem[], hasContact: boolean): Suggestion[] {
   const span = years(moment, signal);
+  const milestone = typeof signal.data.milestoneLabel === "string" ? signal.data.milestoneLabel : null;
   const label = span ? `${span}-year` : "Anniversary";
   const name = m.athlete?.name ?? "the athlete";
+  if (milestone) {
+    const first = name.split(" ")[0];
+    const day = dayLabel(signal.targetDate) ?? "the anniversary";
+    const videos = linked.filter(item => item.kind === "video");
+    const stats = statLine(moment);
+    return [
+      { kind: "social", title: "\"On this day\" post", why: `Schedule for ${day}: ${span ? `${span} years since ` : ""}${milestone}.`, ready: true, status: "Ready to draft", brief: `On this day${span ? ` ${span} years ago` : ""}: ${name}'s ${milestone} (${moment.title}).${stats ? ` ${stats}.` : ""}` },
+      { kind: "video", title: `${label} highlight clip`, why: videos.length ? `${videos.length} linked video${videos.length === 1 ? "" : "s"} to cut from.` : "Link game footage in this Moment's Media tab first.", ready: videos.length > 0, status: videos.length ? "Footage linked" : "Needs footage", brief: `Short clip marking ${name}'s ${milestone}. Use only footage linked to this Moment and cleared for this use.` },
+      { kind: "interview", title: `Ask ${first} to look back`, why: `${first} recalls the ${milestone} in their own words.`, ready: hasContact, status: hasContact ? "Contact on file" : "Contact not on file", brief: `Interview request: ${name} on their ${milestone}, timed for ${day}.` },
+      { kind: "article", title: `${label} retrospective`, why: `Built on the ${moment.evidence.length} record${moment.evidence.length === 1 ? "" : "s"} attached to this Moment.`, ready: moment.evidence.length > 0, status: moment.evidence.length ? "Sources on file" : "Needs sources", brief: `Retrospective on ${name}'s ${milestone} (${momentDate(moment)}). Cite the sources attached to this Moment.` },
+    ];
+  }
   const stats = statLine(moment);
   const videos = linked.filter(item => item.kind === "video");
   const photos = linked.filter(item => item.kind === "photo" || item.kind === "media");
@@ -85,13 +132,14 @@ export function SignalCard({ m, links, hasContact, onMoment, onCreate }: { m: Mo
   const [index, setIndex] = useState(0);
   const reduce = useReducedMotion();
   const signal = m.signals[index];
-  if (!signal) return <div className={styles.nextEmpty}><Zap size={20} aria-hidden="true" /><p>{m.ready ? "No signal is due on this evaluation date." : "Signals appear once this athlete's evidence is complete."}</p><button type="button" className={styles.ghostButton} onClick={() => onCreate({})}><Plus size={15} aria-hidden="true" />New activation</button></div>;
+  if (!signal) return <div className={styles.nextEmpty}><Zap size={20} aria-hidden="true" /><p>{m.ready ? "No dated facts on file yet. Add a reviewed date of birth or approve game Moments to get signals." : "Signals appear once this athlete's evidence is complete."}</p><button type="button" className={styles.ghostButton} onClick={() => onCreate({})}><Plus size={15} aria-hidden="true" />New activation</button></div>;
   const moment = m.moments.find(row => row.id === signal.momentId) ?? null;
   const days = daysBetween(m.asOf, signal.targetDate);
   const linked = moment ? m.media.filter(item => links[moment.id]?.includes(item.id)) : [];
-  const context = moment ? contextFor(signal, moment, m) : [];
-  const ideas = moment ? suggestionsFor(signal, moment, m, linked, hasContact) : [];
+  const context = contextFor(signal, moment, m);
+  const ideas = moment ? suggestionsFor(signal, moment, m, linked, hasContact) : signal.type === "birthday" ? birthdaySuggestions(signal, m, hasContact) : [];
   const opp = m.opportunities.find(row => row.signalKeys.includes(signal.key));
+  const headline = signal.type === "birthday" ? `${m.athlete?.name ?? "Athlete"} ${signalHeadline(signal).toLowerCase()}` : signalHeadline(signal);
   return <div className={styles.signalCard}>
     <div className={styles.signalTop}>
       <div className={styles.pager}>
@@ -105,16 +153,18 @@ export function SignalCard({ m, links, hasContact, onMoment, onCreate }: { m: Mo
         <div className={styles.signalHead}>
           <div className={styles.countdown}><strong>{days === null ? "?" : Math.abs(days)}</strong><span>{days === null ? "date unknown" : days >= 0 ? `day${Math.abs(days) === 1 ? "" : "s"} to go` : "days ago"}</span><small>{dayLabel(signal.targetDate)}</small></div>
           <div className={styles.nextBody}>
-            <span className={styles.tagSm}><Zap size={11} aria-hidden="true" />{human(signal.type)}</span>
-            <h4>{moment?.title ?? "Career signal"}</h4>
+            <span className={styles.verdict} data-verdict={signal.verdict}><Zap size={12} aria-hidden="true" />{VERDICT_LABEL[signal.verdict]}</span>
+            <h4>{headline}</h4>
+            {moment && <p className={styles.quiet}>{moment.title}</p>}
+            <p className={styles.decision}>{VERDICT_ACTION[signal.verdict]}{signal.verdict !== "upcoming" ? ` Target date: ${dayLabel(signal.targetDate)}.` : ""}</p>
             <div className={styles.chain}>
-              <button type="button" onClick={() => moment && onMoment(moment.id)} disabled={!moment}>Open moment</button><ChevronRight size={14} aria-hidden="true" className={styles.chainArrowFlat} />
+              {moment ? <button type="button" onClick={() => onMoment(moment.id)}>Open moment</button> : <span data-on="true">{human(signal.type)}</span>}<ChevronRight size={14} aria-hidden="true" className={styles.chainArrowFlat} />
               <span data-on="true">Signal</span><ChevronRight size={14} aria-hidden="true" className={styles.chainArrowFlat} />
               <span data-on={Boolean(opp)}>{opp ? human(opp.type) : "No opportunity yet"}</span>
             </div>
           </div>
         </div>
-        {context.length > 0 && <div><h5 className={styles.miniTitle}>Why this moment matters</h5><ul className={styles.why}>{context.map(line => <li key={line}>{line}</li>)}</ul></div>}
+        {context.length > 0 && <div><h5 className={styles.miniTitle}>Why it matters</h5><ul className={styles.why}>{context.map(line => <li key={line}>{line}</li>)}</ul></div>}
         {ideas.length > 0 && <div><h5 className={styles.miniTitle}>Suggested activations</h5><div className={styles.ideas}>{ideas.map(idea => <div key={idea.kind} className={styles.idea} data-ready={idea.ready}>
           <span className={styles.ideaIcon}>{KINDS[idea.kind].icon}</span>
           <div className={styles.ideaBody}><strong>{idea.title}</strong><p>{idea.why}</p>
@@ -142,12 +192,14 @@ export function MomentRow({ moment, m, open, onToggle, linked, onLink, highlight
   const stats = performanceStats(moment);
   const scores = m.signals.filter(row => row.momentId === moment.id).map(row => row.score);
   const confidence = confidencePercent(moment.confidence);
+  const candidate = moment.status === "candidate";
   const panelId = useId();
   return <article id={`moment-${moment.id}`} className={styles.momentRow} data-open={open} data-highlight={highlight}>
     <button type="button" className={styles.momentHead} aria-expanded={open} aria-controls={panelId} onClick={onToggle}>
       <span className={styles.momentWhen}>{momentDate(moment)}</span>
       <span className={styles.momentName}>{moment.title}</span>
       <span className={styles.momentMeta}>
+        {candidate && <span className={styles.needsReview}>Needs review</span>}
         {stats.slice(0, 2).map(([key, value]) => <span key={key} className={styles.miniStat}><b>{value}</b> {key}</span>)}
         <Dot value={scores.length ? Math.max(...scores) : null} />
         {linked.length > 0 && <span className={styles.miniStat}><b>{linked.length}</b> media</span>}
@@ -159,6 +211,7 @@ export function MomentRow({ moment, m, open, onToggle, linked, onLink, highlight
         <div className={styles.momentTabs} role="tablist">{([["overview", "Overview"], ["media", `Media${linked.length ? ` (${linked.length})` : ""}`], ["sources", `Sources (${moment.evidence.length})`]] as const).map(([key, label]) => <button key={key} type="button" role="tab" aria-selected={tab === key} onClick={() => setTab(key)}>{label}</button>)}</div>
         <button type="button" className={styles.primaryButton} onClick={() => onCreate({ momentId: moment.id, signalKey: m.signals.find(row => row.momentId === moment.id)?.key ?? null, title: "", mediaIds: linked })}><Plus size={15} aria-hidden="true" />New activation</button>
       </div>
+      {candidate && <MomentReview momentId={moment.id} />}
       {tab === "overview" && <div className={styles.momentOverview}>
         <p className={styles.momentText}>{momentSummary(moment)}</p>
         {stats.length > 0 && <dl className={styles.statChips}>{stats.map(([key, value]) => <div key={key}><dd>{value}</dd><dt>{key}</dt></div>)}</dl>}
@@ -168,6 +221,30 @@ export function MomentRow({ moment, m, open, onToggle, linked, onLink, highlight
       {tab === "sources" && <ul className={styles.sources}>{moment.evidence.map(row => { const href = safeSourceUrl(row.source.locator); return <li key={row.id}><span className={styles.sourceMark}>{initials(row.source.name)}</span><div><strong>{row.source.name}</strong><p>{row.statement}</p></div>{href && <a href={href} target="_blank" rel="noopener noreferrer" aria-label={`Open ${row.source.name}`}><ArrowUpRight size={15} aria-hidden="true" /></a>}</li>; })}</ul>}
     </motion.div>}</AnimatePresence>
   </article>;
+}
+
+/** Approve or reject an imported candidate Moment; approved ones start producing signals. */
+function MomentReview({ momentId }: { momentId: string }) {
+  const router = useRouter();
+  const [busy, setBusy] = useState<"verified" | "rejected" | null>(null);
+  const [error, setError] = useState(false);
+  async function decide(decision: "verified" | "rejected") {
+    setBusy(decision); setError(false);
+    try {
+      const response = await fetch("/api/admin/intelligence/review", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ momentId, decision }) });
+      if (!response.ok) throw new Error("review_failed");
+      router.refresh();
+    } catch { setError(true); }
+    setBusy(null);
+  }
+  return <div className={styles.reviewBanner}>
+    <p>Imported from nflverse game stats. Check the Sources tab, then approve to turn it into signals.</p>
+    <div className={styles.reviewActions}>
+      {error && <small role="alert" className={styles.reviewCount}>Not saved. Try again.</small>}
+      <button type="button" className={styles.ghostButton} disabled={busy !== null} onClick={() => decide("rejected")}>{busy === "rejected" ? "Rejecting…" : "Reject"}</button>
+      <button type="button" className={styles.primaryButton} disabled={busy !== null} onClick={() => decide("verified")}>{busy === "verified" ? "Approving…" : "Approve"}</button>
+    </div>
+  </div>;
 }
 
 /* ---------- per-Moment media linking ---------- */

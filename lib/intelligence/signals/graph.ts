@@ -1,6 +1,6 @@
 import type { GraphEvidence, GraphMoment } from "@/lib/intelligence/contracts";
 import { evaluateIntelligenceSignals } from "./evaluate";
-import type { SignalEvaluationOptions, SignalEvidence, SignalMomentFact, VerifiedMilestoneFact } from "./types";
+import type { GameMilestoneFact, SignalEvaluationOptions, SignalEvidence, SignalMomentFact, VerifiedMilestoneFact } from "./types";
 
 /** Incomplete source records cannot support deterministic signals. */
 function evidenceForSignal(evidence: GraphEvidence): SignalEvidence | null {
@@ -24,6 +24,16 @@ function milestoneAssertion(evidence: GraphEvidence): VerifiedMilestoneFact | nu
   return { label, statistic, value, threshold, unit, verificationStatus: "verified", evidence: [source] };
 }
 
+const GAME_MILESTONE_KINDS = new Set<GameMilestoneFact["kind"]>(["debut", "career_first", "career_high"]);
+
+function gameMilestone(evidence: GraphEvidence): GameMilestoneFact | null {
+  const { kind, label, statistic, value, league } = evidence.data;
+  if (!evidenceForSignal(evidence) || typeof kind !== "string" || !GAME_MILESTONE_KINDS.has(kind as GameMilestoneFact["kind"])
+    || typeof label !== "string" || !label.trim() || typeof league !== "string" || !league.trim()) return null;
+  return { kind: kind as GameMilestoneFact["kind"], label: label.trim(), league,
+    statistic: typeof statistic === "string" ? statistic : null, value: typeof value === "number" && Number.isFinite(value) ? value : null };
+}
+
 /**
  * Canonical graph → rule facts. A moment date is usable only with an explicit
  * reviewed occurrence assertion and the exact athlete association. An external
@@ -44,6 +54,9 @@ export function signalFactsFromGraph(moments: GraphMoment[], playerId: string): 
       && moment.confidence !== null && verifiedAssociations.every(association => association.confidence !== null)
       && !dateConflict;
     const milestone = milestones.length === 1 ? milestoneAssertion(milestones[0]) : null;
+    // Conflicting classifications are dropped rather than one being chosen.
+    const games = relevant.filter(item => item.factType === "game_milestone" && item.status === "verified");
+    const game = games.length === 1 ? gameMilestone(games[0]) : null;
     return [{
         playerId, momentId: moment.id, title: moment.title, occurredOn: moment.occurredOn,
         datePrecision: moment.datePrecision,
@@ -52,6 +65,7 @@ export function signalFactsFromGraph(moments: GraphMoment[], playerId: string): 
         evidence: occurrence.filter(item => item.data.occurredOn === moment.occurredOn)
           .map(evidenceForSignal).filter((item): item is SignalEvidence => item !== null),
         ...(milestone ? { milestone } : {}),
+        ...(game ? { gameMilestone: game } : {}),
       } satisfies SignalMomentFact];
   });
 }

@@ -1,5 +1,6 @@
 import type { IntelligenceContentItem } from "./content";
 import type { AthleteSummary, LabMedia, LabResult, LabSection } from "./lab-types";
+import type { SignalType, SignalVerdict } from "./signals/types";
 
 export type WorkspaceAthleteSummary = AthleteSummary & {
   teamLabel: string | null;
@@ -8,6 +9,14 @@ export type WorkspaceAthleteSummary = AthleteSummary & {
   priorityLabel: "High" | "Mid" | "Low" | "Awaiting review";
   hasIntelligence: boolean;
   intelligenceState: "ready" | "incomplete";
+  /** The athlete's soonest signal; null when nothing dated is on file. */
+  next: { type: SignalType; targetDate: string; daysUntil: number; verdict: SignalVerdict; headline: string } | null;
+  /** Candidate Moments waiting for an admin decision. */
+  pendingReview: number;
+  /** Set for a preview-Locker athlete not yet linked to a canonical player record. */
+  link: { previewId: string; gsisId: string; existingPlayerId: string | null; existingPlayerName: string | null } | null;
+  /** True for athletes with a preview Locker. */
+  cohort: boolean;
 };
 
 export type WorkspaceProfile = {

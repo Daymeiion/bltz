@@ -458,3 +458,19 @@ a.destination:hover, button.destination:hover { border-color: var(--gold); }
 .destination[data-brand="teams"] > svg:first-child { color: #7b83eb; }
 .destination[data-brand="whatsapp"] > svg:first-child { color: #25d366; }
 .sentTag { display: inline-flex; align-items: center; gap: 4px; font-weight: 700; color: var(--low); }
+
+/* ---------- decisive signals, cohort and Moment review ---------- */
+.watchSide { display: grid; justify-items: end; gap: 2px; }
+.watchRow em[data-verdict], .railCard small[data-verdict], .verdict { font-style: normal; font-weight: 700; }
+.root [data-verdict="act_now"] { color: var(--high); }
+.root [data-verdict="prepare"] { color: var(--mid); }
+.root [data-verdict="plan"] { color: var(--low); }
+.root [data-verdict="upcoming"] { color: var(--muted); }
+.reviewCount { font-size: 12px; font-weight: 600; color: var(--mid); white-space: nowrap; }
+.ghostButton[data-size="sm"] { padding: 4px 10px; font-size: 13px; }
+.verdict { display: inline-flex; align-items: center; gap: 6px; width: fit-content; padding: 3px 10px; border-radius: 999px; border: 1px solid currentColor; font-size: 13px; text-transform: uppercase; letter-spacing: .04em; }
+.decision { margin: 6px 0 0; font-weight: 600; }
+.reviewBanner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; padding: 12px 16px; border-radius: 14px; background: var(--gold-wash); }
+.reviewBanner p { margin: 0; }
+.reviewActions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.needsReview { display: inline-flex; padding: 2px 8px; border-radius: 999px; background: var(--gold-wash); color: var(--gold-ink); font-size: 12px; font-weight: 700; white-space: nowrap; }

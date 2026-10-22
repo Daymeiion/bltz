@@ -63,7 +63,12 @@ describe("Intelligence Lab access and graph boundaries", () => {
     expect(result.selected?.id).toBe(PLAYER);
     expect(result.selected?.moments.rows).toEqual([]);
     expect(result.selected?.intelligence.signals).toEqual([]);
-    expect(mocks.queries.map(row => row.table)).not.toContain("preview_lockers");
+    // The only preview read is the reviewed date of birth for this canonical athlete.
+    for (const row of mocks.queries.filter(item => item.table === "preview_lockers")) {
+      expect(row.select).toBe("id,dob,updated_at");
+      expect(row.filters).toContainEqual(["player_id", PLAYER]);
+    }
+    expect(mocks.queries.map(row => row.table)).not.toContain("gtm_player_preview_lockers");
     for (const row of mocks.queries) {
       expect(row.select).not.toMatch(/raw_payload|raw_profile|stripe|email|user_id|\*/);
       if (["media", "videos", "intelligence_evidence", "moment_athletes", "player_external_ids"].includes(row.table)) expect(row.filters).toContainEqual(["player_id", PLAYER]);

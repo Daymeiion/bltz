@@ -32,16 +32,47 @@ export interface SignalMomentFact {
   evidence: SignalEvidence[];
   /** Explicit reviewed career statistic assertion; not an inferred first crossing. */
   milestone?: VerifiedMilestoneFact;
+  /** Reviewed game-level classification, e.g. a first recorded NFL game or a single-game career high. */
+  gameMilestone?: GameMilestoneFact;
+}
+
+export type GameMilestoneKind = "debut" | "career_first" | "career_high";
+
+/** Classification asserted by a reviewed `game_milestone` evidence row. */
+export interface GameMilestoneFact {
+  kind: GameMilestoneKind;
+  /** Short reader label, e.g. "first NFL interception" or "career-high 13 tackles". */
+  label: string;
+  statistic: string | null;
+  value: number | null;
+  league: string;
+}
+
+/** Reviewed date of birth. A birthday never becomes a Moment or a career date. */
+export interface AthleteBirthdayFact {
+  playerId: string;
+  dob: string;
+  evidence: SignalEvidence[];
 }
 
 export const SIGNAL_SCORE_SCALE = "0–100 editorial review priority; not probability, earnings, or monetary value";
 
+export type SignalType =
+  | "historical_anniversary" | "debut_anniversary" | "career_first_anniversary" | "career_high_anniversary"
+  | "career_milestone" | "birthday";
+
+/** How soon to act, from UTC calendar days until the target date. */
+export type SignalVerdict = "act_now" | "prepare" | "plan" | "upcoming";
+
 export interface IntelligenceSignal {
   key: string;
-  type: "historical_anniversary" | "career_milestone";
+  type: SignalType;
   ruleVersion: "v1";
   playerId: string;
-  momentId: string;
+  /** Null for athlete-level signals such as birthdays. */
+  momentId: string | null;
+  verdict: SignalVerdict;
+  daysUntil: number;
   score: number;
   scoreScale: string;
   confidence: number;
@@ -57,9 +88,9 @@ export interface IntelligenceSignal {
 
 export interface IntelligenceOpportunity {
   key: string;
-  type: "anniversary_retrospective_review" | "career_milestone_review";
+  type: "anniversary_retrospective_review" | "career_milestone_review" | "birthday_greeting_review";
   playerId: string;
-  momentId: string;
+  momentId: string | null;
   signalKeys: string[];
   strength: number;
   confidence: number;
@@ -73,11 +104,13 @@ export interface SignalEvaluationOptions {
   asOf: string;
   anniversaryWindowDays?: number;
   milestoneRecencyDays?: number;
+  /** Reviewed dates of birth evaluated with the same window as anniversaries. */
+  birthdays?: AthleteBirthdayFact[];
 }
 
 export interface SignalEvaluationResult {
   asOf: string;
   signals: IntelligenceSignal[];
   opportunities: IntelligenceOpportunity[];
-  skipped: Array<{ playerId: string; momentId: string; reason: string }>;
+  skipped: Array<{ playerId: string; momentId: string | null; reason: string }>;
 }

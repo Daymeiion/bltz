@@ -36,6 +36,7 @@ export function projectGraphEvidenceData(factType: string, value: Record<string,
   const fields: Record<string, readonly string[]> = {
     moment_occurrence: ["occurredOn", "dateBasis", "sport", "team", "opponent", "sourcePaths", "scheduledAt", "actualCompletionTime", "uniquePlayCount"],
     career_milestone: ["label", "statistic", "value", "threshold", "unit"],
+    game_milestone: ["kind", "label", "statistic", "value", "league"],
     career_status: ["status", "statusDate"],
     content_item: ["title", "url", "publisher", "contentType", "publishedOn", "releasedOn", "describedEventOn", "careerContext", "matchMethod", "matchConfidence", "identityStatus", "metadataDateBasis", "sourcePaths", "youtubeId"],
     play_activity: ["type", "clock", "wallClock", "sourcePaths", "actions"],
