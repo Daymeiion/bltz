@@ -78,7 +78,7 @@ function summary(row: z.infer<typeof playerSchema>, evaluated: Pick<Evaluation, 
   return { id: row.id, name: row.full_name || row.name, slug: row.slug, school: row.school, position: row.position,
     teamLabel: row.team, portraitUrl: null, ...workspacePriority(scores), intelligenceState: complete ? "ready" : "incomplete",
     next: first ? { type: first.type, targetDate: first.targetDate, daysUntil: first.daysUntil, verdict: first.verdict, headline: signalHeadline(first) } : null,
-    pendingReview: 0, link: null, cohort: false };
+    pendingReview: 0, signalCount: ready?.signals.length ?? 0, link: null, cohort: false };
 }
 
 type Join = z.infer<typeof joinSchema>;
