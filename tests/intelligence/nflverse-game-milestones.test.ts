@@ -50,6 +50,14 @@ describe("nflverse game milestones", () => {
     expect(games).toEqual([]);
   });
 
+  it("counts a first reception only for running backs, receivers and tight ends", () => {
+    const catches = (group: string | null) => detectGameMilestones([rows[0], row("2008_02_CCC_AAA", "AAA", "CCC", { receptions: 1 })], schedule, coverage, group)
+      .flatMap(game => game.milestones.map(item => item.label));
+    expect(catches("TE")).toContain("first NFL reception");
+    expect(catches("QB")).not.toContain("first NFL reception");
+    expect(catches(null)).not.toContain("first NFL reception");
+  });
+
   it("shows the franchise code a relocated team used that season", () => {
     expect(historicalTeam("LAC", 2009)).toBe("SD");
     expect(historicalTeam("LAC", 2017)).toBe("LAC");
