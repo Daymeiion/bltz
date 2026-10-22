@@ -127,7 +127,7 @@ function Watchlist({ data, m }: Props) {
     </Link></li>;
   };
   return <aside className={styles.watch} aria-label="Athletes">
-    <label className={styles.search}><Search size={17} aria-hidden="true" /><span className={styles.srOnly}>Search athletes, teams and moments</span><input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Search athletes, teams and moments…" maxLength={120} aria-controls={listId} /></label>
+    <label className={styles.search}><Search size={17} aria-hidden="true" /><span className={styles.srOnly}>Search athletes, teams and moments</span><input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Athletes, teams and moments…" maxLength={120} aria-controls={listId} /></label>
     {searching ? <>
       <h2 className={styles.watchTitle}>Results {state === "ready" && <span>{rows.length}</span>}</h2>
       <ul id={listId} className={styles.watchList} aria-busy={state === "loading"}>{state === "ready" && rows.map(row)}</ul>
