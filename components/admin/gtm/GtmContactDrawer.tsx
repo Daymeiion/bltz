@@ -1,4 +1,5 @@
 "use client";
+import { GtmPlayerConnections } from "@/components/admin/gtm/GtmPlayerConnections";
 
 import * as Dialog from "@radix-ui/react-dialog";
 import {
@@ -446,6 +447,7 @@ function ActiveGtmContactDrawer({
 
           {contact.playerMaster && <section className="mt-4 rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900" aria-label="Player Master identity"><div className="flex items-start gap-3"><IconUserCheck className="mt-0.5 h-5 w-5" /><div><h3 className="font-semibold">Player Master identity</h3><p className="mt-2 text-sm font-semibold">{contact.playerMaster.displayName}</p><p className="mt-1 text-xs text-neutral-500">{[contact.playerMaster.position, contact.playerMaster.team, contact.playerMaster.collegeName].filter(Boolean).join(" · ") || "Canonical athlete record"}</p><p className="mt-2 font-mono text-[11px] text-neutral-500">{contact.playerMaster.gsisId}</p></div></div></section>}
 
+          {(contact.playerMaster || contact.previewLocker || contact.playerMatch?.verified) && <section className="mt-4" aria-label="Preview and Career ID connections"><h3 className="font-semibold">Preview and Career ID connections</h3><GtmPlayerConnections gsisId={contact.playerMaster?.gsisId} preview={contact.previewLocker} verifiedPlayerId={contact.playerMatch?.verified ? contact.playerMatch.playerId : null}/></section>}
           {notice && <p className="mt-4 rounded-xl border border-neutral-300 bg-white px-4 py-3 text-sm dark:border-neutral-700 dark:bg-neutral-900" role="status">{notice}{notice.startsWith("Interaction logged") && <button type="button" onClick={() => openMode("discovery", lastLoggedInteractionId)} className="ml-1 font-semibold underline">Add discovery insight</button>}</p>}
 
           {mode === "note" && <form action={submitNote} className={formShell}><h3 className="font-semibold">Add a timestamped note</h3><label className="block text-sm font-medium">Note type<select name="noteType" className={inputClass}>{GTM_NOTE_TYPES.map((type) => <option key={type} value={type}>{label(type)}</option>)}</select></label><label className="block text-sm font-medium">Note<textarea name="body" required maxLength={5000} rows={5} className={textareaClass} /></label><FormActions pending={pending} submitLabel="Save note" onCancel={() => setMode(null)} /></form>}

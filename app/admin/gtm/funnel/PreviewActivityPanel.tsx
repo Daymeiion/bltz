@@ -53,7 +53,7 @@ export function PreviewActivityPanel({ report, query }: { report: Report; query:
   const byKind = new Map(report.activity.metrics.map(metric => [metric.eventKind, metric]));
   const lockerSessions = byKind.get("locker_view")?.tabSessionCount;
   const noActivity = activityAvailable && report.activity.metrics.every(metric => metric.eventCount === 0);
-  return <section className={`${panel} overflow-hidden`} aria-labelledby="preview-activity-heading">
+  return <section id="preview-activity" className={`${panel} overflow-hidden`} aria-labelledby="preview-activity-heading">
     <div className="flex flex-wrap items-end justify-between gap-4 border-b border-neutral-200 p-5 dark:border-slate-800">
       <div><p className={`text-xs uppercase tracking-widest ${muted}`}>Player preview tracking</p><h2 id="preview-activity-heading" className="mt-1 text-xl font-semibold">Locker activity and analytics delivery</h2><p className={`mt-2 max-w-2xl text-sm leading-6 ${muted}`}>Read player engagement alongside the delivery queue. The invitation cohort below remains a separate operational view.</p></div>
       <form action="/admin/gtm/funnel" method="get" className="flex w-full flex-wrap items-end gap-2 sm:w-auto">

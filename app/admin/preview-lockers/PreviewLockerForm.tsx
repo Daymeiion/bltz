@@ -64,6 +64,7 @@ export default function PreviewLockerForm({
   viewerAssigned = false,
   gtmLinked = false,
   gtmCompleted = false,
+  reviewIdentity = false,
 }: {
   record?: PreviewRecord;
   initialEnrichmentReport?: EnrichmentReport | null;
@@ -83,9 +84,10 @@ export default function PreviewLockerForm({
   viewerAssigned?: boolean;
   gtmLinked?: boolean;
   gtmCompleted?: boolean;
+  reviewIdentity?: boolean;
 }) {
   const onPreviewSaved = useContext(PreviewSavedContext);
-  const [activeFolder, setActiveFolder] = useState("info");
+  const [activeFolder, setActiveFolder] = useState(reviewIdentity ? "stats" : "info");
   const [enroll, setEnroll] = useState(enrollmentEnabled && !record && !reservedId);
   const [enrollment, setEnrollment] = useState({contact_id:"",campaign:"",source:"",channel:"email",relationship:"warm",is_test:false});
   const [draft, setDraft] = useState<PreviewContent>(() => record ? previewContent.parse(Object.fromEntries(Object.keys(previewContent.shape).map(k => [k, record[k as keyof PreviewRecord]]))) : { ...initial(), full_name: referralName ?? "", slug: "" });
@@ -105,7 +107,7 @@ export default function PreviewLockerForm({
   const [newsArticles, setNewsArticles] = useState(initialArticles);
   const [newsReview, setNewsReview] = useState<{ review: NewsReview; identity: string; searchContext: string; key: string } | null>(() => initialNewsReview ? { review: initialNewsReview, identity: record && newsReviewCurrent ? newsAthleteIdentity(record) : "", searchContext: record ? merchandiseIdentity(record) : "", key: "saved-" + initialNewsReview.version } : null);
   const [newsError, setNewsError] = useState(newsReviewError);
-  const [showStats, setShowStats] = useState(false);
+  const [showStats, setShowStats] = useState(reviewIdentity);
   const [statsNeedReload, setStatsNeedReload] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");

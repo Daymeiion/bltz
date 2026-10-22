@@ -17,6 +17,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { openPlayerMasterPreview, promotePlayerMasterProspects, selectPlayerMasterProspects } from "@/app/admin/gtm/players/actions";
 import { GtmNavigation } from "@/components/admin/gtm/GtmNavigation";
+import { GtmPlayerConnections } from "@/components/admin/gtm/GtmPlayerConnections";
 import {
   GTM_PLAYER_PROSPECT_SORTS,
   type GtmPlayerProspectsReadModel,
@@ -34,6 +35,7 @@ function label(value: string) {
 function pageHref(model: Extract<GtmPlayerProspectsReadModel, { state: "ready" }>, page: number) {
   const parameters = new URLSearchParams();
   const { filters } = model;
+  if (filters.gsisId) parameters.set("gsis", filters.gsisId);
   if (filters.search) parameters.set("search", filters.search);
   if (filters.college) parameters.set("college", filters.college);
   if (filters.team) parameters.set("team", filters.team);
@@ -168,6 +170,8 @@ export function GtmPlayerProspectsWorkspace({ data }: { data: GtmPlayerProspects
             </div>
 
             <form method="get" className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
+              {data.filters.gsisId && <input type="hidden" name="gsis" value={data.filters.gsisId}/>}
+              {data.filters.view !== "all" && <input type="hidden" name="view" value={data.filters.view}/>}
               <label className="lg:col-span-2"><span className="sr-only">Search player name</span><span className="relative block"><IconSearch className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-neutral-400" /><input name="search" defaultValue={data.filters.search} placeholder="Search player name" className={cn(inputClass, "pl-9")} /></span></label>
               <label><span className="sr-only">College contains</span><input name="college" defaultValue={data.filters.college} placeholder="College contains" className={inputClass} /></label>
               <label><span className="sr-only">NFL team abbreviation</span><input name="team" defaultValue={data.filters.team} placeholder="Team (e.g. LAC)" className={inputClass} /></label>
@@ -232,6 +236,7 @@ export function GtmPlayerProspectsWorkspace({ data }: { data: GtmPlayerProspects
                                   {player.previewState === "complete" ? "Preview complete" : "Open preview draft"}
                                 </Link>
                                 {player.previewState !== "complete" && <p className="text-xs text-neutral-500">Draft / incomplete</p>}
+                                <GtmPlayerConnections preview={{id:player.previewId,player_id:player.careerPlayerId}}/>
                               </div>
                             ) : (
                               <button type="button" onClick={() => openPreview(player.gsisId)} disabled={pending} className={secondaryButton}>

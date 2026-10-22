@@ -1,4 +1,7 @@
 import { GtmNavigation } from "@/components/admin/gtm/GtmNavigation";
+import { getGtmPlayerProspects } from "@/lib/gtm/player-prospects";
+import { parseGtmPlayerProspectFilters } from "@/lib/gtm/player-prospect-contract";
+import { SelectedProspectsPanel } from "./SelectedProspectsPanel";
 import { previewAdmin } from "@/lib/preview-lockers/server";
 import { attributionCode, funnelMetrics } from "@/lib/preview-lockers/conversion";
 import { FunnelWorkspace } from "./FunnelWorkspace";
@@ -10,6 +13,7 @@ import { collectActivityPages, type Activity, type Response, type PreviewRow, ty
 export const dynamic="force-dynamic";
 export default async function Funnel({searchParams}:{searchParams:Promise<Record<string,string|string[]|undefined>>}) {
   const {client}=await previewAdmin();
+  const selectedProspectsPromise=getGtmPlayerProspects(parseGtmPlayerProspectFilters({view:"selected"}));
   const supplied=await searchParams;
   const query:Record<string,string|undefined>=Object.fromEntries(Object.entries(supplied).map(([key,value])=>[key,typeof value === "string" ? value : undefined]));
   const previewActivity=await loadPreviewFunnelReport({previewId:query.activity_preview});
@@ -24,6 +28,19 @@ export default async function Funnel({searchParams}:{searchParams:Promise<Record
   for(const [key,op] of [["since","gte"],["until","lte"]] as const){if(query[key]&&/^\d{4}-\d{2}-\d{2}$/.test(query[key]!))cohort=cohort[op]("created_at",`${query[key]}T${key==="since"?"00:00:00":"23:59:59.999"}Z`);}
   const [campaigns,previews,contacts,referrals]=await Promise.all([cohort,client.from("preview_lockers").select("id,full_name,slug").limit(1000),client.from("gtm_contacts").select("id,display_name,email,player_master_gsis_id").eq("archived",false).limit(1000),client.from("preview_conversion_referrals").select("*").order("created_at",{ascending:false}).limit(1000)]);
   if([campaigns,previews,contacts,referrals].some(r=>r.error))throw new Error("Preview funnel data unavailable");
+  const selectedProspects=await selectedProspectsPromise;
+  const selectedPreviewIds=selectedProspects.rows.flatMap(row=>row.previewId ? [row.previewId] : []);
+  // Enrollment status must not change when the conversion report is filtered.
+  const [selectedEnrollments,selectedResponses,selectedInquiries]=await Promise.all([
+    selectedPreviewIds.length ? client.from("preview_conversion_campaigns").select("preview_id,is_test").in("preview_id",selectedPreviewIds) : {data:[],error:null},
+    selectedPreviewIds.length ? client.from("preview_conversion_responses").select("preview_id,state").in("preview_id",selectedPreviewIds) : {data:[],error:null},
+    selectedPreviewIds.length ? collectActivityPages<{preview_id:string}>(async offset=>{
+      const result=await client.from("preview_link_inquiries").select("preview_id").in("preview_id",selectedPreviewIds).order("created_at").order("id").range(offset,offset+999);
+      if(result.error)throw new Error("Selected player interest submissions unavailable");
+      return result.data??[];
+    },10000) : {rows:[],limited:false},
+  ]);
+  if(selectedEnrollments.error || selectedResponses.error)throw new Error("Selected player conversion status unavailable");
   const invitationEmail=await invitationEmailPromise;
   const recipientAssociation=recipientAssociationPromise ? await recipientAssociationPromise : null;
   const emailContacts=recipientAssociation?.some(result=>result.error) ? [] : (contacts.data??[]).filter(contact=>Boolean(contact.email)
@@ -75,6 +92,7 @@ export default async function Funnel({searchParams}:{searchParams:Promise<Record
   });
   return <main className="mx-auto max-w-[1500px] space-y-6 px-4 py-6 sm:px-8">
     <header className="flex flex-wrap items-end justify-between gap-5 border-b border-neutral-200 pb-6 dark:border-slate-800"><div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-500">90-day conversion experiment</p><h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">Preview conversion</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-500">Follow athlete interest, plan the next conversation, and grow the referral network.</p></div><GtmNavigation/></header>
+    <SelectedProspectsPanel data={selectedProspects} contacts={contacts.data??[]} enrollments={selectedEnrollments.data??[]} responses={selectedResponses.data??[]} inquiries={selectedInquiries.rows} inquiriesLimited={selectedInquiries.limited}/>
     <PreviewActivityPanel report={previewActivity} query={query}/>
     <PreviewInvitationEmailPanel report={invitationEmail} previewName={previewActivity.selectedPreview?.label ?? null} privateInvitation={previewActivity.selectedPreview?.access === "private"} contacts={emailContacts}/>
     <FunnelWorkspace rows={workspaceRows} referrals={filteredReferrals} metrics={metrics} truncated={truncated} contacts={contactOptions} previews={(previews.data??[]).map(p=>({id:p.id,label:p.full_name}))} query={query} listsTruncated={[previews,contacts,referrals].some(r=>(r.data?.length??0)>=1000)}/>

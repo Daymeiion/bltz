@@ -52,6 +52,7 @@ export async function getGtmPlayerProspects(
 
   if (filters.view === "selected") query = query.eq("gtm_player_prospects.archived", false);
   if (filters.view === "contacts") query = query.eq("gtm_contacts.archived", false);
+  if (filters.gsisId) query = query.eq("gsis_id", filters.gsisId);
 
   if (filters.search) {
     query = query.or(`display_name.ilike.%${filters.search}%,first_name.ilike.%${filters.search}%,last_name.ilike.%${filters.search}%`);
@@ -79,7 +80,7 @@ export async function getGtmPlayerProspects(
   const gsisIds = sourceRows.map((row) => String(row.gsis_id));
   const selectionsByGsis = new Map<string, string>();
   const contactsByGsis = new Map<string, string>();
-  const previewsByGsis = new Map<string, { id: string; slug: string; state: "draft" | "complete" }>();
+  const previewsByGsis = new Map<string, { id: string; slug: string; playerId: string | null; state: "draft" | "complete" }>();
   if (gsisIds.length > 0) {
     const [
       { data: selections, error: selectionsError },
@@ -90,7 +91,7 @@ export async function getGtmPlayerProspects(
       gtm.from("gtm_contacts").select("id,player_master_gsis_id").eq("archived", false).in("player_master_gsis_id", gsisIds),
       gtm
         .from("gtm_player_preview_lockers")
-        .select("gsis_id,completed_revision,preview_lockers!inner(id,slug,revision)")
+        .select("gsis_id,completed_revision,preview_lockers!inner(id,slug,revision,player_id)")
         .in("gsis_id", gsisIds),
     ]);
     if (selectionsError && !isMissingRelation(selectionsError)) {
@@ -120,6 +121,7 @@ export async function getGtmPlayerProspects(
       previewsByGsis.set(String(relationship.gsis_id), {
         id: String(row.id),
         slug: String(row.slug),
+        playerId: row.player_id == null ? null : String(row.player_id),
         state: Number(relationship.completed_revision) === revision ? "complete" : "draft",
       });
     }
@@ -150,6 +152,7 @@ export async function getGtmPlayerProspects(
       previewId: preview?.id ?? null,
       previewSlug: preview?.slug ?? null,
       previewState: preview?.state ?? null,
+      careerPlayerId: preview?.playerId ?? null,
     }); }),
     total,
     page: Math.min(filters.page, pageCount),

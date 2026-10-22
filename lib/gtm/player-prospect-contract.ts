@@ -15,6 +15,7 @@ export const GTM_PLAYER_PROSPECT_VIEWS = ["all", "selected", "contacts"] as cons
 export type GtmPlayerProspectView = (typeof GTM_PLAYER_PROSPECT_VIEWS)[number];
 
 export interface GtmPlayerProspectFilters {
+  gsisId?: string;
   search: string;
   college: string;
   team: string;
@@ -45,6 +46,7 @@ export interface GtmPlayerProspectRow {
   previewId: string | null;
   previewSlug: string | null;
   previewState: "draft" | "complete" | null;
+  careerPlayerId?: string | null;
 }
 
 export type GtmPlayerProspectsReadModel =
@@ -73,6 +75,7 @@ export function parseGtmPlayerProspectFilters(input: Record<string, string | str
   const requestedSort = cleanText(typeof input.sort === "string" ? input.sort : undefined) as GtmPlayerProspectSort;
   const requestedView = cleanText(typeof input.view === "string" ? input.view : undefined) as GtmPlayerProspectView;
   return {
+    gsisId: typeof input.gsis === "string" && /^\d{2}-\d{7}$/.test(input.gsis) ? input.gsis : "",
     search: cleanText(typeof input.search === "string" ? input.search : undefined),
     college: cleanText(typeof input.college === "string" ? input.college : undefined, 120),
     team: cleanText(typeof input.team === "string" ? input.team : undefined, 20).toUpperCase(),

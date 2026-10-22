@@ -77,7 +77,7 @@ export function AdminSidebar() {
       href: "/admin/settings",
       icon: <IconSettings className="h-5 w-5 flex-shrink-0" />,
     },
-    { label: "Preview Lockers", href: "/admin/preview-lockers/new", activeHref: "/admin/preview-lockers", icon: <IconUsers className="h-5 w-5 flex-shrink-0" /> },
+    { label: "Preview Lockers", href: "/admin/preview-lockers", activeHref: "/admin/preview-lockers", icon: <IconUsers className="h-5 w-5 flex-shrink-0" /> },
   ];
 
   return (

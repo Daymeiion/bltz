@@ -9,7 +9,9 @@ const items = [
   { href: "/admin/gtm/funnel", label: "Preview funnel", icon: IconChartDots3 },
   { href: "/admin/gtm", label: "Overview", icon: IconChartDots3 },
   { href: "/admin/gtm/contacts", label: "Contacts", icon: IconAddressBook },
-  { href: "/admin/gtm/players", label: "Players", icon: IconUsersGroup },
+  { href: "/admin/gtm/players", label: "Player Master", icon: IconUsersGroup },
+  { href: "/admin/preview-lockers", label: "Preview Lockers", icon: IconUsersGroup },
+  { href: "/admin/intelligence", label: "Intelligence Lab", icon: IconChartDots3 },
   { href: "/admin/gtm/imports", label: "Imports", icon: IconFileUpload },
 ] as const;
 
