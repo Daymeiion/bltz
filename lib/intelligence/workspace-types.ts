@@ -13,6 +13,8 @@ export type WorkspaceAthleteSummary = AthleteSummary & {
   next: { type: SignalType; targetDate: string; daysUntil: number; verdict: SignalVerdict; headline: string } | null;
   /** Candidate Moments waiting for an admin decision. */
   pendingReview: number;
+  /** Signals in the lookahead window. */
+  signalCount: number;
   /** Set for a preview-Locker athlete not yet linked to a canonical player record. */
   link: { previewId: string; gsisId: string; existingPlayerId: string | null; existingPlayerName: string | null } | null;
   /** True for athletes with a preview Locker. */

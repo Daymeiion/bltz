@@ -85,17 +85,23 @@ function contextFor(signal: IntelligenceSignal, moment: LabGraphMoment | null, m
   return lines;
 }
 
-function birthdaySuggestions(signal: IntelligenceSignal, m: Model, hasContact: boolean): Suggestion[] {
+/** Moment media is keyed by Moment; athlete-level signals (birthdays) hold their own links. */
+export function mediaKey(momentId: string | null, signalKey: string | null): string | null {
+  return momentId ?? (signalKey ? `signal:${signalKey}` : null);
+}
+
+function birthdaySuggestions(signal: IntelligenceSignal, m: Model, linked: MediaItem[], hasContact: boolean): Suggestion[] {
   const name = m.athlete?.name ?? "the athlete";
   const first = name.split(" ")[0];
   const age = typeof signal.data.age === "number" ? signal.data.age : null;
   const day = dayLabel(signal.targetDate) ?? "the birthday";
-  const photos = m.media.filter(item => item.kind === "photo" || item.kind === "media");
-  const videos = m.media.filter(item => item.kind === "video");
+  const isPhoto = (item: MediaItem) => item.kind === "photo" || item.kind === "media";
+  const photos = linked.filter(isPhoto), videos = linked.filter(item => item.kind === "video");
+  const onFile = (count: number, noun: string) => count ? `${count} ${noun}${count === 1 ? "" : "s"} on file. Link them in this signal's media below.` : `No ${noun}s on file yet. Add one in this signal's media below.`;
   return [
-    { kind: "social", title: `Birthday post for ${first}`, why: `Schedule for ${day}${photos.length ? " with a career photo" : ""}.`, ready: true, status: "Ready to draft", brief: `Happy ${age ? `${ordinal(age)} ` : ""}birthday to ${name}. Pair with a career photo cleared for this use.` },
-    { kind: "gallery", title: "Throwback photo gallery", why: photos.length ? `${photos.length} photo${photos.length === 1 ? "" : "s"} on file to choose from.` : "Add photos to the Locker first.", ready: photos.length > 0, status: photos.length ? "Photos on file" : "Needs photos", brief: `Birthday throwback gallery for ${name}, ${day}. Use only photos cleared for this use.` },
-    { kind: "video", title: "Birthday highlight reel", why: videos.length ? `${videos.length} video${videos.length === 1 ? "" : "s"} to cut from.` : "No video on file yet.", ready: videos.length > 0, status: videos.length ? "Footage on file" : "Needs footage", brief: `Short birthday highlight reel for ${name}, posted ${day}.` },
+    { kind: "social", title: `Birthday post for ${first}`, why: `Schedule for ${day}${photos.length ? " with the linked photo" : ""}.`, ready: true, status: photos.length ? "Photo linked" : "Ready to draft", brief: `Happy ${age ? `${ordinal(age)} ` : ""}birthday to ${name}. Pair with a career photo cleared for this use.` },
+    { kind: "gallery", title: "Throwback photo gallery", why: photos.length ? `${photos.length} linked photo${photos.length === 1 ? "" : "s"} to build from.` : onFile(m.media.filter(isPhoto).length, "photo"), ready: photos.length > 0, status: photos.length ? "Photos linked" : "Needs photos", brief: `Birthday throwback gallery for ${name}, ${day}. Use only photos cleared for this use.` },
+    { kind: "video", title: "Birthday highlight reel", why: videos.length ? `${videos.length} linked video${videos.length === 1 ? "" : "s"} to cut from.` : onFile(m.media.filter(item => item.kind === "video").length, "video"), ready: videos.length > 0, status: videos.length ? "Footage linked" : "Needs footage", brief: `Short birthday highlight reel for ${name}, posted ${day}.` },
     { kind: "interview", title: `Ask ${first} for a birthday Q&A`, why: "A short where-are-they-now conversation timed to the day.", ready: hasContact, status: hasContact ? "Contact on file" : "Contact not on file", brief: `Birthday Q&A request: ${name}, timed for ${day}.` },
   ];
 }
@@ -128,16 +134,20 @@ function suggestionsFor(signal: IntelligenceSignal, moment: LabGraphMoment, m: M
   ];
 }
 
-export function SignalCard({ m, links, hasContact, onMoment, onCreate }: { m: Model; links: Links; hasContact: boolean; onMoment: (id: string) => void; onCreate: (draft: Partial<ActivationDraft>) => void }) {
+export function SignalCard({ m, links, hasContact, onMoment, onCreate, onLink, onAddMedia }: { m: Model; links: Links; hasContact: boolean; onMoment: (id: string) => void; onCreate: (draft: Partial<ActivationDraft>) => void; onLink: (key: string, ids: string[]) => void; onAddMedia: (items: MediaItem[]) => void }) {
   const [index, setIndex] = useState(0);
+  const [mediaOpenFor, setMediaOpenFor] = useState<string | null>(null);
   const reduce = useReducedMotion();
   const signal = m.signals[index];
   if (!signal) return <div className={styles.nextEmpty}><Zap size={20} aria-hidden="true" /><p>{m.ready ? "No dated facts on file yet. Add a reviewed date of birth or approve game Moments to get signals." : "Signals appear once this athlete's evidence is complete."}</p><button type="button" className={styles.ghostButton} onClick={() => onCreate({})}><Plus size={15} aria-hidden="true" />New activation</button></div>;
   const moment = m.moments.find(row => row.id === signal.momentId) ?? null;
   const days = daysBetween(m.asOf, signal.targetDate);
-  const linked = moment ? m.media.filter(item => links[moment.id]?.includes(item.id)) : [];
+  const key = mediaKey(moment?.id ?? null, signal.key)!;
+  const mediaOpen = mediaOpenFor === signal.key;
+  const linkedIds = links[key] ?? [];
+  const linked = m.media.filter(item => linkedIds.includes(item.id));
   const context = contextFor(signal, moment, m);
-  const ideas = moment ? suggestionsFor(signal, moment, m, linked, hasContact) : signal.type === "birthday" ? birthdaySuggestions(signal, m, hasContact) : [];
+  const ideas = moment ? suggestionsFor(signal, moment, m, linked, hasContact) : signal.type === "birthday" ? birthdaySuggestions(signal, m, linked, hasContact) : [];
   const opp = m.opportunities.find(row => row.signalKeys.includes(signal.key));
   const headline = signal.type === "birthday" ? `${m.athlete?.name ?? "Athlete"} ${signalHeadline(signal).toLowerCase()}` : signalHeadline(signal);
   return <div className={styles.signalCard}>
@@ -165,6 +175,12 @@ export function SignalCard({ m, links, hasContact, onMoment, onCreate }: { m: Mo
           </div>
         </div>
         {context.length > 0 && <div><h5 className={styles.miniTitle}>Why it matters</h5><ul className={styles.why}>{context.map(line => <li key={line}>{line}</li>)}</ul></div>}
+        {!moment && <div>
+          <div className={styles.signalMediaHead}><h5 className={styles.miniTitle}>Media for this signal{linked.length ? ` (${linked.length})` : ""}</h5>
+            <button type="button" className={styles.ghostButton} aria-expanded={mediaOpen} onClick={() => setMediaOpenFor(mediaOpen ? null : signal.key)}>{mediaOpen ? "Done" : linked.length ? "Edit media" : "Link media"}</button></div>
+          {mediaOpen ? <MomentMedia scope="signal" items={m.media} linked={linkedIds} onChange={ids => onLink(key, ids)} onAdd={items => { onAddMedia(items); onLink(key, [...new Set([...linkedIds, ...items.map(item => item.id)])]); }} />
+            : linked.length > 0 && <ul className={styles.linkedList}>{linked.map(item => <li key={item.id}><MediaCard item={item} /></li>)}</ul>}
+        </div>}
         {ideas.length > 0 && <div><h5 className={styles.miniTitle}>Suggested activations</h5><div className={styles.ideas}>{ideas.map(idea => <div key={idea.kind} className={styles.idea} data-ready={idea.ready}>
           <span className={styles.ideaIcon}>{KINDS[idea.kind].icon}</span>
           <div className={styles.ideaBody}><strong>{idea.title}</strong><p>{idea.why}</p>
@@ -200,6 +216,7 @@ export function MomentRow({ moment, m, open, onToggle, linked, onLink, highlight
       <span className={styles.momentName}>{moment.title}</span>
       <span className={styles.momentMeta}>
         {candidate && <span className={styles.needsReview}>Needs review</span>}
+        {moment.status === "rejected" && <span className={styles.rejectedTag}>Rejected</span>}
         {stats.slice(0, 2).map(([key, value]) => <span key={key} className={styles.miniStat}><b>{value}</b> {key}</span>)}
         <Dot value={scores.length ? Math.max(...scores) : null} />
         {linked.length > 0 && <span className={styles.miniStat}><b>{linked.length}</b> media</span>}
@@ -209,7 +226,10 @@ export function MomentRow({ moment, m, open, onToggle, linked, onLink, highlight
     <AnimatePresence initial={false}>{open && <motion.div id={panelId} initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: .28, ease: [0.16, 1, 0.3, 1] }} className={styles.momentPanel}>
       <div className={styles.momentBar}>
         <div className={styles.momentTabs} role="tablist">{([["overview", "Overview"], ["media", `Media${linked.length ? ` (${linked.length})` : ""}`], ["sources", `Sources (${moment.evidence.length})`]] as const).map(([key, label]) => <button key={key} type="button" role="tab" aria-selected={tab === key} onClick={() => setTab(key)}>{label}</button>)}</div>
-        <button type="button" className={styles.primaryButton} onClick={() => onCreate({ momentId: moment.id, signalKey: m.signals.find(row => row.momentId === moment.id)?.key ?? null, title: "", mediaIds: linked })}><Plus size={15} aria-hidden="true" />New activation</button>
+        <div className={styles.reviewActions}>
+          {moment.status === "verified" && <MomentRemove momentId={moment.id} title={moment.title} />}
+          <button type="button" className={styles.primaryButton} onClick={() => onCreate({ momentId: moment.id, signalKey: m.signals.find(row => row.momentId === moment.id)?.key ?? null, title: "", mediaIds: linked })}><Plus size={15} aria-hidden="true" />New activation</button>
+        </div>
       </div>
       {candidate && <MomentReview momentId={moment.id} />}
       {tab === "overview" && <div className={styles.momentOverview}>
@@ -223,8 +243,8 @@ export function MomentRow({ moment, m, open, onToggle, linked, onLink, highlight
   </article>;
 }
 
-/** Approve or reject an imported candidate Moment; approved ones start producing signals. */
-function MomentReview({ momentId }: { momentId: string }) {
+/** Status change through the review endpoint; graph rows are never deleted. */
+function useMomentDecision(momentId: string) {
   const router = useRouter();
   const [busy, setBusy] = useState<"verified" | "rejected" | null>(null);
   const [error, setError] = useState(false);
@@ -237,6 +257,21 @@ function MomentReview({ momentId }: { momentId: string }) {
     } catch { setError(true); }
     setBusy(null);
   }
+  return { busy, error, decide };
+}
+
+/** Removes an approved Moment from the Lab: it stops producing signals and is kept, hidden, as rejected. */
+function MomentRemove({ momentId, title }: { momentId: string; title: string }) {
+  const { busy, error, decide } = useMomentDecision(momentId);
+  return <>
+    {error && <small role="alert" className={styles.reviewCount}>Not removed. Try again.</small>}
+    <button type="button" className={styles.ghostButton} disabled={busy !== null} onClick={() => { if (window.confirm(`Remove "${title}"? It stops producing signals and moves to the hidden rejected list. The record is kept for the audit trail.`)) void decide("rejected"); }}>{busy ? "Removing…" : "Remove"}</button>
+  </>;
+}
+
+/** Approve or reject an imported candidate Moment; approved ones start producing signals. */
+function MomentReview({ momentId }: { momentId: string }) {
+  const { busy, error, decide } = useMomentDecision(momentId);
   return <div className={styles.reviewBanner}>
     <p>Imported from nflverse game stats. Check the Sources tab, then approve to turn it into signals.</p>
     <div className={styles.reviewActions}>
@@ -261,7 +296,7 @@ function Drop({ id, label, className, children }: { id: string; label: string; c
   return <div ref={setNodeRef} className={className} data-over={isOver} data-armed={Boolean(active)} aria-label={label}>{children}</div>;
 }
 
-function MomentMedia({ items, linked, onChange, onAdd }: { items: MediaItem[]; linked: string[]; onChange: (ids: string[]) => void; onAdd: (items: MediaItem[]) => void }) {
+function MomentMedia({ items, linked, onChange, onAdd, scope = "moment" }: { items: MediaItem[]; linked: string[]; onChange: (ids: string[]) => void; onAdd: (items: MediaItem[]) => void; scope?: "moment" | "signal" }) {
   const id = useId();
   const [adding, setAdding] = useState(false);
   const [filter, setFilter] = useState<(typeof FILTERS)[number][0]>("all");
@@ -279,8 +314,8 @@ function MomentMedia({ items, linked, onChange, onAdd }: { items: MediaItem[]; l
   const active = items.find(item => item.id === dragging);
   return <DndContext id={id} sensors={sensors} collisionDetection={collide} onDragStart={event => setDragging(String(event.active.id))} onDragCancel={() => setDragging(null)} onDragEnd={end}>
     <div className={styles.momentMedia}>
-      <Drop id="linked" label="Media linked to this moment" className={styles.linkedZone}>
-        <div className={styles.zoneHead}><strong>Linked to this moment</strong><span className={styles.draftNote}>Drafts, not saved</span><button type="button" className={styles.ghostButton} aria-expanded={adding} onClick={() => setAdding(!adding)}>{adding ? <X size={14} aria-hidden="true" /> : <Plus size={14} aria-hidden="true" />}{adding ? "Close" : "Add media"}</button></div>
+      <Drop id="linked" label={`Media linked to this ${scope}`} className={styles.linkedZone}>
+        <div className={styles.zoneHead}><strong>Linked to this {scope}</strong><span className={styles.draftNote}>Drafts, not saved</span><button type="button" className={styles.ghostButton} aria-expanded={adding} onClick={() => setAdding(!adding)}>{adding ? <X size={14} aria-hidden="true" /> : <Plus size={14} aria-hidden="true" />}{adding ? "Close" : "Add media"}</button></div>
         {adding && <AddMediaForm linked={linked} onAdd={added => { onAdd(added); setAdding(false); }} />}
         {attached.length ? <ul className={styles.linkedList}>{attached.map(item => <li key={item.id}><Drag item={item}><MediaCard item={item} /></Drag><button type="button" className={styles.iconButton} onClick={() => remove(item.id)} aria-label={`Unlink ${item.title}`}><Minus size={15} aria-hidden="true" /></button></li>)}</ul>
           : <p className={styles.zoneEmpty}>{dragging ? "Drop to link" : "Drag a photo, video, article or interview here"}</p>}
@@ -351,7 +386,8 @@ export function ActivationComposer({ draft, m, links, onClose, onSave }: { draft
   // No close() in cleanup: the dev double-run would fire "close" and dismiss the draft. Unmounting removes the modal.
   useEffect(() => { const node = dialog.current; if (node && !node.open) node.showModal(); }, []);
   const moment = m.moments.find(row => row.id === value.momentId) ?? null;
-  const linkedIds = value.momentId ? links[value.momentId] ?? [] : [];
+  const source = mediaKey(value.momentId, value.signalKey);
+  const linkedIds = source ? links[source] ?? [] : [];
   const options = m.media.filter(item => linkedIds.includes(item.id));
   return <dialog ref={dialog} className={styles.dialog} onClose={onClose} aria-labelledby="composer-title">
     <form method="dialog" className={styles.composer} onSubmit={event => { event.preventDefault(); if (value.title.trim()) onSave({ ...value, title: value.title.trim() }); }}>
@@ -362,7 +398,7 @@ export function ActivationComposer({ draft, m, links, onClose, onSave }: { draft
         <label className={styles.field}><span>Moment</span><select value={value.momentId ?? ""} onChange={event => setValue({ ...value, momentId: event.target.value || null, mediaIds: [] })}><option value="">Not tied to a moment</option>{m.moments.map(row => <option key={row.id} value={row.id}>{row.title}</option>)}</select></label>
         <label className={styles.field}><span>Due</span><input type="date" value={value.due ?? ""} onChange={event => setValue({ ...value, due: event.target.value || null })} /></label>
       </div>
-      <fieldset className={styles.field}><legend>Media to use</legend>{options.length ? <div className={styles.mediaPicks}>{options.map(item => <label key={item.id}><input type="checkbox" checked={value.mediaIds.includes(item.id)} onChange={event => setValue({ ...value, mediaIds: event.target.checked ? [...value.mediaIds, item.id] : value.mediaIds.filter(row => row !== item.id) })} />{item.title}</label>)}</div> : <p className={styles.quiet}>{moment ? "Link media in this moment's Media tab to use it here." : "Pick a moment to choose its media."}</p>}</fieldset>
+      <fieldset className={styles.field}><legend>Media to use</legend>{options.length ? <div className={styles.mediaPicks}>{options.map(item => <label key={item.id}><input type="checkbox" checked={value.mediaIds.includes(item.id)} onChange={event => setValue({ ...value, mediaIds: event.target.checked ? [...value.mediaIds, item.id] : value.mediaIds.filter(row => row !== item.id) })} />{item.title}</label>)}</div> : <p className={styles.quiet}>{moment ? "Link media in this moment's Media tab to use it here." : value.signalKey ? "Link media on the signal card to use it here." : "Pick a moment to choose its media."}</p>}</fieldset>
       <label className={styles.field}><span>Brief</span><textarea rows={4} value={value.brief} onChange={event => setValue({ ...value, brief: event.target.value })} placeholder="Angle, audience and must-have facts" /></label>
       <footer><span className={styles.draftNote}>Saved as a draft in this tab only</span><button type="button" className={styles.ghostButton} onClick={onClose}>Cancel</button><button type="submit" className={styles.primaryButton}>Save draft</button></footer>
     </form>

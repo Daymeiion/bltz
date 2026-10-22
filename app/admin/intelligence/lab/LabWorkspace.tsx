@@ -110,8 +110,7 @@ function Watchlist({ data, m }: Props) {
   }, [term, data.result.asOf]);
   const searching = term.length >= 2;
   const row = (athlete: WorkspaceAthleteSummary) => {
-    const next = athlete.next;
-    const meta = next ? `${next.headline} · ${whenLabel(next.daysUntil)}` : athlete.link ? "Link the player record to load career facts" : athlete.school ?? athlete.teamLabel ?? "Nothing dated on file";
+    const meta = athlete.school ?? athlete.teamLabel ?? "School not recorded";
     if (athlete.link) return <li key={athlete.id}><div className={styles.watchRow}>
       <Portrait url={athlete.portraitUrl} name={athlete.name} size="sm" />
       <span><strong>{athlete.name}</strong><small>{meta}</small></span>
@@ -122,8 +121,8 @@ function Watchlist({ data, m }: Props) {
       <Portrait url={athlete.portraitUrl} name={athlete.name} size="sm" />
       <span><strong>{athlete.name}</strong><small>{meta}</small></span>
       <span className={styles.watchSide}>
-        {next ? <em data-verdict={next.verdict}>{VERDICT_LABEL[next.verdict]}</em> : <em data-priority={priority}>{priority === "Awaiting review" ? "No signal" : priority}</em>}
-        {athlete.pendingReview > 0 && <small className={styles.reviewCount}>{athlete.pendingReview} to review</small>}
+        <em data-priority={priority}>{priority === "Awaiting review" ? "—" : priority === "Mid" ? "Med" : priority}</em>
+        <small className={styles.signalCount}>{athlete.signalCount} signal{athlete.signalCount === 1 ? "" : "s"}</small>
       </span>
     </Link></li>;
   };
@@ -247,7 +246,13 @@ function Story({ data, m, onActivation, initialMomentId }: Props & { onActivatio
     return () => { observer.disconnect(); tail.disconnect(); if (focusTimer.current) window.clearTimeout(focusTimer.current); };
   }, [startMoment]);
   const openMoment = (id: string) => { setOpen(id); go(id); };
+  const addMedia = (items: MediaItem[]) => setAdded(current => { const known = new Set([...current, ...m.media].map(row => row.id)); return [...items.filter(row => !known.has(row.id)), ...current]; });
+  const linkMedia = (key: string, ids: string[]) => setLinks(current => ({ ...current, [key]: ids }));
   const pending = m.moments.filter(row => row.status === "candidate");
+  // Rejected and removed Moments stay in the record but out of the way.
+  const [showRejected, setShowRejected] = useState(false);
+  const rejected = m.moments.filter(row => row.status === "rejected");
+  const shown = showRejected ? m.moments : m.moments.filter(row => row.status !== "rejected");
   const tabs = [["intel", "Intelligence"], ["moments", "Moments"]] as const;
   return <div className={styles.story}>
     <Identity data={data} m={m} />
@@ -256,9 +261,9 @@ function Story({ data, m, onActivation, initialMomentId }: Props & { onActivatio
       <Section title="Intelligence" icon={<Zap size={18} aria-hidden="true" />}>{pending.length > 0 && <div className={styles.reviewBanner}>
         <p><strong>{pending.length} game Moment{pending.length === 1 ? "" : "s"}</strong> imported from nflverse {pending.length === 1 ? "needs" : "need"} your review. Approved ones become signals.</p>
         <button type="button" className={styles.primaryButton} onClick={() => openMoment(pending[0].id)}>Review</button>
-      </div>}<SignalCard m={mm} links={links} hasContact={Boolean(data.profile?.email || data.profile?.phone)} onMoment={openMoment} onCreate={setDraft} /></Section>
+      </div>}<SignalCard m={mm} links={links} hasContact={Boolean(data.profile?.email || data.profile?.phone)} onMoment={openMoment} onCreate={setDraft} onLink={linkMedia} onAddMedia={addMedia} /></Section>
     </div>
-    <div id="story-moments" className={styles.anchor}><Section title="Moments" action={m.moments.length ? <span className={styles.quiet}>{m.moments.length}</span> : undefined}>{m.moments.length ? <div className={styles.momentStack}>{m.moments.map(moment => <MomentRow key={moment.id} moment={moment} m={mm} open={open === moment.id} onAddMedia={items => setAdded(current => { const known = new Set([...current, ...m.media].map(row => row.id)); return [...items.filter(row => !known.has(row.id)), ...current]; })} onCreate={setDraft} onToggle={() => setOpen(open === moment.id ? null : moment.id)} linked={links[moment.id] ?? []} onLink={ids => setLinks(current => ({ ...current, [moment.id]: ids }))} highlight={focus === moment.id} />)}</div> : <p className={styles.quiet}>{m.athlete!.moments.state === "unavailable" ? "Moments could not be loaded. Try reloading." : "No Moments linked yet."}</p>}</Section></div>
+    <div id="story-moments" className={styles.anchor}><Section title="Moments" action={rejected.length ? <button type="button" className={styles.ghostButton} data-size="sm" aria-pressed={showRejected} onClick={() => setShowRejected(!showRejected)}>{showRejected ? "Hide" : "Show"} rejected ({rejected.length})</button> : shown.length ? <span className={styles.quiet}>{shown.length}</span> : undefined}>{shown.length ? <div className={styles.momentStack}>{shown.map(moment => <MomentRow key={moment.id} moment={moment} m={mm} open={open === moment.id} onAddMedia={addMedia} onCreate={setDraft} onToggle={() => setOpen(open === moment.id ? null : moment.id)} linked={links[moment.id] ?? []} onLink={ids => setLinks(current => ({ ...current, [moment.id]: ids }))} highlight={focus === moment.id} />)}</div> : <p className={styles.quiet}>{m.athlete!.moments.state === "unavailable" ? "Moments could not be loaded. Try reloading." : rejected.length ? "Every Moment here was rejected or removed." : "No Moments linked yet."}</p>}</Section></div>
     <div id="story-end" aria-hidden="true" />
     {draft && <ActivationComposer key={JSON.stringify(draft)} draft={draft} m={mm} links={links} onClose={() => setDraft(null)} onSave={value => { onActivation(value); setDraft(null); }} />}
   </div>;

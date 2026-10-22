@@ -15,7 +15,7 @@ const MOMENT = "00000000-0000-4000-8000-000000000021";
 const EVIDENCE = "00000000-0000-4000-8000-000000000031";
 const SOURCE = "00000000-0000-4000-8000-000000000041";
 function summary(id = ATHLETE, name = "Test Athlete"): WorkspaceAthleteSummary {
-  return { id, name, slug: "test-athlete", school: "Test School", position: "LB", teamLabel: null, portraitUrl: null, priority: null, priorityLabel: "Awaiting review", hasIntelligence: false, intelligenceState: "ready", next: null, pendingReview: 0, link: null, cohort: false };
+  return { id, name, slug: "test-athlete", school: "Test School", position: "LB", teamLabel: null, portraitUrl: null, priority: null, priorityLabel: "Awaiting review", hasIntelligence: false, intelligenceState: "ready", next: null, pendingReview: 0, signalCount: 0, link: null, cohort: false };
 }
 function fixture(id = ATHLETE, name = "Test Athlete"): WorkspaceResult {
   const section = <T,>(rows: T[] = []) => ({ state: "ready" as const, rows, truncated: false });

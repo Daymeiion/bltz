@@ -60,7 +60,7 @@ function summaryFor(data: WorkspaceResult): WorkspaceAthleteSummary | null {
   if (supplied) return supplied;
   const scores = athlete.intelligenceState === "ready" ? athlete.intelligence.signals.map(row => row.score).filter(Number.isFinite) : [];
   const priority = scores.length ? Math.max(...scores) : null;
-  return { id: athlete.id, name: athlete.name, slug: athlete.slug, school: athlete.school, position: athlete.position, teamLabel: athlete.teamLabel, portraitUrl: data.profile?.portraitUrl ?? null, priority, priorityLabel: reviewPriority(priority), hasIntelligence: scores.length > 0, intelligenceState: athlete.intelligenceState, next: null, pendingReview: 0, link: null, cohort: false };
+  return { id: athlete.id, name: athlete.name, slug: athlete.slug, school: athlete.school, position: athlete.position, teamLabel: athlete.teamLabel, portraitUrl: data.profile?.portraitUrl ?? null, priority, priorityLabel: reviewPriority(priority), hasIntelligence: scores.length > 0, intelligenceState: athlete.intelligenceState, next: null, pendingReview: 0, signalCount: 0, link: null, cohort: false };
 }
 function updateAddress(athlete: string, asOf: string, query: string, moment: string | null) {
   const url = new URL(window.location.href);
@@ -292,7 +292,7 @@ export function CareerWorkspace({ initial, initialMomentId = null }: { initial: 
     try {
       const saved = JSON.parse(sessionStorage.getItem(WATCHLIST_KEY) ?? "[]") as unknown;
       if (Array.isArray(saved)) {
-        const recovered = saved.filter((row): row is WorkspaceAthleteSummary => Boolean(row && typeof row === "object" && UUID.test(row.id) && typeof row.name === "string" && row.name.length <= 200)).map(row => ({ id: row.id, name: row.name, slug: typeof row.slug === "string" ? row.slug : "", school: typeof row.school === "string" ? row.school : null, position: typeof row.position === "string" ? row.position : null, teamLabel: typeof row.teamLabel === "string" ? row.teamLabel : null, priority: null, priorityLabel: "Awaiting review" as const, hasIntelligence: false, portraitUrl: null, intelligenceState: "incomplete" as const, next: null, pendingReview: 0, link: null, cohort: false }));
+        const recovered = saved.filter((row): row is WorkspaceAthleteSummary => Boolean(row && typeof row === "object" && UUID.test(row.id) && typeof row.name === "string" && row.name.length <= 200)).map(row => ({ id: row.id, name: row.name, slug: typeof row.slug === "string" ? row.slug : "", school: typeof row.school === "string" ? row.school : null, position: typeof row.position === "string" ? row.position : null, teamLabel: typeof row.teamLabel === "string" ? row.teamLabel : null, priority: null, priorityLabel: "Awaiting review" as const, hasIntelligence: false, portraitUrl: null, intelligenceState: "incomplete" as const, next: null, pendingReview: 0, signalCount: 0, link: null, cohort: false }));
         setWatchlist(current => uniqueAthletes([...recovered, ...current]));
       }
     } catch { /* A blocked or stale browser session must not prevent graph inspection. */ }
