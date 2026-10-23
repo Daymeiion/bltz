@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  outputFileTracingIncludes: {
+    "/admin/getty-partnership/download": ["./app/admin/getty-partnership/_documents/*.pdf"],
+  },
   experimental: {
     serverActions: {
       // GTM accepts CSV files up to 2 MB. Leave room for multipart boundaries
