@@ -87,7 +87,7 @@ export default async function AdminLoginPage({
               ) : null}
 
               <Button type="submit" className="w-full bg-[#ffbb00] font-semibold text-black hover:bg-[#ffd052]">
-                Sign in to Beta Intelligence
+                Sign in to BLTZ Admin
               </Button>
             </form>
 

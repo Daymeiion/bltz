@@ -61,11 +61,6 @@ export function AdminSidebar() {
       href: "/admin/analytics",
       icon: <IconChartBar className="h-5 w-5 flex-shrink-0" />,
     },
-    {
-      label: "Beta Intelligence",
-      href: "/admin/beta",
-      icon: <IconFlask className="h-5 w-5 flex-shrink-0" />,
-    },
     { label: "Intelligence Lab", href: "/admin/intelligence", icon: <IconFlask className="h-5 w-5 flex-shrink-0" /> },
     {
       label: "GTM",

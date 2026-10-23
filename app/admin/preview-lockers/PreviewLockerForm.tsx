@@ -5,6 +5,7 @@ import { PreviewSavedContext } from "./PreviewSavedContext";
 import { PfrJerseyImport } from "./PfrJerseyImport";
 import { reviewPfrJerseys } from "@/lib/preview-lockers/jersey-review";
 import { z } from "zod";
+import { arrayMove } from "@dnd-kit/sortable";
 
 import { useContext, useEffect, useRef, useState } from "react";
 import Link from "next/link";
@@ -36,6 +37,7 @@ import StatsCsvImport from "./StatsCsvImport";
 import { BuilderSection } from "./BuilderSection";
 import { previewVideoCategories, previewVideoLevel } from "@/lib/preview-lockers/video";
 import { MediaSection, MediaItem } from "./MediaDisclosure";
+import { PhotoOrder, SortablePhotoRow } from "./PhotoOrder";
 import { createClient } from "@/lib/supabase/client";
 import { parseYouTubeBatch } from "@/lib/preview-lockers/youtube-bulk";
 
@@ -159,6 +161,14 @@ export default function PreviewLockerForm({
     };
   }, [dirty, busy]);
   function change(patch: Partial<PreviewContent> | ((current: PreviewContent) => Partial<PreviewContent>)) { setDraft(current => ({ ...current, ...(typeof patch === "function" ? patch(current) : patch) })); setReviewed(false); setCompletionReviewed(false); setDirty(true); setError(""); }
+  function movePhoto(id: string, targetId: string) {
+    if (pending.current || statsNeedReload || id === targetId) return;
+    change(current => {
+      const from = current.photos.findIndex(photo => photo.id === id);
+      const to = current.photos.findIndex(photo => photo.id === targetId);
+      return from < 0 || to < 0 ? {} : { photos: arrayMove(current.photos, from, to) };
+    });
+  }
   function toggleSelection(kind: "photo" | "video", id: string, selected: boolean) {
     const update = kind === "photo" ? setSelectedPhotos : setSelectedVideos;
     update(current => selected ? [...current.filter(value => value !== id), id] : current.filter(value => value !== id));
@@ -358,13 +368,14 @@ export default function PreviewLockerForm({
         if (!response.ok) throw new Error(response.status === 400 ? `${file.name} is not an allowed ${kind} type or exceeds the size limit.` : `Could not prepare ${file.name} for private upload.`);
         const ticket = await response.json() as { path: string; token: string; bucket: string };
         const result = await storage.from(ticket.bucket).uploadToSignedUrl(ticket.path, ticket.token, file, { contentType: file.type });
-        if (result.error) throw new Error(`Upload failed for ${file.name}.`);
+        if (result.error) throw new Error(`Upload failed for ${file.name}: ${result.error.message || "Storage rejected the upload without an error reason."}`);
         uploaded.push({ id: crypto.randomUUID(), title: file.name.replace(/\.[^.]+$/, "").slice(0, 160) || "Uploaded media", storagePath: ticket.path, mimeType: file.type as PreviewMediaMime });
       }
       retainUploaded();
       setMessage(`${uploaded.length} private ${kind}${uploaded.length === 1 ? "" : "s"} uploaded into this draft. Review metadata, then save the draft.${duplicates.length ? ` ${duplicateNotice}` : ""}`);
     } catch (cause) {
       retainUploaded();
+      setMessage("");
       setError(`${cause instanceof Error ? cause.message : "Private upload failed."}${uploaded.length ? ` ${uploaded.length} completed upload${uploaded.length === 1 ? " was" : "s were"} retained in this draft.` : ""}`);
     } finally { pending.current = false; setBusy(null); }
   }
@@ -534,7 +545,58 @@ export default function PreviewLockerForm({
       </section>
       <section id="locker-panel-images" role="tabpanel" aria-labelledby="locker-tab-images" tabIndex={0} hidden={activeFolder !== "images"} className={styles.folderPanel}>
       <h2 className={styles.folderHeading}>Photos & Photo Room</h2>
-      <MediaSection title="Photos" count={draft.photos.length} limit={40}>{saved ? <label className="grid gap-2 text-sm font-medium">Upload multiple private photos<Input aria-label="Upload multiple private photos" type="file" multiple accept="image/jpeg,image/png,image/webp" onChange={event => { void uploadFiles("photo", event.target.files); event.target.value = ""; }} /><span className="font-normal">JPG, PNG, or WebP. Up to 10 MB each. Uploads stay private and must be saved into this draft.</span></label> : <p className="text-sm">Save the private preview once before uploading photo files.</p>}{draft.photos.length > 0 && <div className="flex flex-wrap items-center gap-3 rounded-lg border p-3 text-sm"><button type="button" className="underline" onClick={() => setSelectedPhotos(draft.photos.map(photo => photo.id))}>Select all photos</button><button type="button" className="underline" onClick={() => setSelectedPhotos([])}>Clear selection</button><span aria-live="polite">{selectedPhotos.length} selected</span><Button type="button" variant="outline" disabled={!selectedPhotos.length} onClick={() => setRemovalKind("photo")}>Remove selected photos</Button></div>}{draft.photos.map((photo, index) => <MediaItem key={photo.id} media={photo} kind="photo" index={index} selected={selectedPhotos.includes(photo.id)} onSelect={selected => toggleSelection("photo", photo.id, selected)}><label className="flex items-center gap-2 text-sm"><input type="checkbox" aria-label={`Photo ${index + 1} appears in hero slideshow`} checked={photo.inHeroSlideshow !== false && !photo.isHeadshot} disabled={photo.isHeadshot} onChange={event => change({ photos: draft.photos.map((item, i) => i === index ? { ...item, inHeroSlideshow: event.target.checked } : item) })} />Show in hero slideshow</label><p className="text-xs text-muted-foreground">{photo.isHeadshot ? "Selected headshot. Headshots stay out of the slideshow." : "Selected photos rotate in list order when no hero video is assigned for the device. Uncheck every photo for no slideshow."}</p><Input aria-label={`Photo ${index + 1} title`} placeholder="title" maxLength={160} value={photo.title} onChange={e => change({ photos: draft.photos.map((v, i) => i === index ? { ...v, title: e.target.value } : v) })} />{"url" in photo ? <Input aria-label={`Photo ${index + 1} url`} placeholder="url" maxLength={2048} value={photo.url} onChange={e => change({ photos: draft.photos.map((v, i) => i === index ? { ...v, url: e.target.value } : v) })} /> : <p className="text-sm">Private uploaded file · {photo.mimeType}</p>}{(["credits", "sourceUrl", "season"] as const).map(key => <Input key={key} aria-label={`Photo ${index + 1} ${key}`} placeholder={key} maxLength={key === "credits" ? 300 : key === "season" ? 20 : 2048} value={photo[key] ?? ""} onChange={e => change({ photos: draft.photos.map((v, i) => i === index ? { ...v, [key]: e.target.value || null } : v) })} />)}<select aria-label={`Photo ${index + 1} level`} className="h-10 rounded-md border bg-background px-3" value={photo.level} onChange={e => change({ photos: draft.photos.map((v, i) => i === index ? { ...v, level: e.target.value as typeof photo.level } : v) })}>{["hs", "cfb", "pro", "off-field"].map(level => <option key={level}>{level}</option>)}</select><Button type="button" variant="outline" onClick={() => removeMedia("photo", [photo.id])}>Remove photo from draft</Button></MediaItem>)}<Button type="button" variant="outline" disabled={draft.photos.length >= 40} onClick={() => change({ photos: [...draft.photos, { id: crypto.randomUUID(), title: "", url: "", credits: null, sourceUrl: null, season: null, level: "off-field" }] })}>Add photo</Button></MediaSection>
+      <MediaSection title="Photos" count={draft.photos.length} limit={40}>
+        {saved ? (
+          <label className="grid gap-2 text-sm font-medium">
+            Upload multiple private photos
+            <Input aria-label="Upload multiple private photos" type="file" multiple accept="image/jpeg,image/png,image/webp" onChange={event => { void uploadFiles("photo", event.target.files); event.target.value = ""; }} />
+            <span className="font-normal">JPG, PNG, or WebP. Up to 10 MB each. Uploads stay private and must be saved into this draft.</span>
+          </label>
+        ) : <p className="text-sm">Save the private preview once before uploading photo files.</p>}
+        {draft.photos.length > 0 && (
+          <div className="flex flex-wrap items-center gap-3 rounded-lg border p-3 text-sm">
+            <button type="button" className="underline" onClick={() => setSelectedPhotos(draft.photos.map(photo => photo.id))}>Select all photos</button>
+            <button type="button" className="underline" onClick={() => setSelectedPhotos([])}>Clear selection</button>
+            <span aria-live="polite">{selectedPhotos.length} selected</span>
+            <Button type="button" variant="outline" disabled={!selectedPhotos.length} onClick={() => setRemovalKind("photo")}>Remove selected photos</Button>
+          </div>
+        )}
+        {draft.photos.length > 1 && (
+          <p className="text-sm text-muted-foreground">
+            Drag the handles to reorder photos. With a keyboard, press Space to pick up a photo, use the arrow keys to move it, then press Space to drop it. Save the draft to apply the new slideshow order.
+          </p>
+        )}
+        {draft.photos.length > 0 && (
+          <PhotoOrder ids={draft.photos.map(photo => photo.id)} onMove={movePhoto}>
+            {draft.photos.map((photo, index) => (
+              <SortablePhotoRow
+                key={photo.id}
+                id={photo.id}
+                label={`photo ${index + 1}: ${photo.title || "Untitled photo"}`}
+                disabled={draft.photos.length < 2 || !!busy || statsNeedReload}
+              >
+                <MediaItem media={photo} kind="photo" index={index} selected={selectedPhotos.includes(photo.id)} onSelect={selected => toggleSelection("photo", photo.id, selected)}>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" aria-label={`Photo ${index + 1} appears in hero slideshow`} checked={photo.inHeroSlideshow !== false && !photo.isHeadshot} disabled={photo.isHeadshot} onChange={event => change({ photos: draft.photos.map((item, i) => i === index ? { ...item, inHeroSlideshow: event.target.checked } : item) })} />
+                    Show in hero slideshow
+                  </label>
+                  <p className="text-xs text-muted-foreground">{photo.isHeadshot ? "Selected headshot. Headshots stay out of the slideshow." : "Selected photos rotate in list order when no hero video is assigned for the device. Uncheck every photo for no slideshow."}</p>
+                  <Input aria-label={`Photo ${index + 1} title`} placeholder="title" maxLength={160} value={photo.title} onChange={e => change({ photos: draft.photos.map((v, i) => i === index ? { ...v, title: e.target.value } : v) })} />
+                  {"url" in photo ? <Input aria-label={`Photo ${index + 1} url`} placeholder="url" maxLength={2048} value={photo.url} onChange={e => change({ photos: draft.photos.map((v, i) => i === index ? { ...v, url: e.target.value } : v) })} /> : <p className="text-sm">Private uploaded file · {photo.mimeType}</p>}
+                  {(["credits", "sourceUrl", "season"] as const).map(key => (
+                    <Input key={key} aria-label={`Photo ${index + 1} ${key}`} placeholder={key} maxLength={key === "credits" ? 300 : key === "season" ? 20 : 2048} value={photo[key] ?? ""} onChange={e => change({ photos: draft.photos.map((v, i) => i === index ? { ...v, [key]: e.target.value || null } : v) })} />
+                  ))}
+                  <select aria-label={`Photo ${index + 1} level`} className="h-10 rounded-md border bg-background px-3" value={photo.level} onChange={e => change({ photos: draft.photos.map((v, i) => i === index ? { ...v, level: e.target.value as typeof photo.level } : v) })}>
+                    {["hs", "cfb", "pro", "off-field"].map(level => <option key={level}>{level}</option>)}
+                  </select>
+                  <Button type="button" variant="outline" onClick={() => removeMedia("photo", [photo.id])}>Remove photo from draft</Button>
+                </MediaItem>
+              </SortablePhotoRow>
+            ))}
+          </PhotoOrder>
+        )}
+        <Button type="button" variant="outline" disabled={draft.photos.length >= 40} onClick={() => change({ photos: [...draft.photos, { id: crypto.randomUUID(), title: "", url: "", credits: null, sourceUrl: null, season: null, level: "off-field" }] })}>Add photo</Button>
+      </MediaSection>
       <section aria-labelledby="photo-room-banner-heading" className="space-y-4 rounded-xl border bg-card p-4 sm:p-5">
         <div>
           <h2 id="photo-room-banner-heading" className="text-lg font-semibold">Photo Room ad banner</h2>

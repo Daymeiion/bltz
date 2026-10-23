@@ -36,6 +36,24 @@ it("retains every completed file when a multi-photo upload partially fails", asy
   expect(host.textContent).toContain("1 completed upload was retained in this draft");
 });
 
+it.each([
+  ["The object exceeded the maximum allowed size", "The object exceeded the maximum allowed size"],
+  ["Failed to fetch", "Failed to fetch"],
+  ["", "Storage rejected the upload without an error reason."],
+])("shows the storage failure reason for a video (%s) and retains completed uploads", async (reason, expected) => {
+  const record = { ...previewContent.parse({ slug: "fixture-player", full_name: "Fixture Player" }), id: "00000000-0000-4000-8000-000000000001", revision: 1, created_at: "", updated_at: "" };
+  for (const token of ["one", "two"]) mocks.fetch.mockResolvedValueOnce(new Response(JSON.stringify({ bucket: "preview-locker-videos", path: `${record.id}/videos/${token}.mp4`, token })));
+  mocks.upload.mockResolvedValueOnce({ data: {}, error: null }).mockResolvedValueOnce({ data: null, error: { message: reason, statusCode: "413" } });
+  await act(async () => root.render(<PreviewLockerForm record={record} />));
+  const input = host.querySelector<HTMLInputElement>('[aria-label="Upload multiple private videos"]')!;
+  Object.defineProperty(input, "files", { configurable: true, value: [new File(["one"], "completed.mp4", { type: "video/mp4" }), new File(["two"], "Hughes_General Restoration Model_1622x1080.mp4", { type: "video/mp4" })] });
+  await act(async () => { input.dispatchEvent(new Event("change", { bubbles: true })); await new Promise(resolve => setTimeout(resolve, 0)); });
+  expect(host.textContent).toContain(`Upload failed for Hughes_General Restoration Model_1622x1080.mp4: ${expected}`);
+  expect(host.textContent).toContain("1 completed upload was retained in this draft");
+  expect(host.textContent).not.toContain("Uploading 2 videos privately");
+  expect(host.textContent).toContain("completed");
+});
+
 it("uploads a PNG as the selected headshot and saves private storage metadata", async () => {
   const record = { ...previewContent.parse({ slug: "fixture-player", full_name: "Fixture Player" }), id: "00000000-0000-4000-8000-000000000001", revision: 1, created_at: "", updated_at: "" };
   mocks.fetch.mockResolvedValueOnce(new Response(JSON.stringify({ bucket: "preview-locker-photos", path: `${record.id}/photos/00000000-0000-4000-8000-000000000002.png`, token: "test" })));
