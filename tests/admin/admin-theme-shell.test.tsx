@@ -32,6 +32,17 @@ function renderShell() {
 }
 
 describe("AdminThemeShell workspaces", () => {
+  it("keeps the temporary Getty presentation outside the legacy hero and palette overrides", () => {
+    pathname = "/admin/getty-partnership";
+    renderShell();
+
+    expect(document.querySelector('[data-admin-workspace="getty-partnership"]')).not.toBeNull();
+    expect(document.querySelector(".admin-theme-legacy")).toBeNull();
+    expect(document.querySelector("[data-admin-header]")).toBeNull();
+    expect(document.querySelector("[data-admin-signal-track]")).toBeNull();
+    expect(document.body.textContent).toContain("Workspace content");
+  });
+
   it("renders nested GTM routes in the dedicated workspace shell", () => {
     pathname = "/admin/gtm/contacts";
     renderShell();

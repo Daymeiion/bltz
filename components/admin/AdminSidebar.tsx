@@ -17,6 +17,7 @@ import {
   IconMessageCircle,
   IconFlask,
   IconAddressBook,
+  IconPresentation,
 } from "@tabler/icons-react";
 
 interface SidebarLink {
@@ -62,6 +63,7 @@ export function AdminSidebar() {
       icon: <IconChartBar className="h-5 w-5 flex-shrink-0" />,
     },
     { label: "Intelligence Lab", href: "/admin/intelligence", icon: <IconFlask className="h-5 w-5 flex-shrink-0" /> },
+    { label: "Getty Partnership", href: "/admin/getty-partnership", icon: <IconPresentation className="h-5 w-5 flex-shrink-0" /> },
     {
       label: "GTM",
       href: "/admin/gtm",

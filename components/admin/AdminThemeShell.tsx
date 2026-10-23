@@ -88,7 +88,8 @@ export function AdminThemeShell({ children }: { children: React.ReactNode }) {
   const workspace = pathname === "/admin/gtm" || pathname.startsWith("/admin/gtm/")
     ? "gtm"
     : pathname === "/admin/preview-lockers" || pathname.startsWith("/admin/preview-lockers/") ? "preview"
-      : pathname === "/admin/intelligence" || pathname.startsWith("/admin/intelligence/") ? "intelligence" : null;
+      : pathname === "/admin/intelligence" || pathname.startsWith("/admin/intelligence/") ? "intelligence"
+        : pathname === "/admin/getty-partnership" ? "getty-partnership" : null;
   const route = routeDetails[pathname] ?? routeDetails["/admin"];
 
   useGSAP(() => {
@@ -118,6 +119,7 @@ export function AdminThemeShell({ children }: { children: React.ReactNode }) {
 
   if (workspace === "preview") return <div className="admin-theme-shell min-h-full bg-background text-foreground" data-admin-workspace="preview">{children}</div>;
   if (workspace === "intelligence") return <div className="admin-theme-shell min-h-full bg-background text-foreground" data-admin-workspace="intelligence">{children}</div>;
+  if (workspace === "getty-partnership") return <div className="admin-theme-shell min-h-full" data-admin-workspace="getty-partnership">{children}</div>;
 
   if (workspace === "gtm") {
     return (
