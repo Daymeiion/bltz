@@ -25,6 +25,17 @@ function renderSidebar() {
 }
 
 describe("AdminSidebar GTM destination", () => {
+  it("marks Getty current while preserving the dashboard and other destinations", () => {
+    pathname = "/admin/getty-partnership";
+    renderSidebar();
+    expect(document.querySelector('a[href="/admin/getty-partnership"]')?.getAttribute("aria-current")).toBe("page");
+    for (const href of ["/admin", "/admin/intelligence", "/admin/gtm", "/admin/preview-lockers"]) {
+      const link = document.querySelector(`a[href="${href}"]`);
+      expect(link).not.toBeNull();
+      expect(link?.hasAttribute("aria-current")).toBe(false);
+    }
+  });
+
   beforeEach(() => {
     pathname = "/admin";
     document.body.innerHTML = "";

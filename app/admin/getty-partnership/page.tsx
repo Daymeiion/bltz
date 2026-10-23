@@ -1,10 +1,16 @@
 import Image from "next/image";
+import type { Metadata } from "next";
 import {
   ArrowDown, ArrowDownRight, ArrowDownLeft, ArrowUpRight,
   Building2, Camera, ChartNoAxesCombined, CircleDollarSign,
   Gem, Megaphone, Newspaper, Printer, Shirt, UsersRound,
   UserRound, BookOpenText, BadgeCheck,
 } from "lucide-react";
+
+export const metadata: Metadata = {
+  title: "Getty Partnership | BLTZ Admin",
+  robots: { index: false, follow: false },
+};
 
 const athleteChannels = [
   { icon: Camera, label: "Image licensing" },
@@ -58,14 +64,15 @@ export default function GettyPartnershipPage() {
             <p className="mt-1 text-xs text-zinc-400">Connecting media assets to athletes, moments, and audiences</p>
           </div>
 
-          <div className="grid h-14 grid-cols-2 items-center text-[#ffbb00]" aria-hidden="true">
+          <div className="flex h-12 items-center justify-center text-[#ffbb00] xl:hidden" aria-hidden="true"><ArrowDown className="h-7 w-7" strokeWidth={1.5} /></div>
+          <div className="hidden h-14 grid-cols-2 items-center text-[#ffbb00] xl:grid" aria-hidden="true">
             <div className="flex justify-center"><ArrowDownLeft className="h-7 w-7 lg:h-8 lg:w-8" strokeWidth={1.4}/></div>
             <div className="flex justify-center"><ArrowDownRight className="h-7 w-7 lg:h-8 lg:w-8" strokeWidth={1.4}/></div>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2 lg:gap-6">
+          <div className="grid gap-4 xl:grid-cols-2 lg:gap-6">
             <div className="rounded-2xl border border-white/10 bg-[#1a2029] p-5 sm:p-6">
-              <div className="mb-5 flex items-center justify-between gap-3 border-b border-white/10 pb-4">
+              <div className="mb-5 flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-4">
                 <div className="flex items-center gap-3"><div className="rounded-xl bg-[#ffbb00]/10 p-2.5 text-[#ffbb00]"><UserRound className="h-6 w-6" /></div><div><h2 className="text-lg font-bold">Athlete distribution</h2><p className="text-xs text-zinc-400">Lifetime Player Lockers</p></div></div>
                 <span className="rounded-full bg-[#ffbb00]/10 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-[#ffbb00]">Player</span>
               </div>
@@ -74,7 +81,7 @@ export default function GettyPartnershipPage() {
               </div>
             </div>
             <div className="rounded-2xl border border-white/10 bg-[#1a2029] p-5 sm:p-6">
-              <div className="mb-5 flex items-center justify-between gap-3 border-b border-white/10 pb-4">
+              <div className="mb-5 flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-4">
                 <div className="flex items-center gap-3"><div className="rounded-xl bg-sky-400/10 p-2.5 text-sky-300"><Building2 className="h-6 w-6" /></div><div><h2 className="text-lg font-bold">Enterprise distribution</h2><p className="text-xs text-zinc-400">Schools · Leagues · Organizations</p></div></div>
                 <span className="rounded-full bg-sky-400/10 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-sky-300">Organization</span>
               </div>
