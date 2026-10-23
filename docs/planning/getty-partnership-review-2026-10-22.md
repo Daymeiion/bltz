@@ -45,3 +45,9 @@ Delete `app/admin/getty-partnership/`, remove the Getty link and `IconPresentati
 ## Product direction check
 
 No Career, Moment, or Value Graph relationships or schemas are created by this presentation. Its concept centers persistent athlete identity and athlete-connected media across affiliations. Getty retains the mature licensing workflow. No DAM, publishing suite, financial allocation, or generalized media-management functionality is duplicated.
+
+## Approved Gene Foca wording update — October 22, 2026
+
+The user approved applying the suggested wording from the review of Gene Foca's sports sponsorship and fandom post. The headline now ends with “commercial value”; the subtitle explains making existing content work harder across channels, audiences, and an athlete's lifetime. Getty's label starts with “Authentic visual content”; the channel labels use “Deeper fan connection” and “Year-round sponsorship value”; the footer reads “Fan connection · Attribution · Commercial value.” Athlete identity, Lifetime Player Lockers, attribution, and the concept/rights qualifier remain prominent.
+
+Files changed for this follow-up: the Getty page, the existing footer-content test assertion, and this report. Route affected: `/admin/getty-partnership` only. Database, migrations, environment variables, permissions, dependencies, and graph relationships: no changes. The existing removal instructions still apply. No further feature work is included or deferred. Validation and production release results are reported in the task completion record.

@@ -17,14 +17,14 @@ const athleteChannels = [
   { icon: Gem, label: "Collectibles" },
   { icon: Printer, label: "Print-on-demand" },
   { icon: Shirt, label: "Merchandise" },
-  { icon: UsersRound, label: "Direct fan base" },
+  { icon: UsersRound, label: "Deeper fan connection" },
 ];
 
 const organizationChannels = [
   { icon: Newspaper, label: "Media publishing" },
   { icon: BookOpenText, label: "Content & editorial" },
   { icon: Megaphone, label: "Brand activations" },
-  { icon: Building2, label: "Use-case promotion" },
+  { icon: Building2, label: "Year-round sponsorship value" },
 ];
 
 export default function GettyPartnershipPage() {
@@ -37,8 +37,8 @@ export default function GettyPartnershipPage() {
               <span className="h-1.5 w-1.5 rounded-full bg-[#ffbb00]" />
               Partnership opportunity / Concept
             </div>
-            <h1 className="text-3xl font-black uppercase tracking-tight sm:text-4xl lg:text-5xl">From media assets <span className="text-[#ffbb00]">to opportunity.</span></h1>
-            <p className="mt-3 max-w-3xl text-sm text-zinc-400 sm:text-base">One media archive. Two connected distribution channels. A lifetime of potential value.</p>
+            <h1 className="text-3xl font-black uppercase tracking-tight sm:text-4xl lg:text-5xl">From media assets <span className="text-[#ffbb00]">to commercial value.</span></h1>
+            <p className="mt-3 max-w-3xl text-sm text-zinc-400 sm:text-base">Make existing content work harder—across channels, audiences, and an athlete’s lifetime.</p>
           </div>
           <div className="rounded-full border border-white/15 px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Getty × BLTZ</div>
         </div>
@@ -49,7 +49,7 @@ export default function GettyPartnershipPage() {
             <div className="flex items-center justify-center gap-4">
               <Image src="/images/getty-images-logo.svg" alt="Getty Images" width={207} height={38} className="h-9 w-auto max-w-full" />
             </div>
-            <div className="mt-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Media archive · Licensing · Rights management</div>
+            <div className="mt-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Authentic visual content · Licensing · Rights management</div>
           </div>
 
           <div className="flex h-12 items-center justify-center text-[#ffbb00]" aria-hidden="true"><ArrowDown className="h-7 w-7" strokeWidth={1.5} /></div>
@@ -92,7 +92,7 @@ export default function GettyPartnershipPage() {
           </div>
 
           <div className="relative mt-5 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-[#ffbb00]/25 bg-gradient-to-r from-[#2c2616] to-[#171c24] px-5 py-4 sm:px-7">
-            <div className="flex items-center gap-3"><ChartNoAxesCombined className="h-6 w-6 text-[#ffbb00]" /><div><h3 className="text-sm font-bold uppercase tracking-[0.12em] sm:text-base">Engagement · Attribution · Revenue</h3><p className="mt-1 text-xs text-zinc-400">Measure content discovery, usage, audience actions, and commercial outcomes</p></div></div>
+            <div className="flex items-center gap-3"><ChartNoAxesCombined className="h-6 w-6 text-[#ffbb00]" /><div><h3 className="text-sm font-bold uppercase tracking-[0.12em] sm:text-base">Fan connection · Attribution · Commercial value</h3><p className="mt-1 text-xs text-zinc-400">Measure content discovery, usage, audience actions, and commercial outcomes</p></div></div>
             <div className="flex gap-2 text-[#ffbb00]"><BadgeCheck className="h-5 w-5" /><CircleDollarSign className="h-5 w-5" /><ArrowUpRight className="h-5 w-5" /></div>
           </div>
         </section>
