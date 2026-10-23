@@ -1,9 +1,9 @@
 .meeting { min-height: 100vh; background: #090b10; gap: 0; }
 .navigation { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 24px; border-bottom: 1px solid #28303a; }
 .navigationLabel { color: #aeb8c6; font-size: 12px; text-transform: uppercase; letter-spacing: .13em; }
-.tabs { height: auto; padding: 3px; background: #171c24; border-radius: 5px; max-width: 100%; }
-.tab { min-height: 42px; white-space: normal; color: #c2cbd7; padding: 8px 14px; border-radius: 3px; font-size: 13px; }
-.tab[data-state="active"] { background: #ffbb00; color: #111722; }
+.meeting .tabs { height: auto; padding: 3px; background: #171c24; border-radius: 5px; max-width: 100%; }
+.meeting .tabs .tab { min-height: 42px; white-space: normal; color: #c2cbd7; padding: 8px 14px; border-radius: 3px; font-size: 13px; }
+.meeting .tabs .tab[data-state="active"] { background: #ffbb00; color: #111722; }
 .panel { min-width: 0; }
 .panel[hidden] { display: none; }
 .canvas { padding: 28px; }
