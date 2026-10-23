@@ -365,13 +365,13 @@ function AddMediaForm({ onAdd, linked }: { onAdd: (items: MediaItem[]) => void; 
     {uploads && <div className={styles.sourceRow}>
       <label className={styles.fileDrop} data-has={Boolean(file)}><input type="file" accept={kind === "photo" ? "image/*" : "video/*"} onChange={event => setFile(event.target.files?.[0] ?? null)} /><Plus size={16} aria-hidden="true" />{file ? file.name : `Choose a ${kind} file`}</label>
       <button type="button" className={styles.sourceButton} onClick={() => setPicker("locker")}><span className={styles.sourceGlyph}>L</span>From Player Locker</button>
-      {kind === "photo" && <button type="button" className={styles.sourceButton} onClick={() => setPicker("getty")} aria-label="From Getty Images">
+      <button type="button" className={styles.sourceButton} onClick={() => setPicker("getty")} aria-label={`${kind === "video" ? "Video" : "Photos"} from Getty Images`}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/images/getty-images-logo.svg" alt="" className={styles.gettyInline} />
-      </button>}
+      </button>
     </div>}
     {picker === "locker" && <LockerPicker kind={kind === "video" ? "video" : "photo"} existing={linked} onClose={() => setPicker(null)} onAttach={items => { setPicker(null); if (items.length) onAdd(items); }} />}
-    {picker === "getty" && <GettyPicker existing={linked} onClose={() => setPicker(null)} onAttach={items => { setPicker(null); if (items.length) onAdd(items); }} />}
+    {picker === "getty" && <GettyPicker kind={kind === "video" ? "video" : "photo"} existing={linked} onClose={() => setPicker(null)} onAttach={items => { setPicker(null); if (items.length) onAdd(items); }} />}
     {error && <p className={styles.formError} role="alert">{error}</p>}
     <div className={styles.addFoot}><span className={styles.draftNote}>Stays in this tab. Nothing is uploaded.</span><button type="button" className={styles.primaryButton} onClick={submit}>Add and link</button></div>
   </div>;
