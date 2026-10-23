@@ -24,7 +24,7 @@ describe("Getty partnership presentation", () => {
     }
     expect(document.querySelectorAll("h1")).toHaveLength(1);
     expect([...document.querySelectorAll("h2")].map(node => node.textContent)).toEqual(["Athlete distribution", "Enterprise distribution"]);
-    expect(document.body.textContent).toContain("Engagement · Attribution · Revenue");
+    expect(document.body.textContent).toContain("Fan connection · Attribution · Commercial value");
     expect(document.body.textContent).toContain("depend on Getty approvals");
     expect(document.querySelectorAll("button, form")).toHaveLength(0);
   });
