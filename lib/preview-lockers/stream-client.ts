@@ -1,6 +1,6 @@
 import { previewContent, type PreviewContent } from "./validation";
 
-export async function readDiscovery(response: Response, onProgress: (text: string) => void): Promise<{ draft?: PreviewContent; message: string }> {
+export async function readDiscovery(response: Response, onProgress: (text: string) => void): Promise<{ draft?: PreviewContent; message: string; status?: string }> {
   if (!response.ok) throw new Error(response.status === 429
     ? "The scraper run was not started. The same player may have been searched less than 3 minutes ago, or this Admin account may have reached 50 successful or active scraper runs for the current UTC day. Failed and timed-out runs do not consume the daily allowance."
     : "Discovery unavailable. Your manual draft is still here.");
@@ -24,7 +24,7 @@ export async function readDiscovery(response: Response, onProgress: (text: strin
         if (event === "event") onProgress(typeof data.message === "string" ? data.message.slice(0, 200) : "Searching…");
         if (event === "done") {
           const parsed = previewContent.safeParse(data.draft);
-          return { draft: parsed.success ? parsed.data : undefined, message: data.status === "complete" ? "Suggestions ready. Review every field before saving; identity and rights are not verified." : "Discovery did not complete. Review available suggestions or continue manually." };
+          return { status: typeof data.status === "string" ? data.status : "manual", draft: parsed.success ? parsed.data : undefined, message: data.status === "complete" ? "Suggestions ready. Review every field before saving; identity and rights are not verified." : "Discovery did not complete. Review available suggestions or continue manually." };
         }
       }
     }

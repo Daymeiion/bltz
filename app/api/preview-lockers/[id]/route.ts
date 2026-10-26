@@ -15,7 +15,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const { id } = await params;
     if (!z.uuid().safeParse(id).success) throw new PreviewError("invalid_input", 400);
     const input = await readBody(req, PREVIEW_CONTENT_BODY_LIMIT);
-    const parsed = updatePreview.safeParse(input);
+    const parsed = updatePreview.extend({ deferEnrichment: z.boolean().optional() }).safeParse(input);
     if (!parsed.success) throw new PreviewError("invalid_input", 400);
     const { revision, content } = parsed.data;
     if (!previewMediaBelongsTo(id, content)) throw new PreviewError("invalid_media_path", 400);
@@ -37,7 +37,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const completionStatus = relationship.error ? "unavailable" : "available";
     // Enrich the actual saved snapshot, including fields retained for old clients.
     const savedContent = { ...content, ...Object.fromEntries(Object.keys(content).filter(key => Object.hasOwn(data, key)).map(key => [key, data[key as keyof typeof data]])) };
-    await tryEnrichSavedPreview(client, id, savedContent, data.revision, false);
+    if (!parsed.data.deferEnrichment) await tryEnrichSavedPreview(client, id, savedContent, data.revision, false);
     return json({
       id: data.id, slug: data.slug, revision: data.revision,
       complete: relationship.data != null && Number(relationship.data.completed_revision) === data.revision,

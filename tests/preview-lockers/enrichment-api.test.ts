@@ -53,6 +53,13 @@ it("does not rerun enrichment on idempotent creation retry", async () => {
   expect((await create(request({ id, content }))).status).toBe(200);
   expect(mock.enrich).not.toHaveBeenCalled();
 });
+it("defers enrichment only when explicitly requested by a coordinated private save", async () => {
+  const response = await create(request({ id, content, deferEnrichment: true }));
+  expect(response.status).toBe(201); expect(await response.json()).toMatchObject({ id, revision: 1 });
+  expect(mock.enrich).not.toHaveBeenCalled();
+  expect(mock.insert).toHaveBeenCalledWith({ id, ...content });
+  expect((await create(request({ id, content, deferEnrichment: "yes" }))).status).toBe(400);
+});
 it("denies anonymous, non-admin and cross-origin refresh before discovery", async () => {
   mock.auth.mockResolvedValue({ data: { user: null } }); expect((await refresh(request({}), params)).status).toBe(401);
   mock.auth.mockResolvedValue({ data: { user: { id: "viewer" } } }); mock.rpc.mockResolvedValue({ data: false }); expect((await refresh(request({}), params)).status).toBe(403);

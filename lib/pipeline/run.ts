@@ -167,19 +167,14 @@ export async function claimAndRun(runId: string): Promise<boolean> {
   return true;
 }
 
-async function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
+async function withTimeout<T>(p: Promise<T>, ms: number, label: string, signal?: AbortSignal): Promise<T> {
   return new Promise<T>((resolve, reject) => {
-    const t = setTimeout(() => reject(new Error(`${label} timeout`)), ms);
-    p.then(
-      (v) => {
-        clearTimeout(t);
-        resolve(v);
-      },
-      (e) => {
-        clearTimeout(t);
-        reject(e);
-      },
-    );
+    const clear = () => { clearTimeout(timer); signal?.removeEventListener("abort", cancel); };
+    const cancel = () => { clear(); reject(signal?.reason ?? new Error("cancelled")); };
+    const timer = setTimeout(() => { clear(); reject(new Error(`${label} timeout`)); }, ms);
+    p.then(value => { clear(); resolve(value); }, error => { clear(); reject(error); });
+    if (signal?.aborted) { cancel(); return; }
+    signal?.addEventListener("abort", cancel, { once: true });
   });
 }
 
@@ -190,7 +185,9 @@ async function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise
 export async function executePipeline(
   sink: PipelineSink,
   identity: PlayerIdentityInput,
+  options: { concurrency?: number; signal?: AbortSignal } = {},
 ) {
+  options.signal?.throwIfAborted();
   await sink.setStatus("scraping", { started_at: nowIso() });
   await sink.emit({
     at: nowIso(),
@@ -198,50 +195,59 @@ export async function executePipeline(
     message: `Searching ${SCRAPERS.length} sources for ${identity.full_name}…`,
   });
 
-  const results: ScraperResult[] = [];
-
-  for (const { source, run } of SCRAPERS) {
-    try {
-      const result = await withTimeout(run(identity), 12_000, source);
-      results.push(result);
-      if (result.ok) {
-        await sink.emit({
-          at: nowIso(),
-          phase: "scrape_hit",
-          source,
-          url: result.urls?.[0],
-          message: friendlyHit(source, result),
-        });
-      } else {
-        // Loud log ONLY when the source itself is unhealthy (down, throttled,
-        // paused dependency) — a `no_match` / `ambiguous` is an expected miss
-        // and stays quiet. This is the observability the paused-Supabase
-        // incident was missing: it failed silently behind a clean "miss".
-        if (result.reason && SOURCE_UNHEALTHY_REASONS.has(result.reason)) {
-          console.warn(
-            `[pipeline] source unhealthy source=${source} reason=${result.reason} athlete=${JSON.stringify(identity.full_name)}`,
-          );
+  const results: ScraperResult[] = new Array(SCRAPERS.length);
+  let cursor = 0;
+  const concurrency = Math.max(1, Math.min(SCRAPERS.length, Math.trunc(options.concurrency ?? 1) || 1));
+  async function worker() {
+    while (cursor < SCRAPERS.length) {
+      options.signal?.throwIfAborted();
+      const index = cursor++;
+      const { source, run } = SCRAPERS[index];
+      try {
+        const result = await withTimeout(run(identity), 12_000, source, options.signal);
+        results[index] = result;
+        if (result.ok) {
+          await sink.emit({
+            at: nowIso(),
+            phase: "scrape_hit",
+            source,
+            url: result.urls?.[0],
+            message: friendlyHit(source, result),
+          });
+        } else {
+          // Loud log ONLY when the source itself is unhealthy (down, throttled,
+          // paused dependency) — a `no_match` / `ambiguous` is an expected miss
+          // and stays quiet. This is the observability the paused-Supabase
+          // incident was missing: it failed silently behind a clean "miss".
+          if (result.reason && SOURCE_UNHEALTHY_REASONS.has(result.reason)) {
+            console.warn(
+              `[pipeline] source unhealthy source=${source} reason=${result.reason} athlete=${JSON.stringify(identity.full_name)}`,
+            );
+          }
+          await sink.emit({
+            at: nowIso(),
+            phase: "scrape_miss",
+            source,
+            message: friendlyMiss(source, result.reason),
+          });
         }
+      } catch {
+        options.signal?.throwIfAborted();
+        results[index] = { source, ok: false, reason: "timeout" };
+        console.warn(
+          `[pipeline] source unhealthy source=${source} reason=timeout athlete=${JSON.stringify(identity.full_name)}`,
+        );
         await sink.emit({
           at: nowIso(),
           phase: "scrape_miss",
           source,
-          message: friendlyMiss(source, result.reason),
+          message: friendlyMiss(source, "timeout"),
         });
       }
-    } catch {
-      results.push({ source, ok: false, reason: "timeout" });
-      console.warn(
-        `[pipeline] source unhealthy source=${source} reason=timeout athlete=${JSON.stringify(identity.full_name)}`,
-      );
-      await sink.emit({
-        at: nowIso(),
-        phase: "scrape_miss",
-        source,
-        message: friendlyMiss(source, "timeout"),
-      });
     }
   }
+  await Promise.all(Array.from({ length: concurrency }, () => worker()));
+  options.signal?.throwIfAborted();
 
   // Infra guard. If NOTHING succeeded and every source failed for a source-side
   // reason (unreachable/timeout/blocked), this is an outage, not a missing
@@ -294,8 +300,10 @@ export async function executePipeline(
       synthesize({ identity, results }),
       RUN_TIMEOUT_MS,
       "synthesize",
+      options.signal,
     );
   } catch (e: any) {
+    options.signal?.throwIfAborted();
     await sink.emit({
       at: nowIso(),
       phase: "manual_fallback",

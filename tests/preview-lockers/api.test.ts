@@ -22,6 +22,13 @@ it("returns unchanged idempotent create and rejects later-version retries", asyn
 it("uses revision compare-and-set and returns conflict rather than overwriting", async () => {
   mock.maybeSingle.mockResolvedValue({data:null,error:null}); expect((await PATCH(request({revision:7,content},"PATCH"),{params:Promise.resolve({id})})).status).toBe(409); expect(mock.eq).toHaveBeenCalledWith("revision",7);
 });
+it("defers save-time enrichment for a coordinated PATCH without persisting the control flag", async () => {
+  mock.maybeSingle.mockResolvedValueOnce({ data: { ...content, id, revision: 2 } }).mockResolvedValueOnce({ data: null });
+  const response = await PATCH(request({ revision: 1, content, deferEnrichment: true }, "PATCH"), { params: Promise.resolve({ id }) });
+  expect(response.status).toBe(200); expect(await response.json()).toMatchObject({ id, revision: 2 });
+  expect(mock.update).toHaveBeenCalledWith(content); expect(mock.eq).toHaveBeenCalledWith("revision", 1);
+  expect(mock.from.mock.calls.map(([table]) => table)).toEqual(["preview_lockers", "gtm_player_preview_lockers"]);
+});
 it("distinguishes a duplicate Locker URL from an out-of-date editor", async () => {
   mock.maybeSingle.mockResolvedValueOnce({ data: null, error: { code: "23505" } });
   const duplicate = await PATCH(request({ revision: 7, content }, "PATCH"), { params: Promise.resolve({ id }) });

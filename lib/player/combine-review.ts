@@ -15,6 +15,18 @@ export type CombineSuggestion = z.infer<typeof combineSuggestionSchema>;
 export type CombineSearch = z.infer<typeof combineSearchSchema>;
 export const combineChoiceKey = (suggestion: CombineSuggestion, metric: string) => `${suggestion.id}:${metric}`;
 
+export type CombineReviewState = { identity: string; key: string; result: CombineSearch };
+/** Append unique evidence without replacing earlier source values. */
+export function mergeCombineSearch(previous: CombineSearch | null, incoming: CombineSearch): CombineSearch {
+  const suggestions = [...(previous?.suggestions ?? [])];
+  for (const candidate of incoming.suggestions.filter(item => item.event.eventType === "combine")) {
+    const fingerprint = (item: CombineSuggestion) => JSON.stringify([item.event.sourceUrl, item.event.eventType, item.event.year, item.event.measurements]);
+    if (suggestions.length < 24 && !suggestions.some(item => fingerprint(item) === fingerprint(candidate)))
+      suggestions.push({ ...candidate, id: crypto.randomUUID() });
+  }
+  return { ...incoming, suggestions };
+}
+
 /** Only explicit review adds measurements. Existing event fields and values win,
  * including zero reps. Unknown-year events cannot be safely merged by year. */
 export function addReviewedCombine(current: CombineResult[], suggestions: CombineSuggestion[], choices: string[]): CombineResult[] {

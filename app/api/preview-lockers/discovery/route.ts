@@ -30,6 +30,8 @@ export async function POST(req: Request) {
     });
     if (admission.error) throw new PreviewError("discovery_unavailable", 503);
     if (!admission.data) throw new PreviewError("discovery_rate_limited", 429);
+    const runAbort = new AbortController();
+    const runSignal = AbortSignal.any([req.signal, runAbort.signal]);
     let stopped = false; let terminal = false; let timer: ReturnType<typeof setTimeout> | undefined;
     let finalized = false; let succeeded = false;
     const finalize = async (success: boolean) => {
@@ -51,7 +53,7 @@ export async function POST(req: Request) {
           if (!stopped) { stopped = true; controller.close(); }
           clearTimeout(timer); req.signal.removeEventListener("abort", abort);
         };
-        abort = () => { void finalize(succeeded).finally(finish); };
+        abort = () => { runAbort.abort(); void finalize(succeeded).finally(finish); };
         cleanup = finish;
         const complete = (value: unknown) => {
           if (terminal || stopped || req.signal.aborted) return;
@@ -62,7 +64,7 @@ export async function POST(req: Request) {
         if (req.signal.aborted) { abort(); return; }
         timer = setTimeout(() => {
           try { complete({ status: "timeout", error: "Discovery timed out. Continue with a manual preview." }); }
-          finally { void finalize(false).finally(finish); }
+          finally { runAbort.abort(); void finalize(false).finally(finish); }
         }, TIME_LIMIT_MS);
         const sink: PipelineSink = {
           emit(event) {
@@ -78,7 +80,7 @@ export async function POST(req: Request) {
             }
           },
         };
-        try { await executePipeline(sink, identity); }
+        try { await executePipeline(sink, identity, { concurrency: 3, signal: runSignal }); }
         catch { complete({ status: "manual", draft: discoveryDraft(identity), error: "Discovery unavailable. Continue manually." }); }
         finally {
           complete({ status: "manual", draft: discoveryDraft(identity) });
@@ -86,7 +88,7 @@ export async function POST(req: Request) {
           finish();
         }
       },
-      async cancel() { stopped = true; await finalize(succeeded).catch(() => {}); cleanup(); },
+      async cancel() { runAbort.abort(); stopped = true; await finalize(succeeded).catch(() => {}); cleanup(); },
     });
     return new Response(stream, { headers: { ...PRIVATE_HEADERS, "Content-Type": "text/event-stream", "X-Accel-Buffering": "no" } });
   } catch (error) { return failure(error); }

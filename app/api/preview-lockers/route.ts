@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { assertAwardReferences } from "@/lib/award-images/server";
 import { createPreview, previewRecord, equivalentPreview, previewMediaBelongsTo } from "@/lib/preview-lockers/validation";
 import { assertPreviewMediaExists, previewAdmin, readBody, json, failure, PreviewError, PREVIEW_COLUMNS, PREVIEW_CONTENT_BODY_LIMIT } from "@/lib/preview-lockers/server";
@@ -14,9 +15,9 @@ export const dynamic = "force-dynamic";
 export async function POST(req: Request) {
   try {
     const { client } = await previewAdmin();
-    const parsed = createPreview.extend({ enrollment: previewEnrollment.optional() }).safeParse(await readBody(req, PREVIEW_CONTENT_BODY_LIMIT));
+    const parsed = createPreview.extend({ enrollment: previewEnrollment.optional(), deferEnrichment: z.boolean().optional() }).safeParse(await readBody(req, PREVIEW_CONTENT_BODY_LIMIT));
     if (!parsed.success) throw new PreviewError("invalid_input", 400);
-    const { id, content, enrollment } = parsed.data;
+    const { id, content, enrollment, deferEnrichment } = parsed.data;
     if (enrollment && process.env.PREVIEW_CONVERSION_ENABLED !== "true") throw new PreviewError("conversion_unavailable", 503);
     if (!previewMediaBelongsTo(id, content)) throw new PreviewError("invalid_media_path", 400);
     await assertPreviewMediaExists(client, content);
@@ -26,7 +27,7 @@ export async function POST(req: Request) {
       if (error) throw new PreviewError(error.code === "23505" || error.code === "22023" ? "enrollment_conflict" : "could_not_create", error.code === "23505" || error.code === "22023" ? 409 : 503);
       try {
         const saved = await client.from("preview_lockers").select("revision").eq("id", id).maybeSingle();
-        if (!saved.error && saved.data) await tryEnrichSavedPreview(client, id, content, saved.data.revision);
+        if (!deferEnrichment && !saved.error && saved.data) await tryEnrichSavedPreview(client, id, content, saved.data.revision);
       } catch { /* Base preview and enrollment already committed. */ }
       return json(data, 201);
     }
@@ -42,7 +43,7 @@ export async function POST(req: Request) {
       throw new PreviewError("preview_conflict", 409);
     }
     if (error || !data) throw new PreviewError("could_not_create", 503);
-    const enrichment = await tryEnrichSavedPreview(client, id, content, data.revision);
+    const enrichment = deferEnrichment ? undefined : await tryEnrichSavedPreview(client, id, content, data.revision);
     return json({ id: data.id, slug: data.slug, revision: data.revision, enrichment }, 201);
   } catch (error) { return failure(error); }
 }

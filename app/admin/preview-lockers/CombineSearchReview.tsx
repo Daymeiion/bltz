@@ -3,17 +3,21 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { combineEventLabel, combineMetricInfo, combineValue, type CombineResult } from "@/lib/player/combine";
-import { addReviewedCombine, combineChoiceKey, combineSearchSchema, type CombineSearch, type CombineSuggestion } from "@/lib/player/combine-review";
+import { addReviewedCombine, combineChoiceKey, combineSearchSchema, mergeCombineSearch, type CombineReviewState, type CombineSuggestion } from "@/lib/player/combine-review";
 
 export type CombineDiscoveryProps = {
   preview?: { id: string; revision: number } | null; identityKey: string;
   searchDisabled: boolean; onBusyChange: (busy: boolean) => void;
+  reviewState?: CombineReviewState | null; onReviewChange?: (review: CombineReviewState) => void;
 };
-export default function CombineSearchReview({ preview, identityKey, searchDisabled, onBusyChange, value, onChange }: CombineDiscoveryProps & {
+export default function CombineSearchReview({ preview, identityKey, searchDisabled, onBusyChange, reviewState, onReviewChange, value, onChange }: CombineDiscoveryProps & {
   value: CombineResult[]; onChange: (value: CombineResult[]) => void;
 }) {
-  const [review, setReview] = useState<{ identity: string; result: CombineSearch } | null>(null);
-  const [choices, setChoices] = useState<string[]>([]);
+  const [localReview, setLocalReview] = useState<CombineReviewState | null>(null);
+  const review = reviewState === undefined ? localReview : reviewState;
+  const [selection, setSelection] = useState<{ key: string; values: string[] }>({ key: "", values: [] });
+  const choices = selection.key === review?.key ? selection.values : [];
+  const setChoices = (value: string[] | ((current: string[]) => string[])) => setSelection({ key: review?.key ?? "", values: typeof value === "function" ? value(choices) : value });
   const [busy, setBusy] = useState(false), [message, setMessage] = useState("");
   const controller = useRef<AbortController | null>(null), identity = useRef(identityKey);
   useEffect(() => { identity.current = identityKey; controller.current?.abort(); }, [identityKey]);
@@ -35,16 +39,8 @@ export default function CombineSearchReview({ preview, identityKey, searchDisabl
       if (identity.current !== requestIdentity) return;
       const available = parsed.data.suggestions.filter(item => item.event.eventType === "combine");
       // Append new evidence; failed/repeated searches cannot clear earlier review.
-      setReview(current => {
-        const previous = current?.identity === requestIdentity ? current.result : null;
-        const suggestions = [...(previous?.suggestions ?? [])];
-        for (const candidate of available) {
-          const key = JSON.stringify([candidate.event.sourceUrl, candidate.event.eventType, candidate.event.year, candidate.event.measurements]);
-          if (!suggestions.some(item => JSON.stringify([item.event.sourceUrl, item.event.eventType, item.event.year, item.event.measurements]) === key) && suggestions.length < 24)
-            suggestions.push({ ...candidate, id: crypto.randomUUID() });
-        }
-        return { identity: requestIdentity, result: { ...parsed.data, suggestions } };
-      });
+      const next = { identity: requestIdentity, key: crypto.randomUUID(), result: mergeCombineSearch(review?.identity === requestIdentity ? review.result : null, parsed.data) };
+      if (onReviewChange) onReviewChange(next); else setLocalReview(next);
       setMessage(parsed.data.status === "partial" ? "Some sources were unavailable. Review the available evidence below." : available.length ? "Results ready for review. Nothing has been added or saved." : "No unambiguous testing results found. Check source links or enter results manually.");
     } catch (error) { if (!controller.current?.signal.aborted) setMessage(error instanceof Error ? error.message : "Search unavailable. Your measurements are retained."); }
     finally { controller.current = null; setBusy(false); onBusyChange(false); }

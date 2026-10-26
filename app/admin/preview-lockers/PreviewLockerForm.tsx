@@ -1,4 +1,7 @@
 "use client";
+import BuildAllPanel from "./BuildAllPanel";
+import { runPreviewBuild, buildSearchKeys, type BuildProgress, type BuildStep } from "@/lib/preview-lockers/build-client";
+import { mergeCombineSearch, type CombineReviewState } from "@/lib/player/combine-review";
 import EditorialImageInput from "./EditorialImageInput";
 import HeadshotFields, { type HeadshotTarget } from "./HeadshotFields";
 import { PreviewSavedContext } from "./PreviewSavedContext";
@@ -89,7 +92,7 @@ export default function PreviewLockerForm({
   const [enroll, setEnroll] = useState(enrollmentEnabled && !record && !reservedId);
   const [enrollment, setEnrollment] = useState({contact_id:"",campaign:"",source:"",channel:"email",relationship:"warm",is_test:false});
   const [draft, setDraft] = useState<PreviewContent>(() => record ? previewContent.parse(Object.fromEntries(Object.keys(previewContent.shape).map(k => [k, record[k as keyof PreviewRecord]]))) : { ...initial(), full_name: referralName ?? "", slug: "" });
-  const [busy, setBusy] = useState<"discovery" | "upload" | "save" | "complete" | "stats" | "combine" | "awards" | "news" | "merchandise" | null>(null);
+  const [busy, setBusy] = useState<"build" | "discovery" | "upload" | "save" | "complete" | "stats" | "combine" | "awards" | "news" | "merchandise" | null>(null);
   const [awardsReport, setAwardsReport] = useState<AwardEnrichmentReport | null>(() => initialEnrichmentReport?.last_awards_attempt !== undefined ? initialEnrichmentReport.last_awards_attempt : initialEnrichmentReport && initialEnrichmentRevision ? {
     status: initialEnrichmentReport.errors.includes("awards_unavailable") ? "unavailable" : "complete",
     awards_discovered: initialEnrichmentReport.awards_discovered, awards_normalized: initialEnrichmentReport.awards_normalized,
@@ -105,6 +108,9 @@ export default function PreviewLockerForm({
   const [newsArticles, setNewsArticles] = useState(initialArticles);
   const [newsReview, setNewsReview] = useState<{ review: NewsReview; identity: string; searchContext: string; key: string } | null>(() => initialNewsReview ? { review: initialNewsReview, identity: record && newsReviewCurrent ? newsAthleteIdentity(record) : "", searchContext: record ? merchandiseIdentity(record) : "", key: "saved-" + initialNewsReview.version } : null);
   const [newsError, setNewsError] = useState(newsReviewError);
+  const [buildSteps, setBuildSteps] = useState<Partial<Record<BuildStep, BuildProgress>>>({});
+  const buildStepRef = useRef<Partial<Record<BuildStep, BuildProgress>>>({});
+  const [combineReview, setCombineReview] = useState<CombineReviewState | null>(null);
   const [showStats, setShowStats] = useState(false);
   const [statsNeedReload, setStatsNeedReload] = useState(false);
   const [message, setMessage] = useState("");
@@ -181,6 +187,53 @@ export default function PreviewLockerForm({
   }
   function field(key: Scalar, label: string, maxLength = 160, numeric = false) {
     return <label className="grid gap-2 text-sm" key={key}>{label}<Input aria-label={label} maxLength={maxLength} type={key === "dob" ? "date" : numeric ? "number" : "text"} max={key === "dob" ? new Date().toISOString().slice(0, 10) : undefined} min={key === "dob" ? "1850-01-01" : undefined} value={draft[key] ?? ""} onChange={event => change({ [key]: numeric ? event.target.value === "" ? null : Number(event.target.value) : event.target.value || null })} /></label>;
+  }
+  async function buildAll(retry = false) {
+    if (pending.current || statsNeedReload || (retry && (!saved || dirty))) return;
+    const tasks = retry ? buildSearchKeys.filter(key => ["failed", "partial", "cancelled"].includes(buildStepRef.current[key]?.state ?? "")) : undefined;
+    if (retry && !tasks?.length) return;
+    pending.current = true; setBusy("build"); setError(""); setMessage(""); setReviewed(false); setCompletionReviewed(false);
+    const controller = new AbortController(); abort.current = controller;
+    const updateStep = (key: BuildStep, progress: BuildProgress) => {
+      buildStepRef.current = { ...buildStepRef.current, [key]: progress }; setBuildSteps(buildStepRef.current);
+    };
+    if (!retry) {
+      buildStepRef.current = {}; setBuildSteps({});
+      (["career", "save", ...buildSearchKeys] as BuildStep[]).forEach(key => updateStep(key, { state: "waiting", message: "Waiting for the saved career snapshot." }));
+    }
+    createId.current ??= crypto.randomUUID();
+    try {
+      await runPreviewBuild({
+        draft, saved, createId: createId.current, signal: controller.signal, retry: tasks, existingArticles: newsArticles,
+        onStep: updateStep,
+        onConflict: message => { setSaveVersionConflict(true); setError(message); },
+        onDraft: content => { setDraft(content); setDirty(true); },
+        onSaved: (content, result) => {
+          savedDraft.current = JSON.stringify(content); setSaved(result); revision.current = result.revision;
+          setDirty(false); setSaveVersionConflict(false); setCompleted(result.complete === true); onPreviewSaved?.(result.slug);
+        },
+        onNews: (result, content) => {
+          setAwardsReport(result.awards);
+          setAwardsError(result.awards?.status === "unavailable" ? "Awards mapping is unavailable. Existing award selections are retained." : "");
+          setNewsArticles(result.articles); setNewsReview({ review: result.review, identity: newsAthleteIdentity(content), searchContext: merchandiseIdentity(content), key: crypto.randomUUID() });
+          setNewsError(result.newsStatus === "unavailable" ? "News search did not finish. Previous saved suggestions are retained; retry the unfinished search." : "");
+        },
+        onMerchandise: (result, content) => {
+          setMerchandiseSearch({ result: visibleMerchandiseReview(result.review), identity: merchandiseIdentity(content), key: crypto.randomUUID(), review: result.review }); setMerchandiseError("");
+        },
+        onCombine: (result, content) => {
+          const identity = JSON.stringify([content.full_name, content.school, content.schools, content.pro_teams]);
+          setCombineReview(current => ({ identity, key: crypto.randomUUID(), result: mergeCombineSearch(current?.identity === identity ? current.result : null, result.result) }));
+        },
+      });
+      const unfinished = Object.values(buildStepRef.current).some(step => ["partial", "failed", "cancelled"].includes(step.state));
+      setMessage(unfinished ? "Build finished with some searches needing attention. Successful work is retained. Review the task details and retry unfinished searches." : "Private draft saved. News and merchandise suggestions are ready in Media; Combine suggestions are ready in Stats. Review before adding them.");
+    } catch (cause) {
+      const cancelled = controller.signal.aborted;
+      const message = cancelled ? "Remaining work cancelled. Any completed private save and saved review results are retained." : cause instanceof z.ZodError ? cause.issues.slice(0, 3).map(issue => `${issue.path.join(".")}: ${issue.message}`).join("; ") : cause instanceof Error ? cause.message : "Build could not finish. Your existing draft is retained.";
+      for (const [key, step] of Object.entries(buildStepRef.current)) if (["waiting", "running"].includes(step.state)) updateStep(key as BuildStep, { state: cancelled ? "cancelled" : "failed", message });
+      if (cancelled) setMessage(message); else setError(message);
+    } finally { pending.current = false; setBusy(null); abort.current = null; }
   }
   async function discover(jerseysOnly = false) {
     if (pending.current) return;
@@ -447,6 +500,7 @@ export default function PreviewLockerForm({
     <p className="text-sm">Private demo only. Media suggestions are unverified; saving does not grant rights or create an Athlete Career ID.</p>
     {message && <p role="status" className="rounded-lg border p-3">{message}</p>}
     {error && <div role="alert" className="rounded-lg border border-red-500 p-3"><p>{error}</p>{saveVersionConflict && saved && <a href={`/admin/preview-lockers/${saved.id}/edit`} target="_blank" rel="noopener noreferrer" aria-label="Open latest saved version in a new tab" className="mt-2 inline-flex min-h-11 items-center underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#ffbb00]">Open latest saved version in a new tab</a>}</div>}
+    <BuildAllPanel steps={buildSteps} busy={busy === "build"} disabled={!!busy || statsNeedReload || draft.full_name.trim().length < 2} canRetry={!!saved && !dirty && !busy && !statsNeedReload && !saveVersionConflict} onBuild={() => { void buildAll(); }} onRetry={() => { void buildAll(true); }} onCancel={() => { abort.current?.abort(); }} />
     <div className={styles.folderTabs} role="tablist" aria-label="Locker editing sections">{["info", "career", "stats", "images", "videos", "media"].map((key, index, tabs) => <button key={key} type="button" role="tab" id={`locker-tab-${key}`} aria-controls={`locker-panel-${key}`} aria-selected={activeFolder === key} tabIndex={activeFolder === key ? 0 : -1} className={styles.folderTab} onClick={() => setActiveFolder(key)} onKeyDown={event => {
       const next = event.key === "ArrowRight" ? (index + 1) % tabs.length : event.key === "ArrowLeft" ? (index + tabs.length - 1) % tabs.length : event.key === "Home" ? 0 : event.key === "End" ? tabs.length - 1 : null;
       if (next === null) return;
@@ -494,7 +548,7 @@ export default function PreviewLockerForm({
       </section>
       <section id="locker-panel-stats" role="tabpanel" aria-labelledby="locker-tab-stats" tabIndex={0} hidden={activeFolder !== "stats"} className={styles.folderPanel}>
       <h2 className={styles.folderHeading}>Statistics & imports</h2>
-      <CombineResultsForm value={draft.combine_results} onChange={combine_results => change({ combine_results })} discovery={{ preview: saved, identityKey: JSON.stringify([draft.full_name, draft.school, draft.schools, draft.pro_teams]), searchDisabled: dirty || !!busy || statsNeedReload, onBusyChange: active => { pending.current = active; setBusy(active ? "combine" : null); } }} />
+      <CombineResultsForm value={draft.combine_results} onChange={combine_results => change({ combine_results })} discovery={{ preview: saved, identityKey: JSON.stringify([draft.full_name, draft.school, draft.schools, draft.pro_teams]), searchDisabled: dirty || !!busy || statsNeedReload, reviewState: combineReview, onReviewChange: setCombineReview, onBusyChange: active => { pending.current = active; setBusy(active ? "combine" : null); } }} />
       <CfbCsvImport athleteName={draft.full_name} value={draft.cfb_stats} onChange={cfb_stats => change({ cfb_stats })} />
       <StatsCsvImport league="nfl" athleteName={draft.full_name} value={draft.pfr_stats} onChange={pfr_stats => change({ pfr_stats })} disabled={busy !== null || statsNeedReload} />
       <section className="space-y-3" aria-label="Stats-only update">

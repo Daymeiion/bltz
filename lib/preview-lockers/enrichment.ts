@@ -5,7 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { normalizeAward, normalizeAwards, type CatalogAward, type NormalizedAward } from "@/lib/enrichment/awards";
 import type { EnrichmentDatabase } from "@/types/enrichment.generated";
 import type { Json } from "@/types/database.generated";
-import { articleRelevance, discoverNews, headlineKey, type NewsIdentity, type NewsResult, type PlayerArticle } from "@/lib/enrichment/news";
+import { articleRelevance, discoverNews, headlineKey, type SearchProvider, type NewsIdentity, type NewsResult, type PlayerArticle } from "@/lib/enrichment/news";
 import { fetchArticleMetadata } from "@/lib/enrichment/safe-fetch";
 import { configuredSearchProvider } from "@/lib/enrichment/search-provider";
 import { isNewsArticleUrl } from "@/lib/enrichment/news-classification";
@@ -69,7 +69,7 @@ export async function buildEnrichment(content: PreviewContent, dependencies: {
   } };
 }
 
-export async function enrichSavedPreview(client: SupabaseClient, id: string, content: PreviewContent, revision: number, refreshNews = true, knownUrls: string[] = [], scope: "all" | "awards" | "news" = "all"): Promise<EnrichmentReport> {
+export async function enrichSavedPreview(client: SupabaseClient, id: string, content: PreviewContent, revision: number, refreshNews = true, knownUrls: string[] = [], scope: "all" | "awards" | "news" = "all", options: { provider?: SearchProvider | null; signal?: AbortSignal; identity?: NewsIdentity } = {}): Promise<EnrichmentReport> {
   const startedAt = new Date().toISOString();
   const identityKey = previewIdentityKey(content);
   const previous = await client.from("preview_enrichments").select("report,identity_key,source_revision").eq("preview_id", id).maybeSingle();
@@ -89,17 +89,18 @@ export async function enrichSavedPreview(client: SupabaseClient, id: string, con
     },
     async news() {
       if (!needsNews) return { articles: [], candidates: 0, rejected: 0, duplicates: 0, errors: [], status: "complete" };
-      const provider = configuredSearchProvider();
+      const provider = options.provider === undefined ? configuredSearchProvider() : options.provider;
       if (!provider) return discoverNews(previewNewsIdentity(content), null, async () => null, AbortSignal.timeout(1));
       // Aliases are reference context for discovery only, never stored affiliations
       // or input to the saved identity hash used by revision-scoped persistence.
-      const identity = await withSchoolAliases(client, previewNewsIdentity(content));
+      const identity = options.identity ?? await withSchoolAliases(client, previewNewsIdentity(content));
+      options.signal?.throwIfAborted();
       // Reuse the existing per-admin daily budget and identity cooldown.
       const admission = await client.rpc("admit_preview_discovery", { p_identity_hash: createHash("sha256").update(`news:${identityKey}`).digest("hex") });
       if (admission.error || !admission.data) throw new Error("news_rate_limited");
       let succeeded = false;
       try {
-        const result = await discoverNews(identity, provider, fetchArticleMetadata, AbortSignal.timeout(50_000), knownUrls);
+        const result = await discoverNews(identity, provider, fetchArticleMetadata, AbortSignal.any([...(options.signal ? [options.signal] : []), AbortSignal.timeout(50_000)]), knownUrls);
         succeeded = result.status !== "unavailable";
         return result;
       } finally { await client.rpc("finalize_preview_discovery", { p_request_id: admission.data, p_succeeded: succeeded }); }
@@ -134,6 +135,7 @@ export async function enrichSavedPreview(client: SupabaseClient, id: string, con
     article.thumbnail_url = remoteAssetReference(article.thumbnail_url);
   }
   snapshot.report.news_status = !needsNews ? "skipped" : snapshot.news?.status ?? "unavailable";
+  options.signal?.throwIfAborted();
   const { data, error } = await (client as SupabaseClient<EnrichmentDatabase>).rpc("save_preview_enrichment", {
     p_preview_id: id, p_revision: revision, p_identity_key: identityKey, p_started_at: startedAt,
     p_awards: snapshot.awards as unknown as Json,
