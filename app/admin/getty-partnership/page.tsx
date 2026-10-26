@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import OriginalOverview from "./OriginalOverview";
 import MeetingViews from "./MeetingViews";
+import GettyCommercialModel from "./GettyCommercialModel";
 import { OneSheet, ImageWorkflow } from "./PilotViews";
 
 export const metadata: Metadata = {
@@ -9,5 +10,5 @@ export const metadata: Metadata = {
 };
 
 export default function GettyPartnershipPage() {
-  return <MeetingViews overview={<OriginalOverview />} oneSheet={<OneSheet />} workflow={<ImageWorkflow />} />;
+  return <MeetingViews overview={<OriginalOverview />} oneSheet={<OneSheet />} workflow={<ImageWorkflow />} commercial={<GettyCommercialModel />} />;
 }
