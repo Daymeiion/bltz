@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Eye, Pause, Play } from "lucide-react";
-import { GettyLicenseControl } from "./GettyLicenseControl";
+import { GettyLicenseControl, gettyDetailUrl } from "./GettyLicenseControl";
 import styles from "./related-media-strip.module.css";
 import { useFilmRowScroll } from "./use-film-row-scroll";
 
@@ -33,7 +33,7 @@ export function RelatedMediaStrip({ images, athleteName, athleteSlug, activeImag
   const available = images.filter(image => !failed.includes(image.url));
   return <section className={styles.strip} aria-label="Related media" data-athlete-slug={athleteSlug} data-media-source="preview_upload" data-demo="true" data-context-image-id={activeImageId}>
     <div className={styles.stripHeader}>
-      <p className={styles.powered}>Powered by Getty Images</p>
+      {available.some(image => gettyDetailUrl(image.sourceUrl)) && <p className={styles.powered}>Powered by Getty Images</p>}
       {available.length > 0 && <button type="button" className={styles.scrollToggle} onClick={togglePaused} aria-label={paused ? "Play photo row" : "Pause photo row"} title={paused ? "Play photo row" : "Pause photo row"} aria-pressed={paused}>{paused ? <Play aria-hidden="true" /> : <Pause aria-hidden="true" />}</button>}
       {onResume && <button type="button" className={styles.resume} onClick={onResume} aria-label="Resume slideshow" title="Resume slideshow"><Play aria-hidden="true" fill="currentColor" /></button>}
     </div>

@@ -7,7 +7,7 @@ import styles from "./related-media-strip.module.css";
 
 export type GettyLicenseImage = { id: string; url: string; title: string; sourceUrl?: string | null };
 
-function gettyDetailUrl(sourceUrl: string | null | undefined) {
+export function gettyDetailUrl(sourceUrl: string | null | undefined) {
   if (!sourceUrl) return null;
   try {
     const url = new URL(sourceUrl);
@@ -28,8 +28,7 @@ export function GettyLicenseControl({ image, athleteName, repeated = false, onOp
   onOpenChange?: (open: boolean) => void;
 }) {
   const detailUrl = gettyDetailUrl(image.sourceUrl);
-  const searchName = athleteName.trim().toLowerCase().replace(/\s+/g, "-");
-  const gettySearchUrl = `https://www.gettyimages.com/photos/${encodeURIComponent(searchName)}`;
+  if (!detailUrl) return null;
   return <Dialog onOpenChange={onOpenChange}>
             <DialogTrigger asChild>
               <button type="button" tabIndex={repeated ? -1 : undefined} className={`${styles.imageAction} ${styles.licenseAction}`} aria-label={`Explore Getty Images licensing: ${image.title || athleteName}${repeated ? " (loop)" : ""}`} title="Explore licensing on Getty Images">
@@ -50,13 +49,13 @@ export function GettyLicenseControl({ image, athleteName, repeated = false, onOp
               <img className={styles.modalPhoto} src={image.url} alt={image.title || `${athleteName} career photo`} />
               <DialogTitle className={styles.modalTitle}>License with Getty Images</DialogTitle>
               <DialogDescription className={styles.modalDescription}>
-                {detailUrl ? "View this photo and review its licensing options on Getty Images." : <>Explore photos of {athleteName}. Choose an image and review its licensing options on Getty Images.</>}
+                View this photo and review its licensing options on Getty Images.
               </DialogDescription>
-              <a className={styles.gettyLink} href={detailUrl || gettySearchUrl} target="_blank" rel="noopener noreferrer">
-                {detailUrl ? "View this photo on Getty Images" : "Explore on Getty Images"} <ExternalLink aria-hidden="true" />
+              <a className={styles.gettyLink} href={detailUrl} target="_blank" rel="noopener noreferrer">
+                View this photo on Getty Images <ExternalLink aria-hidden="true" />
                 <span className={styles.srOnly}> (opens in a new tab)</span>
               </a>
-              <p className={styles.modalNote}>{detailUrl ? "Opens this photo’s Getty Images page. Image availability and licensing are confirmed on Getty Images." : "Showcase preview · Opens athlete search results. Image availability and licensing are confirmed on Getty Images."}</p>
+              <p className={styles.modalNote}>Opens this photo’s Getty Images page. Image availability and licensing are confirmed on Getty Images.</p>
             </DialogPrimitive.Content>
           </DialogPortal>
   </Dialog>;

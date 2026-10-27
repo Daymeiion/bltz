@@ -130,6 +130,13 @@ it.each(["locker", "room"])("opens the selected grid photo’s Getty licensing m
   await vi.waitFor(() => expect(document.activeElement).toBe(trigger));
   expect(host.querySelector('button[aria-label="Resume slideshow"]')).toBeNull();
 });
+it.each(["locker", "room"])("keeps personal photos free of Getty licensing controls in the %s", async surface => {
+  await act(async () => root.render(surface === "locker" ? <LockerView data={previewLockerData(record)} /> : <PhotoRoomView data={previewPhotoData(record)} />));
+  expect(host.querySelector('[aria-label^="Explore Getty Images licensing:"]')).toBeNull();
+  expect(host.textContent).not.toContain("Powered by Getty Images");
+  expect(document.querySelector('[role="dialog"]')).toBeNull();
+  expect(host.querySelector('img[src="https://custom.example.com/career.jpg"]')).not.toBeNull();
+});
 it.each([true, false])("keeps award years without the unverified-evidence label (private: %s)", async isPrivate => {
   const data = previewLockerData(record);
   data.awards = [{ year: "2007", label: "Synthetic honor", evidenceStatus: "unverified" }];

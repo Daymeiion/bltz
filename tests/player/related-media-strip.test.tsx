@@ -4,8 +4,8 @@ import { afterEach, beforeEach, expect, it, vi, type Mock } from "vitest";
 import { RelatedMediaStrip, type RelatedMediaImage } from "@/components/player/RelatedMediaStrip";
 
 const images = [
-  { id: "one", url: "https://example.com/one.jpg", title: "College game", credits: "Uploaded photographer" },
-  { id: "two", url: "https://example.com/two.jpg", title: "Professional game" },
+  { id: "one", url: "https://example.com/one.jpg", title: "College game", credits: "Uploaded photographer", sourceUrl: "https://www.gettyimages.com/detail/51458178" },
+  { id: "two", url: "https://example.com/two.jpg", title: "Professional game", sourceUrl: "https://www.gettyimages.com/detail/76443769" },
 ];
 let host: HTMLDivElement;
 let root: Root;
@@ -61,9 +61,9 @@ it("opens the corresponding licensing preview without selecting a slideshow phot
   expect(dialog).not.toBeNull();
   expect(dialog.getAttribute("aria-modal")).toBe("true");
   expect(dialog.querySelector('img[src="https://example.com/two.jpg"]')).not.toBeNull();
-  expect(dialog.textContent).toContain("Showcase preview");
+  expect(dialog.textContent).toContain("View this photo on Getty Images");
   const link = dialog.querySelector<HTMLAnchorElement>("a")!;
-  expect(link.href).toBe("https://www.gettyimages.com/photos/keith-rivers");
+  expect(link.href).toBe(images[1].sourceUrl);
   expect(link.target).toBe("_blank");
   expect(link.rel).toContain("noopener");
   expect(link.rel).toContain("noreferrer");
@@ -100,19 +100,19 @@ it("shows the existing empty state when images fail instead of leaving licensing
   expect(host.querySelector('[aria-label^="Explore Getty Images licensing:"]')).toBeNull();
 });
 
-it("encodes athlete names without allowing the search URL to change its host", async () => {
-  await act(async () => root.render(<RelatedMediaStrip images={images} athleteName="A/B? C&D" athleteSlug="fixture" onSelect={select} />));
-  await act(async () => host.querySelector<HTMLButtonElement>('[aria-label="Explore Getty Images licensing: College game"]')!.click());
-  const link = document.querySelector<HTMLAnchorElement>('[role="dialog"] a')!;
-  const destination = new URL(link.href);
-  expect(destination.origin).toBe("https://www.gettyimages.com");
-  expect(destination.pathname).toBe("/photos/a%2Fb%3F-c%26d");
-  expect(destination.search).toBe("");
+it("does not show Getty branding or licensing controls on personal or unmatched photos", async () => {
+  const personal = images.map(image => ({ ...image, title: "gettyimages-12345678 personal upload", sourceUrl: null }));
+  await act(async () => root.render(<RelatedMediaStrip images={personal} athleteName="Dante Hughes" athleteSlug="dante-hughes" onSelect={select} />));
+  expect(host.querySelector('[aria-label^="Explore Getty Images licensing:"]')).toBeNull();
+  expect(host.textContent).not.toContain("Powered by Getty Images");
+  expect(document.querySelector('[role="dialog"]')).toBeNull();
+  await act(async () => host.querySelector<HTMLButtonElement>('[aria-label^="Show related photo:"]')!.click());
+  expect(select).toHaveBeenCalled();
 });
 
-it("opens the selected photo’s Getty detail page and keeps unmapped photos on search", async () => {
+it("opens the selected photo’s Getty detail page and hides licensing for unmapped photos", async () => {
   const sourceUrl = "https://www.gettyimages.com/detail/news-photo/dante-hughes-news-photo/76443769";
-  await act(async () => root.render(<RelatedMediaStrip images={[{ ...images[0], sourceUrl }, images[1]]} athleteName="Dante Hughes" athleteSlug="dante-hughes" onSelect={select} />));
+  await act(async () => root.render(<RelatedMediaStrip images={[{ ...images[0], sourceUrl }, { ...images[1], sourceUrl: null }]} athleteName="Dante Hughes" athleteSlug="dante-hughes" onSelect={select} />));
   await act(async () => host.querySelector<HTMLButtonElement>('[aria-label="Explore Getty Images licensing: College game"]')!.click());
   const dialog = document.querySelector<HTMLElement>('[role="dialog"]')!;
   expect(dialog.querySelector<HTMLAnchorElement>("a")!.href).toBe(sourceUrl);
@@ -120,8 +120,7 @@ it("opens the selected photo’s Getty detail page and keeps unmapped photos on 
   expect(dialog.textContent).not.toContain("Opens athlete search results");
   expect(select).not.toHaveBeenCalled();
   await act(async () => dialog.querySelector<HTMLButtonElement>('[aria-label="Close Getty Images licensing"]')!.click());
-  await act(async () => host.querySelector<HTMLButtonElement>('[aria-label="Explore Getty Images licensing: Professional game"]')!.click());
-  expect(document.querySelector<HTMLAnchorElement>('[role="dialog"] a')!.href).toBe("https://www.gettyimages.com/photos/dante-hughes");
+  expect(host.querySelector('[aria-label="Explore Getty Images licensing: Professional game"]')).toBeNull();
 });
 
 it.each([
@@ -133,6 +132,6 @@ it.each([
   "javascript:alert(1)",
 ])("does not treat an untrusted or non-detail source as a Getty photo: %s", async sourceUrl => {
   await act(async () => root.render(<RelatedMediaStrip images={[{ ...images[0], sourceUrl }]} athleteName="Dante Hughes" athleteSlug="dante-hughes" onSelect={select} />));
-  await act(async () => host.querySelector<HTMLButtonElement>('[aria-label="Explore Getty Images licensing: College game"]')!.click());
-  expect(document.querySelector<HTMLAnchorElement>('[role="dialog"] a')!.href).toBe("https://www.gettyimages.com/photos/dante-hughes");
+  expect(host.querySelector('[aria-label^="Explore Getty Images licensing:"]')).toBeNull();
+  expect(document.querySelector('[role="dialog"]')).toBeNull();
 });

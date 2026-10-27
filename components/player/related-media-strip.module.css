@@ -12,7 +12,7 @@
 .imageSelect { display: block; width: 100%; height: 100%; padding: 0; border: 0; background: transparent; cursor: pointer; }
 .imageSelect img { display: block; width: 100%; height: 100%; object-fit: contain; }
 .imageNarrow .gettyLogo { display: none; }
-.imageNarrow .licenseAction { top: 8px; bottom: auto; }
+.imageNarrow .viewAction { top: 8px; bottom: auto; }
 .scrollToggle { position: absolute; left: 0; display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 1px solid #47516b; border-radius: 4px; background: transparent; color: #c1c8d6; cursor: pointer; }
 .scrollToggle svg { width: 18px; height: 18px; }
 .scrollToggle:hover { border-color: #ffbb00; color: #ffbb00; }
@@ -23,9 +23,9 @@
 .imageAction { position: absolute; bottom: 8px; z-index: 1; display: flex; align-items: center; justify-content: center; gap: 7px; height: 44px; padding: 0 9px; border: 1px solid rgba(255,255,255,.5); border-radius: 4px; background: rgba(5,7,15,.9); color: #fff; cursor: pointer; opacity: 0; transform: translateY(4px); pointer-events: none; transition: opacity 160ms ease, transform 160ms ease, border-color 160ms ease; }
 .imageAction svg { width: 17px; height: 17px; flex: none; }
 .viewAction { left: 8px; width: 44px; padding: 0; }
-.licenseAction { right: 8px; }
+.licenseAction { left: 50%; bottom: 8px; translate: -50% 0; }
 .licenseTile { position: relative; }
-.licenseTile .licenseAction { top: 8px; bottom: auto; max-width: calc(100% - 16px); }
+.licenseTile .licenseAction { max-width: calc(100% - 16px); }
 .licenseTile:hover .imageAction, .licenseTile:focus-within .imageAction { opacity: 1; transform: none; pointer-events: auto; }
 @media (max-width: 640px) { .licenseTile .gettyLogo { display: none; } }
 .gettyLogo { display: block; width: 76px; height: 17px; object-fit: contain; filter: brightness(0) invert(1); }
