@@ -52,3 +52,56 @@ it("continues a multi-file upload after a failure and reports saved duplicates w
  const finalize=fetcher.mock.calls.find(([url,options])=>url.endsWith('/uploads')&&options?.method==='PATCH');
  expect(JSON.parse(finalize![1].body).details).toMatchObject({image_source_url:null,image_license:null,attribution:null});
 });
+
+it("confirms removal, hides the image after reload, and restores it with the current revision", async () => {
+ let stored = { ...image };
+ fetcher.mockImplementation(async (_url: string, options?: RequestInit) => {
+  if (options?.method === "DELETE" || options?.method === "PATCH") {
+   expect(JSON.parse(options.body as string).revision).toBe(stored.revision);
+   stored = { ...stored, active: options.method === "PATCH", revision: stored.revision + 1 };
+   return Response.json({ id, active: stored.active, revision: stored.revision });
+  }
+  return Response.json({ ...library, images: [stored] });
+ });
+ await act(async () => root.render(<AwardImageLibrary />));
+ await act(async () => host.querySelector<HTMLButtonElement>('[aria-label="Remove Shared trophy"]')!.click());
+ expect(document.querySelector('[role="alertdialog"]')?.textContent).toContain("Award records are preserved");
+ expect(fetcher.mock.calls.filter(([, options]) => options?.method === "DELETE")).toHaveLength(0);
+ await click("Cancel");
+ expect(host.querySelector('figure')).not.toBeNull();
+ await act(async () => host.querySelector<HTMLButtonElement>('[aria-label="Remove Shared trophy"]')!.click());
+ await act(async () => document.querySelector<HTMLButtonElement>('[role="alertdialog"] button:last-child')!.click());
+ expect(stored.active).toBe(false);
+ expect(host.querySelector('figure')).toBeNull();
+ expect(document.querySelector('[role="alertdialog"]')).toBeNull();
+ expect(host.textContent).toContain("removed from the library");
+ await click("Refresh");
+ expect(host.querySelector('figure')).toBeNull();
+ await act(async () => host.querySelector<HTMLInputElement>('input[type="checkbox"]')!.click());
+ expect(host.querySelector('figure')?.textContent).toContain("Removed");
+ await act(async () => host.querySelector<HTMLButtonElement>('[aria-label="Restore Shared trophy"]')!.click());
+ expect(stored.active).toBe(true);
+ expect(host.querySelector('[aria-label="Remove Shared trophy"]')).not.toBeNull();
+ expect(host.textContent).toContain("restored to the library");
+});
+
+it("keeps failed removals visible and provides a refresh path for stale images", async () => {
+ fetcher.mockImplementation(async (_url: string, options?: RequestInit) => options?.method === "DELETE"
+  ? Response.json({ error: "award_image_changed" }, { status: 409 }) : Response.json(library));
+ await act(async () => root.render(<AwardImageLibrary />));
+ await act(async () => host.querySelector<HTMLButtonElement>('[aria-label="Remove Shared trophy"]')!.click());
+ await act(async () => document.querySelector<HTMLButtonElement>('[role="alertdialog"] button:last-child')!.click());
+ expect(document.querySelector('[role="alertdialog"] [role="alert"]')?.textContent).toContain("Cancel and refresh");
+ expect(host.querySelector('figure')).not.toBeNull();
+ await click("Cancel");
+ await click("Refresh");
+ expect(host.querySelector('[role="alert"]')).toBeNull();
+});
+
+it("withholds removed images from the award picker", async () => {
+ fetcher.mockResolvedValue(Response.json({ ...library, images: [{ ...image, active: false }] }));
+ await act(async () => root.render(<AwardImagePicker award={{ label: "Award", year: "2007" }} onChange={vi.fn()} />));
+ await click("Choose award image");
+ expect(document.querySelector('[role="dialog"]')?.textContent).toContain("No images yet");
+ expect(button("Shared trophy")).toBeUndefined();
+});

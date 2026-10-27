@@ -107,6 +107,16 @@ try {
   await db.exec('reset role;set role anon');await assert.rejects(approve(batch),/permission denied/);
   await db.exec('reset role;set role service_role');await assert.rejects(approve(batch),/permission denied/);await db.exec('reset role');
   assert.equal(await auditCount(),before+5); // 3 mappings + image insert/archive, no retry/failed-batch audit.
+  const removalAudit=(await db.query("select * from audit_logs where entity_id=$1 and action='award_image.update' order by id desc limit 1",[newImage.id])).rows[0];
+  assert.equal(removalAudit.previous_values.active,true);assert.equal(removalAudit.new_values.active,false);
+  assert.equal((await db.query('select image_asset_id from award_catalog where id=$1',[replacement.award_id])).rows[0].image_asset_id,newImage.id);
+  await db.exec(`set role authenticated;select set_config('request.jwt.claim.sub','${other}',false)`);
+  assert.equal((await db.query('update award_image_assets set active=true where id=$1 returning id',[newImage.id])).rows.length,0);
+  await db.exec(`select set_config('request.jwt.claim.sub','${admin}',false)`);
+  const removedRevision=(await db.query('select revision from award_image_assets where id=$1',[newImage.id])).rows[0].revision;
+  const restored=(await db.query('update award_image_assets set active=true where id=$1 and revision=$2 returning active,revision',[newImage.id,removedRevision])).rows[0];
+  assert.equal(restored.active,true);assert.equal(restored.revision,removedRevision+1);
+  await db.exec('reset role');
   assert.equal((await db.query("select has_schema_privilege('authenticated','private','usage') ok")).rows[0].ok,false);
   // Generate a scoped contract from the applied schema, including actual FKs.
   const tables=['award_image_assets','award_catalog'];
