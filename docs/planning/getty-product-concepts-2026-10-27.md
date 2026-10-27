@@ -50,3 +50,17 @@ The concepts demonstrate possible uses of existing athlete-career-media-source r
 ## Release validation
 
 Clean release validation passed: **237 test files passed**, two skipped; **1,931 tests passed**, 24 skipped. The production Webpack build including TypeScript passed. Full ESLint passed with zero errors and 298 warnings (the previous 296 plus the new test-only Next Image mock's two image warnings). CRLF-aware diff validation passed. All five final WebP assets were decoded and dimension-checked. No application package or environment settings changed.
+
+## Live production verification
+
+Commit `5018165466756f1af82e7d2abe04c27a593ece83` reached Ready in production deployment `HtjsSV9xYFPeTXZNTqaLVkbtqktv`. Live Dante Photo Room shows exactly five product cards and no previous related-media strip. All five final image assets loaded successfully. The original photo grid retains all 32 photos and its 13 verified Getty licensing controls.
+
+Each product modal was opened in the live browser and checked for the correct product title, image, USD estimate, safe Getty source links, a visible **disabled** Buy Now button, and working Escape dismissal. All five passed. The sticker set showed three Getty source links, and the signed poster describes its unauthenticated concept signature. Modal and row screenshots are saved at `tmp/getty-pod/live-face-modal.png` and `tmp/getty-pod/live-product-row.png`.
+
+The generated scenes and references were visually inspected. Narrow-screen layout is implemented with horizontal card scrolling and a viewport-constrained modal; physical touch and narrow-viewport browser verification remain limitations because the available viewport override did not reliably apply in this session. No purchase or licensing transaction was submitted. No requested demo work remains deferred.
+
+## Child fan image revision
+
+The user requested replacing the adult holding the face cutout with a child. The built-in image tool edited the prior generated image, preserving the printed Dante face cutout, navy clothing, and stadium setting. The revised asset is `public/images/dante-hughes/product-concepts/fan-face-cutout-kid.webp`; the original asset remains. The product manifest uses the new URL for both the row card and modal, and its alt text/description identify the child. Price ($49), Getty source (113640536), disabled Buy Now behavior, routes, permissions, database, migrations, environment variables and the other four concepts remain unchanged. The exact edit prompt is appended to `docs/design-reference/dante-product-concepts-prompts.json`.
+
+Child revision validation: the seven existing product-modal tests passed; lint for the changed manifest passed; the production Webpack build including TypeScript passed; CRLF-aware diff validation passed. No new tests were added for this image/content-only change. Live image verification follows publication.

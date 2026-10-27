@@ -38,9 +38,9 @@ export const DANTE_PRODUCT_CONCEPTS: readonly ProductConcept[] = [
     estimatedPriceUsd: 12, sources: [asset("106613403"), asset("77549351"), asset("51458178")],
   },
   {
-    id: "fan-face-cutout", title: "Fan face cutout", image: image("fan-face-cutout"),
-    alt: "A fan holding a large head-only cutout poster of Dante Hughes’s face at a stadium",
-    description: "A fan holding a 24 inch, head-only face poster. A lightweight rigid cutout with a white silhouette border.",
+    id: "fan-face-cutout", title: "Fan face cutout", image: image("fan-face-cutout-kid"),
+    alt: "A child holding a large head-only cutout poster of Dante Hughes’s face at a stadium",
+    description: "A young fan holding a 24 inch, head-only face poster. A lightweight rigid cutout with a white silhouette border.",
     estimatedPriceUsd: 49, sources: [asset("113640536")],
   },
 ];

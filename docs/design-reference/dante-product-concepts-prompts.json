@@ -40,5 +40,12 @@
     ],
     "prompt": "Use case: product-mockup; identity-preserve compositing. Create one photorealistic square lifestyle product mockup of a smiling adult football fan standing at a stadium concourse, holding a large rigid die-cut poster of JUST THE FACE AND HEAD of Dante Hughes from reference image 1. The giant face print must preserve the exact referenced man's face, hair, skin tone, expression and identity, enlarged as a crisp flat printed photograph; do not redraw or invent a different face. Cut around head silhouette with a slim white border, no jersey/torso printed on the cutout. The cutout is about 24 inches tall, fan holds both lower edges in front of their chest without covering their own face. Fan wears an unbranded navy shirt; stadium background softly blurred. Clearly a real physical cardboard/foam-board printed face poster, not an oversized live human head. Entire cutout and fan's hands visible. No brand names, no title, no price, no additional text.",
     "builtInTool": true
+  },
+  {
+    "product": "fan-face-cutout",
+    "revision": "child fan",
+    "editTarget": "exec-6b2ca59a-155f-419c-bfe8-3bc1a8976d50.png",
+    "prompt": "Edit this product mockup. Change only the adult fan holding the face poster into a cheerful child around 9 years old, wearing the same plain navy T-shirt and navy baseball cap. Give the child natural age-appropriate facial features, body proportions and small hands gripping the two lower edges. Keep the large rigid die-cut Dante Hughes face poster exactly the same: preserve the printed man's identity, face, expression, haircut, skin tone, white silhouette border and flat printed-cardboard appearance. Keep the stadium concourse background, soft natural lighting, square composition, product framing and realistic photographic style. The child should be clearly visible beside and behind the large face cutout; the oversized face must remain a physical poster held by the child, not a live oversized head. No added text, logos or other changes.",
+    "builtInTool": true
   }
 ]
