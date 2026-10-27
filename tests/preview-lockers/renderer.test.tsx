@@ -103,11 +103,32 @@ it("restores portrait and landscape gallery proportions when cached images load 
       { ...record.photos[0], id: "landscape", url: "https://custom.example.com/landscape.jpg" },
     ];
     await act(async () => root.render(<PhotoRoomView data={previewPhotoData({ ...record, photos })} />));
-    const tiles = [...host.querySelectorAll<HTMLButtonElement>('[aria-label="Photo grid"] button')];
+    const tiles = [...host.querySelectorAll<HTMLButtonElement>('[aria-label="Photo grid"] button[aria-label^="View "]')];
     expect(Number(tiles[0].style.getPropertyValue("--photo-ratio"))).toBeCloseTo(2 / 3);
     expect(Number(tiles[1].style.getPropertyValue("--photo-ratio"))).toBeCloseTo(16 / 9);
     expect(analytics).not.toHaveBeenCalled();
   } finally { complete.mockRestore(); width.mockRestore(); height.mockRestore(); }
+});
+it.each(["locker", "room"])("opens the selected grid photo’s Getty licensing modal in the %s", async surface => {
+  const sourceUrl = "https://www.gettyimages.com/detail/news-photo/dante-hughes-news-photo/76443769";
+  const linked = { ...record, photos: [{ ...record.photos[0], sourceUrl }] };
+  await act(async () => root.render(surface === "locker" ? <LockerView data={previewLockerData(linked)} /> : <PhotoRoomView data={previewPhotoData(linked)} />));
+  const grid = host.querySelector(surface === "locker" ? ".locker-photo-contact-sheet" : '[aria-label="Photo grid"]')!;
+  const trigger = grid.querySelector<HTMLButtonElement>('[aria-label^="Explore Getty Images licensing:"]')!;
+  expect(trigger).not.toBeNull();
+  expect(grid.querySelector("button button")).toBeNull();
+  await act(async () => { trigger.focus(); trigger.click(); });
+  const dialog = document.querySelector<HTMLElement>('[role="dialog"]')!;
+  expect(dialog.textContent).toContain("License with Getty Images");
+  expect(dialog.querySelector<HTMLImageElement>('img[src="https://custom.example.com/career.jpg"]')).not.toBeNull();
+  const link = dialog.querySelector<HTMLAnchorElement>("a")!;
+  expect(link.href).toBe(sourceUrl);
+  expect(link.target).toBe("_blank");
+  expect(link.rel).toBe("noopener noreferrer");
+  await act(async () => document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
+  expect(document.querySelector('[role="dialog"]')).toBeNull();
+  await vi.waitFor(() => expect(document.activeElement).toBe(trigger));
+  expect(host.querySelector('button[aria-label="Resume slideshow"]')).toBeNull();
 });
 it.each([true, false])("keeps award years without the unverified-evidence label (private: %s)", async isPrivate => {
   const data = previewLockerData(record);

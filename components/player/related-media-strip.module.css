@@ -24,6 +24,10 @@
 .imageAction svg { width: 17px; height: 17px; flex: none; }
 .viewAction { left: 8px; width: 44px; padding: 0; }
 .licenseAction { right: 8px; }
+.licenseTile { position: relative; }
+.licenseTile .licenseAction { top: 8px; bottom: auto; max-width: calc(100% - 16px); }
+.licenseTile:hover .imageAction, .licenseTile:focus-within .imageAction { opacity: 1; transform: none; pointer-events: auto; }
+@media (max-width: 640px) { .licenseTile .gettyLogo { display: none; } }
 .gettyLogo { display: block; width: 76px; height: 17px; object-fit: contain; filter: brightness(0) invert(1); }
 .image:hover .imageAction, .image:focus-within .imageAction { opacity: 1; transform: none; pointer-events: auto; }
 .imageAction:hover { border-color: #ffbb00; }

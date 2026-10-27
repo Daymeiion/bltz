@@ -5,6 +5,8 @@ import { schoolHistoryName, proHistoryName } from "@/lib/player/team-history-nam
 import { formatHometown, highSchoolName } from "@/lib/player/locker-format";
 import { FittedHeroName } from "@/components/player/FittedHeroName";
 import { EditorialCard } from "@/components/player/EditorialCard";
+import { GettyLicenseControl } from "@/components/player/GettyLicenseControl";
+import licenseStyles from "@/components/player/related-media-strip.module.css";
 
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { ChevronDown, ChevronUp, Mic } from "lucide-react";
@@ -1174,7 +1176,7 @@ export default function LockerView({
                     const index = rowIndex * 3 + columnIndex;
                     return <div
                     key={photo.id}
-                    className="locker-photo-tile"
+                    className={`locker-photo-tile ${licenseStyles.licenseTile}`}
                     style={{
                       "--photo-ratio": photoRatio(photo.id),
                       "--photo-mobile-order": index === 2 ? 3 : index === 3 ? 2 : index,
@@ -1195,6 +1197,7 @@ export default function LockerView({
                     {index === previewPhotos.length - 1 && eligiblePhotoCount > previewPhotos.length ? (
                       <div className="locker-photo-more" style={{ fontFamily: mono }}>+{eligiblePhotoCount - previewPhotos.length} MORE</div>
                     ) : null}
+                    {(isPrivatePreview || photo.sourceUrl?.startsWith("https://www.gettyimages.com/detail/")) && <GettyLicenseControl image={photo} athleteName={data.fullName} />}
                   </div>;
                   })}
                   </div>
@@ -2055,8 +2058,8 @@ const styleSheet = `
 .locker-hero-video{z-index:1;object-fit:contain;object-position:center;background:transparent}
 .locker-photo-contact-sheet{height:390px;display:grid;grid-template-columns:repeat(12,minmax(0,1fr));grid-template-rows:repeat(3,minmax(0,1fr));grid-auto-flow:row;gap:8px;overflow:hidden}
 .locker-photo-tile{position:relative;min-width:0;grid-column:span var(--photo-mobile-span,2);overflow:hidden;border:1px solid #1E2640;border-radius:14px;background:${GRAD_FIELD}}
-.locker-photo-tile img{transition:transform .35s ease}
-.locker-photo-tile:hover img{transform:scale(1.025)}
+.locker-photo-tile > img{transition:transform .35s ease}
+.locker-photo-tile:hover > img{transform:scale(1.025)}
 .locker-photo-empty{position:relative;min-height:228px;grid-column:1/-1;overflow:hidden;border:1px solid #1E2640;border-radius:14px}
 .locker-hero-stroke{border-radius:24px}
 .locker-hero-portrait-stage{display:none}
@@ -2128,8 +2131,8 @@ const styleSheet = `
 .basic-info-grid>div{grid-column:1/-1}
 .locker-photo-contact-sheet{height:390px;display:grid;grid-template-columns:repeat(12,minmax(0,1fr));grid-template-rows:repeat(3,minmax(0,1fr));gap:8px;overflow:hidden}
 .locker-photo-tile{position:relative;min-width:0;grid-column:span var(--photo-mobile-span,6);overflow:hidden;border:1px solid #1E2640;border-radius:14px;background:${GRAD_FIELD}}
-.locker-photo-tile img{display:block;width:100%;height:100%;object-fit:cover;transition:transform .35s ease}
-.locker-photo-tile:hover img{transform:scale(1.025)}
+.locker-photo-tile > img{display:block;width:100%;height:100%;object-fit:cover;transition:transform .35s ease}
+.locker-photo-tile:hover > img{transform:scale(1.025)}
 .locker-photo-shade{position:absolute;inset:0;background:linear-gradient(to top,rgba(5,7,15,.62),transparent 58%);pointer-events:none}
 .locker-photo-label{position:absolute;left:9px;bottom:9px;max-width:calc(100% - 18px);overflow:hidden;color:rgba(255,255,255,.76);font-size:7.5px;letter-spacing:.12em;text-overflow:ellipsis;text-transform:uppercase;white-space:nowrap}
 .locker-photo-more{position:absolute;right:9px;bottom:9px;top:auto;display:inline-flex;width:max-content;height:max-content;white-space:nowrap;line-height:1;padding:5px 7px;border-radius:999px;background:rgba(5,7,15,.82);color:#fff;font-size:9px;font-weight:700;letter-spacing:.12em;text-shadow:0 1px 6px rgba(0,0,0,.8)}
@@ -2141,14 +2144,14 @@ const styleSheet = `
 @media (max-width:640px){
   .locker-photo-contact-sheet--preview{display:flex;flex-wrap:wrap;height:auto;align-items:flex-start}
   .locker-photo-contact-sheet--preview .locker-photo-tile{order:var(--photo-mobile-order,0);flex:0 0 calc((100% - 8px) * var(--photo-mobile-share,.5));min-height:0;aspect-ratio:var(--photo-ratio,1)}
-  .locker-photo-contact-sheet--preview .locker-photo-tile img{position:absolute;inset:0;object-fit:contain!important;transform:none}
+  .locker-photo-contact-sheet--preview .locker-photo-tile > img{position:absolute;inset:0;object-fit:contain!important;transform:none}
 }
 
 @media (min-width:641px){
   .locker-photo-contact-sheet--preview{display:flex;flex-direction:column;height:auto}
   .locker-photo-contact-sheet--preview .locker-photo-row{display:flex;align-items:flex-start;min-height:0;gap:10px}
   .locker-photo-contact-sheet--preview .locker-photo-tile{flex:var(--photo-ratio,1) 1 0%;min-width:0;min-height:0;aspect-ratio:var(--photo-ratio,1)}
-  .locker-photo-contact-sheet--preview .locker-photo-tile img{position:absolute;inset:0;object-fit:contain!important;transform:none}
+  .locker-photo-contact-sheet--preview .locker-photo-tile > img{position:absolute;inset:0;object-fit:contain!important;transform:none}
 }
 @media (max-width:640px){
   .bltz-frame{width:100vw;height:100dvh;box-shadow:none}

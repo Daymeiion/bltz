@@ -292,8 +292,10 @@
 
 .photoTileLarge { grid-row: span 2; min-height: 336px; }
 .photoTileWide { grid-column: span 2; min-height: 192px; }
+.tileSelect { position: absolute; inset: 0; display: block; width: 100%; height: 100%; padding: 0; border: 0; background: transparent; color: inherit; cursor: pointer; }
+.tileSelect:focus-visible { outline: 2px solid var(--photo-accent); outline-offset: -2px; }
 
-.photoTile img {
+.tileSelect > img {
   width: 100%;
   height: 100%;
   display: block;
@@ -303,7 +305,7 @@
 }
 
 .photoTile:focus-visible { outline: 2px solid var(--photo-accent); outline-offset: -2px; }
-.photoTile:hover img { transform: scale(1.035); filter: saturate(1.08); }
+.photoTile:hover .tileSelect > img { transform: scale(1.035); filter: saturate(1.08); }
 
 .photoTilePlaceholder {
   min-height: 168px;
@@ -432,7 +434,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .heroImage,
-  .photoTile img,
+  .tileSelect > img,
   .scrollShade {
     transition: none;
   }
@@ -458,8 +460,8 @@
   flex: var(--photo-ratio, 1) 1 calc(var(--photo-ratio, 1) * 180px);
   aspect-ratio: var(--photo-ratio, 1);
 }
-.previewPage .photoTile img { position: absolute; inset: 0; object-fit: contain; }
-.previewPage .photoTile:hover img { transform: none; }
+.previewPage .tileSelect > img { position: absolute; inset: 0; object-fit: contain; }
+.previewPage .photoTile:hover .tileSelect > img { transform: none; }
 .previewPage .gridStack { transform: none; }
 
 @media (max-width: 640px) {

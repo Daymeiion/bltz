@@ -109,3 +109,30 @@ it("encodes athlete names without allowing the search URL to change its host", a
   expect(destination.pathname).toBe("/photos/a%2Fb%3F-c%26d");
   expect(destination.search).toBe("");
 });
+
+it("opens the selected photo’s Getty detail page and keeps unmapped photos on search", async () => {
+  const sourceUrl = "https://www.gettyimages.com/detail/news-photo/dante-hughes-news-photo/76443769";
+  await act(async () => root.render(<RelatedMediaStrip images={[{ ...images[0], sourceUrl }, images[1]]} athleteName="Dante Hughes" athleteSlug="dante-hughes" onSelect={select} />));
+  await act(async () => host.querySelector<HTMLButtonElement>('[aria-label="Explore Getty Images licensing: College game"]')!.click());
+  const dialog = document.querySelector<HTMLElement>('[role="dialog"]')!;
+  expect(dialog.querySelector<HTMLAnchorElement>("a")!.href).toBe(sourceUrl);
+  expect(dialog.textContent).toContain("View this photo on Getty Images");
+  expect(dialog.textContent).not.toContain("Opens athlete search results");
+  expect(select).not.toHaveBeenCalled();
+  await act(async () => dialog.querySelector<HTMLButtonElement>('[aria-label="Close Getty Images licensing"]')!.click());
+  await act(async () => host.querySelector<HTMLButtonElement>('[aria-label="Explore Getty Images licensing: Professional game"]')!.click());
+  expect(document.querySelector<HTMLAnchorElement>('[role="dialog"] a')!.href).toBe("https://www.gettyimages.com/photos/dante-hughes");
+});
+
+it.each([
+  "https://www.gettyimages.com.evil.example/detail/76443769",
+  "https://www.gettyimages.com@evil.example/detail/76443769",
+  "http://www.gettyimages.com/detail/76443769",
+  "https://www.gettyimages.com/photos/dante-hughes",
+  "https://www.gettyimages.com/detail/not-an-image",
+  "javascript:alert(1)",
+])("does not treat an untrusted or non-detail source as a Getty photo: %s", async sourceUrl => {
+  await act(async () => root.render(<RelatedMediaStrip images={[{ ...images[0], sourceUrl }]} athleteName="Dante Hughes" athleteSlug="dante-hughes" onSelect={select} />));
+  await act(async () => host.querySelector<HTMLButtonElement>('[aria-label="Explore Getty Images licensing: College game"]')!.click());
+  expect(document.querySelector<HTMLAnchorElement>('[role="dialog"] a')!.href).toBe("https://www.gettyimages.com/photos/dante-hughes");
+});
