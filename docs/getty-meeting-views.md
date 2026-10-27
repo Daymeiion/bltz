@@ -1,50 +1,69 @@
-# Getty meeting views — October 23, 2026
+# Getty meeting views — October 27, 2026
 
-## Summary and scope
+## Summary
 
-The admin Getty meeting page now has Original overview (default), Visual one-sheet and Image workflow tabs. The original presentation was moved verbatim into a route-local component. The two new views have matching one-page landscape PDFs, downloaded through an independently authorized route.
+The main Getty one-sheet and workflow are now visual maps for a short executive call. Each has about 54 visible words: Getty image sets → Player Lockers → player marketing → buyer interest (Tinybird + QStash events) → agreed licenses / Getty revenue. The four use icons cover editorial, podcast, print on demand, and events/camps/speaking. Two large icon panels show Getty and BLTZ pilot roles; the one-sheet emphasizes the proposed 50-player cohort.
 
-The three proposed cases are print on demand, a player podcast video episode and a player documentary. Each names a potential buyer, Getty revenue mechanism and approval requirements. The proposed 50-player pilot allows up to three approved stills per player, capped at 150 unique images; duration, budget and success targets remain open. Two blank quote spaces are reserved for actual player interviews and permission to quote.
+The original overview stays the default and is unchanged. The newer Commercial model remains available as the user's requested backup for pricing/payout questions. Dense briefs, quote placeholders and extended pilot assumptions have been removed from the two primary meeting maps. Pricing, eligibility and detailed terms remain discussion/MOU material.
 
-## Files and routes
+## Files changed
 
-- `app/admin/getty-partnership/page.tsx`: server composition and metadata.
-- `OriginalOverview.tsx`: unchanged original chart, including both logos.
-- `MeetingViews.tsx`: existing accessible Radix tabs; only the switcher requires client JavaScript.
-- `PilotViews.tsx`, `meeting-content.json`, `meeting.module.css`: the two responsive document views and shared copy.
-- `_documents/`: two private PDFs and the reproducible ReportLab generator. It reads the same JSON as the page; requires Python, ReportLab, pypdf and Windows Arial fonts.
-- `download/route.ts`: allowlisted document downloads, checked with `getCurrentAuthorizationProfile` before file access; private/no-store responses.
-- `next.config.ts`: narrow PDF file-tracing inclusion for that download route.
-- `tests/admin/getty-partnership.test.tsx`, `getty-download.test.ts`: tab interaction, original contents, admin/non-admin/anonymous behavior, allowlist and actual bundled PDF responses.
-- `docs/design-reference/getty-meeting-tabs.md`: page intent and layout reference.
+- `PilotViews.tsx`: document wrapper, protected PDF link and readable mobile alternative.
+- `MeetingDiagram.tsx`: shared vector diagram; large icons/labels, connected stages, uses and pilot panels.
+- `meeting-content.json`: short labels and screen-reader description.
+- `meeting.module.css`: dark/navy/gold presentation styling, larger tabs and container-based mobile stacking.
+- `_documents/render_diagrams.mjs`: server-renders the actual React SVG for export.
+- `_documents/build_documents.py`: creates two PDFs from that SVG. Requires existing Node dependencies, Python ReportLab/svglib/pypdf and Windows Arial. svglib was installed only in ignored `output/getty-pdf-dependencies`; there is no production dependency change.
+- `_documents/getty-one-sheet.pdf`, `_documents/getty-image-workflow.pdf`: matching one-page vector PDFs, 1280 × 790 points.
+- `tests/admin/getty-partnership.test.tsx`: current four-tab navigation, compact diagram contents and commercial backup checks. This also fixes the stale three-tab expectation left after PR #22.
+- `docs/design-reference/getty-meeting-tabs.md`: current visual wireframe and superseded reference.
 
-Routes: existing `/admin/getty-partnership`; new `/admin/getty-partnership/download?document=one-sheet` or `document=workflow`.
+All app paths above are relative to `app/admin/getty-partnership/` except the tests/docs paths.
 
-## Data, permissions and boundaries
+## Routes changed
 
-No database changes, migrations, environment variables, dependencies or permission changes. The page retains the shared admin layout. The download handler repeats authorization because route handlers do not inherit layout protection. PDFs are outside `public/`; no public PDF URL is introduced. No sensitive write occurs, so no new audit event is needed.
+The existing `/admin/getty-partnership` presentation content is revised. PDF content is updated at the existing `/admin/getty-partnership/download?document=one-sheet` and `document=workflow` URLs. No new route.
 
-No licensing workflow, analytics collection, payments, automatic revenue allocation, quote editing or media processing was implemented. Proposed player shares, royalties and referral fees are subject to agreement. Attribution is distinct from payment rights. Views and exposure are distinct from license revenue.
+## Database changes
 
-## Validation
+None. No graph records, licensing records, payment data or analytics records were created or modified.
 
-- Full Vitest run: 236 files passed, 2 skipped; 1,912 tests passed, 24 skipped.
-- Repository ESLint check passed (quiet errors-only mode).
-- Production Next webpack build and TypeScript passed; generated route traces include both PDFs.
-- Original component compared to main: verbatim apart from component name and relocated metadata.
-- PDF generator confirmed one page each and all three use cases; both rendered to PNG and visually reviewed.
-- Local visual fixtures verified desktop and approximately 375 CSS-pixel layouts with no horizontal overflow. Live authenticated tab, navigation and download verification follows deployment.
+## Migrations
 
-Existing suite emits its known disabled YouTube iframe-loading diagnostic; all tests passed. Existing Vite config-loader notice remains unchanged.
+None.
+
+## Environment variables
+
+No application environment-variable changes. Optional local `PYTHONPATH=output/getty-pdf-dependencies` locates the PDF-only authoring dependency.
+
+## Permissions
+
+Unchanged. Shared server-side admin layout and independently authorized PDF route remain intact. Sidebar and other dashboards are unchanged. No authentication bypass was introduced.
+
+## Tests and validation
+
+- Full Vitest suite: 236 files passed, 2 skipped; 1,912 tests passed, 24 skipped.
+- Production Next webpack build / TypeScript passed.
+- Repository ESLint passed after making the offline renderer an ES module compatible with the existing Next lint preset.
+- Existing real-PDF download tests cover admin access, anonymous/non-admin denial, allowlisting, private/no-store headers and file signatures.
+- Keyboard tab switching, original logos, the compact maps and commercial calculator availability pass the presentation test.
+- Build trace includes both private PDFs.
+- Both latest PDFs were rendered and visually inspected; one page each with large labels and no clipping or overlapping elements.
+
+## Manual verification and limitations
+
+Computer Use stopped browser interaction because it could not confidently determine the current Chrome URL. No further browser input or alternate browser automation was used. An authenticated live visual check, exact viewport measurements and live PDF-click verification are therefore not claimed for this revision. The mobile alternative is implemented with 20–36px text and stacked stages; it needs a live-device screen check when browser access is available. PDF rendering checks and automated access/navigation/build checks are complete. Deployment evidence will be recorded with the release handoff.
+
+The diagram is a proposal. It does not implement new Tinybird events, QStash delivery, license agreements or payments. Static PDF copies must be regenerated after copy/diagram changes. Both PDFs are vector documents intended for screen review and can be scaled when printed.
+
+## Deferred work
+
+Actual pilot imagery, participants, MOU terms, use-specific quotes, pricing, approvals, revenue participation and production integrations remain subject to separate agreement and implementation. Existing player-quote collection can continue as meeting preparation; quote placeholders are no longer on the main visual maps.
 
 ## Product direction
 
-This is presentation material describing career identity → moment → licensed use → attribution and value. It does not create graph records. Career, Moment and Value Graph relationships are illustrated, not newly persisted. The concept remains useful after an athlete leaves an organization. No mature third-party DAM, publishing, licensing, payment or production workflow was duplicated; no generalized media-management scope was added.
-
-## Known limitations and deferred work
-
-Actual player quotes, participating players, buyer commitments, Getty approvals, image eligibility, pricing, pilot timing/budget and numerical success targets remain to be gathered or agreed. Quote spaces are presentation placeholders, not editable/persisted fields. PDF downloads are static generated documents, so copy changes require rerunning the generator and committing both PDFs.
+The maps illustrate Getty asset → athlete identity/Locker → discovery/usage → attribution and potential value. No Career, Moment or Value Graph relationships were persisted by this presentation-only change. The persistent athlete relationship remains useful after a team affiliation ends. No mature DAM, social publishing, licensing or payment workflow was rebuilt; no generalized media-management scope was added.
 
 ## Removal
 
-To remove just the new material, restore `page.tsx` to render `OriginalOverview`, delete the other route-local new files and download handler, remove the single `outputFileTracingIncludes` entry and update the tests. To remove the entire meeting page, also remove its existing sidebar link and exact-path theme-shell case. No schema or data cleanup is required. Keep any previously distributed PDFs as separate meeting artifacts as needed.
+All new presentation code and both PDFs remain route-local. Restore the two `PilotViews` documents and their copy/styles to revert this visual revision. To remove the meeting feature entirely, remove its route, the existing sidebar link, the exact-path theme-shell case and the narrow PDF tracing configuration. No data/schema cleanup is required.

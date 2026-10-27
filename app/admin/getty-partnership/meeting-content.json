@@ -1,59 +1,134 @@
 {
-  "title": "One image. A career of possibilities.",
-  "thesis": "BLTZ connects approved imagery to an athlete’s permanent career identity, helping fans and producers discover a specific use and request the right license.",
-  "flow": ["Getty imagery", "Athlete + career moment", "Permitted use", "License revenue + attribution"],
-  "uses": [
+  "brand": "BLTZ × Getty Images",
+  "pilotTitle": "50 players. A focused pilot.",
+  "workflowTitle": "From Getty to licensed use.",
+  "proposed": "Proposed pilot",
+  "stages": [
     {
-      "id": "A",
-      "title": "Print on demand",
-      "steps": ["Approved image in Locker", "Fan discovers career moment", "Fan buys licensed print"],
-      "buyer": "Fan, through a Getty-approved print partner",
-      "example": "A career-defining photograph offered as a physical print from the player’s Locker.",
-      "revenue": "Getty receives the agreed license fee or sales-based payment. Player participation and fulfillment costs require separate agreed terms.",
-      "approval": "Approve Locker display and print resale separately; confirm third-party rights, seller, pricing and fulfillment.",
-      "track": "Asset ID → Locker referral → print order → Getty payment; creator credit and any contracted player payout."
+      "id": "getty",
+      "icon": "Database",
+      "lines": [
+        "Getty image",
+        "sets"
+      ]
     },
     {
-      "id": "B",
-      "title": "Player podcast",
-      "steps": ["Player selects career image", "Producer requests episode use", "Licensed image in video episode"],
-      "buyer": "Player’s media business or podcast producer",
-      "example": "A player and former teammate discuss a career moment with its licensed still shown on screen.",
-      "revenue": "Getty receives a license fee quoted for the episode and approved channels. Podcast income is separate from image licensing.",
-      "approval": "Specify episode, channels, audience, territory and term; quote promotional clips or social use separately if needed.",
-      "track": "Asset ID → episode license → published URL + credit → episode views and Getty license revenue."
+      "id": "locker",
+      "icon": "UserRound",
+      "lines": [
+        "Player",
+        "Lockers"
+      ]
     },
     {
-      "id": "C",
-      "title": "Player documentary",
-      "steps": ["Producer discovers career story", "Requests image for a scene", "Licensed still in documentary"],
-      "buyer": "Production company or archival producer",
-      "example": "A production team discovers an athlete’s history through the Locker and requests a still for a documentary scene.",
-      "revenue": "Getty receives a license fee based on the production’s intended use. Additional uses may require additional licensing.",
-      "approval": "Submit production title, scene/use, distribution, territory and term; agree clearance and credit requirements.",
-      "track": "Asset ID → production inquiry → license → scene + credit record → Getty license revenue."
+      "id": "marketing",
+      "icon": "Megaphone",
+      "lines": [
+        "Player",
+        "marketing"
+      ]
+    },
+    {
+      "id": "interest",
+      "icon": "ChartNoAxesCombined",
+      "lines": [
+        "Buyer",
+        "interest"
+      ],
+      "caption": "Tinybird + QStash events"
+    },
+    {
+      "id": "license",
+      "icon": "FileCheck2",
+      "lines": [
+        "Agreed",
+        "licenses"
+      ],
+      "caption": "Getty revenue"
     }
   ],
-  "pilot": {
-    "title": "Proposed 50-player pilot",
-    "scope": "50 opt-in players · Up to 3 approved stills each · Maximum 150 unique images",
-    "stages": "Validate player demand → Agree approved uses + pricing → Clear imagery → Launch + measure → Joint review",
-    "boundary": "Begin with approved Locker display and selected use cases; expand only after clearance. Duration, budget and success targets to agree with Getty.",
-    "getty": "Getty: define eligible imagery, quote each use, approve rights/credit requirements and provide a licensing contact.",
-    "bltz": "BLTZ: recruit players, gather use briefs, link imagery to career moments, route requests and report attributable activity.",
-    "metrics": [
-      { "label": "Demand", "value": "Player interviews, selected images and qualified license requests" },
-      { "label": "Exposure", "value": "Locker views, episode/social views and tracked referrals where available" },
-      { "label": "Revenue", "value": "Paid licenses or print orders, Getty receipts and repeat buyer requests" }
-    ]
-  },
-  "quotes": ["Player / intended use", "Player / podcast or production"],
-  "note": "Discussion proposal, not an existing Getty agreement. Each use needs appropriate approval and a use-specific quote. Views are engagement, not license revenue. Creator attribution does not itself create payment entitlement; royalties, referral fees and player shares apply only if contracted.",
-  "workflowTitle": "From discovery to a paid, credited use.",
-  "workflowSteps": [
-    { "title": "Connect", "body": "Retain Getty asset ID, source and creator credit; connect the image to the athlete and career moment." },
-    { "title": "Specify", "body": "Identify buyer, intended use, channel, territory and term. Locker display permission is separate from downstream use." },
-    { "title": "Approve + license", "body": "Getty quotes the use; required rights and approvals are confirmed before publication, resale or production use." },
-    { "title": "Attribute + measure", "body": "Record license, use location, credit, referral and payment reference. Pay participants only under agreed contracts." }
-  ]
+  "uses": [
+    {
+      "id": "editorial",
+      "icon": "Newspaper",
+      "lines": [
+        "Editorial"
+      ]
+    },
+    {
+      "id": "podcast",
+      "icon": "Mic2",
+      "lines": [
+        "Podcast"
+      ]
+    },
+    {
+      "id": "print",
+      "icon": "Printer",
+      "lines": [
+        "Print on demand"
+      ]
+    },
+    {
+      "id": "events",
+      "icon": "Presentation",
+      "lines": [
+        "Events · Camps",
+        "Speaking"
+      ]
+    }
+  ],
+  "roles": [
+    {
+      "id": "getty",
+      "title": "Getty provides",
+      "items": [
+        {
+          "icon": "Images",
+          "lines": [
+            "Image sets"
+          ]
+        },
+        {
+          "icon": "SlidersHorizontal",
+          "lines": [
+            "Usage terms"
+          ]
+        },
+        {
+          "icon": "FileCheck2",
+          "lines": [
+            "Licenses"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "bltz",
+      "title": "BLTZ runs",
+      "items": [
+        {
+          "icon": "UsersRound",
+          "lines": [
+            "50 players"
+          ]
+        },
+        {
+          "icon": "Megaphone",
+          "lines": [
+            "Locker",
+            "marketing"
+          ]
+        },
+        {
+          "icon": "ChartNoAxesCombined",
+          "lines": [
+            "Interest",
+            "tracking"
+          ]
+        }
+      ]
+    }
+  ],
+  "description": "Proposed flow: Getty image sets connect to Player Lockers. Players market imagery through their Lockers. Buyer interest is tracked through Tinybird and QStash events. Licenses follow agreed terms for editorial, podcast, print, or events, camps and speaking uses. Getty provides image sets, usage terms and licenses. BLTZ runs the 50-player pilot, Locker marketing and interest tracking."
 }
