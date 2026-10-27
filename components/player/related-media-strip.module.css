@@ -23,7 +23,7 @@
 .imageAction { position: absolute; bottom: 8px; z-index: 1; display: flex; align-items: center; justify-content: center; gap: 7px; height: 44px; padding: 0 9px; border: 1px solid rgba(255,255,255,.5); border-radius: 4px; background: rgba(5,7,15,.9); color: #fff; cursor: pointer; opacity: 0; transform: translateY(4px); pointer-events: none; transition: opacity 160ms ease, transform 160ms ease, border-color 160ms ease; }
 .imageAction svg { width: 17px; height: 17px; flex: none; }
 .viewAction { left: 8px; width: 44px; padding: 0; }
-.licenseAction { left: 50%; bottom: 8px; translate: -50% 0; }
+.licenseAction { left: 50%; bottom: 8px; width: max-content; translate: -50% 0; }
 .licenseTile { position: relative; }
 .licenseTile .licenseAction { max-width: calc(100% - 16px); }
 .licenseTile:hover .imageAction, .licenseTile:focus-within .imageAction { opacity: 1; transform: none; pointer-events: auto; }
