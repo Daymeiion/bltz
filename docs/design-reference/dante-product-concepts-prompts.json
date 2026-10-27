@@ -1,0 +1,44 @@
+[
+  {
+    "product": "framed-print",
+    "sourceGettyIds": [
+      "82679329"
+    ],
+    "prompt": "Use case: product-mockup. Create one photorealistic square premium e-commerce product photograph of a black wood framed sports photograph with a broad warm-white mat. Reference image 1 is the EXACT photograph to print inside the frame: preserve its players, pose, uniforms, ball, field and composition; do not generate a different football moment. A landscape frame stands on a low charcoal plinth against a neutral light-gray studio background. Three-quarter angle, subtle realistic glass reflection, crisp frame grain, soft natural studio shadow. Entire product visible, generous breathing room. No headings, no price, no additional branding or text. This is a conceptual print-on-demand product mockup.",
+    "builtInTool": true
+  },
+  {
+    "product": "signed-poster",
+    "sourceGettyIds": [
+      "599195822"
+    ],
+    "prompt": "Use case: product-mockup. Create one photorealistic square studio product photograph of a premium unframed 18-by-24-inch sports poster. Reference image 1 is the EXACT photograph printed on the poster; preserve the athlete's identity, pose, number 13, blue-and-gold uniform, football and the photographed game moment. Show the entire vertical poster with slight paper curvature leaning on a neutral gray studio surface, a slim white print border. Add a decorative small metallic-silver facsimile autograph reading 'Dante Hughes' across the lower print, as a clearly conceptual autograph design, not an authentication certificate. No certificate, no real-sale branding, no price, no title overlay. Soft studio lighting, detailed paper texture, clean composition.",
+    "builtInTool": true
+  },
+  {
+    "product": "photo-pillow",
+    "sourceGettyIds": [
+      "76443769"
+    ],
+    "prompt": "Use case: product-mockup. Create one photorealistic square e-commerce product photograph of an 18-inch square decorative throw pillow with the exact sports photograph in reference image 1 printed edge-to-edge across its front. Preserve the white-uniform Indianapolis player number 20 reaching for the pass and the orange-uniform opponent number 18, pose and game moment; the image should naturally curve over the pillow's soft fabric. White woven fabric edges and neat seams. Three-quarter view on a neutral light-gray studio surface, softly filled cushion with realistic folds. Entire pillow visible with generous breathing room, no other products, no headings, no prices, no extra text or added logos.",
+    "builtInTool": true
+  },
+  {
+    "product": "sticker-set",
+    "sourceGettyIds": [
+      "106613403",
+      "77549351",
+      "51458178"
+    ],
+    "prompt": "Use case: product-mockup. Create one photorealistic square overhead studio product photograph showing EXACTLY THREE separate premium vinyl sports-photo stickers on a light-gray surface. Sticker one uses the athlete in reference image 1, sticker two uses the player in reference image 2, sticker three uses the entire football moment in reference image 3. Preserve each referenced photograph's identity, uniform numbers, pose and content rather than inventing new athletes. White die-cut borders, slightly glossy laminated paper, subtle cast shadows. Arrange the three distinct stickers loosely with no overlap hiding their subjects, one with a slightly lifted backing-paper corner. No extra stickers, no packaging, no headings, no prices, no invented text.",
+    "builtInTool": true
+  },
+  {
+    "product": "fan-face-cutout",
+    "sourceGettyIds": [
+      "113640536"
+    ],
+    "prompt": "Use case: product-mockup; identity-preserve compositing. Create one photorealistic square lifestyle product mockup of a smiling adult football fan standing at a stadium concourse, holding a large rigid die-cut poster of JUST THE FACE AND HEAD of Dante Hughes from reference image 1. The giant face print must preserve the exact referenced man's face, hair, skin tone, expression and identity, enlarged as a crisp flat printed photograph; do not redraw or invent a different face. Cut around head silhouette with a slim white border, no jersey/torso printed on the cutout. The cutout is about 24 inches tall, fan holds both lower edges in front of their chest without covering their own face. Fan wears an unbranded navy shirt; stadium background softly blurred. Clearly a real physical cardboard/foam-board printed face poster, not an oversized live human head. Entire cutout and fan's hands visible. No brand names, no title, no price, no additional text.",
+    "builtInTool": true
+  }
+]

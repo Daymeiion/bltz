@@ -1,6 +1,7 @@
 "use client";
 
 import { RelatedMediaStrip } from "@/components/player/RelatedMediaStrip";
+import { ProductConceptRow } from "@/components/player/ProductConceptRow";
 import { GettyLicenseControl } from "@/components/player/GettyLicenseControl";
 import licenseStyles from "@/components/player/related-media-strip.module.css";
 import Image from "next/image";
@@ -422,7 +423,9 @@ export default function PhotoRoomView({ data, previewId }: { data: PhotoRoomData
                 {loadMoreError ? <span role="alert">Photos could not load. Try again.</span> : null}
               </div>
             ) : null}
-            {isPrivatePreview && hasAnyImages && <RelatedMediaStrip images={images} athleteName={data.athleteName} athleteSlug={data.slug} activeImageId={slideshowImages[activeIndex]?.id} onSelect={photo => selectImage(photo.id)} onResume={!autoplayEnabled ? resumeSlideshow : undefined} />}
+            {isPrivatePreview && hasAnyImages && (data.slug === "dante-hughes"
+              ? <ProductConceptRow onResume={!autoplayEnabled ? resumeSlideshow : undefined} />
+              : <RelatedMediaStrip images={images} athleteName={data.athleteName} athleteSlug={data.slug} activeImageId={slideshowImages[activeIndex]?.id} onSelect={photo => selectImage(photo.id)} onResume={!autoplayEnabled ? resumeSlideshow : undefined} />)}
             <div className={styles.returnRow}>
               <Link className={styles.returnButton} href={data.lockerHref ?? `/player/${data.slug}`}>Return to Locker</Link>
             </div>

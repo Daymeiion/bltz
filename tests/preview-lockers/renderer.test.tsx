@@ -91,6 +91,23 @@ it("selects related preview images in Photo Room and keeps uploaded provenance",
   expect(fetcher).not.toHaveBeenCalled();
 });
 
+it("replaces only Dante’s preview related row with the five product concepts", async () => {
+  vi.stubGlobal("scrollTo", vi.fn());
+  await act(async () => root.render(<PhotoRoomView data={previewPhotoData({ ...record, slug: "dante-hughes", full_name: "Dante Hughes", photos: [...record.photos, { ...record.photos[0], id: "second", url: "https://custom.example.com/second.jpg" }] })} />));
+  expect(host.querySelector('section[aria-label="Related media"]')).toBeNull();
+  expect(host.querySelectorAll('[aria-label="Five product examples"] button')).toHaveLength(5);
+  expect(host.querySelector('[aria-label="Photo grid"] img[src="https://custom.example.com/career.jpg"]')).not.toBeNull();
+  await act(async () => host.querySelector<HTMLButtonElement>('[aria-label="View Career photo"]')!.click());
+  const resume = host.querySelector<HTMLButtonElement>('[aria-label="Resume slideshow"]')!;
+  expect(resume).not.toBeNull();
+  await act(async () => resume.click());
+  expect(host.querySelector('[aria-label="Resume slideshow"]')).toBeNull();
+  const publicData = previewPhotoData({ ...record, slug: "dante-hughes" });
+  delete publicData.lockerHref;
+  await act(async () => root.render(<PhotoRoomView data={publicData} />));
+  expect(host.querySelector('[aria-label="Five product examples"]')).toBeNull();
+});
+
 it("restores portrait and landscape gallery proportions when cached images load before hydration", async () => {
   const complete = vi.spyOn(HTMLImageElement.prototype, "complete", "get").mockReturnValue(true);
   const width = vi.spyOn(HTMLImageElement.prototype, "naturalWidth", "get").mockImplementation(function (this: HTMLImageElement) {
