@@ -1,5 +1,6 @@
 import { previewPendingOrNotFound } from "@/components/preview-lockers/preview-pending";
 import { readPrivatePreview } from "@/lib/preview-lockers/server";
+import PrototypeBanner from "@/components/preview-lockers/PrototypeBanner";
 
 // Every preview page and nested room passes this exact-slug authorization.
 // readPrivatePreview permits a current assigned viewer, an internal admin,
@@ -13,5 +14,5 @@ export default async function PreviewLockerAccessLayout({
 }) {
   const { slug } = await params;
   if (!await readPrivatePreview(slug)) return previewPendingOrNotFound(slug);
-  return <>{children}</>;
+  return <><PrototypeBanner />{children}</>;
 }
