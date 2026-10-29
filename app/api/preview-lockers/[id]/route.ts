@@ -15,9 +15,11 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const { id } = await params;
     if (!z.uuid().safeParse(id).success) throw new PreviewError("invalid_input", 400);
     const input = await readBody(req, PREVIEW_CONTENT_BODY_LIMIT);
-    const parsed = updatePreview.safeParse(input);
+    // refreshNews: one-click builds ask for a fresh news search in this same save,
+    // so awards and news share one enrichment write instead of racing a second call.
+    const parsed = updatePreview.extend({ refreshNews: z.literal(true).optional() }).safeParse(input);
     if (!parsed.success) throw new PreviewError("invalid_input", 400);
-    const { revision, content } = parsed.data;
+    const { revision, content, refreshNews = false } = parsed.data;
     if (!previewMediaBelongsTo(id, content)) throw new PreviewError("invalid_media_path", 400);
     await assertPreviewMediaExists(client, content);
     await assertAwardReferences(client, content.awards);
@@ -37,11 +39,12 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const completionStatus = relationship.error ? "unavailable" : "available";
     // Enrich the actual saved snapshot, including fields retained for old clients.
     const savedContent = { ...content, ...Object.fromEntries(Object.keys(content).filter(key => Object.hasOwn(data, key)).map(key => [key, data[key as keyof typeof data]])) };
-    await tryEnrichSavedPreview(client, id, savedContent, data.revision, false);
+    const enrichment = await tryEnrichSavedPreview(client, id, savedContent, data.revision, refreshNews);
     return json({
       id: data.id, slug: data.slug, revision: data.revision,
       complete: relationship.data != null && Number(relationship.data.completed_revision) === data.revision,
       completionStatus,
+      ...(refreshNews ? { enrichment } : {}),
     });
   } catch (error) { return failure(error); }
 }

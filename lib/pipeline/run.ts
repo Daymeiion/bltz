@@ -26,7 +26,7 @@ const RUN_TIMEOUT_MS = 45_000;
 // If a run has been claimed (status scraping/generating) but its started_at is
 // older than this, the claiming connection is presumed dead (tab closed, server
 // reaped) and a fresh connection may re-claim and restart. Set above the worst-
-// case pipeline runtime (~141s: 5 scrapers x 12s cap + 45s synthesis) so a
+// case pipeline runtime (~141s if sources ran serially: 5 x 12s + 45s synthesis) so a
 // healthy in-flight run is never stolen out from under itself.
 const RECLAIM_STALE_MS = 180_000;
 
@@ -183,6 +183,57 @@ async function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise
   });
 }
 
+const SOURCE_CONCURRENCY = 3;
+
+/** One source with its own timeout. A slow or failing source is a miss, never a run failure. */
+async function runSource(
+  sink: PipelineSink,
+  identity: PlayerIdentityInput,
+  { source, run }: (typeof SCRAPERS)[number],
+): Promise<ScraperResult> {
+  let result: ScraperResult;
+  try {
+    result = await withTimeout(run(identity), 12_000, source);
+  } catch {
+    console.warn(
+      `[pipeline] source unhealthy source=${source} reason=timeout athlete=${JSON.stringify(identity.full_name)}`,
+    );
+    await sink.emit({
+      at: nowIso(),
+      phase: "scrape_miss",
+      source,
+      message: friendlyMiss(source, "timeout"),
+    });
+    return { source, ok: false, reason: "timeout" };
+  }
+  if (result.ok) {
+    await sink.emit({
+      at: nowIso(),
+      phase: "scrape_hit",
+      source,
+      url: result.urls?.[0],
+      message: friendlyHit(source, result),
+    });
+  } else {
+    // Loud log ONLY when the source itself is unhealthy (down, throttled,
+    // paused dependency) — a `no_match` / `ambiguous` is an expected miss
+    // and stays quiet. This is the observability the paused-Supabase
+    // incident was missing: it failed silently behind a clean "miss".
+    if (result.reason && SOURCE_UNHEALTHY_REASONS.has(result.reason)) {
+      console.warn(
+        `[pipeline] source unhealthy source=${source} reason=${result.reason} athlete=${JSON.stringify(identity.full_name)}`,
+      );
+    }
+    await sink.emit({
+      at: nowIso(),
+      phase: "scrape_miss",
+      source,
+      message: friendlyMiss(source, result.reason),
+    });
+  }
+  return result;
+}
+
 /**
  * Run the pipeline against an arbitrary sink. Used by both the Supabase-
  * backed `startRun` and the in-memory test path in `lib/onboarding/test-auth`.
@@ -198,50 +249,19 @@ export async function executePipeline(
     message: `Searching ${SCRAPERS.length} sources for ${identity.full_name}…`,
   });
 
-  const results: ScraperResult[] = [];
-
-  for (const { source, run } of SCRAPERS) {
-    try {
-      const result = await withTimeout(run(identity), 12_000, source);
-      results.push(result);
-      if (result.ok) {
-        await sink.emit({
-          at: nowIso(),
-          phase: "scrape_hit",
-          source,
-          url: result.urls?.[0],
-          message: friendlyHit(source, result),
-        });
-      } else {
-        // Loud log ONLY when the source itself is unhealthy (down, throttled,
-        // paused dependency) — a `no_match` / `ambiguous` is an expected miss
-        // and stays quiet. This is the observability the paused-Supabase
-        // incident was missing: it failed silently behind a clean "miss".
-        if (result.reason && SOURCE_UNHEALTHY_REASONS.has(result.reason)) {
-          console.warn(
-            `[pipeline] source unhealthy source=${source} reason=${result.reason} athlete=${JSON.stringify(identity.full_name)}`,
-          );
-        }
-        await sink.emit({
-          at: nowIso(),
-          phase: "scrape_miss",
-          source,
-          message: friendlyMiss(source, result.reason),
-        });
-      }
-    } catch {
-      results.push({ source, ok: false, reason: "timeout" });
-      console.warn(
-        `[pipeline] source unhealthy source=${source} reason=timeout athlete=${JSON.stringify(identity.full_name)}`,
-      );
-      await sink.emit({
-        at: nowIso(),
-        phase: "scrape_miss",
-        source,
-        message: friendlyMiss(source, "timeout"),
-      });
+  // Sources overlap (bounded), but results stay indexed in registry order:
+  // synthesis is first-non-null-wins, so completion order must not matter.
+  const results: ScraperResult[] = new Array(SCRAPERS.length);
+  let next = 0;
+  let failed = false;
+  const worker = async () => {
+    while (!failed && next < SCRAPERS.length) {
+      const index = next++;
+      try { results[index] = await runSource(sink, identity, SCRAPERS[index]); }
+      catch (error) { failed = true; throw error; }
     }
-  }
+  };
+  await Promise.all(Array.from({ length: Math.min(SOURCE_CONCURRENCY, SCRAPERS.length) }, worker));
 
   // Infra guard. If NOTHING succeeded and every source failed for a source-side
   // reason (unreachable/timeout/blocked), this is an outage, not a missing

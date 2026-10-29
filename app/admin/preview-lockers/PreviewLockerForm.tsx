@@ -32,6 +32,9 @@ import { newsReviewSchema, newsReviewArticleSchema, type NewsReview } from "@/li
 import { searchErrorMessage } from "@/lib/search/errors";
 import CfbCsvImport from "./CfbCsvImport";
 import CombineResultsForm from "./CombineResultsForm";
+import type { CombineSearchHandle } from "./CombineSearchReview";
+import BuildAllPanel from "./BuildAllPanel";
+import { awardsOutcome, failedRetryable, initialBuildStatus, newsProblem, skipRemaining, type BuildStatus, type BuildTask, type BuildTaskState, type RetryableTask } from "@/lib/preview-lockers/build-all";
 import StatsCsvImport from "./StatsCsvImport";
 import { BuilderSection } from "./BuilderSection";
 import { previewVideoCategories, previewVideoLevel } from "@/lib/preview-lockers/video";
@@ -43,6 +46,7 @@ const initial = () => previewContent.parse({ slug: "private-preview", full_name:
 // Career search context can change without changing the athlete in this editor.
 const newsAthleteIdentity = (content: PreviewContent) => content.full_name.trim().toLowerCase();
 const merchandiseIdentity = (content: PreviewContent) => JSON.stringify([content.full_name, content.school, content.position, content.schools.map(item => item.label), content.pro_teams.map(item => item.label)]);
+type SaveResponse = { id: string; slug: string; revision: number; complete?: boolean; completionStatus?: string; enrolled?: boolean; enrichment?: EnrichmentReport | { status: "unavailable"; errors: string[] } };
 type Scalar = Exclude<keyof PreviewContent, "schools" | "pro_teams" | "awards" | "social" | "article_edits" | "merchandise" | "career_stats" | "cfb_stats" | "pfr_stats" | "combine_results" | "videos" | "photos">;
 
 export default function PreviewLockerForm({
@@ -91,7 +95,9 @@ export default function PreviewLockerForm({
   const [enroll, setEnroll] = useState(enrollmentEnabled && !record && !reservedId);
   const [enrollment, setEnrollment] = useState({contact_id:"",campaign:"",source:"",channel:"email",relationship:"warm",is_test:false});
   const [draft, setDraft] = useState<PreviewContent>(() => record ? previewContent.parse(Object.fromEntries(Object.keys(previewContent.shape).map(k => [k, record[k as keyof PreviewRecord]]))) : { ...initial(), full_name: referralName ?? "", slug: "" });
-  const [busy, setBusy] = useState<"discovery" | "upload" | "save" | "complete" | "stats" | "combine" | "awards" | "news" | "merchandise" | null>(null);
+  const [busy, setBusy] = useState<"discovery" | "build" | "upload" | "save" | "complete" | "stats" | "combine" | "awards" | "news" | "merchandise" | null>(null);
+  const [build, setBuild] = useState<BuildStatus | null>(null);
+  const combineSearch = useRef<CombineSearchHandle>(null);
   const [awardsReport, setAwardsReport] = useState<AwardEnrichmentReport | null>(() => initialEnrichmentReport?.last_awards_attempt !== undefined ? initialEnrichmentReport.last_awards_attempt : initialEnrichmentReport && initialEnrichmentRevision ? {
     status: initialEnrichmentReport.errors.includes("awards_unavailable") ? "unavailable" : "complete",
     awards_discovered: initialEnrichmentReport.awards_discovered, awards_normalized: initialEnrichmentReport.awards_normalized,
@@ -147,7 +153,7 @@ export default function PreviewLockerForm({
       event.preventDefault();
       event.stopPropagation();
       if (!busy) { setLeaveHref(target.href); return; }
-      setMessage(busy === "discovery"
+      setMessage(busy === "discovery" || busy === "build"
         ? "Discovery is still running in this editor. Wait for it to finish or cancel it before leaving; navigating away would stop the admitted run."
         : busy
           ? "A private preview update is still being saved. Wait for it to finish before leaving."
@@ -199,6 +205,107 @@ export default function PreviewLockerForm({
     } catch (cause) { if (!controller.signal.aborted) setError(cause instanceof Error ? cause.message : "Discovery unavailable. Continue manually."); }
     finally { pending.current = false; setBusy(null); abort.current = null; }
   }
+  // One owner for the whole run: career search, one private save, then the
+  // searches that need that saved revision, in parallel. Nothing is auto-added.
+  async function buildAll() {
+    if (pending.current) return;
+    if (statsNeedReload) { setError("Preview identity or statistics updated. Reload the saved version before building."); return; }
+    const identity = previewIdentity.safeParse({ full_name: draft.full_name, school: draft.school, position: draft.position, level: draft.level });
+    if (!identity.success) { setError("Enter a name of at least two characters before building."); return; }
+    pending.current = true; setBusy("build"); setError(""); setMessage(""); setSaveVersionConflict(false);
+    const controller = new AbortController(); abort.current = controller;
+    const { signal } = controller;
+    let status = initialBuildStatus();
+    const mark = (task: BuildTask, state: BuildTaskState, detail: string) => { status = { ...status, [task]: { state, detail } }; setBuild(status); };
+    const stop = (detail: string) => { status = skipRemaining(status, detail); setBuild(status); };
+    setBuild(status);
+    try {
+      mark("career", "running", "Searching career sources…");
+      let content = draft;
+      try {
+        const result = await readDiscovery(await fetch("/api/preview-lockers/discovery", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(identity.data), signal }), text => mark("career", "running", text));
+        if (signal.aborted) return;
+        if (result.draft) { content = mergeSuggestions(draft, result.draft); setDraft(content); setReviewed(false); setCompletionReviewed(false); setDirty(true); }
+        mark("career", "done", result.draft ? "Suggestions filled blank fields. Your existing entries were kept." : result.message);
+      } catch (cause) {
+        if (signal.aborted) return;
+        mark("career", "failed", cause instanceof Error ? cause.message : "Career search unavailable.");
+        stop("Not started because the career search failed.");
+        return;
+      }
+      const parsed = previewContent.safeParse(content);
+      if (!parsed.success) {
+        mark("save", "failed", `Fix these fields, then save: ${parsed.error.issues.map(issue => issue.path.join(".")).slice(0, 5).join(", ")}.`);
+        stop("Not started because the draft could not be saved.");
+        return;
+      }
+      mark("save", "running", "Saving private draft…");
+      mark("awards", "running", "Mapping awards during save…");
+      mark("news", "running", "Searching news during save…");
+      let data: SaveResponse;
+      // Never abort a save mid-request: its outcome would be unknown.
+      try { data = await persistDraft(parsed.data, null, true); }
+      catch (cause) {
+        mark("save", "failed", cause instanceof Error ? cause.message : "Save failed. Your draft is retained.");
+        stop("Not started because the draft was not saved.");
+        return;
+      }
+      mark("save", "done", `Private draft saved (revision ${data.revision}).`);
+      const awards = awardsOutcome(data.enrichment);
+      if (awards.attempt) setAwardsReport(awards.attempt);
+      mark("awards", awards.ok ? "done" : "failed", awards.detail);
+      if (signal.aborted) return;
+      const news = newsProblem(data.enrichment);
+      await runSearches(data.id, parsed.data, signal, ["news", "merchandise", "combine"], news.fatal ? news.message : "", news.fatal ? "" : news.message, mark);
+    } finally {
+      if (signal.aborted) stop("Cancelled. Finished results were kept.");
+      pending.current = false; setBusy(null); abort.current = null;
+    }
+  }
+  /** The saved-revision searches. A news search that already ran during save is only loaded, not repeated. */
+  async function runSearches(id: string, content: PreviewContent, signal: AbortSignal, tasks: readonly RetryableTask[], newsFailure: string | null, newsWarning: string, mark: (task: BuildTask, state: BuildTaskState, detail: string) => void) {
+    const failed = (task: BuildTask, cause: unknown, fallback: string) => { if (!signal.aborted) mark(task, "failed", cause instanceof Error ? cause.message : fallback); };
+    await Promise.all([
+      tasks.includes("news") && (async () => {
+        mark("news", "running", newsFailure === null ? "Searching news…" : "Loading news results…");
+        try {
+          const problem = newsFailure ?? await refreshSavedNews(id, signal);
+          const loaded = await fetchSavedNews(id, content, 0, signal);
+          if (problem) mark("news", "failed", problem);
+          else mark("news", "done", `${loaded.pending} article${loaded.pending === 1 ? "" : "s"} awaiting review.${newsWarning ? ` ${newsWarning}` : ""}`);
+        } catch (cause) { failed("news", cause, "News could not be loaded."); }
+      })(),
+      tasks.includes("merchandise") && (async () => {
+        mark("merchandise", "running", "Searching cards, jerseys and listings…");
+        try {
+          const result = await runMerchandiseSearch(id, content, signal);
+          mark("merchandise", "done", `${result.pending} listing${result.pending === 1 ? "" : "s"} awaiting review.${result.warning ? ` ${result.warning}` : ""}`);
+        } catch (cause) { failed("merchandise", cause, "Merchandise search is unavailable."); }
+      })(),
+      tasks.includes("combine") && (async () => {
+        mark("combine", "running", "Searching Combine sources…");
+        const search = combineSearch.current;
+        if (!search) { mark("combine", "failed", "Combine search is unavailable in this editor."); return; }
+        const outcome = await search.search({ id, revision: revision.current! }, signal);
+        if (signal.aborted) return;
+        mark("combine", outcome.ok ? "done" : "failed", outcome.ok ? `${outcome.found} source suggestion${outcome.found === 1 ? "" : "s"} to review. ${outcome.message}` : outcome.message);
+      })(),
+    ]);
+  }
+  async function retryBuild() {
+    const tasks = failedRetryable(build);
+    if (pending.current || !saved || dirty || !tasks.length) return;
+    pending.current = true; setBusy("build"); setError("");
+    const controller = new AbortController(); abort.current = controller;
+    let status = { ...build!, ...Object.fromEntries(tasks.map(task => [task, { state: "waiting", detail: "Waiting" }])) } as BuildStatus;
+    const mark = (task: BuildTask, state: BuildTaskState, detail: string) => { status = { ...status, [task]: { state, detail } }; setBuild(status); };
+    setBuild(status);
+    try { await runSearches(saved.id, draft, controller.signal, tasks, null, "", mark); }
+    finally {
+      if (controller.signal.aborted) { status = skipRemaining(status, "Cancelled. Finished results were kept."); setBuild(status); }
+      pending.current = false; setBusy(null); abort.current = null;
+    }
+  }
   async function save(asDraft = false) {
     if (statsNeedReload) { setError("Preview identity or statistics updated. Reload the saved version before making further edits."); return; }
     if (pending.current || (!asDraft && !reviewed)) return;
@@ -207,32 +314,37 @@ export default function PreviewLockerForm({
     const enrollmentData = !asDraft && !saved && enroll ? previewEnrollment.safeParse(enrollment) : null;
     if (enrollmentData && !enrollmentData.success) { setError("Choose a GTM contact and enter campaign and source codes (letters, numbers, hyphens or underscores)."); return; }
     pending.current = true; setBusy("save"); setError(""); setSaveVersionConflict(false);
-    createId.current ??= crypto.randomUUID();
     try {
-      const response = await fetch(saved ? `/api/preview-lockers/${saved.id}` : "/api/preview-lockers", {
-        method: saved ? "PATCH" : "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(saved ? { revision: revision.current, content: parsed.data } : { id: createId.current, content: parsed.data, ...(enrollmentData?.success ? { enrollment: enrollmentData.data } : {}) }),
-      });
-      if (!response.ok) {
-        const failure = await response.json().catch(() => null);
-        if (failure?.error === "source_policy_blocked") throw new Error("This statistics source is reference-only. Keep or remove previously saved imports; new or changed imports cannot be saved. Your draft is retained.");
-        if (response.status === 409) {
-          if (failure?.error === "slug_conflict") throw new Error("Save conflict: that private URL slug is already used by another Locker. Choose a different slug and save again. Your draft is retained.");
-          if (saved) {
-            setSaveVersionConflict(true);
-            throw new Error("Save conflict: A newer version of this Locker is already saved. Open the latest saved version in a new tab, review it, and copy over your unsaved changes before saving there. Keep this tab open until your changes are saved.");
-          }
-          throw new Error("Save conflict: this slug or GTM contact may already be linked, or enrollment details changed. Your draft is retained. Open the saved list in a new tab to find the existing Locker before retrying.");
-        }
-        throw new Error(response.status === 401 || response.status === 403 ? "Your Admin session is no longer authorized. Sign in again before saving." : "Save failed. Your draft is retained; retry is safe.");
-      }
-      const data = await response.json(); savedDraft.current = JSON.stringify(parsed.data); setSaved(data); onPreviewSaved?.(data.slug); revision.current = data.revision; setReviewed(false); setCompletionReviewed(false); setDirty(false);
-      if (gtmLinked) setCompleted(data.complete === true);
+      const data = await persistDraft(parsed.data, enrollmentData?.success ? enrollmentData.data : null);
       setMessage(asDraft ? "Draft saved privately. You can close this editor and resume from the preview list. No new enrollment or completion was recorded." : data.completionStatus === "unavailable"
         ? "Saved privately. Completion status could not be refreshed; reload before marking this preview complete."
         : data.enrolled ? "Preview created and enrolled in the conversion funnel. Publish its reviewed invite link before outreach; players will not need to sign in." : "Saved privately as a draft. Publish its reviewed invite link when it is ready to share.");
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Save failed. Your draft is retained."); }
     finally { pending.current = false; setBusy(null); }
+  }
+  /** Saves one snapshot. Callers own pending/busy. refreshNews asks an existing preview's save to search news too. */
+  async function persistDraft(content: PreviewContent, enrollment: z.infer<typeof previewEnrollment> | null, refreshNews = false): Promise<SaveResponse> {
+    createId.current ??= crypto.randomUUID();
+    const response = await fetch(saved ? `/api/preview-lockers/${saved.id}` : "/api/preview-lockers", {
+      method: saved ? "PATCH" : "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(saved ? { revision: revision.current, content, ...(refreshNews ? { refreshNews: true } : {}) } : { id: createId.current, content, ...(enrollment ? { enrollment } : {}) }),
+    });
+    if (!response.ok) {
+      const failure = await response.json().catch(() => null);
+      if (failure?.error === "source_policy_blocked") throw new Error("This statistics source is reference-only. Keep or remove previously saved imports; new or changed imports cannot be saved. Your draft is retained.");
+      if (response.status === 409) {
+        if (failure?.error === "slug_conflict") throw new Error("Save conflict: that private URL slug is already used by another Locker. Choose a different slug and save again. Your draft is retained.");
+        if (saved) {
+          setSaveVersionConflict(true);
+          throw new Error("Save conflict: A newer version of this Locker is already saved. Open the latest saved version in a new tab, review it, and copy over your unsaved changes before saving there. Keep this tab open until your changes are saved.");
+        }
+        throw new Error("Save conflict: this slug or GTM contact may already be linked, or enrollment details changed. Your draft is retained. Open the saved list in a new tab to find the existing Locker before retrying.");
+      }
+      throw new Error(response.status === 401 || response.status === 403 ? "Your Admin session is no longer authorized. Sign in again before saving." : "Save failed. Your draft is retained; retry is safe.");
+    }
+    const data = await response.json() as SaveResponse; savedDraft.current = JSON.stringify(content); setSaved({ id: data.id, slug: data.slug, revision: data.revision }); onPreviewSaved?.(data.slug); revision.current = data.revision; setReviewed(false); setCompletionReviewed(false); setDirty(false);
+    if (gtmLinked) setCompleted(data.complete === true);
+    return data;
   }
   async function completePreview() {
     if (pending.current || !saved || !gtmLinked || !completionReviewed || dirty) return;
@@ -266,24 +378,31 @@ export default function PreviewLockerForm({
     pending.current = true; setBusy("news"); setError(""); setNewsError(""); setMessage("");
     try {
       let refreshError = "";
-      if (refresh) {
-        const response = await fetch(`/api/preview-lockers/${saved.id}/news`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ revision: revision.current }) });
-        const body = await response.json();
-        if (response.status === 409) { setNewsReview(current => current ? { ...current, identity: "" } : null); throw new Error("This preview changed. Reload the saved version before searching news. Your draft is retained."); }
-        if (!response.ok) refreshError = [...(body.report?.errors ?? []), body.error].map((code: string) => searchErrorMessage(code)).filter(Boolean).join(" ") || "News refresh is unavailable. Previously saved articles are retained.";
-      }
-      const response = await fetch(`/api/preview-lockers/${saved.id}/news${dismissedOffset ? `?dismissedOffset=${dismissedOffset}` : ""}`, { cache: "no-store" });
-      if (!response.ok) throw new Error(response.status === 401 || response.status === 403 ? "Your Admin session is no longer authorized to load articles." : "Saved articles could not be loaded. Your draft is retained.");
-      const body = await response.json();
-      if (body.revision !== revision.current) { setNewsReview(current => current ? { ...current, identity: "" } : null); throw new Error("This preview changed. Reload the saved version before refreshing articles. Your draft is retained."); }
-      const articles = z.array(newsReviewArticleSchema).max(24).safeParse(body.articles), review = newsReviewSchema.safeParse(body.review);
-      if (!articles.success || !review.success) throw new Error("The article list was unavailable. Your draft and previous reviews are retained.");
-      setNewsArticles(articles.data);
-      setNewsReview({ review: review.data, identity: newsAthleteIdentity(draft), searchContext: merchandiseIdentity(draft), key: crypto.randomUUID() });
-      setMessage(`Loaded ${body.articles.length} saved matching articles. Your manual additions, edits and hidden choices are unchanged.`);
+      if (refresh) refreshError = await refreshSavedNews(saved.id);
+      const loaded = await fetchSavedNews(saved.id, draft, dismissedOffset);
+      setMessage(`Loaded ${loaded.articles} saved matching articles. Your manual additions, edits and hidden choices are unchanged.`);
       if (refreshError) setNewsError(refreshError);
     } catch (cause) { setNewsError(cause instanceof Error ? cause.message : "News could not be loaded. Your draft is retained."); }
     finally { pending.current = false; setBusy(null); }
+  }
+  /** Loads the saved article list and review queue. Callers own pending/busy. */
+  async function fetchSavedNews(id: string, content: PreviewContent, dismissedOffset = 0, signal?: AbortSignal) {
+    const response = await fetch(`/api/preview-lockers/${id}/news${dismissedOffset ? `?dismissedOffset=${dismissedOffset}` : ""}`, { cache: "no-store", signal });
+    if (!response.ok) throw new Error(response.status === 401 || response.status === 403 ? "Your Admin session is no longer authorized to load articles." : "Saved articles could not be loaded. Your draft is retained.");
+    const body = await response.json();
+    if (body.revision !== revision.current) { setNewsReview(current => current ? { ...current, identity: "" } : null); throw new Error("This preview changed. Reload the saved version before refreshing articles. Your draft is retained."); }
+    const articles = z.array(newsReviewArticleSchema).max(24).safeParse(body.articles), review = newsReviewSchema.safeParse(body.review);
+    if (!articles.success || !review.success) throw new Error("The article list was unavailable. Your draft and previous reviews are retained.");
+    setNewsArticles(articles.data);
+    setNewsReview({ review: review.data, identity: newsAthleteIdentity(content), searchContext: merchandiseIdentity(content), key: crypto.randomUUID() });
+    return { articles: articles.data.length, pending: review.data.articles.length };
+  }
+  /** Runs a news search for the saved revision. Returns a readable problem, or "" when it succeeded. */
+  async function refreshSavedNews(id: string, signal?: AbortSignal): Promise<string> {
+    const response = await fetch(`/api/preview-lockers/${id}/news`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ revision: revision.current }), signal });
+    const body = await response.json();
+    if (response.status === 409) { setNewsReview(current => current ? { ...current, identity: "" } : null); throw new Error("This preview changed. Reload the saved version before searching news. Your draft is retained."); }
+    return response.ok ? "" : [...(body.report?.errors ?? []), body.error].map((code: string) => searchErrorMessage(code)).filter(Boolean).join(" ") || "News refresh is unavailable. Previously saved articles are retained.";
   }
   async function dismissNews(url: string | string[], restore = false): Promise<boolean> {
     if (pending.current || !saved || !newsReview) return false;
@@ -301,21 +420,25 @@ export default function PreviewLockerForm({
   async function searchMerchandise() {
     if (pending.current || !saved || dirty) return;
     pending.current = true; setBusy("merchandise"); setMerchandiseError("");
-    const explain = (codes: string[]) => codes.map(code => searchErrorMessage(code)?.replace(/\bnews\b/gi, "merchandise")).filter(Boolean).join(" ");
-    try {
-      const response = await fetch(`/api/preview-lockers/${saved.id}/merchandise`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ revision: revision.current }) });
-      const body = await response.json();
-      if (response.status === 409 || (response.ok && body.revision !== revision.current)) setMerchandiseSearch(current => current ? { ...current, identity: "" } : null);
-      if (!response.ok) throw new Error(response.status === 409 ? "This preview changed. Reload the saved version before searching merchandise. Your draft is retained." : response.status === 401 || response.status === 403 ? "Your Admin session is no longer authorized to search merchandise." : explain([...(Array.isArray(body.result?.errors) ? body.result.errors : []), body.error]) || "Merchandise search is unavailable. Previous results and your draft are retained.");
-      if (body.revision !== revision.current) throw new Error("This preview changed. Reload the saved version before adding search results.");
-      const parsed = merchandiseQueueResultSchema.safeParse(body.result);
-      if (!parsed.success) throw new Error("The merchandise search response was invalid. Previous results and your draft are retained.");
-      const review = merchandiseReviewSchema.safeParse(body.review);
-      if (!review.success) throw new Error("Search results could not be saved. Previous saved results and your draft are retained.");
-      setMerchandiseSearch({ result: visibleMerchandiseReview(review.data), identity: merchandiseIdentity(draft), key: crypto.randomUUID(), review: review.data });
-      setMerchandiseError(explain(parsed.data.errors));
-    } catch (cause) { setMerchandiseError(cause instanceof Error ? cause.message : "Merchandise search is unavailable. Your draft is retained."); }
+    try { setMerchandiseError((await runMerchandiseSearch(saved.id, draft)).warning); }
+    catch (cause) { setMerchandiseError(cause instanceof Error ? cause.message : "Merchandise search is unavailable. Your draft is retained."); }
     finally { pending.current = false; setBusy(null); }
+  }
+  /** Searches and saves the merchandise review queue for the saved revision. Callers own pending/busy. */
+  async function runMerchandiseSearch(id: string, content: PreviewContent, signal?: AbortSignal) {
+    const explain = (codes: string[]) => codes.map(code => searchErrorMessage(code)?.replace(/\bnews\b/gi, "merchandise")).filter(Boolean).join(" ");
+    const response = await fetch(`/api/preview-lockers/${id}/merchandise`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ revision: revision.current }), signal });
+    const body = await response.json();
+    if (response.status === 409 || (response.ok && body.revision !== revision.current)) setMerchandiseSearch(current => current ? { ...current, identity: "" } : null);
+    if (!response.ok) throw new Error(response.status === 409 ? "This preview changed. Reload the saved version before searching merchandise. Your draft is retained." : response.status === 401 || response.status === 403 ? "Your Admin session is no longer authorized to search merchandise." : explain([...(Array.isArray(body.result?.errors) ? body.result.errors : []), body.error]) || "Merchandise search is unavailable. Previous results and your draft are retained.");
+    if (body.revision !== revision.current) throw new Error("This preview changed. Reload the saved version before adding search results.");
+    const parsed = merchandiseQueueResultSchema.safeParse(body.result);
+    if (!parsed.success) throw new Error("The merchandise search response was invalid. Previous results and your draft are retained.");
+    const review = merchandiseReviewSchema.safeParse(body.review);
+    if (!review.success) throw new Error("Search results could not be saved. Previous saved results and your draft are retained.");
+    const visible = visibleMerchandiseReview(review.data);
+    setMerchandiseSearch({ result: visible, identity: merchandiseIdentity(content), key: crypto.randomUUID(), review: review.data });
+    return { pending: visible.items.length, warning: explain(parsed.data.errors) };
   }
   async function dismissMerchandise(url: string | string[], restore = false): Promise<boolean> {
     if (pending.current || !saved || !merchandiseSearch?.review) return false;
@@ -449,6 +572,8 @@ export default function PreviewLockerForm({
     <p className="text-sm">Private demo only. Media suggestions are unverified; saving does not grant rights or create an Athlete Career ID.</p>
     {message && <p role="status" className="rounded-lg border p-3">{message}</p>}
     {error && <div role="alert" className="rounded-lg border border-red-500 p-3"><p>{error}</p>{saveVersionConflict && saved && <a href={`/admin/preview-lockers/${saved.id}/edit`} target="_blank" rel="noopener noreferrer" aria-label="Open latest saved version in a new tab" className="mt-2 inline-flex min-h-11 items-center underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#ffbb00]">Open latest saved version in a new tab</a>}</div>}
+    <BuildAllPanel status={build} running={busy === "build"} canStart={!busy && !statsNeedReload && draft.full_name.trim().length >= 2} canRetry={!busy && !!saved && !dirty && failedRetryable(build).length > 0}
+      onStart={() => { void buildAll(); }} onCancel={() => abort.current?.abort()} onRetry={() => { void retryBuild(); }} onReview={setActiveFolder} />
     <div className={styles.folderTabs} role="tablist" aria-label="Locker editing sections">{["info", "career", "stats", "images", "videos", "media"].map((key, index, tabs) => <button key={key} type="button" role="tab" id={`locker-tab-${key}`} aria-controls={`locker-panel-${key}`} aria-selected={activeFolder === key} tabIndex={activeFolder === key ? 0 : -1} className={styles.folderTab} onClick={() => setActiveFolder(key)} onKeyDown={event => {
       const next = event.key === "ArrowRight" ? (index + 1) % tabs.length : event.key === "ArrowLeft" ? (index + tabs.length - 1) % tabs.length : event.key === "Home" ? 0 : event.key === "End" ? tabs.length - 1 : null;
       if (next === null) return;
@@ -496,7 +621,7 @@ export default function PreviewLockerForm({
       </section>
       <section id="locker-panel-stats" role="tabpanel" aria-labelledby="locker-tab-stats" tabIndex={0} hidden={activeFolder !== "stats"} className={styles.folderPanel}>
       <h2 className={styles.folderHeading}>Statistics & imports</h2>
-      <CombineResultsForm value={draft.combine_results} onChange={combine_results => change({ combine_results })} discovery={{ preview: saved, identityKey: JSON.stringify([draft.full_name, draft.school, draft.schools, draft.pro_teams]), searchDisabled: dirty || !!busy || statsNeedReload, onBusyChange: active => { pending.current = active; setBusy(active ? "combine" : null); } }} />
+      <CombineResultsForm value={draft.combine_results} onChange={combine_results => change({ combine_results })} discovery={{ ref: combineSearch, preview: saved, identityKey: JSON.stringify([draft.full_name, draft.school, draft.schools, draft.pro_teams]), searchDisabled: dirty || !!busy || statsNeedReload, onBusyChange: active => { pending.current = active; setBusy(active ? "combine" : null); } }} />
       <CfbCsvImport athleteName={draft.full_name} value={draft.cfb_stats} onChange={cfb_stats => change({ cfb_stats })} />
       <StatsCsvImport league="nfl" athleteName={draft.full_name} value={draft.pfr_stats} onChange={pfr_stats => change({ pfr_stats })} disabled={busy !== null || statsNeedReload} />
       <section className="space-y-3" aria-label="Stats-only update">

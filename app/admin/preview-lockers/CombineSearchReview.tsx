@@ -1,15 +1,19 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useImperativeHandle, useRef, useState, type Ref } from "react";
 import { Button } from "@/components/ui/button";
 import { combineEventLabel, combineMetricInfo, combineValue, type CombineResult } from "@/lib/player/combine";
 import { addReviewedCombine, combineChoiceKey, combineSearchSchema, type CombineSearch, type CombineSuggestion } from "@/lib/player/combine-review";
 
+export type CombineSearchOutcome = { ok: boolean; found: number; message: string };
+/** Lets the one-click builder run this search against the snapshot it just saved. */
+export type CombineSearchHandle = { search: (preview: { id: string; revision: number }, signal?: AbortSignal) => Promise<CombineSearchOutcome> };
 export type CombineDiscoveryProps = {
   preview?: { id: string; revision: number } | null; identityKey: string;
   searchDisabled: boolean; onBusyChange: (busy: boolean) => void;
+  ref?: Ref<CombineSearchHandle>;
 };
-export default function CombineSearchReview({ preview, identityKey, searchDisabled, onBusyChange, value, onChange }: CombineDiscoveryProps & {
+export default function CombineSearchReview({ preview, identityKey, searchDisabled, onBusyChange, value, onChange, ref }: CombineDiscoveryProps & {
   value: CombineResult[]; onChange: (value: CombineResult[]) => void;
 }) {
   const [review, setReview] = useState<{ identity: string; result: CombineSearch } | null>(null);
@@ -19,20 +23,25 @@ export default function CombineSearchReview({ preview, identityKey, searchDisabl
   useEffect(() => { identity.current = identityKey; controller.current?.abort(); }, [identityKey]);
   useEffect(() => () => controller.current?.abort(), []);
   const result = review?.identity === identityKey ? { ...review.result, suggestions: review.result.suggestions.filter(item => item.event.eventType === "combine") } : null;
-  async function search() {
-    if (!preview || searchDisabled || controller.current) return;
-    const requestIdentity = identityKey;
-    controller.current = new AbortController(); setBusy(true); onBusyChange(true); setMessage("");
+  useImperativeHandle(ref, () => ({ search: (target, signal) => search(target, signal) }));
+  // A managed search (one-click builder) leaves busy ownership with its caller.
+  async function search(target = preview, signal?: AbortSignal): Promise<CombineSearchOutcome> {
+    const managed = !!signal;
+    if (!target || (!managed && searchDisabled) || controller.current) return { ok: false, found: 0, message: "Combine search is already running." };
+    const requestIdentity = identity.current;
+    controller.current = new AbortController(); setBusy(true); if (!managed) onBusyChange(true); setMessage("");
+    const stop = () => controller.current?.abort();
+    signal?.addEventListener("abort", stop, { once: true });
     try {
-      const response = await fetch(`/api/preview-lockers/${preview.id}/combine`, { method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ revision: preview.revision }), signal: controller.current.signal });
+      const response = await fetch(`/api/preview-lockers/${target.id}/combine`, { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ revision: target.revision }), signal: controller.current.signal });
       const body = await response.json(), parsed = combineSearchSchema.safeParse(body.result);
-      if (!response.ok || !parsed.success || body.revision !== preview.revision) throw new Error(response.status === 409
+      if (!response.ok || !parsed.success || body.revision !== target.revision) throw new Error(response.status === 409
         ? "The saved preview changed. Reload it before searching again. Your measurements are retained."
         : response.status === 429 ? "Search is temporarily limited. Try again shortly. Your measurements are retained."
         : body.error === "combine_identity_incomplete" ? "Add a college or team and save the draft before searching."
         : "Combine search is unavailable. Previous suggestions and your measurements are retained.");
-      if (identity.current !== requestIdentity) return;
+      if (identity.current !== requestIdentity) return { ok: false, found: 0, message: "Player details changed during the search. Search again." };
       const available = parsed.data.suggestions.filter(item => item.event.eventType === "combine");
       // Append new evidence; failed/repeated searches cannot clear earlier review.
       setReview(current => {
@@ -45,9 +54,15 @@ export default function CombineSearchReview({ preview, identityKey, searchDisabl
         }
         return { identity: requestIdentity, result: { ...parsed.data, suggestions } };
       });
-      setMessage(parsed.data.status === "partial" ? "Some sources were unavailable. Review the available evidence below." : available.length ? "Results ready for review. Nothing has been added or saved." : "No unambiguous testing results found. Check source links or enter results manually.");
-    } catch (error) { if (!controller.current?.signal.aborted) setMessage(error instanceof Error ? error.message : "Search unavailable. Your measurements are retained."); }
-    finally { controller.current = null; setBusy(false); onBusyChange(false); }
+      const done = parsed.data.status === "partial" ? "Some sources were unavailable. Review the available evidence below." : available.length ? "Results ready for review. Nothing has been added or saved." : "No unambiguous testing results found. Check source links or enter results manually.";
+      setMessage(done);
+      return { ok: true, found: available.length, message: done };
+    } catch (error) {
+      const failed = controller.current?.signal.aborted ? "Combine search cancelled." : error instanceof Error ? error.message : "Search unavailable. Your measurements are retained.";
+      if (!controller.current?.signal.aborted) setMessage(failed);
+      return { ok: false, found: 0, message: failed };
+    }
+    finally { signal?.removeEventListener("abort", stop); controller.current = null; setBusy(false); if (!managed) onBusyChange(false); }
   }
   function blocked(suggestion: CombineSuggestion, metric: string) {
     const event = value.find(event => event.eventType === suggestion.event.eventType && (suggestion.event.year !== null
