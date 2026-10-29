@@ -41,4 +41,15 @@
 .folderHeading { font: 700 23px/1.1 'BLTZ Career Condensed',var(--font-oswald),sans-serif; letter-spacing: .02em; text-transform: uppercase; }
 .form > fieldset { margin-top: 0 !important; }
 .form > fieldset > :not(.folderPanel):not(legend) { margin-inline: 18px; }
+.buildTasks { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.buildTask { display: grid; grid-template-columns: minmax(0,9rem) 5.5rem minmax(0,1fr); gap: 4px 12px; align-items: baseline; padding: 8px 10px; border: 1px solid var(--line,#d1d8de); border-radius: 8px; overflow-wrap: anywhere; }
+.buildTask > button { grid-column: 3; }
+.buildTaskName { font-weight: 600; }
+.buildTaskState { font-size: 12px; font-weight: 600; color: var(--muted,#5c6879); }
+.buildTask[data-state='running'] .buildTaskState { color: #9a6f00; }
+.buildTask[data-state='done'] .buildTaskState { color: #1f7a45; }
+.buildTask[data-state='failed'] { border-color: #dc2626; }
+.buildTask[data-state='failed'] .buildTaskState { color: #dc2626; }
+.buildTaskDetail { font-size: 14px; }
+@media(max-width:600px) { .buildTask { grid-template-columns: minmax(0,1fr) auto; } .buildTaskDetail,.buildTask > button { grid-column: 1 / -1; } }
 @media(max-width:600px) { .folderTabs { gap: 3px; padding-inline: 5px; } .folderTab { font-size: 11px; } .folderPanel { padding: 15px; } }
