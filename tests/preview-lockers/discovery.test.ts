@@ -58,6 +58,6 @@ describe("request-owned preview discovery", () => {
     const admission = mocks.rpc.mock.calls.find(([name]) => name === "admit_preview_discovery");
     expect(admission?.[1]?.p_identity_hash).toMatch(/^[0-9a-f]{64}$/);
     expect(JSON.stringify(admission)).not.toContain("Synthetic Preview");
-    await expect(readDiscovery(new Response("", { status: 429 }), vi.fn())).rejects.toThrow(/same player.*3 minutes.*50 successful or active.*Failed and timed-out runs do not consume/);
+    await expect(readDiscovery(new Response("", { status: 429 }), vi.fn())).rejects.toThrow(/same player.*3 minutes.*200 successful or active.*Failed and timed-out runs do not consume/);
   });
 });

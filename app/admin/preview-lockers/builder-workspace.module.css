@@ -24,7 +24,8 @@
 .athlete[aria-current='page'] { border-color:var(--accent); background:var(--selected); }
 .athlete strong { display:block; font-size:13px; font-weight:600; overflow-wrap:anywhere; }
 .athlete small { display:block; font-size:11px; color:var(--muted); margin-top:3px; overflow-wrap:anywhere; }
-.initials { display:grid; place-items:center; width:35px; height:42px; border:1px solid var(--line); border-radius:6px; background:var(--soft); font:700 17px 'BLTZ Career Condensed',sans-serif; }
+.reviewDot { position:absolute; top:-4px; right:-4px; width:10px; height:10px; border:2px solid var(--panel,#fff); border-radius:50%; background:#ffbb00; }
+.initials { position:relative; display:grid; place-items:center; width:35px; height:42px; border:1px solid var(--line); border-radius:6px; background:var(--soft); font:700 17px 'BLTZ Career Condensed',sans-serif; }
 .athlete>svg { color:var(--muted); }
 .railFooter { margin-top:auto; padding:16px 17px; border-top:1px solid var(--line); }
 .railFooter a { display:flex; align-items:center; justify-content:space-between; min-height:36px; color:var(--ink); font-weight:600; }

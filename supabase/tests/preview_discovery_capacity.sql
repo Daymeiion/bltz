@@ -18,7 +18,7 @@ set local role authenticated;
 do $$
 declare request_id uuid; replacement_id uuid; index integer;
 begin
-  for index in 1..49 loop
+  for index in 1..199 loop
     request_id := public.admit_preview_discovery(md5('successful-' || index::text) || md5('player-' || index::text));
     if request_id is null then raise exception 'attempt % was unexpectedly rejected', index; end if;
     if not public.finalize_preview_discovery(request_id,true) then raise exception 'attempt % did not finalize', index; end if;
@@ -36,8 +36,8 @@ begin
   end if;
   if not public.finalize_preview_discovery(replacement_id,true) then raise exception 'replacement did not finalize'; end if;
   if public.finalize_preview_discovery(replacement_id,true) then raise exception 'finalization was not idempotent'; end if;
-  if public.admit_preview_discovery(md5('fifty-first') || md5('fifty-first-player')) is not null then
-    raise exception 'fifty-first charged attempt was admitted';
+  if public.admit_preview_discovery(md5('two-hundred-first') || md5('two-hundred-first-player')) is not null then
+    raise exception 'two-hundred-first charged attempt was admitted';
   end if;
 end $$;
 

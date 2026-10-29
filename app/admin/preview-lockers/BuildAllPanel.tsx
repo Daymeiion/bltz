@@ -20,7 +20,7 @@ export default function BuildAllPanel({ status, running, canStart, canRetry, onS
     <div className="space-y-1">
       <h2 id="preview-build-all-heading" className="font-semibold">Build & search all</h2>
       <p className="text-sm">One click runs the career search, saves a private draft, then searches awards, news, merchandise and Combine together. Results wait for your review; nothing is added to the Locker automatically.</p>
-      <p className="text-sm text-muted-foreground">Saving makes changes visible to anyone already invited to this preview. Each full run uses four of your daily scraper searches.</p>
+      <p className="text-sm text-muted-foreground">Saving makes changes visible to anyone already invited to this preview. Each full run uses four of your 200 daily scraper searches.</p>
     </div>
     <div className="flex flex-wrap gap-3">
       {running

@@ -4,22 +4,27 @@ import PreviewList from "@/app/admin/preview-lockers/page";
 const mocked = vi.hoisted(() => ({ admin: vi.fn() }));
 let request: { select: ReturnType<typeof vi.fn>; ilike: ReturnType<typeof vi.fn>; order: ReturnType<typeof vi.fn>; range: ReturnType<typeof vi.fn> };
 let shortLinkRequest: { select: ReturnType<typeof vi.fn>; in: ReturnType<typeof vi.fn> };
+let reviewRequest: { select: ReturnType<typeof vi.fn>; in: ReturnType<typeof vi.fn> };
 let from: ReturnType<typeof vi.fn>;
 beforeEach(() => {
   request = { select: vi.fn(), ilike: vi.fn(), order: vi.fn(), range: vi.fn() };
   request.select.mockReturnValue(request); request.ilike.mockReturnValue(request); request.order.mockReturnValue(request);
   shortLinkRequest = { select: vi.fn(), in: vi.fn().mockResolvedValue({ data: [], error: null }) };
   shortLinkRequest.select.mockReturnValue(shortLinkRequest);
+  reviewRequest = { select: vi.fn(), in: vi.fn().mockResolvedValue({ data: [], error: null }) };
+  reviewRequest.select.mockReturnValue(reviewRequest);
   from = vi.fn(table => {
     if (table === "preview_lockers") return request;
     if (table === "preview_locker_short_links") return shortLinkRequest;
+    if (table === "gtm_player_preview_lockers") return reviewRequest;
     throw new Error(`Unexpected preview table: ${table}`);
   });
   mocked.admin.mockResolvedValue({ client: { from } });
 });
 vi.mock("@/lib/preview-lockers/server", () => ({ previewAdmin: mocked.admin }));
 it("searches before pagination, scopes publication lookup, and provides compact accessible row actions", async () => {
-  const rows = Array.from({ length: 51 }, (_, i) => ({ id: `id-${i}`, slug: `athlete-${i}`, full_name: `Athlete ${i}`, school: null }));
+  const rows = Array.from({ length: 51 }, (_, i) => ({ id: `id-${i}`, slug: `athlete-${i}`, full_name: `Athlete ${i}`, school: null, revision: 2 }));
+  reviewRequest.in.mockResolvedValue({ data: [{ preview_locker_id: "id-0", completed_revision: 1 }, { preview_locker_id: "id-1", completed_revision: 2 }], error: null });
   request.range.mockResolvedValue({ data: rows, error: null });
   shortLinkRequest.in.mockResolvedValue({ data: [{ preview_id: "id-0", public_access_enabled: true }, { preview_id: "id-1", public_access_enabled: false }], error: null });
   const html = renderToStaticMarkup(await PreviewList({ searchParams: Promise.resolve({ q: "Athlete", sort: "name", page: "2" }) }));
@@ -42,6 +47,10 @@ it("searches before pagination, scopes publication lookup, and provides compact 
   expect(host.querySelector('[aria-label="Publish invite for Athlete 1"]')?.textContent).toBe("Publish");
   expect(host.querySelectorAll("li")[0].textContent).toContain("Published — no sign-in");
   expect(host.querySelectorAll("li")[1].textContent).toContain("Unpublished draft");
+  // Cohort Lockers not completed at their current revision get the yellow dot.
+  expect(host.querySelectorAll("li")[0].querySelector('[aria-label="Needs review"]')).not.toBeNull();
+  expect(host.querySelectorAll("li")[1].querySelector('[aria-label="Needs review"]')).toBeNull();
+  expect(host.querySelectorAll("li")[2].querySelector('[aria-label="Needs review"]')).toBeNull();
   expect(html).toContain("q=Athlete&amp;sort=name&amp;page=3");
 });
 it("provides search empty and load error states without exposing rows", async () => {
