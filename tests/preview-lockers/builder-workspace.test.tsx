@@ -66,9 +66,9 @@ it("keeps edits and upload controls mounted across keyboard folder navigation, a
 it("scopes claim and referrals in the database query and refuses mismatched data", async () => {
   const queries: Array<{ table: string; eq: ReturnType<typeof vi.fn> }> = [];
   const client = { from: vi.fn((table: string) => {
-    const result = { data: table === "preview_lockers" ? context().athletes : table === "preview_conversion_responses" ? { ...context().claim, preview_id: otherId } : [{ ...context().referrals[0], referrer_preview_id: otherId }], error: null };
-    const chain = { select: vi.fn(), order: vi.fn(), range: vi.fn(), eq: vi.fn(), maybeSingle: vi.fn(async () => result), then: (resolve: (value: typeof result) => unknown) => Promise.resolve(result).then(resolve) };
-    for (const method of [chain.select, chain.order, chain.range, chain.eq]) method.mockReturnValue(chain);
+    const result = { data: table === "preview_lockers" ? context().athletes.map(row => ({ ...row, revision: 2 })) : table === "gtm_player_preview_lockers" ? [{ preview_locker_id: otherId, completed_revision: null }] : table === "preview_conversion_responses" ? { ...context().claim, preview_id: otherId } : [{ ...context().referrals[0], referrer_preview_id: otherId }], error: null };
+    const chain = { select: vi.fn(), order: vi.fn(), range: vi.fn(), eq: vi.fn(), in: vi.fn(), maybeSingle: vi.fn(async () => result), then: (resolve: (value: typeof result) => unknown) => Promise.resolve(result).then(resolve) };
+    for (const method of [chain.select, chain.order, chain.range, chain.eq, chain.in]) method.mockReturnValue(chain);
     queries.push({ table, eq: chain.eq }); return chain;
   }) };
   const loaded = await readBuilderContext(client as unknown as SupabaseClient, id);
@@ -76,4 +76,7 @@ it("scopes claim and referrals in the database query and refuses mismatched data
   expect(queries.find(row => row.table === "preview_locker_candidates")?.eq).toHaveBeenCalledWith("referrer_preview_id", id);
   expect(loaded.claim).toBeNull(); expect(loaded.referrals).toEqual([]);
   expect(loaded.athletes).toHaveLength(2);
+  // Only the cohort Locker without a completed current revision needs review.
+  expect(loaded.athletes.map(row => row.needsReview)).toEqual([false, true]);
+  expect(loaded.athletes[0]).not.toHaveProperty("revision");
 });
