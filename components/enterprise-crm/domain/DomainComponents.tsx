@@ -1,0 +1,18 @@
+import type { ReactNode } from "react";
+import { IconArrowRight, IconCalendar, IconLock, IconShieldCheck } from "@tabler/icons-react";
+import { AvatarGroup, EntityReference, StatusBadge, type AvatarGroupItem, type StatusVariant } from "../data";
+
+export function OpportunityStageBadge({ label, variant = "neutral" }: { label: string; variant?: StatusVariant }) { return <StatusBadge label={label} variant={variant} />; }
+export function PartnerReference({ label, context, initials, mark, status }: { label: string; context?: string; initials?: string; mark?: ReactNode; status?: ReactNode }) { return <EntityReference label={label} context={context ?? "Partner"} initials={initials} mark={mark} status={status} />; }
+
+export type OpportunityRowProps = { title: string; context?: string; partner: ReactNode; stageLabel: string; stageVariant?: StatusVariant; value?: ReactNode; decisionDate?: string; action?: ReactNode };
+export function OpportunityRow({ title, context, partner, stageLabel, stageVariant, value, decisionDate, action }: OpportunityRowProps) {
+  return <article className="crm-domain-row"><div className="crm-domain-row__title"><strong>{title}</strong>{context ? <span>{context}</span> : null}</div><div>{partner}</div><OpportunityStageBadge label={stageLabel} variant={stageVariant} />{value ? <div className="crm-domain-row__value">{value}</div> : null}{decisionDate ? <span className="crm-domain-row__date"><IconCalendar aria-hidden />{decisionDate}</span> : null}<div>{action ?? <button type="button" className="crm-icon-button" aria-label={`Open ${title}`}><IconArrowRight aria-hidden /></button>}</div></article>;
+}
+
+export function ParticipantGroup({ participants, max = 4, label = "Participants" }: { participants: readonly AvatarGroupItem[]; max?: number; label?: string }) { return <div className="crm-participant-group"><AvatarGroup items={participants} max={max} label={label} /><span>{participants.length} {participants.length === 1 ? "participant" : "participants"}</span></div>; }
+export type ActivationSummaryRowProps = { title: string; context?: string; status: string; statusVariant?: StatusVariant; owner: ReactNode; participants: readonly AvatarGroupItem[]; due?: string; rights?: ReactNode; action?: ReactNode };
+export function ActivationSummaryRow({ title, context, status, statusVariant, owner, participants, due, rights, action }: ActivationSummaryRowProps) { return <article className="crm-domain-row crm-domain-row--activation"><div className="crm-domain-row__title"><strong>{title}</strong>{context ? <span>{context}</span> : null}</div><StatusBadge label={status} variant={statusVariant} /><div>{owner}</div><ParticipantGroup participants={participants} />{rights}{due ? <span className="crm-domain-row__date"><IconCalendar aria-hidden />{due}</span> : null}<div>{action}</div></article>; }
+
+export type RightsSummaryProps = { label: string; status: string; statusVariant: StatusVariant; context?: string; reviewer?: ReactNode; due?: string; action?: ReactNode };
+export function RightsSummary({ label, status, statusVariant, context, reviewer, due, action }: RightsSummaryProps) { const blocked = statusVariant === "blocked" || statusVariant === "restricted"; return <section className="crm-rights-summary" aria-label={`${label}: ${status}`}><span className="crm-rights-summary__icon" aria-hidden>{blocked ? <IconLock /> : <IconShieldCheck />}</span><div><strong>{label}</strong>{context ? <p>{context}</p> : null}<StatusBadge label={status} variant={statusVariant} /></div>{reviewer ? <div className="crm-rights-summary__reviewer">{reviewer}</div> : null}{due ? <span className="crm-domain-row__date"><IconCalendar aria-hidden />{due}</span> : null}{action}</section>; }

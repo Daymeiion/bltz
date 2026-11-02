@@ -53,6 +53,7 @@ export const previewOptions: OrganizationWorkspaceOptions = {
 };
 
 export const PREVIEW_SECTIONS = [
+  "executive",
   "players",
   "athletes",
   "media",
