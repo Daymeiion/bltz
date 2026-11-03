@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { OrganizationShell } from "@/components/organization/OrganizationShell";
+import { resolveWorkspaceAccess } from "@/lib/enterprise-crm/workspace-access";
 import {
   listAccessibleOrganizations,
   listOrganizationWorkspaceOptions,
@@ -25,9 +26,10 @@ export default async function OrganizationLayout({
     notFound();
   }
 
-  const [directory, options] = await Promise.all([
+  const [directory, options, access] = await Promise.all([
     listAccessibleOrganizations(),
     listOrganizationWorkspaceOptions(result.context.organization.id),
+    resolveWorkspaceAccess(result.context),
   ]);
 
   if (!directory.ok) {
@@ -45,6 +47,7 @@ export default async function OrganizationLayout({
       context={result.context}
       organizations={organizations}
       options={options}
+      access={access}
     >
       {children}
     </OrganizationShell>

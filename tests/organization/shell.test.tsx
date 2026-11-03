@@ -6,6 +6,7 @@ import type {
   OrganizationContext,
   OrganizationWorkspaceOptions,
 } from "@/lib/organization/types";
+import type { WorkspaceAccess } from "@/lib/enterprise-crm/workspace-access";
 
 const navigation = vi.hoisted(() => ({
   pathname: "/organization/11111111-1111-4111-8111-111111111111/dashboard",
@@ -53,13 +54,14 @@ const organizations: AccessibleOrganization[] = [
 let container: HTMLDivElement;
 let root: Root;
 
-function renderShell(options: OrganizationWorkspaceOptions = { teams: [], seasons: [] }) {
+function renderShell(options: OrganizationWorkspaceOptions = { teams: [], seasons: [] }, access?: WorkspaceAccess) {
   act(() => {
     root.render(
       <OrganizationShell
         context={context}
         organizations={organizations}
         options={options}
+        access={access}
       >
         <div>Authorized workspace content</div>
       </OrganizationShell>,
@@ -67,7 +69,7 @@ function renderShell(options: OrganizationWorkspaceOptions = { teams: [], season
   });
 }
 
-describe("Phase 3 organization shell", () => {
+describe("Pilot school workspace shell", () => {
   beforeEach(() => {
     navigation.pathname = `/organization/${ORGANIZATION_ID}/dashboard`;
     container = document.createElement("div");
@@ -81,67 +83,107 @@ describe("Phase 3 organization shell", () => {
     vi.clearAllMocks();
   });
 
-  it("renders the authorized organization, current role, and active overview destination", () => {
+
+  function access(granted: string[], theme: WorkspaceAccess["theme"] = { mode: "bltz", accent: "#2952ff", highlight: "#d6a500", logoUrl: null }): WorkspaceAccess {
+    const keys = ["navigation.home", "navigation.athletes", "navigation.media", "navigation.opportunities", "navigation.activations", "navigation.intelligence", "navigation.analytics", "navigation.organization", "utility.global_search", "utility.create", "utility.notifications", "utility.theme_admin", "surface.financial"] as const;
+    return { capabilities: Object.fromEntries(keys.map((key) => [key, granted.includes(key)])) as WorkspaceAccess["capabilities"], canManageActivations: false, theme };
+  }
+
+  function railLinks() {
+    return [...container.querySelectorAll('.pilot-rail nav[aria-label="School workspace"] a')].map((link) => [link.textContent, link.getAttribute("href")]);
+  }
+
+  it("shows the school, the member's role and the active page", () => {
     renderShell();
 
     expect(container.textContent).toContain("BLTZ Test Organization");
     expect(container.textContent).toContain("Media Manager");
+    expect(container.querySelector('.pilot-rail a[aria-current="page"]')?.textContent).toContain("Overview");
+    expect(container.querySelector('[data-product="enterprise-crm"]')).not.toBeNull();
     expect(container.textContent).toContain("Authorized workspace content");
-    expect(container.querySelector('a[aria-current="page"]')?.getAttribute("aria-label")).toBe("Overview");
-    expect(container.querySelector('button[aria-label="Switch organization"]')).not.toBeNull();
   });
 
-  it("keeps future modules non-interactive instead of linking to missing routes", () => {
+  it("offers only the pilot destinations", () => {
     renderShell();
 
-    const unavailable = [...container.querySelectorAll('[aria-disabled="true"]')];
-    expect(unavailable).toHaveLength(4);
-    expect(container.querySelector(`a[href="/organization/${ORGANIZATION_ID}/players"]`)).toBeNull();
-    expect(container.querySelector('[aria-label="Players — coming soon"]')).not.toBeNull();
-    expect(container.querySelector('[aria-label="Finance — coming soon"]')).not.toBeNull();
-  });
-
-  it("renders the five-link preview navigation and marks finance active", () => {
-    navigation.pathname = "/organization/preview/revenue";
-    renderShell();
-
-    const destinations = [
-      ["Overview", "/organization/preview"],
-      ["Players", "/organization/preview/players"],
-      ["Media", "/organization/preview/media"],
-      ["Agreements", "/organization/preview/agreements"],
-      ["Finance", "/organization/preview/revenue"],
-    ];
-
-    for (const [label, href] of destinations) {
-      const link = container.querySelector(`a[href="${href}"][aria-label="${label}"]`);
-      expect(link, label).not.toBeNull();
-      expect(link?.getAttribute("aria-label"), label).toBe(label);
+    expect(railLinks()).toEqual([
+      ["Overview", `/organization/${ORGANIZATION_ID}/dashboard`],
+      ["Intelligence", `/organization/${ORGANIZATION_ID}/intelligence`],
+      ["Launch a Locker", `/organization/${ORGANIZATION_ID}/launch`],
+    ]);
+    const nav = container.querySelector(".pilot-rail nav")?.textContent ?? "";
+    for (const removed of ["Athletes", "Media", "Opportunities", "Activations", "Analytics", "Organization"]) {
+      expect(nav, removed).not.toContain(removed);
     }
-    expect(container.querySelector('a[aria-current="page"]')?.getAttribute("aria-label")).toBe("Finance");
-    expect(container.querySelector('a[aria-label="Rights"]')).toBeNull();
-    expect(container.querySelector('a[aria-label="Reports"]')).toBeNull();
-    expect(container.querySelector('[aria-disabled="true"]')).toBeNull();
+    for (const removed of ["Create", "Search workspace", "All Athletics", "Notifications"]) {
+      expect(container.textContent, removed).not.toContain(removed);
+    }
+    expect(container.querySelector("select")).toBeNull();
   });
 
-  it("exposes a labeled mobile navigation control and disables empty filters", () => {
+  it("points preview navigation at the fictional preview pages", () => {
+    navigation.pathname = "/organization/preview/intelligence/p1";
     renderShell();
 
-    expect(container.querySelector('button[aria-label="Open workspace navigation"]')).not.toBeNull();
-    const filters = [...container.querySelectorAll("select")];
-    expect(filters).toHaveLength(2);
-    expect(filters.every((filter) => filter.disabled)).toBe(true);
+    expect(railLinks()).toEqual([
+      ["Overview", "/organization/preview"],
+      ["Intelligence", "/organization/preview/intelligence"],
+      ["Launch a Locker", "/organization/preview/launch"],
+    ]);
+    expect(container.querySelector('.pilot-rail a[aria-current="page"]')?.textContent).toContain("Intelligence");
   });
 
-  it("renders server-supplied team and season options without inventing client data", () => {
-    renderShell({
-      teams: [{ id: "team-1", name: "Varsity Football", sport: "football" }],
-      seasons: [{ id: "season-1", seasonCode: "2026", sport: "football", status: "active" }],
-    });
+  it("hides destinations the member has not been granted", () => {
+    renderShell({ teams: [], seasons: [] }, access(["navigation.home"]));
+    expect(railLinks()).toEqual([["Overview", `/organization/${ORGANIZATION_ID}/dashboard`]]);
+  });
 
-    const options = [...container.querySelectorAll("option")].map((option) => option.textContent);
-    expect(options).toContain("Varsity Football (Football)");
-    expect(options).toContain("2026 (Football)");
-    expect([...container.querySelectorAll("select")].every((filter) => !filter.disabled)).toBe(true);
+  it("shows Launch a Locker only to members who can plan activations", () => {
+    renderShell({ teams: [], seasons: [] }, access(["navigation.home", "navigation.intelligence"]));
+    expect(railLinks().map(([label]) => label)).toEqual(["Overview", "Intelligence"]);
+
+    renderShell({ teams: [], seasons: [] }, { ...access(["navigation.home", "navigation.intelligence"]), canManageActivations: true });
+    expect(railLinks().map(([label]) => label)).toEqual(["Overview", "Intelligence", "Launch a Locker"]);
+  });
+
+  it("opens and closes the mobile menu", () => {
+    renderShell();
+    const toggle = container.querySelector<HTMLButtonElement>('button[aria-controls="pilot-mobile-menu"]')!;
+    const menu = container.querySelector<HTMLElement>("#pilot-mobile-menu")!;
+
+    expect(menu.hidden).toBe(true);
+    act(() => toggle.click());
+    expect(menu.hidden).toBe(false);
+    expect(toggle.getAttribute("aria-label")).toBe("Close navigation");
+    act(() => menu.querySelector<HTMLAnchorElement>("a.pilot-nav__item")!.click());
+    expect(menu.hidden).toBe(true);
+  });
+
+  it("starts on the school canvas and switches to white, remembering the choice", () => {
+    window.localStorage.removeItem("bltz-enterprise-canvas");
+    renderShell();
+    const shell = () => container.querySelector<HTMLElement>('[data-product="enterprise-crm"]')!;
+    expect(shell().dataset.canvas).toBe("school");
+
+    act(() => container.querySelector<HTMLButtonElement>('[aria-label="Page background"] button[aria-checked="false"]')!.click());
+    expect(shell().dataset.canvas).toBe("white");
+    expect(window.localStorage.getItem("bltz-enterprise-canvas")).toBe("white");
+    window.localStorage.removeItem("bltz-enterprise-canvas");
+  });
+
+  it("applies the exact school colors by default", () => {
+    renderShell({ teams: [], seasons: [] }, access(["navigation.home"], { mode: "school", accent: "#8b1e3f", highlight: "#f2c14e", logoUrl: null }));
+
+    const shell = container.querySelector<HTMLElement>('[data-product="enterprise-crm"]');
+    expect(shell?.dataset.organizationTheme).toBe("school");
+    expect(shell?.style.getPropertyValue("--crm-org-accent")).toBe("#8b1e3f");
+  });
+
+  it("stays on BLTZ colors when the school has no exact identity", () => {
+    renderShell({ teams: [], seasons: [] }, access(["navigation.home"]));
+
+    const shell = container.querySelector<HTMLElement>('[data-product="enterprise-crm"]');
+    expect(shell?.dataset.organizationTheme).toBe("bltz");
+    expect(shell?.style.getPropertyValue("--crm-org-accent")).toBe("#2952ff");
   });
 });

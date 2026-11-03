@@ -1,4 +1,5 @@
-import { Geist, Oswald, Roboto_Condensed, Bebas_Neue, Open_Sans } from "next/font/google";
+import { Geist, Oswald, Bebas_Neue, Open_Sans } from "next/font/google";
+import localFont from "next/font/local";
 import { ClientShell } from "./client-shell";
 import "./globals.css";
 
@@ -16,10 +17,15 @@ const oswald = Oswald({
   variable: "--font-oswald",
 });
 
-const robotoCondensed = Roboto_Condensed({
-  subsets: ["latin"],
-  weight: ["400", "700"],
+// Self-hosted: Google Fonts began returning Roboto Condensed file URLs that the
+// build-time next/font/google loader cannot parse on Vercel, failing every build.
+const robotoCondensed = localFont({
+  src: [
+    { path: "../node_modules/@fontsource/roboto-condensed/files/roboto-condensed-latin-400-normal.woff2", weight: "400", style: "normal" },
+    { path: "../node_modules/@fontsource/roboto-condensed/files/roboto-condensed-latin-700-normal.woff2", weight: "700", style: "normal" },
+  ],
   variable: "--font-rc",
+  display: "swap",
 });
 
 const bebasNeue = Bebas_Neue({

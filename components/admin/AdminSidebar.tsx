@@ -18,6 +18,8 @@ import {
   IconFlask,
   IconAddressBook,
   IconPresentation,
+  IconRocket,
+  IconBuildingStadium,
 } from "@tabler/icons-react";
 
 interface SidebarLink {
@@ -80,6 +82,8 @@ export function AdminSidebar() {
       icon: <IconSettings className="h-5 w-5 flex-shrink-0" />,
     },
     { label: "Preview Lockers", href: "/admin/preview-lockers", activeHref: "/admin/preview-lockers", icon: <IconUsers className="h-5 w-5 flex-shrink-0" /> },
+    { label: "Enterprise CRM", href: "/organization", icon: <IconBuildingStadium className="h-5 w-5 flex-shrink-0" /> },
+    { label: "School Launches", href: "/admin/locker-launches", icon: <IconRocket className="h-5 w-5 flex-shrink-0" /> },
   ];
 
   return (

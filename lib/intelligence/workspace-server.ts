@@ -215,6 +215,15 @@ async function directoryFor(db: Db, asOf: string): Promise<LabSection<WorkspaceA
     rows: [...cohort.rows, ...priority.rows.filter(row => !known.has(row.id))], truncated: cohort.truncated || priority.truncated };
 }
 
+/**
+ * The same soonest-first signal directory the Lab shows, without the internal
+ * admin gate. Callers must authorize first (Enterprise CRM: `intelligence.read`
+ * or the Home capability for the requesting organization).
+ */
+export async function loadSignalDirectory(now: Date = new Date()): Promise<LabSection<WorkspaceAthleteSummary>> {
+  return directoryFor(createServiceClient(), now.toISOString());
+}
+
 function validDay(value: unknown): string | null {
   if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
   const timestamp = Date.parse(`${value}T00:00:00Z`);

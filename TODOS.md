@@ -141,3 +141,20 @@ Revisit when the app has real onboarding traffic; premature pre-launch.
 
 ## Launch blocker (separate plan)
 - [ ] Public landing page — app/page.tsx is still the Supabase starter boilerplate. Flagged by both /autoplan reviewers as more launch-critical than pipeline hardening.
+
+## Enterprise CRM (school workspace pilot)
+
+### Show cleared school media on the public Locker
+- **What:** Render BLTZ-approved school media (videos, images, publications, businesses) on the player's public Locker.
+- **Why:** Schools can attach and BLTZ can approve media today, but approved items only show as "On Locker" in the workspace.
+- **Priority:** P1
+- **Depends on:** `organization_athlete_media` migration applied; signed URLs for private uploads.
+
+### Rate-limit tracked Locker links
+- **What:** Add basic abuse protection (per-IP throttle or bot filter) to `/api/go/<activation id>`.
+- **Why:** The link is public, so anyone holding it can inflate an activation's visit count.
+- **Priority:** P2
+
+### One-time walkthrough
+- **What:** First-visit walkthrough on Overview, Intelligence and Launch a Locker showing the basic actions.
+- **Priority:** P1
