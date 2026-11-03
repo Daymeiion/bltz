@@ -63,6 +63,15 @@ function summary(row: z.infer<typeof athleteSchema>): AthleteSummary { return { 
 
 export async function loadIntelligenceLab(params: { q?: string; athlete?: string; asOf?: string }): Promise<LabResult> {
   await authorizeIntelligenceLab();
+  return loadIntelligenceLabUnchecked(params);
+}
+
+/**
+ * The Lab read without the internal-admin gate. Callers must authorize first:
+ * the Enterprise CRM checks `intelligence.read` and that the athlete belongs to
+ * the requesting school before calling this.
+ */
+export async function loadIntelligenceLabUnchecked(params: { q?: string; athlete?: string; asOf?: string }): Promise<LabResult> {
   const query = (params.q ?? "").trim().slice(0, 120);
   const now = new Date().toISOString();
   const candidateDate = params.asOf ?? now.slice(0, 10);
