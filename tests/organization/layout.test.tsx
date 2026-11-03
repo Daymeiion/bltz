@@ -18,6 +18,10 @@ vi.mock("@/lib/organization/context", () => ({
   listOrganizationWorkspaceOptions: mocks.listOrganizationWorkspaceOptions,
 }));
 
+vi.mock("@/lib/enterprise-crm/workspace-access", () => ({
+  resolveWorkspaceAccess: vi.fn().mockResolvedValue({ capabilities: {}, theme: { mode: "bltz" } }),
+}));
+
 vi.mock("@/components/organization/OrganizationShell", () => ({
   OrganizationShell: ({ children }: { children: React.ReactNode }) => (
     <section data-testid="organization-shell">{children}</section>

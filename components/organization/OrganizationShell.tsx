@@ -1,113 +1,100 @@
 "use client";
 
 import type { ComponentType, CSSProperties, ReactNode } from "react";
-import { createContext, useContext, useState, useTransition } from "react";
+import { useContext, createContext, useEffect, useState, useTransition } from "react";
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { motion } from "motion/react";
 import {
-  IconActivityHeartbeat,
-  IconBell,
-  IconBolt,
-  IconBuilding,
   IconBuildingStadium,
-  IconChartBar,
+  IconLayoutDashboard,
+  IconCheck,
   IconChevronDown,
-  IconChevronLeft,
-  IconChevronRight,
-  IconHome,
   IconLock,
   IconLogout,
-  IconMenu2,
-  IconPhoto,
-  IconPlus,
-  IconSearch,
+  IconPalette,
+  IconRocket,
   IconSparkles,
-  IconSpeakerphone,
-  IconUserCircle,
-  IconUsers,
 } from "@tabler/icons-react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import type { AccessibleOrganization, OrganizationContext, OrganizationWorkspaceOptions } from "@/lib/organization/types";
+import type { ShellCapabilityKey } from "@/lib/enterprise-crm/auth/shell-capabilities";
+import type { WorkspaceAccess } from "@/lib/enterprise-crm/workspace-access";
 import { OrganizationThemeProvider, useOrganizationTheme } from "./OrganizationTheme";
+import { CanvasToggle, SchoolArt } from "./pilot/PilotMotion";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Sheet, SheetClose, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-
-type NavigationIcon = ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
 
 type NavigationItem = {
   label: string;
-  segment: string;
-  icon: NavigationIcon;
-  productionAvailable?: boolean;
-  previewAvailable?: boolean;
+  segment: "dashboard" | "intelligence" | "launch";
+  icon: ComponentType<{ className?: string; stroke?: number; "aria-hidden"?: boolean }>;
+  capability: ShellCapabilityKey;
+  /** Also requires permission to plan activations. */
+  manage?: boolean;
 };
 
-type WorkspaceChromeValue = {
-  context: OrganizationContext;
-  organizations: AccessibleOrganization[];
-  options: OrganizationWorkspaceOptions;
-};
-
-const WorkspaceChromeContext = createContext<WorkspaceChromeValue | null>(null);
-
+/** Pilot scope: the overview of moments and reach, and each former player's intelligence. */
 const NAVIGATION: readonly NavigationItem[] = [
-  { label: "Home", segment: "dashboard", icon: IconHome, productionAvailable: true },
-  { label: "Athletes", segment: "athletes", icon: IconUsers, previewAvailable: true },
-  { label: "Media", segment: "media", icon: IconPhoto, previewAvailable: true },
-  { label: "Opportunities", segment: "opportunities", icon: IconBolt },
-  { label: "Activations", segment: "activations", icon: IconSpeakerphone },
-  { label: "Intelligence", segment: "intelligence", icon: IconSparkles },
-  { label: "Analytics", segment: "analytics", icon: IconChartBar, previewAvailable: true },
-  { label: "Organization", segment: "organization", icon: IconBuilding },
+  { label: "Overview", segment: "dashboard", icon: IconLayoutDashboard, capability: "navigation.home" },
+  { label: "Intelligence", segment: "intelligence", icon: IconSparkles, capability: "navigation.intelligence" },
+  { label: "Launch a Locker", segment: "launch", icon: IconRocket, capability: "navigation.intelligence", manage: true },
 ];
+
+const ShellContext = createContext<{ access?: WorkspaceAccess; theme?: WorkspaceAccess["theme"] } | null>(null);
+
+function isPreviewPath(pathname: string): boolean {
+  return pathname === "/organization/preview" || pathname.startsWith("/organization/preview/");
+}
+
+export function navigationHref(organizationId: string, segment: NavigationItem["segment"], preview: boolean): string {
+  if (preview) return segment === "dashboard" ? "/organization/preview" : `/organization/preview/${segment}`;
+  return `/organization/${organizationId}/${segment}`;
+}
 
 function formatCode(value: string): string {
   return value.split("_").filter(Boolean).map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(" ");
 }
 
 function accessLabel(context: OrganizationContext): string {
-  return context.access.scope === "platform" ? "Platform super admin" : formatCode(context.access.role);
+  return context.access.scope === "platform" ? "BLTZ admin" : formatCode(context.access.role);
 }
 
-function isPreviewPath(pathname: string): boolean {
-  return pathname === "/organization/preview" || pathname.startsWith("/organization/preview/");
+function SchoolMark() {
+  const logoUrl = useContext(ShellContext)?.theme?.logoUrl ?? null;
+  const { mode } = useOrganizationTheme();
+  return (
+    <span className="pilot-mark" aria-hidden>
+      {/* eslint-disable-next-line @next/next/no-img-element -- directory logos come from arbitrary HTTPS hosts */}
+      {logoUrl && mode === "school" ? <img src={logoUrl} alt="" /> : <IconBuildingStadium stroke={1.5} />}
+    </span>
+  );
 }
 
-function navigationHref(organizationId: string, segment: string, preview: boolean): string {
-  if (preview) return segment === "dashboard" ? "/organization/preview/executive" : `/organization/preview/${segment}`;
-  return `/organization/${organizationId}/${segment}`;
-}
-
-function OrganizationSwitcher({ current, organizations }: { current: OrganizationContext["organization"]; organizations: AccessibleOrganization[] }) {
+function SchoolSwitcher({ current, organizations, onNavigate }: { current: OrganizationContext["organization"]; organizations: AccessibleOrganization[]; onNavigate?: () => void }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const identity = <><SchoolMark /><span className="pilot-school__copy"><strong>{current.name}</strong><small>School workspace</small></span></>;
+
+  if (organizations.length < 2) return <div className="pilot-school">{identity}</div>;
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button type="button" aria-label="Switch organization" className="crm-organization-switcher" disabled={isPending}>
-          <span className="crm-organization-mark"><IconBuildingStadium aria-hidden /></span>
-          <span className="crm-organization-switcher__copy"><strong>{current.name}</strong><span>{formatCode(current.organizationType)} workspace</span></span>
-          <IconChevronDown aria-hidden />
+        <button type="button" aria-label="Switch school" className="pilot-school pilot-school--button" disabled={isPending}>
+          {identity}<IconChevronDown stroke={1.5} aria-hidden />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="crm-menu-content">
-        <DropdownMenuLabel>Organization workspaces</DropdownMenuLabel>
-        <DropdownMenuSeparator />
+      <DropdownMenuContent align="start" className="pilot-menu">
+        <DropdownMenuLabel>Schools</DropdownMenuLabel>
         {organizations.map((entry) => {
           const selected = entry.organization.id === current.id;
           return (
-            <DropdownMenuItem
-              key={entry.organization.id}
-              disabled={selected}
-              className="crm-menu-item"
-              onSelect={() => {
-                if (!selected) startTransition(() => router.push(`/organization/${entry.organization.id}/dashboard`));
-              }}
-            >
-              <span className={cn("crm-menu-status", selected && "crm-menu-status--current")} aria-hidden />
-              <span className="crm-menu-item__copy"><strong>{entry.organization.name}</strong><span>{entry.access.scope === "platform" ? "Platform access" : formatCode(entry.access.role)}</span></span>
-              {selected ? <span className="crm-current-label">Current</span> : null}
+            <DropdownMenuItem key={entry.organization.id} disabled={selected} onSelect={() => {
+              if (selected) return;
+              onNavigate?.();
+              startTransition(() => router.push(`/organization/${entry.organization.id}/dashboard`));
+            }}>
+              {entry.organization.name}{selected ? <IconCheck stroke={1.5} className="ml-auto" aria-hidden /> : null}
             </DropdownMenuItem>
           );
         })}
@@ -116,199 +103,150 @@ function OrganizationSwitcher({ current, organizations }: { current: Organizatio
   );
 }
 
-function ScopeSwitcher({ options }: { options: OrganizationWorkspaceOptions }) {
-  const pathname = usePathname();
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const [isPending, startTransition] = useTransition();
-  const teamId = searchParams.get("team") ?? "";
-
-  function setScope(value: string) {
-    const next = new URLSearchParams(searchParams.toString());
-    if (value) next.set("team", value);
-    else next.delete("team");
-    const query = next.toString();
-    startTransition(() => router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false }));
-  }
-
-  return (
-    <label className="crm-scope-switcher">
-      <span>Scope</span>
-      <select value={teamId} onChange={(event) => setScope(event.target.value)} disabled={isPending || options.teams.length === 0} aria-busy={isPending || undefined}>
-        <option value="">All Athletics</option>
-        {options.teams.map((team) => <option key={team.id} value={team.id}>{team.name}{team.sport ? ` · ${formatCode(team.sport)}` : ""}</option>)}
-      </select>
-      <IconChevronDown aria-hidden />
-      {isPending ? <span className="sr-only" role="status">Authorizing selected scope</span> : null}
-    </label>
-  );
-}
-
-function PrimaryNavigation({ organizationId, pathname, expanded, mobile = false }: { organizationId: string; pathname: string; expanded: boolean; mobile?: boolean }) {
+function Navigation({ organizationId, pathname, onNavigate }: { organizationId: string; pathname: string; onNavigate?: () => void }) {
   const preview = isPreviewPath(pathname);
+  const access = useContext(ShellContext)?.access;
+  // Live workspaces show only what the member has been granted.
+  const items = access && !preview ? NAVIGATION.filter((item) => access.capabilities[item.capability] && (!item.manage || access.canManageActivations)) : NAVIGATION;
   return (
-    <nav aria-label="Organization workspace" className="crm-primary-navigation">
-      {NAVIGATION.map((item) => {
+    <nav aria-label="School workspace" className="pilot-nav">
+      {items.map((item, index) => {
         const href = navigationHref(organizationId, item.segment, preview);
         const current = item.segment === "dashboard" ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
-        const available = preview ? item.productionAvailable || item.previewAvailable : item.productionAvailable;
         const Icon = item.icon;
-        const content = <><Icon aria-hidden /><span>{item.label}</span>{!available ? <IconLock className="crm-navigation-lock" aria-hidden /> : null}</>;
-        if (!available) {
-          return <span key={item.segment} className="crm-navigation-item crm-navigation-item--disabled" aria-disabled="true" aria-label={`${item.label} — unavailable`}>{content}</span>;
-        }
-        const link = <Link key={item.segment} href={href} className={cn("crm-navigation-item", current && "crm-navigation-item--current")} aria-current={current ? "page" : undefined} aria-label={!expanded ? item.label : undefined} title={!expanded ? item.label : undefined}>{content}</Link>;
-        return mobile ? <SheetClose key={item.segment} asChild>{link}</SheetClose> : link;
+        return (
+          <Link key={item.segment} href={href} onClick={onNavigate} className={cn("pilot-nav__item", current && "pilot-nav__item--current")} aria-current={current ? "page" : undefined} style={{ "--pilot-i": index } as CSSProperties}>
+            {current ? <motion.span layoutId={onNavigate ? "pilot-nav-pill-mobile" : "pilot-nav-pill"} className="pilot-nav__pill" transition={{ type: "spring", stiffness: 380, damping: 32 }} /> : null}
+            <Icon stroke={1.5} aria-hidden /><span>{item.label}</span>
+          </Link>
+        );
       })}
     </nav>
   );
 }
 
-function SystemHealth({ expanded = true }: { expanded?: boolean }) {
-  return (
-    <div className="crm-system-health" title="System health: Operational" aria-label="System health: Operational">
-      <span aria-hidden><IconActivityHeartbeat /></span>
-      {expanded ? <span><strong>Operational</strong><small>System health</small></span> : null}
-    </div>
-  );
-}
-
-function ThemeMenu() {
-  const { mode, setMode } = useOrganizationTheme();
-  return (
-    <>
-      <DropdownMenuLabel>Workspace appearance</DropdownMenuLabel>
-      <DropdownMenuItem className="crm-menu-item" onSelect={() => setMode("bltz")}><IconBolt aria-hidden />BLTZ Default{mode === "bltz" ? <span className="crm-current-label">Active</span> : null}</DropdownMenuItem>
-      <DropdownMenuItem className="crm-menu-item" onSelect={() => setMode("school")}><IconBuildingStadium aria-hidden />School Theme{mode === "school" ? <span className="crm-current-label">Active</span> : null}</DropdownMenuItem>
-    </>
-  );
-}
-
-function AccountMenu({ context, expanded = true }: { context: OrganizationContext; expanded?: boolean }) {
+function ProfileMenu({ context }: { context: OrganizationContext }) {
   const router = useRouter();
+  const { mode, setMode, schoolAvailable } = useOrganizationTheme();
   const [signingOut, setSigningOut] = useState(false);
   async function signOut() {
     setSigningOut(true);
-    const supabase = createClient();
-    await supabase.auth.signOut();
+    await createClient().auth.signOut();
     router.push("/auth/login");
     router.refresh();
   }
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button type="button" className="crm-account-trigger" aria-label={!expanded ? `Open profile menu — ${accessLabel(context)}` : undefined}>
-          <span><IconUserCircle aria-hidden /></span>
-          {expanded ? <span className="crm-account-trigger__copy"><strong>Profile</strong><small>{accessLabel(context)}</small></span> : null}
-          {expanded ? <IconChevronDown aria-hidden /> : null}
+        <button type="button" className="pilot-profile">
+          <span className="pilot-profile__avatar" aria-hidden>{accessLabel(context).charAt(0)}</span>
+          <span className="pilot-profile__copy"><strong>Account</strong><small>{accessLabel(context)}</small></span>
+          <IconChevronDown stroke={1.5} aria-hidden />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" side="right" className="crm-menu-content">
-        <DropdownMenuLabel><strong>Workspace access</strong><span className="crm-menu-label-note">{accessLabel(context)}</span></DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <ThemeMenu />
-        <DropdownMenuSeparator />
-        <DropdownMenuItem disabled={signingOut} className="crm-menu-item" onSelect={(event) => { event.preventDefault(); void signOut(); }}><IconLogout aria-hidden />{signingOut ? "Signing out" : "Sign out"}</DropdownMenuItem>
+      <DropdownMenuContent align="start" side="top" className="pilot-menu">
+        {schoolAvailable ? (
+          <>
+            <DropdownMenuLabel>Colors</DropdownMenuLabel>
+            <DropdownMenuItem onSelect={() => setMode("school")}><IconPalette stroke={1.5} aria-hidden />School colors{mode === "school" ? <IconCheck stroke={1.5} className="ml-auto" aria-hidden /> : null}</DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => setMode("bltz")}><IconPalette stroke={1.5} aria-hidden />BLTZ colors{mode === "bltz" ? <IconCheck stroke={1.5} className="ml-auto" aria-hidden /> : null}</DropdownMenuItem>
+            <DropdownMenuSeparator />
+          </>
+        ) : null}
+        <DropdownMenuItem disabled={signingOut} onSelect={(event) => { event.preventDefault(); void signOut(); }}><IconLogout stroke={1.5} aria-hidden />{signingOut ? "Signing out" : "Sign out"}</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
 }
 
-function Sidebar({ context, organizations, pathname, collapsed, onCollapse, mobile = false }: { context: OrganizationContext; organizations: AccessibleOrganization[]; pathname: string; collapsed: boolean; onCollapse?: () => void; mobile?: boolean }) {
-  const expanded = mobile || !collapsed;
+function RailContents({ context, organizations, pathname, onNavigate }: { context: OrganizationContext; organizations: AccessibleOrganization[]; pathname: string; onNavigate?: () => void }) {
   return (
-    <aside className={cn("crm-sidebar", collapsed && !mobile && "crm-sidebar--collapsed")}>
-      <div className="crm-sidebar__brand">
-        <Link href={navigationHref(context.organization.id, "dashboard", isPreviewPath(pathname))} className="crm-brand" aria-label="BLTZ Enterprise Home"><span aria-hidden>B</span>{expanded ? <span><strong>BLTZ</strong><small>Enterprise CRM</small></span> : null}</Link>
-        {!mobile ? <button type="button" className="crm-collapse-button" aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} aria-expanded={!collapsed} onClick={onCollapse}>{collapsed ? <IconChevronRight aria-hidden /> : <IconChevronLeft aria-hidden />}</button> : null}
-      </div>
-      {expanded ? <div className="crm-sidebar__organization"><OrganizationSwitcher current={context.organization} organizations={organizations} /></div> : <div className="crm-sidebar__organization-mark"><span className="crm-organization-mark"><IconBuildingStadium aria-hidden /></span></div>}
-      <PrimaryNavigation organizationId={context.organization.id} pathname={pathname} expanded={expanded} mobile={mobile} />
-      <div className="crm-sidebar__footer"><SystemHealth expanded={expanded} /><AccountMenu context={context} expanded={expanded} /></div>
-    </aside>
+    <>
+      <Link href={navigationHref(context.organization.id, "dashboard", isPreviewPath(pathname))} onClick={onNavigate} className="pilot-brand" aria-label="BLTZ home">
+        <span aria-hidden>B</span><strong>BLTZ</strong>
+      </Link>
+      <SchoolSwitcher current={context.organization} organizations={organizations} onNavigate={onNavigate} />
+      <Navigation organizationId={context.organization.id} pathname={pathname} onNavigate={onNavigate} />
+      <div className="pilot-rail__footer"><ProfileMenu context={context} /></div>
+    </>
   );
 }
 
-function SearchMenu() {
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild><button type="button" className="crm-search-entry"><IconSearch aria-hidden /><span>Search workspace</span><kbd>⌘ K</kbd></button></DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="crm-menu-content crm-search-menu">
-        <DropdownMenuLabel>Global search</DropdownMenuLabel>
-        <div className="crm-search-field"><IconSearch aria-hidden /><input aria-label="Search workspace preview" placeholder="Search athletes, media, or work" /></div>
-        <p className="crm-menu-note">Search results are unavailable until a server-authorized contract is connected.</p>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
-
-function CreateMenu() {
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild><button type="button" className="crm-button crm-button--primary"><IconPlus aria-hidden />Create</button></DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="crm-menu-content">
-        <DropdownMenuLabel>BLTZ Create</DropdownMenuLabel>
-        <p className="crm-menu-note">Creation actions appear here when their server permission and journey are available.</p>
-        {(["Opportunity", "Activation", "Assignment"] as const).map((label) => <DropdownMenuItem key={label} disabled className="crm-menu-item"><IconLock aria-hidden />{label}<span className="crm-current-label">Unavailable</span></DropdownMenuItem>)}
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
-
-function NotificationsMenu() {
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild><button type="button" className="crm-icon-button" aria-label="Open notifications"><IconBell aria-hidden /><span className="crm-notification-dot" aria-hidden /></button></DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="crm-menu-content crm-notification-menu">
-        <DropdownMenuLabel>Notifications <span className="crm-preview-label">Preview</span></DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <p className="crm-notification-item"><strong>Rights review needs an owner</strong><span>Fictional preview only · no live notification</span></p>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
-
-export function WorkspaceContextActions({ action }: { action?: ReactNode }) {
-  const chrome = useContext(WorkspaceChromeContext);
-  if (!chrome) return action ? <div className="crm-context-actions">{action}</div> : null;
-  return <div className="crm-context-actions"><OrganizationSwitcher current={chrome.context.organization} organizations={chrome.organizations} /><ScopeSwitcher options={chrome.options} />{action}</div>;
-}
-
-type OrganizationShellProps = { context: OrganizationContext; organizations: AccessibleOrganization[]; options: OrganizationWorkspaceOptions; children: ReactNode };
+type OrganizationShellProps = {
+  context: OrganizationContext;
+  organizations: AccessibleOrganization[];
+  options: OrganizationWorkspaceOptions;
+  access?: WorkspaceAccess;
+  /** Fictional previews pass a sample school identity instead of server access. */
+  previewTheme?: WorkspaceAccess["theme"];
+  children: ReactNode;
+};
 
 export function OrganizationShell(props: OrganizationShellProps) {
-  const pathname = usePathname();
-  const referenceDark = ["/media"].some((segment) => pathname.includes(`/organization/preview${segment}`));
-  return <OrganizationThemeProvider initialTone={referenceDark ? "dark" : "light"}><OrganizationShellBody {...props} /></OrganizationThemeProvider>;
+  const theme = props.access?.theme ?? props.previewTheme;
+  return (
+    <OrganizationThemeProvider
+      schoolAccent={theme?.mode === "school" ? theme.accent : undefined}
+      schoolHighlight={theme?.mode === "school" ? theme.highlight : undefined}
+      schoolAvailable={theme ? theme.mode === "school" : true}
+      defaultMode={theme?.mode ?? "bltz"}
+      defaultCanvas="school"
+    >
+      <OrganizationShellBody {...props} />
+    </OrganizationThemeProvider>
+  );
 }
 
-function OrganizationShellBody({ context, organizations, options, children }: OrganizationShellProps) {
+function OrganizationShellBody({ context, organizations, access, previewTheme, children }: OrganizationShellProps) {
   const pathname = usePathname();
-  const { mode, tone, accent, highlight } = useOrganizationTheme();
-  const [collapsed, setCollapsed] = useState(false);
+  const { mode, canvas, accent, highlight } = useOrganizationTheme();
+  const theme = access?.theme ?? previewTheme;
+  const [menuOpen, setMenuOpen] = useState(false);
   const style = { "--crm-org-accent": accent, "--crm-org-highlight": highlight } as CSSProperties;
 
+  useEffect(() => {
+    if (!menuOpen) return;
+    const close = (event: KeyboardEvent) => { if (event.key === "Escape") setMenuOpen(false); };
+    window.addEventListener("keydown", close);
+    return () => window.removeEventListener("keydown", close);
+  }, [menuOpen]);
+
   return (
-    <WorkspaceChromeContext.Provider value={{ context, organizations, options }}>
-      <div data-product="enterprise-crm" data-organization-theme={mode} data-organization-tone={tone} className={cn("crm-app-shell", collapsed && "crm-app-shell--collapsed")} style={style}>
-        <div className="crm-desktop-sidebar"><Sidebar context={context} organizations={organizations} pathname={pathname} collapsed={collapsed} onCollapse={() => setCollapsed((value) => !value)} /></div>
-        <div className="crm-shell-main">
-          <header className="crm-utility-bar">
-            <Sheet>
-              <SheetTrigger asChild><button type="button" aria-label="Open workspace navigation" className="crm-icon-button crm-mobile-menu"><IconMenu2 aria-hidden /></button></SheetTrigger>
-              <SheetContent side="left" className="crm-mobile-sheet" style={style}>
-                <SheetHeader className="sr-only"><SheetTitle>Organization navigation</SheetTitle><SheetDescription>Switch scope and open available Enterprise CRM sections.</SheetDescription></SheetHeader>
-                <Sidebar context={context} organizations={organizations} pathname={pathname} collapsed={false} mobile />
-              </SheetContent>
-            </Sheet>
-            <SearchMenu />
-            <div className="crm-utility-bar__actions"><ScopeSwitcher options={options} /><CreateMenu /><NotificationsMenu /></div>
-          </header>
-          <main id="organization-workspace" className="crm-workspace">
-            <div className="crm-workspace__inner">{children}</div>
-          </main>
+    <ShellContext.Provider value={{ access, theme }}>
+      <div data-product="enterprise-crm" data-organization-theme={mode} data-canvas={canvas} className="pilot-shell" style={style}>
+        <aside className="pilot-rail" aria-label="Workspace">
+          <div className="pilot-rail__core"><RailContents context={context} organizations={organizations} pathname={pathname} /></div>
+        </aside>
+
+        <div className="pilot-mobile-bar">
+          <span className="pilot-brand" aria-hidden><span>B</span><strong>BLTZ</strong></span>
+          <button type="button" className={cn("pilot-burger", menuOpen && "pilot-burger--open")} aria-label={menuOpen ? "Close navigation" : "Open navigation"} aria-expanded={menuOpen} aria-controls="pilot-mobile-menu" onClick={() => setMenuOpen((open) => !open)}>
+            <span /><span />
+          </button>
         </div>
+        <div id="pilot-mobile-menu" className={cn("pilot-mobile-menu", menuOpen && "pilot-mobile-menu--open")} hidden={!menuOpen}>
+          <RailContents context={context} organizations={organizations} pathname={pathname} onNavigate={() => setMenuOpen(false)} />
+        </div>
+
+        <main id="organization-workspace" className="pilot-main">
+          <SchoolArt logoUrl={mode === "school" ? theme?.logoUrl ?? null : null} />
+          <div className="pilot-main__bar"><CanvasToggle /></div>
+          {children}
+        </main>
       </div>
-    </WorkspaceChromeContext.Provider>
+    </ShellContext.Provider>
+  );
+}
+
+/** Shown in place of a section the member has not been granted. */
+export function PilotRestricted() {
+  return (
+    <div className="pilot-page">
+      <div className="pilot-empty pilot-empty--page">
+        <IconLock stroke={1.25} aria-hidden />
+        <strong>Your access is being set up.</strong>
+        <span>Your BLTZ contact will turn on this workspace for you. Nothing is needed on your side.</span>
+      </div>
+    </div>
   );
 }
