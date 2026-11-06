@@ -987,7 +987,7 @@ export default function LockerView({
           <section className="locker-hero-section" style={{ padding: "0 18px" }}>
             <div className={`locker-hero-card${isPrivatePreview ? " locker-hero-card--preview" : ""}`} style={{ position: "relative", height: 610, borderRadius: 24, overflow: "hidden", background: "linear-gradient(180deg,#161B30 0%,#10142404 55%,#0B0E1A 100%)" }}>
               {/* video / photo-reel background */}
-              <div className="locker-hero-media">
+              <div className={`locker-hero-media${heroVideoUrl ? " locker-hero-media--video" : ""}`}>
                 {heroVideoUrl ? (
                   <>
                     <video
@@ -2153,9 +2153,12 @@ const styleSheet = `
   .locker-photo-contact-sheet--preview .locker-photo-tile{flex:var(--photo-ratio,1) 1 0%;min-width:0;min-height:0;aspect-ratio:var(--photo-ratio,1)}
   .locker-photo-contact-sheet--preview .locker-photo-tile > img{position:absolute;inset:0;object-fit:contain!important;transform:none}
 }
+@media (max-width:767px){
+  .locker-hero-media--video{inset:0;border-radius:0;clip-path:none}
+  .locker-hero-video{object-fit:cover;object-position:center center}
+}
 @media (max-width:640px){
   .bltz-frame{width:100vw;height:100dvh;box-shadow:none}
-  .locker-hero-video{object-fit:cover;object-position:center center}
   .locker-hero-video-backdrop{transform:scale(1.16);filter:blur(20px) saturate(.82) brightness(.58)}
   .locker-filter-row{gap:6px!important;padding-right:12px!important;padding-left:12px!important}
   .locker-filter-pill{min-width:0;padding:7px 9px!important;font-size:9px!important;letter-spacing:.08em!important}
