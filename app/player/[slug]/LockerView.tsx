@@ -609,7 +609,6 @@ export default function LockerView({
     return () => window.clearInterval(timer);
   }, [isPrivatePreview, heroVideoUrl, slideshowKey, slideshowPhotos.length]);
   const slideshowPhoto = slideshowPhotos[slideshowIndex % slideshowPhotos.length];
-  const hasHeroPhotos = isPrivatePreview ? Boolean(slideshowPhoto) : imgPool.length > 0;
 
 
   const schoolAbbr = data.school?.abbr || "SCHOOL";
@@ -902,6 +901,7 @@ export default function LockerView({
   const earnedFmt = "$" + (stats.earned || 0).toLocaleString("en-US");
   const viewsFmt = Math.round((stats.views || 0) / 1000) + "K";
 
+  const reelBase: React.CSSProperties = { position: "absolute", inset: 0, backgroundSize: "cover", backgroundPosition: "center", animation: "heroFade 18s ease-in-out infinite" };
 
   const renderSocialCard = (post: (typeof mediaSocial)[number], index: number) => (
     <button
@@ -987,7 +987,7 @@ export default function LockerView({
           <section className="locker-hero-section" style={{ padding: "0 18px" }}>
             <div className={`locker-hero-card${isPrivatePreview ? " locker-hero-card--preview" : ""}`} style={{ position: "relative", height: 610, borderRadius: 24, overflow: "hidden", background: "linear-gradient(180deg,#161B30 0%,#10142404 55%,#0B0E1A 100%)" }}>
               {/* video / photo-reel background */}
-              <div className={`locker-hero-media${heroVideoUrl ? " locker-hero-media--video" : hasHeroPhotos ? " locker-hero-media--photos" : ""}`}>
+              <div className={`locker-hero-media${heroVideoUrl ? " locker-hero-media--video" : ""}`}>
                 {heroVideoUrl ? (
                   <>
                     <video
@@ -1023,7 +1023,12 @@ export default function LockerView({
                     <img src={slideshowPhoto.url} alt="" className="locker-hero-photo" />
                   </div> : null) : [0, 6, 12].map((delay, i) => {
                     const img = poolAt(i);
-                    return img ? <div key={i} className="locker-hero-reel" style={{ backgroundImage: `url(${img})`, animationDelay: `${delay}s` }} /> : null;
+                    return img ? isPrivatePreview ? (
+                      <div key={i} style={{ ...reelBase, animationDelay: `${delay}s` }}>
+                        <img src={img} alt="" aria-hidden="true" className="locker-hero-photo-backdrop" />
+                        <img src={img} alt="" className="locker-hero-photo" />
+                      </div>
+                    ) : <div key={i} style={{ ...reelBase, backgroundImage: `url(${img})`, animationDelay: `${delay}s` }} /> : null;
                   })
                 )}
                 {/* glows */}
@@ -2045,7 +2050,6 @@ const styleSheet = `
 .bltz-frame{position:relative;width:390px;height:844px;background:#0B0E1A;overflow:hidden;box-shadow:0 30px 90px rgba(0,0,0,.6);border-radius:0}
 .locker-hero-card{contain:paint;isolation:isolate;transform:translateZ(0);clip-path:inset(0 round 24px);outline:1px solid rgba(255,255,255,.12);outline-offset:-1px}
 .locker-hero-media{position:absolute;inset:3px;overflow:hidden;border-radius:21px;clip-path:inset(0 round 21px)}
-.locker-hero-reel{position:absolute;inset:0;background-size:cover;background-position:center;animation:heroFade 18s ease-in-out infinite}
 .locker-hero-photo-backdrop,.locker-hero-photo{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 .locker-hero-photo-backdrop{object-fit:cover;filter:blur(28px) brightness(.65);transform:scale(1.12)}
 .locker-hero-photo{object-fit:contain;object-position:center}
@@ -2150,10 +2154,8 @@ const styleSheet = `
   .locker-photo-contact-sheet--preview .locker-photo-tile > img{position:absolute;inset:0;object-fit:contain!important;transform:none}
 }
 @media (max-width:767px){
-  .locker-hero-media--video,.locker-hero-media--photos{inset:0;border-radius:0;clip-path:none}
+  .locker-hero-media--video{inset:0;border-radius:0;clip-path:none}
   .locker-hero-video{object-fit:cover;object-position:center center}
-  .locker-hero-photo{object-position:center top}
-  .locker-hero-reel{background-position:center top}
 }
 @media (max-width:640px){
   .bltz-frame{width:100vw;height:100dvh;box-shadow:none}
