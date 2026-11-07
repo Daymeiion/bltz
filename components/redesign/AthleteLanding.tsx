@@ -257,7 +257,7 @@ function ThreeStepDrop() {
     <section className={`${styles.section} ${styles.stepDrop}`} aria-labelledby="steps-title">
       <div className={styles.inner}>
         <div className={styles.sectionHead}>
-          <h2 className={styles.h2} id="steps-title">Three Step drop</h2>
+          <h2 className={`${styles.h2} ${styles.goldTitle}`} id="steps-title">Three Step drop</h2>
         </div>
         <PlayDiagram />
         <ol className={`${styles.steps} ${styles.stepsCentered}`}>

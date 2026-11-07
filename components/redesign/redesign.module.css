@@ -1170,7 +1170,7 @@
   /* Phone hero: smaller headline; the copy, form and scroll cue all sit
      at the bottom of the screen. */
   .heroCopy {
-    bottom: max(16px, env(safe-area-inset-bottom));
+    bottom: calc(max(16px, env(safe-area-inset-bottom)) + 20px);
     gap: 12px;
   }
 
@@ -1338,8 +1338,12 @@
   /* Phones: the title sits below the open locker's jersey, with the icons
      beside the jersey and under the title. */
   .journeyIntro {
-    top: 76%;
+    top: 72.5%;
     transform: translateY(-50%);
+  }
+
+  .journeyIntro .h2 {
+    font-size: clamp(34px, 9.4vw, 44px);
   }
 
   .journeyIntro .lede {
@@ -2121,5 +2125,58 @@
 
   .annotation .lede {
     font-size: 17px;
+  }
+}
+
+.goldTitle {
+  color: var(--flood);
+}
+
+/* Footer: the full BLTZ logo above the tagline. */
+.footerBrand {
+  display: grid;
+  justify-items: start;
+  gap: 16px;
+}
+
+.footerBrand p {
+  max-width: 26em;
+  margin: 0;
+}
+
+/* Phones: a wider app demo sitting closer to its caption, the caption card
+   with room below it, and a centered footer. */
+@media (max-width: 900px) {
+  .device {
+    --design-w: 440px;
+    top: 38.5%;
+    height: min(64svh, 640px);
+    aspect-ratio: 440 / 844;
+  }
+
+  .annotations {
+    bottom: 28px;
+  }
+
+  .annotation {
+    padding: 16px 18px 22px;
+  }
+
+  .footerBrand {
+    justify-items: center;
+    text-align: center;
+  }
+
+  .footerBase {
+    align-items: center;
+    flex-direction: column;
+    text-align: center;
+  }
+}
+
+@media (max-width: 900px) and (max-height: 740px) {
+  .device {
+    top: 40%;
+    height: 66svh;
   }
 }
