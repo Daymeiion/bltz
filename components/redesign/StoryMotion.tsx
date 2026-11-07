@@ -108,7 +108,7 @@ export function PlayDiagram() {
 
   return (
     <div className={styles.playDiagram} ref={ref} aria-hidden="true">
-      <svg viewBox="0 0 1200 240" preserveAspectRatio="xMidYMid meet">
+      <svg className={styles.playWide} viewBox="0 0 1200 240" preserveAspectRatio="xMidYMid meet">
         <defs>
           <marker id="rd-arrow" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
             <path d="M0 0 L10 5 L0 10 z" fill="currentColor" />
@@ -131,6 +131,29 @@ export function PlayDiagram() {
           <g key={x} transform={`translate(${x} 170)`}>
             <circle r="26" className={styles.player} />
             <text className={styles.playerNum} textAnchor="middle" dominantBaseline="central">{String(i + 1).padStart(2, "0")}</text>
+          </g>
+        ))}
+      </svg>
+      {/* Phones: the same play, drawn tighter so the players and numbers stay readable. */}
+      <svg className={styles.playCompact} viewBox="0 0 600 250" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <marker id="rd-arrow-compact" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="currentColor" />
+          </marker>
+        </defs>
+        <line x1="20" y1="190" x2="580" y2="190" className={styles.scrimmage} />
+        {[[170, 80], [250, 120], [370, 70], [450, 125]].map(([x, y]) => (
+          <g key={`${x}-${y}`} className={styles.defender} transform={`translate(${x} ${y})`}>
+            <line x1="-12" y1="-12" x2="12" y2="12" />
+            <line x1="12" y1="-12" x2="-12" y2="12" />
+          </g>
+        ))}
+        <path className={styles.route} pathLength={1} d="M90 190 C 100 100, 170 50, 230 90 S 280 200, 300 190" markerEnd="url(#rd-arrow-compact)" />
+        <path className={styles.route} data-second pathLength={1} d="M300 190 C 320 90, 400 150, 440 90 S 500 80, 510 190" markerEnd="url(#rd-arrow-compact)" />
+        {[90, 300, 510].map((x, i) => (
+          <g key={x} transform={`translate(${x} 190)`}>
+            <circle r="34" className={styles.player} />
+            <text className={`${styles.playerNum} ${styles.playerNumCompact}`} textAnchor="middle" dominantBaseline="central">{String(i + 1).padStart(2, "0")}</text>
           </g>
         ))}
       </svg>

@@ -562,6 +562,7 @@
   z-index: 4;
   top: 50%;
   left: 50%;
+  --design-w: 390px;
   height: min(82svh, 780px);
   aspect-ratio: 390 / 844;
   --device-shift: 16vw;
@@ -599,7 +600,7 @@
   position: absolute;
   top: 0;
   left: 0;
-  width: 390px;
+  width: var(--design-w, 390px);
   height: calc(100% / var(--screen-scale, 0.87));
   transform: scale(var(--screen-scale, 0.87));
   transform-origin: 0 0;
@@ -1526,6 +1527,10 @@
   font: 500 17px var(--mono);
 }
 
+.playerNumCompact {
+  font-size: 24px;
+}
+
 /* ---------- Story motion: photo wall ---------- */
 
 .photoWall {
@@ -1577,7 +1582,8 @@
   }
 
   .playDiagram {
-    display: none;
+    width: 100%;
+    margin-bottom: 8px;
   }
 }
 
@@ -2041,4 +2047,47 @@
 .journeyIntro .lede {
   font-weight: 700;
   font-size: clamp(18px, 1.6vw, 24px);
+}
+
+/* Desktop: a slightly wider phone, so the locker inside isn't cramped. */
+@media (min-width: 901px) {
+  .device {
+    --design-w: 440px;
+    aspect-ratio: 440 / 844;
+  }
+}
+
+/* Three Step drop sits right under the phone demo, and the sign-up form
+   right under it. */
+.stepDrop {
+  padding-top: clamp(24px, 4vw, 56px);
+  padding-bottom: 0;
+}
+
+.finaleTight {
+  padding-top: clamp(40px, 5vw, 72px);
+}
+
+/* The play diagram has a compact version for phones. */
+.playDiagram .playWide {
+  display: block;
+}
+
+.playDiagram .playCompact {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .playDiagram .playWide {
+    display: none;
+  }
+
+  .playDiagram .playCompact {
+    display: block;
+  }
+}
+
+/* The diagram already numbers the steps. */
+.stepsCentered li::before {
+  display: none;
 }
