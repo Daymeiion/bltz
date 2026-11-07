@@ -439,7 +439,7 @@
   --exit: 0;
   position: relative;
   z-index: 2;
-  height: 620svh;
+  height: 440svh;
   margin-top: -100svh;
 }
 
@@ -633,6 +633,7 @@
 }
 
 .annotation .h3 {
+  color: var(--flood);
   font-size: clamp(48px, 5.4vw, 88px);
   line-height: 0.95;
 }
@@ -644,7 +645,7 @@
 }
 
 .annotationIndex {
-  color: var(--accent);
+  color: var(--chalk);
   font: 500 15px/1 var(--mono);
 }
 
@@ -2035,11 +2036,12 @@
 /* On desktop the title sits between the icons along the bottom. */
 @media (min-width: 901px) {
   .journeyIntro {
-    width: min(460px, 34vw);
+    width: min(760px, 50vw);
   }
 
+  /* Same size as the titles next to the app demo. */
   .journeyIntro .h2 {
-    font-size: min(clamp(38px, 4vw, 60px), 6.2svh);
+    font-size: clamp(48px, 5.4vw, 88px);
   }
 
   .journeyIntro .lede {
