@@ -1210,3 +1210,32 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Tabs docked in the nav while the CRM fills the screen. */
+.demoTabsNav {
+  background: rgba(22, 25, 29, 0.8);
+}
+
+.demoTabsNav button {
+  min-height: 36px;
+  padding: 0 16px;
+}
+
+.tabShort {
+  display: none;
+}
+
+@media (max-width: 520px) {
+  .demoTabsNav button {
+    padding: 0 10px;
+    font-size: 13px;
+  }
+
+  .tabFull {
+    display: none;
+  }
+
+  .tabShort {
+    display: inline;
+  }
+}

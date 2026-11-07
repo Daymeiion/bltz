@@ -22,7 +22,16 @@ export function LiveRoutes({ children }: { children: ReactNode }) {
 }
 export const useRoutes = () => useContext(RoutesContext);
 
-export function SiteNav({ audience, announcement }: { audience: Audience; announcement?: ReactNode }) {
+export function SiteNav({
+  audience,
+  announcement,
+  swap,
+}: {
+  audience: Audience;
+  announcement?: ReactNode;
+  /** Content that flips in over the Athletes/Enterprise switch while `active`. */
+  swap?: { active: boolean; content: ReactNode };
+}) {
   const ROUTES = useRoutes();
   const [solid, setSolid] = useState(false);
 
@@ -34,21 +43,28 @@ export function SiteNav({ audience, announcement }: { audience: Audience; announ
   }, []);
 
   return (
-    <header className={`${styles.nav} ${solid ? styles.navSolid : ""}`}>
+    <header className={`${styles.nav} ${solid ? styles.navSolid : ""}`} data-site-nav>
       {announcement ? <div className={styles.announce}>{announcement}</div> : null}
       <div className={styles.navInner}>
         <Link className={styles.brand} href={ROUTES[audience]} aria-label="BLTZ home">
           <Image src="/images/bltz-mark.svg" alt="" width={34} height={34} priority style={{ height: "auto" }} />
           <span aria-hidden="true">BLTZ</span>
         </Link>
-        <nav className={styles.audienceSwitch} aria-label="Choose your view">
-          <Link href={ROUTES.athletes} aria-current={audience === "athletes" ? "page" : undefined}>
-            Athletes
-          </Link>
-          <Link href={ROUTES.enterprise} aria-current={audience === "enterprise" ? "page" : undefined}>
-            Enterprise
-          </Link>
-        </nav>
+        <div className={styles.navFlip} data-swapped={swap?.active ? "true" : "false"}>
+          <nav className={`${styles.audienceSwitch} ${styles.navFlipFront}`} aria-label="Choose your view" inert={swap?.active || undefined}>
+            <Link href={ROUTES.athletes} aria-current={audience === "athletes" ? "page" : undefined}>
+              Athletes
+            </Link>
+            <Link href={ROUTES.enterprise} aria-current={audience === "enterprise" ? "page" : undefined}>
+              Enterprise
+            </Link>
+          </nav>
+          {swap ? (
+            <div className={styles.navFlipBack} inert={!swap.active || undefined}>
+              {swap.content}
+            </div>
+          ) : null}
+        </div>
         <div className={styles.navRight}>
           {audience === "enterprise" ? (
             <Link className={styles.navSignIn} href="/auth/login">Sign in</Link>

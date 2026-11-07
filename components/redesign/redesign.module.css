@@ -230,6 +230,11 @@
   box-shadow: 0 1px 0 var(--line);
 }
 
+/* Darker while controls are docked in the nav, so the screen behind doesn't compete. */
+.navSolid:has([data-swapped="true"]) {
+  background: rgba(5, 6, 7, 0.92);
+}
+
 .brand {
   display: inline-flex;
   width: fit-content;
@@ -237,6 +242,49 @@
   gap: 10px;
   font: 700 26px/1 var(--display);
   text-decoration: none;
+}
+
+/* Center slot: the audience switch, which can flip over to show other controls. */
+.navFlip {
+  display: grid;
+  justify-self: center;
+  perspective: 600px;
+}
+
+.navFlipFront,
+.navFlipBack {
+  grid-area: 1 / 1;
+  justify-self: center;
+  align-self: center;
+  backface-visibility: hidden;
+  transition:
+    transform 520ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 320ms ease;
+}
+
+.navFlipBack {
+  opacity: 0;
+  transform: rotateX(-90deg);
+  pointer-events: none;
+}
+
+.navFlip[data-swapped="true"] .navFlipFront {
+  opacity: 0;
+  transform: rotateX(90deg);
+  pointer-events: none;
+}
+
+.navFlip[data-swapped="true"] .navFlipBack {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .navFlipFront,
+  .navFlipBack {
+    transition: opacity 200ms ease;
+  }
 }
 
 .audienceSwitch {
@@ -1110,7 +1158,12 @@
     display: none;
   }
 
-  .audienceSwitch {
+  .navFlip {
+    justify-self: end;
+  }
+
+  .navFlipFront,
+  .navFlipBack {
     justify-self: end;
   }
 
