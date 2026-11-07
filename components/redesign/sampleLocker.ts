@@ -11,7 +11,7 @@ export const sampleLocker: LockerData = {
   position: "DB",
   jersey: "#1",
   levelLabel: "College",
-  headshotUrl: "/images/Headshot.png",
+  headshotUrl: "/images/redesign/locker-headshot.png",
   heroVideoUrl: "/videos/demo-reel.mp4",
   logoSrc: "/bltz-white-logo.svg",
   bio: "Jordan Carter built a career around preparation, leadership, and making the biggest plays when the moment demanded it.",

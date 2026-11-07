@@ -6,19 +6,21 @@ import LockerView from "@/app/player/[slug]/LockerView";
 import { sampleLocker } from "./sampleLocker";
 import styles from "./redesign.module.css";
 
-// The five icons fly in from off-screen over the open locker (on desktop in an
-// arc along the bottom, around the title), then get pulled into one phone. The phone holds a real Player
+// The five icons rise in from each side of the screen over the open locker (on
+// desktop in an arc along the bottom, around the title), then get pulled into
+// one phone. Both moves play through on their own once triggered, so they never
+// stop halfway when the visitor stops scrolling. The phone holds a real Player
 // Locker that scrolls itself as the page scrolls.
 const icons = [
-  { type: "film", label: "Game film", Icon: Film, from: ["-80vw", "-60vh", "-40vw", "-50vh"], to: ["-40vw", "36vh", "-28vw", "4vh"], rot: -8 },
-  { type: "social", label: "Social", Icon: Share2, from: ["20vw", "-90vh", "30vw", "-60vh"], to: ["-24vw", "30vh", "12vw", "0vh"], rot: 6 },
-  { type: "stats", label: "Stats", Icon: ChartNoAxesColumnIncreasing, from: ["90vw", "-10vh", "70vw", "20vh"], to: ["24vw", "31vh", "30vw", "18vh"], rot: -5 },
-  { type: "podcast", label: "Podcasts", Icon: Mic2, from: ["70vw", "90vh", "50vw", "80vh"], to: ["40vw", "37vh", "-18vw", "28vh"], rot: 7 },
-  { type: "articles", label: "Press", Icon: Newspaper, from: ["-30vw", "100vh", "-20vw", "90vh"], to: ["0vw", "38vh", "10vw", "38vh"], rot: -4 },
+  { type: "film", label: "Game film", Icon: Film, from: ["-75vw", "70vh", "-75vw", "60vh"], to: ["-40vw", "36vh", "-28vw", "4vh"], rot: -8 },
+  { type: "social", label: "Social", Icon: Share2, from: ["-70vw", "85vh", "-75vw", "80vh"], to: ["-24vw", "30vh", "12vw", "0vh"], rot: 6 },
+  { type: "stats", label: "Stats", Icon: ChartNoAxesColumnIncreasing, from: ["70vw", "85vh", "75vw", "70vh"], to: ["24vw", "31vh", "30vw", "18vh"], rot: -5 },
+  { type: "podcast", label: "Podcasts", Icon: Mic2, from: ["75vw", "70vh", "75vw", "85vh"], to: ["40vw", "37vh", "-18vw", "28vh"], rot: 7 },
+  { type: "articles", label: "Press", Icon: Newspaper, from: ["0vw", "110vh", "0vw", "110vh"], to: ["0vw", "38vh", "10vw", "38vh"], rot: -4 },
 ] as const;
 
 const stages = [
-  { title: "Your name on the door", body: "Your hero reel, position, school and the quote you want people to remember." },
+  { title: "Your Legacy Starts Here", body: "Your hero reel, position, school and the quote you want people to remember." },
   { title: "Film room", body: "Highlights and full games in one place, newest first." },
   { title: "Photos", body: "Only photos you choose. Each one is checked for usage rights before it's shown." },
   { title: "Bio and career", body: "Measurables, hometown, schools and your story in your own words." },
@@ -31,7 +33,7 @@ const clamp01 = (t: number) => Math.min(1, Math.max(0, t));
 const ease = (t: number) => t * t * (3 - 2 * t);
 // Overshoots and settles, so the icons jump into place.
 const jump = (t: number) => {
-  const c = 1.9;
+  const c = 1.2;
   return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2);
 };
 const range = (p: number, a: number, b: number) => clamp01((p - a) / (b - a));
@@ -52,6 +54,26 @@ export function LockerJourney({ outro = false }: { outro?: boolean }) {
     if (!section) return;
     let frame = 0;
     let lastStage = 0;
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    // Time-based moves, triggered by scroll position.
+    type Tween = { v: number; from: number; to: number; t0: number; dur: number };
+    const tweens: Record<"enter" | "collect", Tween> = {
+      enter: { v: 0, from: 0, to: 0, t0: 0, dur: 1100 },
+      collect: { v: 0, from: 0, to: 0, t0: 0, dur: 900 },
+    };
+    const aim = (tw: Tween, to: number, now: number) => {
+      if (tw.to === to) return;
+      tw.from = tw.v;
+      tw.to = to;
+      tw.t0 = now;
+    };
+    const step = (tw: Tween, now: number) => {
+      if (tw.v === tw.to) return false;
+      const k = reduceMotion ? 1 : clamp01((now - tw.t0) / (tw.dur * Math.abs(tw.to - tw.from)));
+      tw.v = k >= 1 ? tw.to : tw.from + (tw.to - tw.from) * k;
+      return tw.v !== tw.to;
+    };
 
     const update = () => {
       frame = 0;
@@ -59,7 +81,6 @@ export function LockerJourney({ outro = false }: { outro?: boolean }) {
       const distance = Math.max(section.offsetHeight - window.innerHeight, 1);
       const p = clamp01(-rect.top / distance);
 
-      // Icons jump in as soon as the section arrives, right after the locker opens.
       // This section overlaps the last screen of the hero (see CSS). While it
       // rises into view its stage is held in place and see-through, so the
       // icons float in over the open locker, then converge into the phone on
@@ -69,8 +90,12 @@ export function LockerJourney({ outro = false }: { outro?: boolean }) {
       section.style.setProperty("--pre-shift", `${shift.toFixed(1)}px`);
       section.style.setProperty("--intro", range(pre, 0.35, 0.7).toFixed(4));
       section.style.setProperty("--cover", range(p, 0, 0.06).toFixed(4));
-      const enter = range(pre, 0.45, 0.85);
-      const collect = range(p, 0.03, 0.14);
+      const now = performance.now();
+      aim(tweens.enter, pre >= 0.55 ? 1 : 0, now);
+      aim(tweens.collect, p >= 0.04 ? 1 : 0, now);
+      const moving = [step(tweens.enter, now), step(tweens.collect, now)].some(Boolean);
+      const enter = tweens.enter.v;
+      const collect = tweens.collect.v;
       const deviceIn = range(p, 0.12, 0.18);
       const scroll = range(p, 0.18, 0.88);
       const exit = range(p, 0.9, 0.99);
@@ -109,6 +134,7 @@ export function LockerJourney({ outro = false }: { outro?: boolean }) {
           setStage(next);
         }
       }
+      if (moving) request();
     };
 
     const request = () => {
