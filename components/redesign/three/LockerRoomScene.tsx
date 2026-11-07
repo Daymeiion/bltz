@@ -131,7 +131,7 @@ export function LockerRoomScene({ name, progressRef, fontFamily }: Props) {
     scene.background = new THREE.Color("#050607");
     scene.fog = new THREE.Fog("#050607", 6, 16);
 
-    const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 60);
+    const camera = new THREE.PerspectiveCamera(32, 1, 0.3, 40);
     const lookAt = new THREE.Vector3(0, 1.25, 0);
 
     // ---------- materials ----------
@@ -142,13 +142,15 @@ export function LockerRoomScene({ name, progressRef, fontFamily }: Props) {
     };
 
     const bodyMat = track(new THREE.MeshStandardMaterial({ color: "#23272c", metalness: 0.55, roughness: 0.5 }));
-    const innerMat = track(new THREE.MeshStandardMaterial({ color: "#14171a", metalness: 0.3, roughness: 0.8, side: THREE.BackSide }));
+    // Interior walls of the open locker. They are the shell's own walls (no
+    // separate inner box), so no two surfaces share a plane and nothing
+    // z-fights or flickers as the camera moves.
+    const interiorMat = track(new THREE.MeshStandardMaterial({ color: "#191c20", metalness: 0.35, roughness: 0.78 }));
     const doorTex = track(doorTexture());
     const doorMat = track(new THREE.MeshStandardMaterial({ map: doorTex, metalness: 0.6, roughness: 0.42 }));
     const handleMat = track(new THREE.MeshStandardMaterial({ color: "#8b8f96", metalness: 0.9, roughness: 0.25 }));
 
     const bodyGeo = track(new THREE.BoxGeometry(LOCKER_W, LOCKER_H, LOCKER_D));
-    const innerGeo = track(new THREE.BoxGeometry(LOCKER_W - 0.08, DOOR_H - 0.04, LOCKER_D - 0.06));
     const doorGeo = track(new THREE.BoxGeometry(LOCKER_W - 0.1, DOOR_H, 0.035));
     const handleGeo = track(new THREE.BoxGeometry(0.035, 0.28, 0.05));
     const plateGeo = track(new THREE.PlaneGeometry(0.74, 0.17));
@@ -170,26 +172,25 @@ export function LockerRoomScene({ name, progressRef, fontFamily }: Props) {
       // body: solid for neighbours, hollow shell for the center locker so its
       // interior is visible once the door swings open.
       if (isCenter) {
-        const sides: [number, number, number, number, number, number][] = [
-          [LOCKER_W, 0.06, LOCKER_D, 0, LOCKER_H / 2 - 0.03, 0],
-          [LOCKER_W, 0.4, LOCKER_D, 0, -LOCKER_H / 2 + 0.2, 0],
-          [0.05, LOCKER_H, LOCKER_D, -LOCKER_W / 2 + 0.025, 0, 0],
-          [0.05, LOCKER_H, LOCKER_D, LOCKER_W / 2 - 0.025, 0, 0],
-          [LOCKER_W, LOCKER_H, 0.04, 0, 0, -LOCKER_D / 2 + 0.02],
-          [LOCKER_W, LOCKER_H - DOOR_H - 0.42, LOCKER_D, 0, LOCKER_H / 2 - (LOCKER_H - DOOR_H - 0.42) / 2, 0],
+        // [w, h, d, x, y, z, interior?]
+        const sides: [number, number, number, number, number, number, boolean][] = [
+          // Top, base and header fit between the side walls and in front of the
+          // back panel, so no faces overlap.
+          [LOCKER_W - 0.1, 0.06, LOCKER_D - 0.04, 0, LOCKER_H / 2 - 0.03, 0.02, false],
+          [LOCKER_W - 0.1, 0.4, LOCKER_D - 0.04, 0, -LOCKER_H / 2 + 0.2, 0.02, false],
+          [0.05, LOCKER_H, LOCKER_D, -LOCKER_W / 2 + 0.025, 0, 0, true],
+          [0.05, LOCKER_H, LOCKER_D, LOCKER_W / 2 - 0.025, 0, 0, true],
+          [LOCKER_W - 0.1, LOCKER_H - 0.46, 0.04, 0, 0.2 - 0.03, -LOCKER_D / 2 + 0.02, true],
+          [LOCKER_W - 0.1, LOCKER_H - DOOR_H - 0.48, LOCKER_D - 0.04, 0, LOCKER_H / 2 - 0.06 - (LOCKER_H - DOOR_H - 0.48) / 2, 0.02, false],
         ];
-        for (const [w, h, d, x, y, z] of sides) {
+        for (const [w, h, d, x, y, z, interior] of sides) {
           const g = track(new THREE.BoxGeometry(w, h, d));
-          const m = new THREE.Mesh(g, bodyMat);
+          const m = new THREE.Mesh(g, interior ? interiorMat : bodyMat);
           m.position.set(x, LOCKER_H / 2 + y, z);
           m.castShadow = true;
           m.receiveShadow = true;
           locker.add(m);
         }
-        const inner = new THREE.Mesh(innerGeo, innerMat);
-        inner.position.set(0, 0.4 + DOOR_H / 2, 0.01);
-        inner.receiveShadow = true;
-        locker.add(inner);
 
         // hanging rod + realistic jersey, back facing out
         const rod = new THREE.Mesh(track(new THREE.CylinderGeometry(0.012, 0.012, LOCKER_W - 0.1, 12)), handleMat);
@@ -304,7 +305,8 @@ export function LockerRoomScene({ name, progressRef, fontFamily }: Props) {
     key.target.position.set(0, 1.1, 0);
     key.castShadow = true;
     key.shadow.mapSize.set(1024, 1024);
-    key.shadow.bias = -0.0004;
+    key.shadow.bias = -0.0005;
+    key.shadow.normalBias = 0.03; // no shadow acne shimmer on the interior walls
     scene.add(key, key.target);
     for (const x of [-4.4, 4.4]) {
       const rim = new THREE.SpotLight("#5a78ff", 22, 12, 0.6, 0.9, 1.6);
