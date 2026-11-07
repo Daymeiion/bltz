@@ -45,15 +45,34 @@ self-hosted via `@fontsource`. Section titles are centered.
 5. Audiences, connected channels with a moving photo wall, link to Enterprise,
    FAQ, final claim form, footer.
 
-**Enterprise** (`components/redesign/EnterpriseLanding.tsx`), modeled on the
-depth of sponsorcx.com
+**Enterprise** (`components/redesign/EnterpriseLanding.tsx`) follows the
+section layout of sponsorcx.com, one section at a time:
 
-1. Hero (three.js roster wall) and a product dashboard mockup that flattens as
-   it scrolls in (`EnterpriseUI.tsx`, all sample data).
-2. Sports strip, problem statement, four pillars (Launch, Approve, Activate,
-   Report) with auto-advancing tabs and a UI panel for each.
-3. Facts band, two audiences, a "today vs. with BLTZ" comparison, how a pilot
-   works, a photo wall, a demo CTA, Calendly booking, FAQ.
+| # | sponsorcx.com | BLTZ |
+| --- | --- | --- |
+| 0 | Announcement bar and pill nav | Pilot announcement, Athletes/Enterprise switch, Sign in, Book a demo |
+| 1 | Hero: copy left, product shots right | Copy left, floating CRM cards right, over the three.js roster wall |
+| 2 | (product imagery) | **Product demo screen: the real organization CRM** (`CrmScreen.tsx`), with Overview, Intelligence and Launch a Locker tabs |
+| 3 | "Trusted by" logo band | Sports band (placeholder for partner logos) |
+| 4 | Centered problem statement with floating icons | Same |
+| 5 | What it does: copy and quote left, four tabs right | Build, Flag, Share, Measure (quote is a placeholder) |
+| 6 | Metrics band | 1 Locker, 0 approvals, 30 days ahead |
+| 7 | One system, two perspectives (cards) | Athletic departments and NIL collectives |
+| 8 | Rotating-word headline | "Every legend / captain / walk-on… deserves an encore." |
+| 9 | Industries: stacked sticky cards | Program types |
+| 10 | "Current tools vs. us" comparison | Same, from the real product |
+| 11 | Statement card | Same |
+| 12 | How it works: accordion with screenshots | Launch, Flag, Plan, Measure, each showing the real CRM |
+| 13 | Testimonials | Placeholder cards (no invented quotes) |
+| 14 | CTA band | Opens Calendly inline |
+| 15 | Resource guides | Playbooks marked "Coming soon" |
+| 16 | Footer | Shared footer |
+
+`CrmScreen` renders the actual workspace components (`OrganizationShell`,
+`ThisWeek`, `AthleteIntelligence`, `LaunchLocker`) with the existing preview
+data in `components/organization/pilot/preview-data.ts`. It is scaled to fit,
+display-only and mounts only when scrolled near, so product changes show up on
+the landing page automatically.
 
 ## Before launch
 
@@ -61,9 +80,13 @@ depth of sponsorcx.com
       video and photos in `components/redesign/sampleLocker.ts`). Several show
       real team uniforms. Prompts are below.
 - [ ] Create `/privacy` and `/terms`. The footer already links to them.
-- [ ] Confirm product claims in the copy: usage-rights checks on photos,
-      staff approvals, engagement reporting, roster import, alumni lockers,
-      activation suggestions.
+- [ ] Confirm product claims in the copy. The enterprise page now follows the
+      real workspace: Lockers for former players, flagged moments (Act now is
+      the next 7 days, Coming up is days 8 to 30), tracked links, BLTZ clearing
+      media, and reach reporting. The athlete page still mentions usage-rights
+      checks on photos.
+- [ ] Replace placeholder testimonials, the sports band (partner logos) and the
+      "Coming soon" playbooks.
 - [ ] Add real testimonials or partner logos once you have permission (the
       SponsorCX-style layout has room for them after the pillars).
 - [ ] Decide whether the Calendly link (`PREVIEW_CALENDLY_URL`) is the right
@@ -71,19 +94,5 @@ depth of sponsorcx.com
 
 ## AI photo prompts
 
-Generate at 1600×2000 (4:5), save to `public/images/redesign/`, then update
-`assets.ts`. Shared style suffix for every prompt:
-
-> editorial sports photography, night game, single hard key light, deep
-> shadows, shallow depth of field, 35mm, subtle film grain, **plain uniforms with
-> no logos, no team names, no real brands**, navy and gold color accents
-
-| File | Prompt |
-| --- | --- |
-| `high-school.jpg` | High school football player on a small-town field under stadium lights, helmet in hand, steam from breath, bleachers blurred behind |
-| `college.jpg` | College wide receiver mid-stride catching a pass, crowd as bokeh, sweat and motion |
-| `pro.jpg` | Professional linebacker walking out of a concrete tunnel toward bright field lights, seen from behind at shoulder height |
-| `former.jpg` | Former player in his 40s in a plain hoodie, sitting on a locker room bench holding an old game ball, warm light |
-| `coaches.jpg` | Football coach with headset on the sideline, focused on the field, clipboard under arm |
-| `sample-headshot.png` | Studio headshot of a 22-year-old Black college defensive back, plain navy jersey #1, neutral grey background, transparent cutout |
-| `sample-hero.mp4` (optional) | 6–8s slow-motion loop: player celebrating after a play under lights, plain navy uniform |
+See [`ai-photo-prompts.md`](./ai-photo-prompts.md) for copy-paste prompts, file
+names and sizes for every image slot.

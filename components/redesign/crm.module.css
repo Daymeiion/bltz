@@ -1,0 +1,49 @@
+/* Frame that holds the real organization CRM, scaled down. */
+
+.frame {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  background: #f2f2ef;
+  border-radius: 16px;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.12),
+    0 50px 120px rgba(0, 0, 0, 0.6);
+  isolation: isolate;
+}
+
+.canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  overflow: hidden;
+  transform-origin: 0 0;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Fit the workspace to the frame instead of the browser window. */
+.canvas :global(.pilot-shell) {
+  min-height: var(--crm-h);
+  height: var(--crm-h);
+  overflow: hidden;
+}
+
+.canvas :global(.pilot-rail) {
+  position: relative;
+  height: var(--crm-h);
+}
+
+.canvas :global(.pilot-main) {
+  height: var(--crm-h);
+  overflow: hidden;
+}
+
+.canvas :global(.pilot-main) > * {
+  transform: translateY(var(--crm-offset, 0px));
+}
+
+.canvas :global(.pilot-mobile-bar) {
+  position: relative;
+  top: 0;
+}

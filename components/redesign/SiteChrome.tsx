@@ -12,7 +12,7 @@ export const ROUTES = {
   enterprise: "/redesign/enterprise",
 } as const;
 
-export function SiteNav({ audience }: { audience: Audience }) {
+export function SiteNav({ audience, announcement }: { audience: Audience; announcement?: ReactNode }) {
   const [solid, setSolid] = useState(false);
 
   useEffect(() => {
@@ -24,27 +24,29 @@ export function SiteNav({ audience }: { audience: Audience }) {
 
   return (
     <header className={`${styles.nav} ${solid ? styles.navSolid : ""}`}>
-      <Link className={styles.brand} href={ROUTES[audience]} aria-label="BLTZ home">
-        <Image src="/images/bltz-mark.svg" alt="" width={34} height={34} priority />
-        <span aria-hidden="true">BLTZ</span>
-      </Link>
-      <nav className={styles.audienceSwitch} aria-label="Choose your view">
-        <Link href={ROUTES.athletes} aria-current={audience === "athletes" ? "page" : undefined}>
-          Athletes
+      {announcement ? <div className={styles.announce}>{announcement}</div> : null}
+      <div className={styles.navInner}>
+        <Link className={styles.brand} href={ROUTES[audience]} aria-label="BLTZ home">
+          <Image src="/images/bltz-mark.svg" alt="" width={34} height={34} priority style={{ height: "auto" }} />
+          <span aria-hidden="true">BLTZ</span>
         </Link>
-        <Link href={ROUTES.enterprise} aria-current={audience === "enterprise" ? "page" : undefined}>
-          Enterprise
-        </Link>
-      </nav>
-      {audience === "athletes" ? (
-        <a className={`${styles.button} ${styles.navCta}`} href="#claim">
-          Claim my locker
-        </a>
-      ) : (
-        <a className={`${styles.button} ${styles.navCta}`} href="#demo">
-          Book a demo
-        </a>
-      )}
+        <nav className={styles.audienceSwitch} aria-label="Choose your view">
+          <Link href={ROUTES.athletes} aria-current={audience === "athletes" ? "page" : undefined}>
+            Athletes
+          </Link>
+          <Link href={ROUTES.enterprise} aria-current={audience === "enterprise" ? "page" : undefined}>
+            Enterprise
+          </Link>
+        </nav>
+        <div className={styles.navRight}>
+          {audience === "enterprise" ? (
+            <Link className={styles.navSignIn} href="/auth/login">Sign in</Link>
+          ) : null}
+          <a className={`${styles.button} ${styles.navCta}`} href={audience === "athletes" ? "#claim" : "#demo"}>
+            {audience === "athletes" ? "Claim my locker" : "Book a demo"}
+          </a>
+        </div>
+      </div>
     </header>
   );
 }

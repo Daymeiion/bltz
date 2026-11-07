@@ -27,5 +27,15 @@ export const storyPhotos = {
   training: { src: "/images/dante-hughes/16-offseason-training.jpg", position: "40% center" },
   headshot: { src: "/images/dante-hughes/13-chargers-profile.png", position: "center 20%" },
   helmet: { src: "/images/Media-4.avif", position: "center" },
-  program: { src: "/images/dante-hughes/12-cal-kickoff-program.jpg", position: "center 30%" },
+  program: { src: "/images/dante-hughes/15-colts-tackle.jpg", position: "center" },
+} as const;
+
+// Enterprise page. Final files: see docs/redesign/ai-photo-prompts.md.
+export const enterprisePhotos = {
+  departments: { src: "/images/media-6.jpg", position: "center 35%" }, // program-athletic-departments.jpg
+  collectives: { src: "/images/dante-hughes/16-offseason-training.jpg", position: "center 30%" }, // program-nil-collectives.jpg
+  letterwinners: { src: "/images/dante-hughes/01-lott-trophy.jpg", position: "center 25%" }, // program-letterwinners.jpg
+  boosters: { src: "/images/media-9.jpg", position: "center 30%" }, // program-booster-clubs.jpg
+  foundations: { src: "/images/media-5.jpg", position: "center 30%" }, // program-foundations.jpg
+  highSchool: { src: "/images/dante-hughes/video-poster-01.jpg", position: "center" }, // program-high-school.jpg
 } as const;
