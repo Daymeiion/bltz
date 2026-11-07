@@ -609,6 +609,7 @@ export default function LockerView({
     return () => window.clearInterval(timer);
   }, [isPrivatePreview, heroVideoUrl, slideshowKey, slideshowPhotos.length]);
   const slideshowPhoto = slideshowPhotos[slideshowIndex % slideshowPhotos.length];
+  const showsHeroPhoto = !heroVideoUrl && isPrivatePreview && Boolean(slideshowPhoto);
 
 
   const schoolAbbr = data.school?.abbr || "SCHOOL";
@@ -987,7 +988,7 @@ export default function LockerView({
           <section className="locker-hero-section" style={{ padding: "0 18px" }}>
             <div className={`locker-hero-card${isPrivatePreview ? " locker-hero-card--preview" : ""}`} style={{ position: "relative", height: 610, borderRadius: 24, overflow: "hidden", background: "linear-gradient(180deg,#161B30 0%,#10142404 55%,#0B0E1A 100%)" }}>
               {/* video / photo-reel background */}
-              <div className={`locker-hero-media${heroVideoUrl ? " locker-hero-media--video" : ""}`}>
+              <div className={`locker-hero-media${heroVideoUrl ? " locker-hero-media--video" : showsHeroPhoto ? " locker-hero-media--photo" : ""}`}>
                 {heroVideoUrl ? (
                   <>
                     <video
@@ -1035,7 +1036,7 @@ export default function LockerView({
                 <div style={{ position: "absolute", top: -60, left: -80, width: 340, height: 340, borderRadius: 9999, background: "radial-gradient(circle,rgba(41,82,255,.35),transparent 70%)", animation: "glowA 7s ease-in-out infinite", pointerEvents: "none" }} />
                 <div style={{ position: "absolute", bottom: 120, right: -70, width: 260, height: 260, borderRadius: 9999, background: "radial-gradient(circle,rgba(245,166,35,.28),transparent 70%)", animation: "glowB 8s ease-in-out infinite", pointerEvents: "none" }} />
                 {/* bottom blend */}
-                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom,rgba(11,14,26,.08) 0%,rgba(11,14,26,0) 24%,rgba(11,14,26,.28) 44%,rgba(11,14,26,.72) 64%,rgba(11,14,26,.94) 82%,#0B0E1A 100%)", pointerEvents: "none" }} />
+                {!showsHeroPhoto && <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom,rgba(11,14,26,.08) 0%,rgba(11,14,26,0) 24%,rgba(11,14,26,.28) 44%,rgba(11,14,26,.72) 64%,rgba(11,14,26,.94) 82%,#0B0E1A 100%)", pointerEvents: "none" }} />}
               </div>
 
               {/* Spotify "now playing" — live. Collapses entirely when the athlete
@@ -1082,8 +1083,8 @@ export default function LockerView({
               <img className="locker-hero-headshot" src={data.headshotUrl} alt={data.fullName} style={{ position: "absolute", bottom: 74, left: "50%", transform: "translateX(-50%)", height: 268, width: "80vw", objectFit: "cover", objectPosition: "top", zIndex: 4, opacity: 1, clipPath: "inset(0 0 39px 0)" }} />
               <img className="locker-hero-headshot locker-hero-headshot-gradient" src={data.headshotUrl} alt="" aria-hidden="true" style={{ position: "absolute", bottom: 74, left: "50%", transform: "translateX(-50%)", height: 268, width: "80vw", objectFit: "cover", objectPosition: "top", zIndex: 4, clipPath: "inset(0 0 39px 0)", filter: "brightness(0)", WebkitMaskImage: "linear-gradient(to bottom, transparent 66%, rgba(0,0,0,.72) 82%, #000 100%)", maskImage: "linear-gradient(to bottom, transparent 66%, rgba(0,0,0,.72) 82%, #000 100%)", pointerEvents: "none" }} />
 
-              {/* hero-video gradient — behind the headshot and name */}
-              <div style={{ position: "absolute", inset: 0, zIndex: 3, background: "linear-gradient(to bottom, transparent 0%, transparent 30%, rgba(5,7,15,.35) 38%, rgba(5,7,15,.65) 52%, rgba(5,7,15,.85) 68%, rgba(11,14,26,.98) 86%, #0B0E1A 100%)", pointerEvents: "none" }} />
+              {/* Keep the headshot and name readable over the hero media. */}
+              <div className={showsHeroPhoto ? "locker-hero-content-shade--photo" : "locker-hero-content-shade"} />
 
               {/* name block */}
             <div className="locker-hero-copy" style={{ position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 5, textAlign: "center", padding: "0 16px" }}>
@@ -2050,9 +2051,13 @@ const styleSheet = `
 .bltz-frame{position:relative;width:390px;height:844px;background:#0B0E1A;overflow:hidden;box-shadow:0 30px 90px rgba(0,0,0,.6);border-radius:0}
 .locker-hero-card{contain:paint;isolation:isolate;transform:translateZ(0);clip-path:inset(0 round 24px);outline:1px solid rgba(255,255,255,.12);outline-offset:-1px}
 .locker-hero-media{position:absolute;inset:3px;overflow:hidden;border-radius:21px;clip-path:inset(0 round 21px)}
+.locker-hero-media--photo{inset:0;border-radius:0;clip-path:none}
 .locker-hero-photo-backdrop,.locker-hero-photo{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
-.locker-hero-photo-backdrop{object-fit:cover;filter:blur(28px) brightness(.65);transform:scale(1.12)}
+.locker-hero-photo-backdrop{object-fit:cover;filter:blur(24px) brightness(.82);transform:scale(1.12)}
 .locker-hero-photo{object-fit:contain;object-position:center}
+.locker-hero-content-shade,.locker-hero-content-shade--photo{position:absolute;inset:0;z-index:3;pointer-events:none}
+.locker-hero-content-shade{background:linear-gradient(to bottom,transparent 30%,rgba(5,7,15,.35) 38%,rgba(5,7,15,.65) 52%,rgba(5,7,15,.85) 68%,rgba(11,14,26,.98) 86%,#0B0E1A 100%)}
+.locker-hero-content-shade--photo{background:linear-gradient(to bottom,transparent 40%,rgba(5,7,15,.18) 56%,rgba(5,7,15,.58) 78%,rgba(11,14,26,.88) 100%)}
 .locker-hero-video-backdrop,.locker-hero-video{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 .locker-hero-video-backdrop{z-index:0;object-fit:cover;transform:scale(1.1);filter:blur(24px) saturate(.82) brightness(.62)}
 .locker-hero-video{z-index:1;object-fit:contain;object-position:center;background:transparent}
@@ -2197,7 +2202,7 @@ const styleSheet = `
   .bltz-frame:not(.bltz-frame-embedded) .scr>section{width:min(1180px,calc(100% - 64px));margin-right:auto;margin-left:auto}
   .bltz-frame:not(.bltz-frame-embedded) .locker-hero-section{width:calc(100% - 32px)!important;max-width:none!important;padding:0!important}
   .bltz-frame:not(.bltz-frame-embedded) .locker-hero-card{height:min(calc(76vh + 10px),770px)!important;min-height:650px;border-radius:8px!important;clip-path:inset(0 round 8px)}
-  .bltz-frame:not(.bltz-frame-embedded) .locker-hero-media{border-radius:5px;clip-path:inset(0 round 5px)}
+  .bltz-frame:not(.bltz-frame-embedded) .locker-hero-media:not(.locker-hero-media--photo){border-radius:5px;clip-path:inset(0 round 5px)}
   .bltz-frame:not(.bltz-frame-embedded) .locker-hero-stroke{border-radius:8px}
   .bltz-frame:not(.bltz-frame-embedded) .locker-hero-headshot{bottom:82px!important;width:80vw!important;height:282px!important;clip-path:inset(0 0 clamp(47px,4.5vw,68px) 0)!important}
   .bltz-frame:not(.bltz-frame-embedded) .locker-hero-copy{right:50%!important;left:50%!important;width:min(560px,calc(100% - 48px));padding:0!important;transform:translateX(-50%)}
