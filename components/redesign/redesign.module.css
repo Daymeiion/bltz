@@ -429,13 +429,18 @@
 
 /* ---------- Journey: scattered icons → locker in hand ---------- */
 
+/* The journey overlaps the last screen of the hero. Until it pins, its stage
+   is held in place and see-through, so the icons float over the open locker;
+   it turns solid as the icons converge. */
 .journey {
   --enter: 0;
   --collect: 0;
   --device: 0;
   --exit: 0;
   position: relative;
+  z-index: 2;
   height: 620svh;
+  margin-top: -100svh;
 }
 
 .journeyStage {
@@ -444,21 +449,25 @@
   height: 100svh;
   min-height: 640px;
   overflow: hidden;
+  background: rgba(5, 6, 7, var(--cover, 1));
+  transform: translateY(calc(-1 * var(--pre-shift, 0px)));
 }
 
 .journeyIntro {
   position: absolute;
   z-index: 3;
-  top: 50%;
+  top: 72%;
   right: 0;
   left: 0;
   width: min(820px, calc(100% - 2 * var(--gutter)));
   margin: 0 auto;
   text-align: center;
-  opacity: calc(1 - var(--collect) * 3);
+  opacity: calc(var(--intro, 1) - var(--collect) * 3);
   transform: translateY(-50%);
   pointer-events: none;
+  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.85);
 }
+
 
 .journeyIntro .lede {
   margin: 18px auto 0;
@@ -1155,10 +1164,10 @@
 /* ---------- Responsive ---------- */
 
 @media (max-width: 900px) {
-  /* Phone hero: smaller headline, starting about halfway down the screen. */
+  /* Phone hero: smaller headline; the copy, form and scroll cue all sit
+     at the bottom of the screen. */
   .heroCopy {
-    top: 46svh;
-    bottom: auto;
+    bottom: max(16px, env(safe-area-inset-bottom));
     gap: 12px;
   }
 
@@ -1168,24 +1177,6 @@
 
   .heroCopy .lede {
     font-size: 16px;
-  }
-
-  /* The journey overlaps the last screen of the hero. Until it pins, its
-     stage is held in place and see-through, so the icons float over the
-     open locker; it turns solid as the icons converge. */
-  .journey {
-    z-index: 2;
-    margin-top: -100svh;
-  }
-
-  .journeyIntro {
-    opacity: calc(var(--intro, 1) - var(--collect) * 3);
-    text-shadow: 0 2px 18px rgba(0, 0, 0, 0.85);
-  }
-
-  .journeyStage {
-    background: rgba(5, 6, 7, var(--cover, 1));
-    transform: translateY(calc(-1 * var(--pre-shift, 0px)));
   }
 
   .navInner {
@@ -2011,4 +2002,28 @@
 
 @media (prefers-reduced-motion: reduce) {
   .scrollCue i::after { animation: none; }
+}
+
+/* On desktop the title sits between the icons along the bottom. */
+@media (min-width: 901px) {
+  .journeyIntro {
+    width: min(460px, 34vw);
+  }
+
+  .journeyIntro .h2 {
+    font-size: min(clamp(38px, 4vw, 60px), 6.2svh);
+  }
+
+  .journeyIntro .lede {
+    display: none;
+  }
+
+  .iconFlight {
+    width: clamp(78px, 6.6vw, 108px);
+  }
+
+  .iconLabel {
+    margin-top: 14px;
+    font-size: clamp(15px, 1.2vw, 18px);
+  }
 }
