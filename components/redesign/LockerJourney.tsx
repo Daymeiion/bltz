@@ -97,8 +97,8 @@ export function LockerJourney({ outro = false }: { outro?: boolean }) {
       const enter = tweens.enter.v;
       const collect = tweens.collect.v;
       const deviceIn = range(p, 0.12, 0.18);
-      const scroll = range(p, 0.18, 0.88);
-      const exit = range(p, 0.9, 0.99);
+      const scroll = range(p, 0.18, 0.97);
+      const exit = 0;
       const outro = range(p, 0.93, 1);
 
       const vars: Record<string, number> = {
@@ -114,9 +114,13 @@ export function LockerJourney({ outro = false }: { outro?: boolean }) {
       };
       for (const [k, v] of Object.entries(vars)) section.style.setProperty(k, v.toFixed(4));
 
-      // The locker is designed at 390px wide; scale it to fit the phone.
+      // The locker is laid out at a fixed design width (390px on phones, a bit
+      // wider on desktop, see --design-w); scale it to fit the phone.
       const screen = screenRef.current;
-      if (screen) screen.style.setProperty("--screen-scale", (screen.clientWidth / 390).toFixed(4));
+      if (screen) {
+        const designW = parseFloat(getComputedStyle(screen).getPropertyValue("--design-w")) || 390;
+        screen.style.setProperty("--screen-scale", (screen.clientWidth / designW).toFixed(4));
+      }
 
       // Drive the real locker's own scroll container.
       const scr = screenRef.current?.querySelector<HTMLElement>(".scr");

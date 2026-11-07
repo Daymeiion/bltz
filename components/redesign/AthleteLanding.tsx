@@ -254,7 +254,7 @@ function Channels() {
 
 function ThreeStepDrop() {
   return (
-    <section className={styles.section} aria-labelledby="steps-title">
+    <section className={`${styles.section} ${styles.stepDrop}`} aria-labelledby="steps-title">
       <div className={styles.inner}>
         <div className={styles.sectionHead}>
           <h2 className={styles.h2} id="steps-title">Three Step drop</h2>
@@ -276,9 +276,8 @@ function ThreeStepDrop() {
 function FinalClaim() {
   const [name, setName] = useState("");
   return (
-    <section className={styles.section} id="claim" aria-labelledby="final-title">
+    <section className={`${styles.section} ${styles.finaleTight}`} id="claim" aria-label="Claim your locker">
       <div className={`${styles.inner} ${styles.finale}`}>
-        <h2 className={styles.h1} id="final-title">Your name goes here.</h2>
         <div style={{ width: "min(720px, 100%)" }}>
           <ClaimForm id="final-claim" name={name} onNameChange={setName} />
         </div>
