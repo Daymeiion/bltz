@@ -83,12 +83,11 @@ export function SiteFooter() {
   return (
     <footer className={styles.footer}>
       <div className={`${styles.inner} ${styles.footerGrid}`}>
-        <div>
-          <Link className={styles.brand} href={ROUTES.athletes}>
-            <Image src="/images/bltz-mark.svg" alt="" width={30} height={30} />
-            <span>BLTZ</span>
+        <div className={styles.footerBrand}>
+          <Link href={ROUTES.athletes} aria-label="BLTZ home">
+            <Image src="/bltz-white-logo.svg" alt="BLTZ" width={145} height={40} style={{ height: "auto" }} />
           </Link>
-          <p className={styles.muted} style={{ maxWidth: "26em", marginTop: 16 }}>
+          <p className={styles.muted}>
             Player Lockers for athletes, and the programs and collectives behind them.
           </p>
         </div>
@@ -119,7 +118,7 @@ export function SiteFooter() {
         ) : null}
       </div>
       <div className={`${styles.inner} ${styles.footerBase}`}>
-        <span>© {new Date().getFullYear()} BLTZ. All rights reserved.</span>
+        <span>© {new Date().getFullYear()} BLTZ.me. All rights reserved.</span>
         <Link href="/privacy">Privacy policy</Link>
       </div>
     </footer>
@@ -130,7 +129,7 @@ export function SiteFooter() {
 export function LegalBar() {
   return (
     <footer className={styles.legalBar}>
-      <span>© {new Date().getFullYear()} BLTZ. All rights reserved.</span>
+      <span>© {new Date().getFullYear()} BLTZ.me. All rights reserved.</span>
       <Link href="/privacy">Privacy policy</Link>
     </footer>
   );
