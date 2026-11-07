@@ -37,6 +37,8 @@ export function isPublicPath(pathname: string): boolean {
   ) {
     return true;
   }
+  // Marketing pages: the enterprise landing page, the privacy policy and the redesign mockups.
+  if (pathname === "/enterprise" || pathname === "/privacy" || pathname === "/redesign" || pathname.startsWith("/redesign/")) return true;
   if (pathname.startsWith("/player/")) return true; // public locker pages
   if (pathname.startsWith("/preview-lockers/")) return true; // public demo-preview locker pages
   return PUBLIC_PATH_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
