@@ -15,18 +15,21 @@ import {
   previewOrganizations,
   previewReach,
   previewRoster,
-  previewTheme,
 } from "@/components/organization/pilot/preview-data";
 import styles from "./crm.module.css";
 
 export type CrmView = "overview" | "intelligence" | "launch";
+
+// The landing page always shows the workspace in BLTZ colors (blue accent),
+// not the sample school's colors the in-app preview uses.
+const bltzTheme = { mode: "bltz" as const, accent: "#2952ff", highlight: "#d6a500", logoUrl: null };
 
 const DESKTOP = { width: 1440, height: 900 };
 const PHONE = { width: 390, height: 780 };
 
 function Screen({ view }: { view: CrmView }) {
   const shell = (children: React.ReactNode) => (
-    <OrganizationShell context={previewContext} organizations={previewOrganizations} options={previewOptions} previewTheme={previewTheme}>
+    <OrganizationShell context={previewContext} organizations={previewOrganizations} options={previewOptions} previewTheme={bltzTheme}>
       {children}
     </OrganizationShell>
   );

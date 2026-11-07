@@ -157,7 +157,7 @@
   height: 30px;
   place-items: center;
   color: #fff;
-  background: #7d1d3a;
+  background: #2952ff;
   border-radius: 999px;
   font-size: 13px;
 }
@@ -195,8 +195,8 @@
   width: 34px;
   height: 34px;
   place-items: center;
-  color: #7d1d3a;
-  background: #f1e3e7;
+  color: #2952ff;
+  background: #e7ecff;
   border-radius: 999px;
   font-size: 12px;
   font-weight: 700;
@@ -205,8 +205,8 @@
 .dayChip {
   flex: none;
   padding: 4px 8px;
-  color: #7d1d3a;
-  background: #f6e1e6;
+  color: #2952ff;
+  background: #e7ecff;
   border-radius: 999px;
   font-size: 12px;
   font-weight: 600;
@@ -1064,5 +1064,149 @@
   .whatPanel,
   .accBody {
     animation: none;
+  }
+}
+
+/* Demo request form (live enterprise page) -------------------------------- */
+
+.demoForm {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: clamp(32px, 5vw, 72px);
+  width: min(1240px, calc(100% - 2 * var(--gutter)));
+  margin: clamp(80px, 9vw, 120px) auto 0;
+  padding: clamp(32px, 5vw, 64px);
+  background: radial-gradient(80% 120% at 0% 100%, rgba(41, 82, 255, 0.35), transparent 60%), var(--steel);
+  border-radius: 40px;
+  box-shadow: inset 0 0 0 1px var(--line);
+  scroll-margin-top: 120px;
+}
+
+.demoFormIntro {
+  display: grid;
+  align-content: start;
+  gap: 18px;
+}
+
+.demoFormIntro h2 {
+  max-width: 14ch;
+  margin: 0;
+  font: 700 clamp(40px, 4.4vw, 64px)/1 var(--display);
+}
+
+.demoFormIntro p:not(.eyebrow) {
+  max-width: 34em;
+  margin: 0;
+  color: var(--concrete);
+  font-size: 17px;
+  line-height: 1.55;
+}
+
+.page .demoFormAlt a {
+  color: var(--chalk);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.demoFormFields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.demoFormFields label {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.demoFormFields label small {
+  color: var(--concrete);
+  font-weight: 500;
+}
+
+.demoFormFields input,
+.demoFormFields select,
+.demoFormFields textarea {
+  width: 100%;
+  min-height: 50px;
+  padding: 12px 16px;
+  color: var(--chalk);
+  background: rgba(5, 6, 7, 0.55);
+  border: 0;
+  border-radius: 14px;
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+  font: 500 16px/1.4 var(--text);
+}
+
+.demoFormFields textarea {
+  resize: vertical;
+}
+
+.demoFormFields select:invalid {
+  color: rgba(238, 236, 230, 0.5);
+}
+
+.demoFormFields option {
+  color: #111;
+}
+
+.demoFormFields input::placeholder,
+.demoFormFields textarea::placeholder {
+  color: rgba(238, 236, 230, 0.4);
+}
+
+.demoFormFields input:focus-visible,
+.demoFormFields select:focus-visible,
+.demoFormFields textarea:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 0;
+}
+
+.demoFormWide,
+.demoFormSubmit {
+  grid-column: 1 / -1;
+}
+
+.demoFormSubmit {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 20px;
+  margin-top: 4px;
+}
+
+.demoFormSubmit p {
+  flex: 1 1 260px;
+  margin: 0;
+  color: var(--concrete);
+  font-size: 15px;
+}
+
+.demoFormSubmit p[data-tone="error"] {
+  color: #ff8f7a;
+}
+
+.demoFormSubmit p[data-tone="success"] {
+  color: var(--chalk);
+}
+
+.demoFormSubmit button:disabled {
+  opacity: 0.7;
+  cursor: progress;
+}
+
+@media (max-width: 860px) {
+  .demoForm {
+    grid-template-columns: minmax(0, 1fr);
+    border-radius: 28px;
+  }
+}
+
+@media (max-width: 520px) {
+  .demoFormFields {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

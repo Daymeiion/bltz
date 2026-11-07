@@ -1,13 +1,33 @@
-# BLTZ landing redesign (mockup)
+# BLTZ landing redesign
 
-Preview routes. The production homepage at `/` is unchanged.
+## Live now (short-term launch)
+
+Only the finished hero sections are live, so visitors never see an unfinished page.
+
+| Route | Component | Sections |
+| --- | --- | --- |
+| `/` | `AthleteHeroPage` | Three.js locker hero, claim form, link to programs, footer |
+| `/enterprise` | `EnterpriseHeroPage` | Hero, product demo with tabs (real CRM, BLTZ colors), book-a-demo form, privacy and copyright bar |
+| `/privacy` | `app/privacy/page.tsx` | Plain-language privacy policy (have it reviewed) |
+
+- `LiveRoutes` (in `SiteChrome.tsx`) makes the nav and footer link to the live
+  routes; the mockups use `MOCKUP_ROUTES`.
+- Demo requests post to `/api/demo-requests` and are saved in
+  `landing_waitlist` with `source = 'enterprise_demo'` (organization in
+  `school`; type, role and message in `current_content_gap`). No migration needed.
+- These pages are public in `lib/supabase/middleware.ts`, and `enterprise`,
+  `privacy` and `redesign` are reserved short-link names.
+- The old homepage component (`components/landing/LandingJourney`) is kept
+  but no longer routed.
+
+To ship another section, add it to `AthleteHeroPage` or `EnterpriseHeroPage`.
+
+## Full mockups (still in design)
 
 - Athletes: `/redesign`
 - Enterprise (athletic departments and NIL collectives): `/redesign/enterprise`
 
-Both routes are `noindex`. To ship, point `app/page.tsx` at `AthleteLanding`,
-move the enterprise page to `/enterprise`, and update `ROUTES` in
-`components/redesign/SiteChrome.tsx`.
+Both are `noindex` and viewable without signing in.
 
 ## Concept: lights on in the locker room
 
@@ -79,7 +99,8 @@ the landing page automatically.
 - [ ] Replace stand-in photos (`components/redesign/assets.ts`, and the headshot,
       video and photos in `components/redesign/sampleLocker.ts`). Several show
       real team uniforms. Prompts are below.
-- [ ] Create `/privacy` and `/terms`. The footer already links to them.
+- [x] Create `/privacy` (plain-language draft, needs review).
+- [ ] Create `/terms`, then show the footer's legal column on live pages (`LIVE_ROUTES.legal`).
 - [ ] Confirm product claims in the copy. The enterprise page now follows the
       real workspace: Lockers for former players, flagged moments (Act now is
       the next 7 days, Coming up is days 8 to 30), tracked links, BLTZ clearing

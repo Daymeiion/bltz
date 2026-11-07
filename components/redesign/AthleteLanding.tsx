@@ -6,7 +6,7 @@ import { AtSign, Music2, Podcast } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { redesignPhotos, type RedesignPhotoKey } from "./assets";
-import { Faq, ROUTES, SiteFooter, SiteNav, useDisplayFontFamily } from "./SiteChrome";
+import { Faq, SiteFooter, SiteNav, useDisplayFontFamily, useRoutes } from "./SiteChrome";
 import { LockerJourney } from "./LockerJourney";
 import { CareerChapters, PhotoWall, PlayDiagram } from "./StoryMotion";
 import styles from "./redesign.module.css";
@@ -248,8 +248,50 @@ function Channels() {
   );
 }
 
+function FinalClaim() {
+  const [name, setName] = useState("");
+  return (
+    <section className={styles.section} id="claim" aria-labelledby="final-title">
+      <div className={`${styles.inner} ${styles.finale}`}>
+        <h2 className={styles.h1} id="final-title">Your name goes here.</h2>
+        <div style={{ width: "min(720px, 100%)" }}>
+          <ClaimForm id="final-claim" name={name} onNameChange={setName} />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ProgramsBand() {
+  const ROUTES = useRoutes();
+  return (
+    <section className={styles.section} style={{ paddingTop: 0 }}>
+      <div className={`${styles.inner} ${styles.band}`}>
+        <div style={{ display: "grid", gap: 16, justifyItems: "center" }}>
+          <h2 className={styles.h3} style={{ fontSize: "clamp(34px, 4vw, 56px)" }}>Run a program or a collective?</h2>
+          <p className={styles.lede}>Give your former players a Locker, and see which moments are worth celebrating next.</p>
+        </div>
+        <Link className={styles.button} href={ROUTES.enterprise}>See BLTZ for programs</Link>
+      </div>
+    </section>
+  );
+}
+
+/** Live homepage: the hero, then a short path to programs. The rest is still in design at /redesign. */
+export function AthleteHeroPage() {
+  return (
+    <main className={styles.page} data-audience="athletes">
+      <a className={styles.skip} href="#claim">Skip to claim your locker</a>
+      <SiteNav audience="athletes" />
+      <Hero />
+      <FinalClaim />
+      <ProgramsBand />
+      <SiteFooter />
+    </main>
+  );
+}
+
 export function AthleteLanding() {
-  const [finalName, setFinalName] = useState("");
   return (
     <main className={styles.page} data-audience="athletes">
       <a className={styles.skip} href="#claim">Skip to claim your locker</a>
@@ -278,15 +320,7 @@ export function AthleteLanding() {
       <Audiences />
       <Channels />
 
-      <section className={styles.section} style={{ paddingTop: 0 }}>
-        <div className={`${styles.inner} ${styles.band}`}>
-          <div style={{ display: "grid", gap: 16, justifyItems: "center" }}>
-            <h2 className={styles.h3} style={{ fontSize: "clamp(34px, 4vw, 56px)" }}>Run a program or a collective?</h2>
-            <p className={styles.lede}>Give every athlete on your roster a locker, with approvals and reporting for your staff.</p>
-          </div>
-          <Link className={styles.button} href={ROUTES.enterprise}>See BLTZ for programs</Link>
-        </div>
-      </section>
+      <ProgramsBand />
 
       <Faq
         title="Questions, answered."
@@ -298,14 +332,7 @@ export function AthleteLanding() {
         ]}
       />
 
-      <section className={styles.section} id="claim" aria-labelledby="final-title">
-        <div className={`${styles.inner} ${styles.finale}`}>
-          <h2 className={styles.h1} id="final-title">Your name goes here.</h2>
-          <div style={{ width: "min(720px, 100%)" }}>
-            <ClaimForm id="final-claim" name={finalName} onNameChange={setFinalName} />
-          </div>
-        </div>
-      </section>
+      <FinalClaim />
 
       <SiteFooter />
     </main>

@@ -2,17 +2,28 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 import styles from "./redesign.module.css";
 
 type Audience = "athletes" | "enterprise";
 
-export const ROUTES = {
-  athletes: "/redesign",
-  enterprise: "/redesign/enterprise",
-} as const;
+type Routes = { athletes: string; enterprise: string; legal: boolean };
+
+/** Full mockups, still in design. */
+export const MOCKUP_ROUTES: Routes = { athletes: "/redesign", enterprise: "/redesign/enterprise", legal: true };
+/** Live pages (hero sections only, for now). /terms doesn't exist yet, so the footer hides the legal column. */
+export const LIVE_ROUTES: Routes = { athletes: "/", enterprise: "/enterprise", legal: false };
+
+const RoutesContext = createContext<Routes>(MOCKUP_ROUTES);
+
+/** Wrap a live page so its nav and footer link to the live routes. */
+export function LiveRoutes({ children }: { children: ReactNode }) {
+  return <RoutesContext.Provider value={LIVE_ROUTES}>{children}</RoutesContext.Provider>;
+}
+export const useRoutes = () => useContext(RoutesContext);
 
 export function SiteNav({ audience, announcement }: { audience: Audience; announcement?: ReactNode }) {
+  const ROUTES = useRoutes();
   const [solid, setSolid] = useState(false);
 
   useEffect(() => {
@@ -52,6 +63,7 @@ export function SiteNav({ audience, announcement }: { audience: Audience; announ
 }
 
 export function SiteFooter() {
+  const ROUTES = useRoutes();
   return (
     <footer className={styles.footer}>
       <div className={`${styles.inner} ${styles.footerGrid}`}>
@@ -69,7 +81,6 @@ export function SiteFooter() {
           <ul>
             <li><Link href={ROUTES.athletes}>For athletes</Link></li>
             <li><Link href={ROUTES.enterprise}>For programs and collectives</Link></li>
-            <li><Link href={`${ROUTES.athletes}#locker`}>Sample locker</Link></li>
           </ul>
         </div>
         <div>
@@ -80,19 +91,31 @@ export function SiteFooter() {
             <li><Link href="/auth/login">Sign in</Link></li>
           </ul>
         </div>
-        <div>
-          <h2>Legal</h2>
-          <ul>
-            {/* TODO: these pages don't exist yet; they are required before collecting emails at launch. */}
-            <li><Link href="/privacy">Privacy policy</Link></li>
-            <li><Link href="/terms">Terms of use</Link></li>
-          </ul>
-        </div>
+        {/* TODO: /terms doesn't exist yet, so this column stays hidden on the live pages. */}
+        {ROUTES.legal ? (
+          <div>
+            <h2>Legal</h2>
+            <ul>
+              <li><Link href="/privacy">Privacy policy</Link></li>
+              <li><Link href="/terms">Terms of use</Link></li>
+            </ul>
+          </div>
+        ) : null}
       </div>
       <div className={`${styles.inner} ${styles.footerBase}`}>
-        <span>© {new Date().getFullYear()} BLTZ</span>
-        <span>Built for the people who played.</span>
+        <span>© {new Date().getFullYear()} BLTZ. All rights reserved.</span>
+        <Link href="/privacy">Privacy policy</Link>
       </div>
+    </footer>
+  );
+}
+
+/** Slim closing bar for the live pages: privacy link and copyright. */
+export function LegalBar() {
+  return (
+    <footer className={styles.legalBar}>
+      <span>© {new Date().getFullYear()} BLTZ. All rights reserved.</span>
+      <Link href="/privacy">Privacy policy</Link>
     </footer>
   );
 }

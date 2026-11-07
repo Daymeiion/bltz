@@ -18,10 +18,10 @@ import {
   Share2,
   Users,
 } from "lucide-react";
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type FormEvent, type ReactNode } from "react";
 import { PREVIEW_CALENDLY_URL } from "@/components/preview-lockers/CalendlyBooking";
 import { CrmScreen, type CrmView } from "./CrmScreen";
-import { ROUTES, SiteFooter, SiteNav } from "./SiteChrome";
+import { LegalBar, SiteFooter, SiteNav, useRoutes } from "./SiteChrome";
 import { enterprisePhotos } from "./assets";
 import base from "./redesign.module.css";
 import s from "./ent.module.css";
@@ -35,7 +35,7 @@ const RosterWallScene = dynamic(
   { ssr: false, loading: () => <div className={base.canvasFallback} /> },
 );
 
-function PillCta({ href, children, onClick }: { href?: string; children: ReactNode; onClick?: () => void }) {
+function PillCta({ href, children, onClick, submit, disabled }: { href?: string; children: ReactNode; onClick?: () => void; submit?: boolean; disabled?: boolean }) {
   const inner = (
     <>
       <span>{children}</span>
@@ -45,7 +45,7 @@ function PillCta({ href, children, onClick }: { href?: string; children: ReactNo
   return href ? (
     <a className={s.pillCta} href={href}>{inner}</a>
   ) : (
-    <button className={s.pillCta} type="button" onClick={onClick}>{inner}</button>
+    <button className={s.pillCta} type={submit ? "submit" : "button"} onClick={onClick} disabled={disabled}>{inner}</button>
   );
 }
 
@@ -69,7 +69,7 @@ function Hero() {
           </p>
           <div className={s.heroActions}>
             <PillCta href="#demo">Book a demo</PillCta>
-            <a className={s.textLink} href="#how">See how it works</a>
+            <a className={s.textLink} href="#product">See the workspace</a>
           </div>
         </div>
         <div className={s.heroCards} aria-hidden="true">
@@ -135,7 +135,7 @@ function ProductDemo() {
   }, []);
 
   return (
-    <section className={s.demoScreen} aria-label="The BLTZ organization workspace">
+    <section className={s.demoScreen} id="product" aria-label="The BLTZ organization workspace">
       <div className={s.demoTabs} role="tablist" aria-label="Workspace screens">
         {demoViews.map((d) => (
           <button key={d.view} type="button" role="tab" aria-selected={view === d.view} onClick={() => setView(d.view)}>
@@ -590,21 +590,139 @@ function Resources() {
   );
 }
 
+/* Demo request form (live enterprise page) -------------------------------- */
+
+type DemoStatus = { tone: "idle" | "error" | "success"; message: string };
+
+function DemoForm() {
+  const [pending, setPending] = useState(false);
+  const [status, setStatus] = useState<DemoStatus>({
+    tone: "idle",
+    message: "We'll reply within one business day to set up a time.",
+  });
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const data = Object.fromEntries(new FormData(form)) as Record<string, string>;
+    setPending(true);
+    try {
+      const res = await fetch("/api/demo-requests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      const body = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) throw new Error(body.error || "We couldn't send your request. Try again.");
+      const first = data.fullName?.trim().split(/\s+/)[0];
+      setStatus({ tone: "success", message: `Thanks${first ? `, ${first}` : ""}. We'll email ${data.email} to set up your demo.` });
+      form.reset();
+    } catch (error) {
+      setStatus({ tone: "error", message: error instanceof Error ? error.message : "Something went wrong. Try again." });
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <section className={s.demoForm} id="demo" aria-labelledby="demo-title">
+      <div className={s.demoFormIntro}>
+        <Eyebrow>Book a demo</Eyebrow>
+        <h2 id="demo-title">See BLTZ with your own former players.</h2>
+        <p>
+          Tell us about your program. We&apos;ll walk you through the workspace, build a sample Locker for one of your
+          former players and answer your questions.
+        </p>
+        <p className={s.demoFormAlt}>
+          Prefer to pick a time now?{" "}
+          <a href={PREVIEW_CALENDLY_URL} target="_blank" rel="noopener noreferrer">Open the calendar</a>
+        </p>
+      </div>
+      <form className={s.demoFormFields} onSubmit={submit} aria-describedby="demo-note">
+        <label>
+          <span>Full name</span>
+          <input name="fullName" required maxLength={120} autoComplete="name" />
+        </label>
+        <label>
+          <span>Work email</span>
+          <input name="email" type="email" required maxLength={254} autoComplete="email" />
+        </label>
+        <label>
+          <span>Organization</span>
+          <input name="organization" required maxLength={120} autoComplete="organization" placeholder="School, department or collective" />
+        </label>
+        <label>
+          <span>Organization type</span>
+          <select name="organizationType" required defaultValue="">
+            <option value="" disabled>Choose one</option>
+            <option value="athletic_department">Athletic department</option>
+            <option value="nil_collective">NIL collective</option>
+            <option value="other">Other</option>
+          </select>
+        </label>
+        <label className={s.demoFormWide}>
+          <span>Your role <small>(optional)</small></span>
+          <input name="role" maxLength={80} autoComplete="organization-title" placeholder="For example, Director of Alumni Relations" />
+        </label>
+        <label className={s.demoFormWide}>
+          <span>What would you like to see? <small>(optional)</small></span>
+          <textarea name="message" rows={3} maxLength={300} />
+        </label>
+        <input className={base.honeypot} name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" defaultValue="" />
+        <div className={s.demoFormSubmit}>
+          <PillCta submit disabled={pending}>{pending ? "Sending…" : "Request a demo"}</PillCta>
+          <p id="demo-note" role="status" data-tone={status.tone}>{status.message}</p>
+        </div>
+      </form>
+    </section>
+  );
+}
+
 /* Page ------------------------------------------------------------------- */
+
+function EnterpriseNav() {
+  return (
+    <SiteNav
+      audience="enterprise"
+      announcement={
+        <>
+          <span>Pilot programs are open for athletic departments and NIL collectives.</span>
+          <a href="#demo">Book a demo</a>
+        </>
+      }
+    />
+  );
+}
+
+function AthleteLink() {
+  const ROUTES = useRoutes();
+  return (
+    <section className={s.athleteLink}>
+      <span>Are you an athlete?</span>
+      <Link href={`${ROUTES.athletes}#claim`}>Claim your own Player Locker</Link>
+    </section>
+  );
+}
+
+/** Live enterprise page: hero, the product demo screen, a demo request form and the legal bar. The rest is still in design at /redesign/enterprise. */
+export function EnterpriseHeroPage() {
+  return (
+    <main className={`${base.page} ${s.page}`} data-audience="enterprise">
+      <a className={base.skip} href="#demo">Skip to book a demo</a>
+      <EnterpriseNav />
+      <Hero />
+      <ProductDemo />
+      <DemoForm />
+      <LegalBar />
+    </main>
+  );
+}
 
 export function EnterpriseLanding() {
   return (
     <main className={`${base.page} ${s.page}`} data-audience="enterprise">
       <a className={base.skip} href="#demo">Skip to book a demo</a>
-      <SiteNav
-        audience="enterprise"
-        announcement={
-          <>
-            <span>Pilot programs are open for athletic departments and NIL collectives.</span>
-            <a href="#demo">Book a demo</a>
-          </>
-        }
-      />
+      <EnterpriseNav />
       <Hero />
       <ProductDemo />
       <TrustBand />
@@ -620,10 +738,7 @@ export function EnterpriseLanding() {
       <Testimonials />
       <Booking />
       <Resources />
-      <section className={s.athleteLink}>
-        <span>Are you an athlete?</span>
-        <Link href={`${ROUTES.athletes}#claim`}>Claim your own Player Locker</Link>
-      </section>
+      <AthleteLink />
       <SiteFooter />
     </main>
   );
