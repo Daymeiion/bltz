@@ -122,7 +122,7 @@ export function LockerRoomScene({ name, progressRef, fontFamily }: Props) {
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.05;
     renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFShadowMap;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap; // soft edges: no crawling stair-steps while things move
     renderer.domElement.className = styles.canvas;
     renderer.domElement.setAttribute("aria-hidden", "true");
     host.appendChild(renderer.domElement);
@@ -226,7 +226,9 @@ export function LockerRoomScene({ name, progressRef, fontFamily }: Props) {
       hinge.position.set(-LOCKER_W / 2 + 0.05, 0.4 + DOOR_H / 2, LOCKER_D / 2 + 0.02);
       const door = new THREE.Mesh(doorGeo, doorMat);
       door.position.x = (LOCKER_W - 0.1) / 2;
-      door.castShadow = true;
+      // The center door swings through the key light as it opens; letting it
+      // cast a shadow sweeps a flickering band across the open locker.
+      door.castShadow = !isCenter;
       door.receiveShadow = true;
       hinge.add(door);
       const handle = new THREE.Mesh(handleGeo, handleMat);
@@ -304,7 +306,9 @@ export function LockerRoomScene({ name, progressRef, fontFamily }: Props) {
     key.position.set(0, 5.2, 3);
     key.target.position.set(0, 1.1, 0);
     key.castShadow = true;
-    key.shadow.mapSize.set(1024, 1024);
+    key.shadow.mapSize.set(2048, 2048);
+    key.shadow.camera.near = 2;
+    key.shadow.camera.far = 9;
     key.shadow.bias = -0.0005;
     key.shadow.normalBias = 0.03; // no shadow acne shimmer on the interior walls
     scene.add(key, key.target);

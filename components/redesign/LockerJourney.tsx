@@ -12,10 +12,10 @@ import styles from "./redesign.module.css";
 // stop halfway when the visitor stops scrolling. The phone holds a real Player
 // Locker that scrolls itself as the page scrolls.
 const icons = [
-  { type: "film", label: "Game film", Icon: Film, from: ["-75vw", "70vh", "-75vw", "60vh"], to: ["-40vw", "36vh", "-27vw", "8vh"], rot: -8 },
-  { type: "social", label: "Social", Icon: Share2, from: ["-70vw", "85vh", "-75vw", "80vh"], to: ["-24vw", "30vh", "27vw", "8vh"], rot: 6 },
-  { type: "stats", label: "Stats", Icon: ChartNoAxesColumnIncreasing, from: ["70vw", "85vh", "75vw", "70vh"], to: ["24vw", "31vh", "-34vw", "37vh"], rot: -5 },
-  { type: "podcast", label: "Podcasts", Icon: Mic2, from: ["75vw", "70vh", "75vw", "85vh"], to: ["40vw", "37vh", "34vw", "37vh"], rot: 7 },
+  { type: "film", label: "Game film", Icon: Film, from: ["-75vw", "70vh", "-75vw", "60vh"], to: ["-42vw", "36vh", "-27vw", "8vh"], rot: -8 },
+  { type: "social", label: "Social", Icon: Share2, from: ["-70vw", "85vh", "-75vw", "80vh"], to: ["-29vw", "30vh", "27vw", "8vh"], rot: 6 },
+  { type: "stats", label: "Stats", Icon: ChartNoAxesColumnIncreasing, from: ["70vw", "85vh", "75vw", "70vh"], to: ["29vw", "31vh", "-34vw", "37vh"], rot: -5 },
+  { type: "podcast", label: "Podcasts", Icon: Mic2, from: ["75vw", "70vh", "75vw", "85vh"], to: ["42vw", "37vh", "34vw", "37vh"], rot: 7 },
   { type: "articles", label: "Press", Icon: Newspaper, from: ["0vw", "110vh", "0vw", "110vh"], to: ["0vw", "38vh", "0vw", "37vh"], rot: -4 },
 ] as const;
 
@@ -54,6 +54,7 @@ export function LockerJourney({ outro = false }: { outro?: boolean }) {
     if (!section) return;
     let frame = 0;
     let lastStage = 0;
+    let scrollPos: number | null = null;
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     // Time-based moves, triggered by scroll position.
@@ -92,12 +93,11 @@ export function LockerJourney({ outro = false }: { outro?: boolean }) {
       section.style.setProperty("--cover", range(p, 0, 0.06).toFixed(4));
       const now = performance.now();
       aim(tweens.enter, pre >= 0.55 ? 1 : 0, now);
-      aim(tweens.collect, p >= 0.04 ? 1 : 0, now);
+      aim(tweens.collect, p >= 0.06 ? 1 : 0, now);
       const moving = [step(tweens.enter, now), step(tweens.collect, now)].some(Boolean);
       const enter = tweens.enter.v;
       const collect = tweens.collect.v;
-      const deviceIn = range(p, 0.12, 0.18);
-      const scroll = range(p, 0.18, 0.97);
+      const deviceIn = range(p, 0.1, 0.18);
       const exit = 0;
       const outro = range(p, 0.93, 1);
 
@@ -122,22 +122,31 @@ export function LockerJourney({ outro = false }: { outro?: boolean }) {
         screen.style.setProperty("--screen-scale", (screen.clientWidth / designW).toFixed(4));
       }
 
-      // Drive the real locker's own scroll container.
+      // The app demo moves one screen per scroll step: each step picks a
+      // locker section, and the caption and the phone change together. The
+      // phone then glides to that section instead of tracking every pixel.
+      const next = p < 0.18 ? 0 : Math.min(sectionSelectors.length - 1, Math.floor(((p - 0.18) / 0.82) * sectionSelectors.length));
+      if (next !== lastStage) {
+        lastStage = next;
+        setStage(next);
+      }
       const scr = screenRef.current?.querySelector<HTMLElement>(".scr");
+      let gliding = false;
       if (scr) {
         const max = scr.scrollHeight - scr.clientHeight;
-        scr.scrollTop = max * ease(scroll);
-        const anchor = scr.scrollTop + scr.clientHeight * 0.45;
-        let next = 0;
-        sectionSelectors.forEach((sel, i) => {
-          const el = scr.querySelector<HTMLElement>(sel);
-          if (el && el.offsetTop <= anchor) next = i;
-        });
-        if (next !== lastStage) {
-          lastStage = next;
-          setStage(next);
+        const el = next === 0 ? null : scr.querySelector<HTMLElement>(sectionSelectors[next]);
+        // land each section just below the app's sticky top bar
+        const target = el ? Math.min(max, Math.max(0, el.offsetTop - 64)) : 0;
+        if (scrollPos === null || reduceMotion) scrollPos = target;
+        const diff = target - scrollPos;
+        if (Math.abs(diff) < 0.5) scrollPos = target;
+        else {
+          scrollPos += diff * 0.14;
+          gliding = true;
         }
+        scr.scrollTop = scrollPos;
       }
+      if (gliding) request();
       if (moving) request();
     };
 
