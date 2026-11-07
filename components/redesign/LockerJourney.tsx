@@ -6,15 +6,15 @@ import LockerView from "@/app/player/[slug]/LockerView";
 import { sampleLocker } from "./sampleLocker";
 import styles from "./redesign.module.css";
 
-// The five icons fly in from off-screen, settle where a career actually lives
-// (scattered), then get pulled into one phone. The phone holds a real Player
+// The five icons fly in from off-screen over the open locker (on desktop in an
+// arc along the bottom, around the title), then get pulled into one phone. The phone holds a real Player
 // Locker that scrolls itself as the page scrolls.
 const icons = [
-  { type: "film", label: "Game film", Icon: Film, from: ["-80vw", "-60vh", "-40vw", "-50vh"], to: ["-30vw", "-30vh", "-28vw", "4vh"], rot: -8 },
-  { type: "social", label: "Social", Icon: Share2, from: ["20vw", "-90vh", "30vw", "-60vh"], to: ["8vw", "-31vh", "12vw", "0vh"], rot: 6 },
-  { type: "stats", label: "Stats", Icon: ChartNoAxesColumnIncreasing, from: ["90vw", "-10vh", "70vw", "20vh"], to: ["33vw", "-12vh", "30vw", "18vh"], rot: -5 },
-  { type: "podcast", label: "Podcasts", Icon: Mic2, from: ["70vw", "90vh", "50vw", "80vh"], to: ["24vw", "27vh", "-18vw", "28vh"], rot: 7 },
-  { type: "articles", label: "Press", Icon: Newspaper, from: ["-30vw", "100vh", "-20vw", "90vh"], to: ["-4vw", "31vh", "10vw", "38vh"], rot: -4 },
+  { type: "film", label: "Game film", Icon: Film, from: ["-80vw", "-60vh", "-40vw", "-50vh"], to: ["-40vw", "36vh", "-28vw", "4vh"], rot: -8 },
+  { type: "social", label: "Social", Icon: Share2, from: ["20vw", "-90vh", "30vw", "-60vh"], to: ["-24vw", "30vh", "12vw", "0vh"], rot: 6 },
+  { type: "stats", label: "Stats", Icon: ChartNoAxesColumnIncreasing, from: ["90vw", "-10vh", "70vw", "20vh"], to: ["24vw", "31vh", "30vw", "18vh"], rot: -5 },
+  { type: "podcast", label: "Podcasts", Icon: Mic2, from: ["70vw", "90vh", "50vw", "80vh"], to: ["40vw", "37vh", "-18vw", "28vh"], rot: 7 },
+  { type: "articles", label: "Press", Icon: Newspaper, from: ["-30vw", "100vh", "-20vw", "90vh"], to: ["0vw", "38vh", "10vw", "38vh"], rot: -4 },
 ] as const;
 
 const stages = [
@@ -60,20 +60,19 @@ export function LockerJourney({ outro = false }: { outro?: boolean }) {
       const p = clamp01(-rect.top / distance);
 
       // Icons jump in as soon as the section arrives, right after the locker opens.
-      // Phones: this section overlaps the end of the hero (see CSS), so the
-      // icons float in over the open locker while the section rises into
-      // view, then converge into the phone on the next scroll.
-      const phone = window.matchMedia("(max-width: 900px)").matches;
+      // This section overlaps the last screen of the hero (see CSS). While it
+      // rises into view its stage is held in place and see-through, so the
+      // icons float in over the open locker, then converge into the phone on
+      // the next scroll.
       const pre = clamp01(1 - rect.top / window.innerHeight);
-      // Hold the stage in place only once it starts entering the screen.
-      const shift = phone && rect.top < window.innerHeight ? Math.max(0, rect.top) : 0;
+      const shift = rect.top < window.innerHeight ? Math.max(0, rect.top) : 0;
       section.style.setProperty("--pre-shift", `${shift.toFixed(1)}px`);
-      section.style.setProperty("--intro", (phone ? range(pre, 0.35, 0.7) : 1).toFixed(4));
-      section.style.setProperty("--cover", (phone ? range(p, 0, 0.06) : 1).toFixed(4));
-      const enter = phone ? range(pre, 0.45, 0.85) : range(p, 0, 0.06);
-      const collect = phone ? range(p, 0.03, 0.14) : range(p, 0.2, 0.33);
-      const deviceIn = phone ? range(p, 0.12, 0.18) : range(p, 0.3, 0.36);
-      const scroll = phone ? range(p, 0.18, 0.88) : range(p, 0.36, 0.88);
+      section.style.setProperty("--intro", range(pre, 0.35, 0.7).toFixed(4));
+      section.style.setProperty("--cover", range(p, 0, 0.06).toFixed(4));
+      const enter = range(pre, 0.45, 0.85);
+      const collect = range(p, 0.03, 0.14);
+      const deviceIn = range(p, 0.12, 0.18);
+      const scroll = range(p, 0.18, 0.88);
       const exit = range(p, 0.9, 0.99);
       const outro = range(p, 0.93, 1);
 
