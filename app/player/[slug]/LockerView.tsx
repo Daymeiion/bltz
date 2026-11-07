@@ -2159,6 +2159,7 @@ const styleSheet = `
   .locker-photo-contact-sheet--preview .locker-photo-tile > img{position:absolute;inset:0;object-fit:contain!important;transform:none}
 }
 @media (max-width:767px){
+  .locker-hero-photo{object-fit:cover;object-position:center top}
   .locker-hero-media--video{inset:0;border-radius:0;clip-path:none}
   .locker-hero-video{object-fit:cover;object-position:center center}
 }
