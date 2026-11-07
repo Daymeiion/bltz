@@ -54,8 +54,9 @@ self-hosted via `@fontsource`. Section titles are centered.
 
 1. Hero (three.js): a row of lockers under one spotlight. The center nameplate
    shows whatever the visitor types. Scrolling opens the door to show a
-   realistic jersey (`three/jersey.ts`: draped cloth mesh, knit normal map,
-   twill name and number, collar trim, sleeve stripes, metal hanger) with the
+   3D jersey (`three/jersey.ts`: a rounded torso with real thickness and drape
+   folds, striped sleeves, collar ring, knit normal map, twill name and number,
+   and a hanger tucked inside the shoulders) with the
    visitor's last name on the back.
 2. Journey: the five app icons fly in and get pulled into a phone that holds a
    **real `LockerView`**, which scrolls itself as the page scrolls.
