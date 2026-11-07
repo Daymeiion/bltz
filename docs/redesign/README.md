@@ -24,29 +24,36 @@ material world: night, brushed steel, chalk-white type.
 | Floodlight | `#FFC21A` | Athlete actions |
 | Signal | `#3A63FF` | Enterprise actions |
 
-Type: **Big Shoulders Display** (based on Chicago street signage, tall and
-condensed like locker nameplates) for headlines, and **Hanken Grotesk** for body
-text. Headlines are sentence case and left-aligned. There are no all-caps labels.
+Type: **Barlow Condensed Bold** for headings, **Barlow** for body text, and
+**JetBrains Mono** for every number (years, steps, stats, UI figures). All are
+self-hosted via `@fontsource`. Section titles are centered.
 
 ## Page structure
 
-**Athletes**
+**Athletes** (`components/redesign/AthleteLanding.tsx`)
 
 1. Hero (three.js): a row of lockers under one spotlight. The center nameplate
-   reads whatever the visitor types in the name field. Scrolling pushes the
-   camera in and swings the door open to show a jersey with their name.
-2. Journey: the five app icons fly in, get pulled into a phone, and the phone
-   holds a **real `LockerView`** that scrolls itself as the page scrolls, with
-   captions for each part (hero, film, photos, bio).
-3. Three steps, audiences (photo reveal), connected channels, a cross-link to
-   Enterprise, FAQ, final claim form, footer.
+   shows whatever the visitor types. Scrolling opens the door to show a
+   realistic jersey (`three/jersey.ts`: draped cloth mesh, knit normal map,
+   twill name and number, collar trim, sleeve stripes, metal hanger) with the
+   visitor's last name on the back.
+2. Journey: the five app icons fly in and get pulled into a phone that holds a
+   **real `LockerView`**, which scrolls itself as the page scrolls.
+3. Career chapters (`StoryMotion.tsx`): a pinned section that scrolls photo
+   chapters sideways along a timeline.
+4. Three steps, with a play diagram whose routes draw in on scroll.
+5. Audiences, connected channels with a moving photo wall, link to Enterprise,
+   FAQ, final claim form, footer.
 
-**Enterprise**
+**Enterprise** (`components/redesign/EnterpriseLanding.tsx`), modeled on the
+depth of sponsorcx.com
 
-1. Hero (three.js): a curved wall of lockers. The nameplates light up in a
-   wave, one for every player on the roster.
-2. Two audiences, staff capabilities, how a pilot works, book a demo (Calendly,
-   loaded only on click), FAQ, cross-link back to athletes.
+1. Hero (three.js roster wall) and a product dashboard mockup that flattens as
+   it scrolls in (`EnterpriseUI.tsx`, all sample data).
+2. Sports strip, problem statement, four pillars (Launch, Approve, Activate,
+   Report) with auto-advancing tabs and a UI panel for each.
+3. Facts band, two audiences, a "today vs. with BLTZ" comparison, how a pilot
+   works, a photo wall, a demo CTA, Calendly booking, FAQ.
 
 ## Before launch
 
@@ -55,7 +62,10 @@ text. Headlines are sentence case and left-aligned. There are no all-caps labels
       real team uniforms. Prompts are below.
 - [ ] Create `/privacy` and `/terms`. The footer already links to them.
 - [ ] Confirm product claims in the copy: usage-rights checks on photos,
-      staff approvals, engagement reporting, roster import, alumni lockers.
+      staff approvals, engagement reporting, roster import, alumni lockers,
+      activation suggestions.
+- [ ] Add real testimonials or partner logos once you have permission (the
+      SponsorCX-style layout has room for them after the pillars).
 - [ ] Decide whether the Calendly link (`PREVIEW_CALENDLY_URL`) is the right
       calendar for enterprise demos.
 

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type MutableRefObject } from "react";
 import * as THREE from "three";
 import styles from "../redesign.module.css";
+import { createJersey } from "./jersey";
 
 type Props = {
   /** Athlete name typed in the hero form. Drawn on the center nameplate and jersey. */
@@ -79,66 +80,15 @@ function drawPlate(canvas: HTMLCanvasElement, text: string, font: string, lit: b
   }
   const label = text.trim().toUpperCase() || "YOUR NAME";
   let size = 86;
-  g.font = `900 ${size}px ${font}`;
+  g.font = `700 ${size}px ${font}`;
   while (g.measureText(label).width > w - 90 && size > 30) {
     size -= 4;
-    g.font = `900 ${size}px ${font}`;
+    g.font = `700 ${size}px ${font}`;
   }
   g.fillStyle = lit ? "#15120a" : "#2d2c2a";
   g.textAlign = "center";
   g.textBaseline = "middle";
   g.fillText(label, w / 2, h / 2 + 4);
-}
-
-function drawJersey(canvas: HTMLCanvasElement, text: string, font: string) {
-  const g = canvas.getContext("2d")!;
-  const { width: w, height: h } = canvas;
-  g.clearRect(0, 0, w, h);
-  // hanger
-  g.strokeStyle = "#8d8a82";
-  g.lineWidth = 6;
-  g.beginPath();
-  g.moveTo(w / 2, 8);
-  g.lineTo(w / 2, 40);
-  g.stroke();
-  // jersey body
-  g.fillStyle = "#0d1a5c";
-  g.beginPath();
-  g.moveTo(w * 0.32, 44);
-  g.quadraticCurveTo(w / 2, 70, w * 0.68, 44);
-  g.lineTo(w * 0.96, 110);
-  g.lineTo(w * 0.86, 210);
-  g.lineTo(w * 0.78, 190);
-  g.lineTo(w * 0.8, h - 12);
-  g.lineTo(w * 0.2, h - 12);
-  g.lineTo(w * 0.22, 190);
-  g.lineTo(w * 0.14, 210);
-  g.lineTo(w * 0.04, 110);
-  g.closePath();
-  g.fill();
-  // stripes on sleeves
-  g.strokeStyle = "#ffc21a";
-  g.lineWidth = 8;
-  g.beginPath();
-  g.moveTo(w * 0.07, 150);
-  g.lineTo(w * 0.2, 172);
-  g.moveTo(w * 0.93, 150);
-  g.lineTo(w * 0.8, 172);
-  g.stroke();
-  const label = (text.trim().split(/\s+/).pop() || "YOU").toUpperCase();
-  let size = 54;
-  g.font = `900 ${size}px ${font}`;
-  while (g.measureText(label).width > w * 0.56 && size > 20) {
-    size -= 2;
-    g.font = `900 ${size}px ${font}`;
-  }
-  g.fillStyle = "#eeece6";
-  g.textAlign = "center";
-  g.textBaseline = "middle";
-  g.fillText(label, w / 2, 130);
-  g.font = `900 190px ${font}`;
-  g.fillStyle = "#ffc21a";
-  g.fillText("1", w / 2, 290);
 }
 
 export function LockerRoomScene({ name, progressRef, fontFamily }: Props) {
@@ -172,7 +122,7 @@ export function LockerRoomScene({ name, progressRef, fontFamily }: Props) {
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.05;
     renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.shadowMap.type = THREE.PCFShadowMap;
     renderer.domElement.className = styles.canvas;
     renderer.domElement.setAttribute("aria-hidden", "true");
     host.appendChild(renderer.domElement);
@@ -241,33 +191,26 @@ export function LockerRoomScene({ name, progressRef, fontFamily }: Props) {
         inner.receiveShadow = true;
         locker.add(inner);
 
-        // jersey hanging inside
-        const jerseyCanvas = document.createElement("canvas");
-        jerseyCanvas.width = 256;
-        jerseyCanvas.height = 400;
-        const jerseyTex = track(new THREE.CanvasTexture(jerseyCanvas));
-        jerseyTex.colorSpace = THREE.SRGBColorSpace;
-        const jersey = new THREE.Mesh(
-          track(new THREE.PlaneGeometry(0.72, 1.12)),
-          track(new THREE.MeshStandardMaterial({ map: jerseyTex, transparent: true, roughness: 0.9 })),
-        );
-        jersey.position.set(0, 0.4 + DOOR_H - 0.66, -0.12);
-        locker.add(jersey);
+        // hanging rod + realistic jersey, back facing out
+        const rod = new THREE.Mesh(track(new THREE.CylinderGeometry(0.012, 0.012, LOCKER_W - 0.1, 12)), handleMat);
+        rod.rotation.z = Math.PI / 2;
+        rod.position.set(0, 0.4 + DOOR_H - 0.165, -0.08); // sits inside the hanger hook
+        locker.add(rod);
+        const jersey = createJersey(font, nameRef.current);
+        disposables.push(jersey);
+        jersey.group.position.set(0, 0.4 + DOOR_H - 0.42, -0.08);
+        jersey.group.scale.setScalar(0.98);
+        locker.add(jersey.group);
 
-        const glow = new THREE.PointLight("#ffc21a", 0, 2.4, 1.6);
-        glow.position.set(0, 0.4 + DOOR_H - 0.12, 0.05);
+        const glow = new THREE.PointLight("#ffd27a", 0, 2.6, 1.4);
+        glow.position.set(0, 0.4 + DOOR_H - 0.05, 0.3);
         glow.name = "glow";
         locker.add(glow);
 
-        const drawJ = (n: string) => {
-          drawJersey(jerseyCanvas, n, font);
-          jerseyTex.needsUpdate = true;
-        };
-        drawJ(nameRef.current);
         const prev = redrawRef.current;
         redrawRef.current = (n) => {
           prev(n);
-          drawJ(n);
+          jersey.redraw(n);
         };
       } else {
         const body = new THREE.Mesh(bodyGeo, bodyMat);
@@ -409,11 +352,11 @@ export function LockerRoomScene({ name, progressRef, fontFamily }: Props) {
       pointer.y += (pointer.ty - pointer.y) * 0.05;
 
       const p = smoothed;
-      const push = ease(clamp01(p / 0.9));
-      const open = ease(clamp01((p - 0.28) / 0.55));
+      const push = ease(clamp01(p / 0.8));
+      const open = ease(clamp01((p - 0.22) / 0.45));
       const portrait = camera.aspect < 0.8;
       const startZ = portrait ? 9.4 : 7.4;
-      const endZ = portrait ? 3.4 : 2.7;
+      const endZ = portrait ? 3.9 : 3.25;
       // A slow intro dolly on load: the one orchestrated motion of the page.
       const intro = reduceMotion ? 1 : ease(clamp01(t / 2.4));
 
@@ -423,7 +366,7 @@ export function LockerRoomScene({ name, progressRef, fontFamily }: Props) {
         startZ + (1 - intro) * 2.2 - (startZ - endZ) * push,
       );
       // On tall screens aim lower so the nameplates sit above the headline.
-      lookAt.set(0, (portrait ? 0.55 + push * 0.75 : 1.3 + push * 0.12), 0);
+      lookAt.set(0, portrait ? 0.55 + push * 0.95 : 0.98 + push * 0.52, 0);
       camera.lookAt(lookAt);
 
       if (centerDoor) centerDoor.rotation.y = -1.9 * open;

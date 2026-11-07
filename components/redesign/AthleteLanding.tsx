@@ -8,6 +8,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { redesignPhotos, type RedesignPhotoKey } from "./assets";
 import { Faq, ROUTES, SiteFooter, SiteNav, useDisplayFontFamily } from "./SiteChrome";
 import { LockerJourney } from "./LockerJourney";
+import { CareerChapters, PhotoWall, PlayDiagram } from "./StoryMotion";
 import styles from "./redesign.module.css";
 
 const LockerRoomScene = dynamic(
@@ -115,7 +116,7 @@ function Hero() {
       const distance = Math.max(section.offsetHeight - window.innerHeight, 1);
       const p = Math.min(1, Math.max(0, -rect.top / distance));
       progressRef.current = p;
-      section.style.setProperty("--hero-copy", Math.max(0, 1 - p * 2.4).toFixed(3));
+      section.style.setProperty("--hero-copy", Math.max(0, 1 - p * 3.2).toFixed(3));
     };
     const request = () => {
       if (!frame) frame = requestAnimationFrame(update);
@@ -242,6 +243,7 @@ function Channels() {
           </div>
         ))}
       </div>
+      <PhotoWall />
     </section>
   );
 }
@@ -254,13 +256,15 @@ export function AthleteLanding() {
       <SiteNav audience="athletes" />
       <Hero />
       <LockerJourney />
+      <CareerChapters />
 
       <section className={styles.section} aria-labelledby="steps-title">
         <div className={styles.inner}>
           <div className={styles.sectionHead}>
             <h2 className={styles.h2} id="steps-title">Three steps to your locker.</h2>
           </div>
-          <ol className={styles.steps}>
+          <PlayDiagram />
+          <ol className={`${styles.steps} ${styles.stepsCentered}`}>
             {steps.map((s) => (
               <li key={s.title}>
                 <h3 className={styles.h3}>{s.title}</h3>
@@ -276,7 +280,7 @@ export function AthleteLanding() {
 
       <section className={styles.section} style={{ paddingTop: 0 }}>
         <div className={`${styles.inner} ${styles.band}`}>
-          <div style={{ display: "grid", gap: 16 }}>
+          <div style={{ display: "grid", gap: 16, justifyItems: "center" }}>
             <h2 className={styles.h3} style={{ fontSize: "clamp(34px, 4vw, 56px)" }}>Run a program or a collective?</h2>
             <p className={styles.lede}>Give every athlete on your roster a locker, with approvals and reporting for your staff.</p>
           </div>
