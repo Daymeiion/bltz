@@ -12,11 +12,11 @@ import styles from "./redesign.module.css";
 // stop halfway when the visitor stops scrolling. The phone holds a real Player
 // Locker that scrolls itself as the page scrolls.
 const icons = [
-  { type: "film", label: "Game film", Icon: Film, from: ["-75vw", "70vh", "-75vw", "60vh"], to: ["-40vw", "36vh", "-28vw", "4vh"], rot: -8 },
-  { type: "social", label: "Social", Icon: Share2, from: ["-70vw", "85vh", "-75vw", "80vh"], to: ["-24vw", "30vh", "12vw", "0vh"], rot: 6 },
-  { type: "stats", label: "Stats", Icon: ChartNoAxesColumnIncreasing, from: ["70vw", "85vh", "75vw", "70vh"], to: ["24vw", "31vh", "30vw", "18vh"], rot: -5 },
-  { type: "podcast", label: "Podcasts", Icon: Mic2, from: ["75vw", "70vh", "75vw", "85vh"], to: ["40vw", "37vh", "-18vw", "28vh"], rot: 7 },
-  { type: "articles", label: "Press", Icon: Newspaper, from: ["0vw", "110vh", "0vw", "110vh"], to: ["0vw", "38vh", "10vw", "38vh"], rot: -4 },
+  { type: "film", label: "Game film", Icon: Film, from: ["-75vw", "70vh", "-75vw", "60vh"], to: ["-40vw", "36vh", "-34vw", "-6vh"], rot: -8 },
+  { type: "social", label: "Social", Icon: Share2, from: ["-70vw", "85vh", "-75vw", "80vh"], to: ["-24vw", "30vh", "34vw", "-6vh"], rot: 6 },
+  { type: "stats", label: "Stats", Icon: ChartNoAxesColumnIncreasing, from: ["70vw", "85vh", "75vw", "70vh"], to: ["24vw", "31vh", "-33vw", "10vh"], rot: -5 },
+  { type: "podcast", label: "Podcasts", Icon: Mic2, from: ["75vw", "70vh", "75vw", "85vh"], to: ["40vw", "37vh", "33vw", "10vh"], rot: 7 },
+  { type: "articles", label: "Press", Icon: Newspaper, from: ["0vw", "110vh", "0vw", "110vh"], to: ["0vw", "38vh", "0vw", "39vh"], rot: -4 },
 ] as const;
 
 const stages = [

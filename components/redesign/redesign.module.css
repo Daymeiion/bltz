@@ -1317,21 +1317,37 @@
     backdrop-filter: blur(10px);
   }
 
+  /* Captions under the app demo: centered and larger on phones. */
+  .annotation {
+    justify-items: center;
+    text-align: center;
+  }
+
   .annotation .h3 {
-    font-size: 30px;
+    font-size: 36px;
   }
 
   .annotation .lede {
-    font-size: 17px;
+    font-size: 19px;
   }
 
   .progressRail {
     display: none;
   }
 
+  /* Phones: the title sits below the open locker's jersey, with the icons
+     beside the jersey and under the title. */
   .journeyIntro {
-    top: 14%;
-    transform: none;
+    top: 76%;
+    transform: translateY(-50%);
+  }
+
+  .journeyIntro .lede {
+    display: none;
+  }
+
+  .iconFlight {
+    width: min(84px, 10svh);
   }
 }
 
@@ -2090,4 +2106,20 @@
 /* The diagram already numbers the steps. */
 .stepsCentered li::before {
   display: none;
+}
+
+/* Short phones: a slightly smaller app demo so the bigger caption fits under it. */
+@media (max-width: 900px) and (max-height: 740px) {
+  .device {
+    top: 38%;
+    height: 58svh;
+  }
+
+  .annotation .h3 {
+    font-size: 30px;
+  }
+
+  .annotation .lede {
+    font-size: 17px;
+  }
 }
