@@ -1155,6 +1155,39 @@
 /* ---------- Responsive ---------- */
 
 @media (max-width: 900px) {
+  /* Phone hero: smaller headline, starting about halfway down the screen. */
+  .heroCopy {
+    top: 46svh;
+    bottom: auto;
+    gap: 12px;
+  }
+
+  .heroCopy .h1 {
+    font-size: clamp(38px, 11vw, 52px);
+  }
+
+  .heroCopy .lede {
+    font-size: 16px;
+  }
+
+  /* The journey overlaps the last screen of the hero. Until it pins, its
+     stage is held in place and see-through, so the icons float over the
+     open locker; it turns solid as the icons converge. */
+  .journey {
+    z-index: 2;
+    margin-top: -100svh;
+  }
+
+  .journeyIntro {
+    opacity: calc(var(--intro, 1) - var(--collect) * 3);
+    text-shadow: 0 2px 18px rgba(0, 0, 0, 0.85);
+  }
+
+  .journeyStage {
+    background: rgba(5, 6, 7, var(--cover, 1));
+    transform: translateY(calc(-1 * var(--pre-shift, 0px)));
+  }
+
   .navInner {
     grid-template-columns: auto 1fr;
   }

@@ -60,10 +60,20 @@ export function LockerJourney({ outro = false }: { outro?: boolean }) {
       const p = clamp01(-rect.top / distance);
 
       // Icons jump in as soon as the section arrives, right after the locker opens.
-      const enter = range(p, 0, 0.06);
-      const collect = range(p, 0.2, 0.33);
-      const deviceIn = range(p, 0.3, 0.36);
-      const scroll = range(p, 0.36, 0.88);
+      // Phones: this section overlaps the end of the hero (see CSS), so the
+      // icons float in over the open locker while the section rises into
+      // view, then converge into the phone on the next scroll.
+      const phone = window.matchMedia("(max-width: 900px)").matches;
+      const pre = clamp01(1 - rect.top / window.innerHeight);
+      // Hold the stage in place only once it starts entering the screen.
+      const shift = phone && rect.top < window.innerHeight ? Math.max(0, rect.top) : 0;
+      section.style.setProperty("--pre-shift", `${shift.toFixed(1)}px`);
+      section.style.setProperty("--intro", (phone ? range(pre, 0.35, 0.7) : 1).toFixed(4));
+      section.style.setProperty("--cover", (phone ? range(p, 0, 0.06) : 1).toFixed(4));
+      const enter = phone ? range(pre, 0.45, 0.85) : range(p, 0, 0.06);
+      const collect = phone ? range(p, 0.03, 0.14) : range(p, 0.2, 0.33);
+      const deviceIn = phone ? range(p, 0.12, 0.18) : range(p, 0.3, 0.36);
+      const scroll = phone ? range(p, 0.18, 0.88) : range(p, 0.36, 0.88);
       const exit = range(p, 0.9, 0.99);
       const outro = range(p, 0.93, 1);
 
