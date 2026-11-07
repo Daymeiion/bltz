@@ -29,9 +29,14 @@ const sectionSelectors = [".locker-hero-section", ".locker-film-section", ".lock
 const noopSubscribe = () => () => {};
 const clamp01 = (t: number) => Math.min(1, Math.max(0, t));
 const ease = (t: number) => t * t * (3 - 2 * t);
+// Overshoots and settles, so the icons jump into place.
+const jump = (t: number) => {
+  const c = 1.9;
+  return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2);
+};
 const range = (p: number, a: number, b: number) => clamp01((p - a) / (b - a));
 
-export function LockerJourney() {
+export function LockerJourney({ outro = false }: { outro?: boolean }) {
   const sectionRef = useRef<HTMLElement>(null);
   const screenRef = useRef<HTMLDivElement>(null);
   const [stage, setStage] = useState(0);
@@ -54,7 +59,8 @@ export function LockerJourney() {
       const distance = Math.max(section.offsetHeight - window.innerHeight, 1);
       const p = clamp01(-rect.top / distance);
 
-      const enter = range(p, 0, 0.13);
+      // Icons jump in as soon as the section arrives, right after the locker opens.
+      const enter = range(p, 0, 0.06);
       const collect = range(p, 0.2, 0.33);
       const deviceIn = range(p, 0.3, 0.36);
       const scroll = range(p, 0.36, 0.88);
@@ -63,7 +69,7 @@ export function LockerJourney() {
 
       const vars: Record<string, number> = {
         "--enter": enter,
-        "--enter-e": ease(enter),
+        "--enter-e": jump(enter),
         "--collect": collect,
         "--collect-e": ease(collect),
         "--device": deviceIn,
@@ -172,9 +178,11 @@ export function LockerJourney() {
           </div>
         </div>
 
-        <div className={styles.journeyOutro}>
-          <h2 className={styles.h2}>Everything you built, finally together.</h2>
-        </div>
+        {outro ? (
+          <div className={styles.journeyOutro}>
+            <h2 className={styles.h2}>Everything you built, finally together.</h2>
+          </div>
+        ) : null}
       </div>
     </section>
   );
