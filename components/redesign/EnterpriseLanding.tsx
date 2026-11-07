@@ -55,6 +55,19 @@ function Eyebrow({ children }: { children: ReactNode }) {
 
 /* 1. Hero ---------------------------------------------------------------- */
 
+const heroWords = ["Athlete", "Alumni", "Legend", "Walk-on", "Champion"];
+
+/** Same switcher as the rotating headline further down the full page. */
+function HeroWord() {
+  const [i, setI] = useState(0);
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const t = window.setInterval(() => setI((v) => (v + 1) % heroWords.length), 2200);
+    return () => window.clearInterval(t);
+  }, []);
+  return <span className={s.rotWord} key={heroWords[i]}>{heroWords[i]}</span>;
+}
+
 function Hero() {
   return (
     <section className={s.hero} aria-labelledby="e-hero-title">
@@ -62,8 +75,13 @@ function Hero() {
       <div className={s.heroShade} />
       <div className={s.heroGrid}>
         <div className={s.heroCopy}>
-          <Eyebrow>Alumni engagement, simplified</Eyebrow>
-          <h1 className={base.h1} id="e-hero-title">Every legend deserves an encore.</h1>
+          <Eyebrow>Player Media Simplified</Eyebrow>
+          <h1 className={`${base.h1} ${base.caps}`} id="e-hero-title">
+            <span className={base.visuallyHidden}>Every athlete deserves an encore.</span>
+            <span aria-hidden="true">
+              Every <HeroWord /> deserves an encore.
+            </span>
+          </h1>
           <p className={base.lede}>
             BLTZ builds a Player Locker for every former player in your program, flags the dates that matter and gives your staff a tracked link to share, so fans show up.
           </p>
@@ -103,45 +121,77 @@ function Hero() {
 
 /* 2. Product demo screen (the real CRM) ---------------------------------- */
 
-const demoViews: { view: CrmView; label: string }[] = [
-  { view: "overview", label: "Overview" },
-  { view: "intelligence", label: "Intelligence" },
-  { view: "launch", label: "Launch a Locker" },
+const demoViews: { view: CrmView; label: string; short: string }[] = [
+  { view: "overview", label: "Overview", short: "Overview" },
+  { view: "intelligence", label: "Intelligence", short: "Intelligence" },
+  { view: "launch", label: "Launch a Locker", short: "Launch" },
 ];
 
-function ProductDemo() {
-  const ref = useRef<HTMLDivElement>(null);
+type DemoState = { view: CrmView; setView: (v: CrmView) => void; docked: boolean; setDocked: (d: boolean) => void };
+
+/** Shared by the product demo and the nav, which takes over the tabs once the CRM fills the screen. */
+function useDemoState(): DemoState {
   const [view, setView] = useState<CrmView>("overview");
+  const [docked, setDocked] = useState(false);
+  return { view, setView, docked, setDocked };
+}
+
+function DemoTabs({ view, setView, inNav }: { view: CrmView; setView: (v: CrmView) => void; inNav?: boolean }) {
+  return (
+    <div className={`${s.demoTabs} ${inNav ? s.demoTabsNav : ""}`} role="tablist" aria-label="Workspace screens">
+      {demoViews.map((d) => (
+        <button key={d.view} type="button" role="tab" aria-selected={view === d.view} aria-label={inNav ? d.label : undefined} onClick={() => setView(d.view)}>
+          {inNav ? (
+            <>
+              <span className={s.tabFull}>{d.label}</span>
+              <span className={s.tabShort}>{d.short}</span>
+            </>
+          ) : (
+            d.label
+          )}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function ProductDemo({ view, setView, setDocked }: DemoState) {
+  const ref = useRef<HTMLDivElement>(null);
+  const tabsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const el = ref.current;
-    if (!el) return;
+    const tabs = tabsRef.current;
+    if (!el || !tabs) return;
     let frame = 0;
     const update = () => {
       frame = 0;
       const r = el.getBoundingClientRect();
       const p = Math.min(1, Math.max(0, (window.innerHeight - r.top) / (window.innerHeight * 0.85)));
       el.style.setProperty("--tilt", (1 - p).toFixed(3));
+      // Dock the tabs in the nav once they slide under it, while the CRM is still on screen.
+      const navBottom = document.querySelector("[data-site-nav]")?.getBoundingClientRect().bottom ?? 0;
+      const tabsHidden = tabs.getBoundingClientRect().bottom < navBottom + 4;
+      const crmOnScreen = r.bottom > navBottom + 60;
+      setDocked(tabsHidden && crmOnScreen);
     };
     const request = () => {
       if (!frame) frame = requestAnimationFrame(update);
     };
     update();
     window.addEventListener("scroll", request, { passive: true });
+    window.addEventListener("resize", request);
     return () => {
       cancelAnimationFrame(frame);
       window.removeEventListener("scroll", request);
+      window.removeEventListener("resize", request);
     };
-  }, []);
+  }, [setDocked]);
 
   return (
     <section className={s.demoScreen} id="product" aria-label="The BLTZ organization workspace">
-      <div className={s.demoTabs} role="tablist" aria-label="Workspace screens">
-        {demoViews.map((d) => (
-          <button key={d.view} type="button" role="tab" aria-selected={view === d.view} onClick={() => setView(d.view)}>
-            {d.label}
-          </button>
-        ))}
+      <div ref={tabsRef}>
+        <DemoTabs view={view} setView={setView} />
       </div>
       <div className={s.demoTilt} ref={ref}>
         <CrmScreen key={view} view={view} label={`BLTZ workspace: ${demoViews.find((d) => d.view === view)?.label}`} />
@@ -680,10 +730,11 @@ function DemoForm() {
 
 /* Page ------------------------------------------------------------------- */
 
-function EnterpriseNav() {
+function EnterpriseNav({ demo }: { demo: DemoState }) {
   return (
     <SiteNav
       audience="enterprise"
+      swap={{ active: demo.docked, content: <DemoTabs view={demo.view} setView={demo.setView} inNav /> }}
       announcement={
         <>
           <span>Pilot programs are open for athletic departments and NIL collectives.</span>
@@ -704,27 +755,30 @@ function AthleteLink() {
   );
 }
 
-/** Live enterprise page: hero, the product demo screen, a demo request form and the legal bar. The rest is still in design at /redesign/enterprise. */
+/** Live enterprise page: hero, the product demo screen, a demo request form, the sports band and the legal bar. The rest is still in design at /redesign/enterprise. */
 export function EnterpriseHeroPage() {
+  const demo = useDemoState();
   return (
     <main className={`${base.page} ${s.page}`} data-audience="enterprise">
       <a className={base.skip} href="#demo">Skip to book a demo</a>
-      <EnterpriseNav />
+      <EnterpriseNav demo={demo} />
       <Hero />
-      <ProductDemo />
+      <ProductDemo {...demo} />
       <DemoForm />
+      <TrustBand />
       <LegalBar />
     </main>
   );
 }
 
 export function EnterpriseLanding() {
+  const demo = useDemoState();
   return (
     <main className={`${base.page} ${s.page}`} data-audience="enterprise">
       <a className={base.skip} href="#demo">Skip to book a demo</a>
-      <EnterpriseNav />
+      <EnterpriseNav demo={demo} />
       <Hero />
-      <ProductDemo />
+      <ProductDemo {...demo} />
       <TrustBand />
       <Problem />
       <WhatWeDo />

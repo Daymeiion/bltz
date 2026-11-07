@@ -8,7 +8,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { redesignPhotos, type RedesignPhotoKey } from "./assets";
 import { Faq, SiteFooter, SiteNav, useDisplayFontFamily, useRoutes } from "./SiteChrome";
 import { LockerJourney } from "./LockerJourney";
-import { CareerChapters, PhotoWall, PlayDiagram } from "./StoryMotion";
+import { PhotoWall, PlayDiagram } from "./StoryMotion";
 import styles from "./redesign.module.css";
 
 const LockerRoomScene = dynamic(
@@ -135,11 +135,15 @@ function Hero() {
         {fontFamily ? <LockerRoomScene name={name} progressRef={progressRef} fontFamily={fontFamily} /> : <div className={styles.canvasFallback} />}
         <div className={styles.heroShade} />
         <div className={styles.heroCopy}>
-          <h1 className={styles.h1} id="hero-title">Put your name on it.</h1>
+          <h1 className={`${styles.h1} ${styles.caps}`} id="hero-title">Build your legacy today</h1>
           <p className={styles.lede}>
             BLTZ gives you a Player Locker: one page for your film, stats, photos, interviews and press, with your name on the door.
           </p>
           <ClaimForm id="hero-claim" name={name} onNameChange={setName} />
+          <a className={styles.scrollCue} href="#locker" aria-label="Scroll to see your locker">
+            <i aria-hidden="true" />
+            <span aria-hidden="true">Scroll</span>
+          </a>
         </div>
       </div>
     </section>
@@ -248,6 +252,27 @@ function Channels() {
   );
 }
 
+function ThreeStepDrop() {
+  return (
+    <section className={styles.section} aria-labelledby="steps-title">
+      <div className={styles.inner}>
+        <div className={styles.sectionHead}>
+          <h2 className={styles.h2} id="steps-title">Three Step drop</h2>
+        </div>
+        <PlayDiagram />
+        <ol className={`${styles.steps} ${styles.stepsCentered}`}>
+          {steps.map((st) => (
+            <li key={st.title}>
+              <h3 className={styles.h3}>{st.title}</h3>
+              <p>{st.body}</p>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </section>
+  );
+}
+
 function FinalClaim() {
   const [name, setName] = useState("");
   return (
@@ -277,15 +302,16 @@ function ProgramsBand() {
   );
 }
 
-/** Live homepage: the hero, then a short path to programs. The rest is still in design at /redesign. */
+/** Live homepage: hero, the locker journey, the three steps, a claim form and the footer. */
 export function AthleteHeroPage() {
   return (
     <main className={styles.page} data-audience="athletes">
       <a className={styles.skip} href="#claim">Skip to claim your locker</a>
       <SiteNav audience="athletes" />
       <Hero />
+      <LockerJourney />
+      <ThreeStepDrop />
       <FinalClaim />
-      <ProgramsBand />
       <SiteFooter />
     </main>
   );
@@ -298,24 +324,8 @@ export function AthleteLanding() {
       <SiteNav audience="athletes" />
       <Hero />
       <LockerJourney />
-      <CareerChapters />
 
-      <section className={styles.section} aria-labelledby="steps-title">
-        <div className={styles.inner}>
-          <div className={styles.sectionHead}>
-            <h2 className={styles.h2} id="steps-title">Three steps to your locker.</h2>
-          </div>
-          <PlayDiagram />
-          <ol className={`${styles.steps} ${styles.stepsCentered}`}>
-            {steps.map((s) => (
-              <li key={s.title}>
-                <h3 className={styles.h3}>{s.title}</h3>
-                <p>{s.body}</p>
-              </li>
-            ))}
-          </ol>
-        </div>
-      </section>
+      <ThreeStepDrop />
 
       <Audiences />
       <Channels />

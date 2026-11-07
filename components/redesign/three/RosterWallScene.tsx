@@ -37,7 +37,7 @@ export function RosterWallScene() {
 
     const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 80);
 
-    const COLS = 26;
+    const COLS = 25; // odd, so one locker sits dead center
     const ROWS = 2;
     const W = 0.62;
     const H = 1.7;
@@ -116,8 +116,8 @@ export function RosterWallScene() {
     warm.position.set(-3.2, 2.6, 1.5);
     scene.add(warm);
 
-    // Wave order: by column, with a little per-locker jitter so it feels human.
-    const delays = placements.map((p) => p.col * 0.07 + p.row * 0.12 + Math.random() * 0.18);
+    // Wave order: outward from the center column, with a little per-locker jitter so it feels human.
+    const delays = placements.map((p) => Math.abs(p.col - (COLS - 1) / 2) * 0.1 + p.row * 0.12 + Math.random() * 0.18);
 
     const pointer = { x: 0, y: 0, tx: 0, ty: 0 };
     const onPointer = (e: PointerEvent) => {
@@ -162,8 +162,9 @@ export function RosterWallScene() {
       }
       if (plates.instanceColor) plates.instanceColor.needsUpdate = true;
 
-      camera.position.set(0.9 + pointer.x * 0.6, 1.6 - pointer.y * 0.15, 6.2);
-      camera.lookAt(-0.6 + pointer.x * 0.3, 1.45, -3);
+      // Centered on the middle locker; the pointer only nudges it.
+      camera.position.set(pointer.x * 0.6, 1.6 - pointer.y * 0.15, 6.2);
+      camera.lookAt(pointer.x * 0.3, 1.45, -3);
       renderer.render(scene, camera);
     };
     tick();
