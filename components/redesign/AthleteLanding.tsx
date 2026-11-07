@@ -135,7 +135,7 @@ function Hero() {
         {fontFamily ? <LockerRoomScene name={name} progressRef={progressRef} fontFamily={fontFamily} /> : <div className={styles.canvasFallback} />}
         <div className={styles.heroShade} />
         <div className={styles.heroCopy}>
-          <h1 className={styles.h1} id="hero-title">Put your name on it.</h1>
+          <h1 className={`${styles.h1} ${styles.caps}`} id="hero-title">Build your legacy today</h1>
           <p className={styles.lede}>
             BLTZ gives you a Player Locker: one page for your film, stats, photos, interviews and press, with your name on the door.
           </p>

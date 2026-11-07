@@ -311,7 +311,7 @@
 .heroCopy {
   position: absolute;
   z-index: 2;
-  bottom: clamp(28px, 6vh, 64px);
+  bottom: calc(clamp(28px, 6vh, 64px) + 50px);
   left: 50%;
   width: min(820px, calc(100% - 2 * var(--gutter)));
   display: grid;
@@ -1866,4 +1866,8 @@
   color: var(--chalk);
   text-decoration: underline;
   text-underline-offset: 3px;
+}
+
+.caps {
+  text-transform: uppercase;
 }

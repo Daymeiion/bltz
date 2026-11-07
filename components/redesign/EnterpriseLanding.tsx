@@ -55,6 +55,19 @@ function Eyebrow({ children }: { children: ReactNode }) {
 
 /* 1. Hero ---------------------------------------------------------------- */
 
+const heroWords = ["Athlete", "Alumni", "Legend", "Walk-on", "Champion"];
+
+/** Same switcher as the rotating headline further down the full page. */
+function HeroWord() {
+  const [i, setI] = useState(0);
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const t = window.setInterval(() => setI((v) => (v + 1) % heroWords.length), 2200);
+    return () => window.clearInterval(t);
+  }, []);
+  return <span className={s.rotWord} key={heroWords[i]}>{heroWords[i]}</span>;
+}
+
 function Hero() {
   return (
     <section className={s.hero} aria-labelledby="e-hero-title">
@@ -62,8 +75,13 @@ function Hero() {
       <div className={s.heroShade} />
       <div className={s.heroGrid}>
         <div className={s.heroCopy}>
-          <Eyebrow>Alumni engagement, simplified</Eyebrow>
-          <h1 className={base.h1} id="e-hero-title">Every legend deserves an encore.</h1>
+          <Eyebrow>Player Media Simplified</Eyebrow>
+          <h1 className={`${base.h1} ${base.caps}`} id="e-hero-title">
+            <span className={base.visuallyHidden}>Every athlete deserves an encore.</span>
+            <span aria-hidden="true">
+              Every <HeroWord /> deserves an encore.
+            </span>
+          </h1>
           <p className={base.lede}>
             BLTZ builds a Player Locker for every former player in your program, flags the dates that matter and gives your staff a tracked link to share, so fans show up.
           </p>
@@ -704,7 +722,7 @@ function AthleteLink() {
   );
 }
 
-/** Live enterprise page: hero, the product demo screen, a demo request form and the legal bar. The rest is still in design at /redesign/enterprise. */
+/** Live enterprise page: hero, the product demo screen, a demo request form, the sports band and the legal bar. The rest is still in design at /redesign/enterprise. */
 export function EnterpriseHeroPage() {
   return (
     <main className={`${base.page} ${s.page}`} data-audience="enterprise">
@@ -713,6 +731,7 @@ export function EnterpriseHeroPage() {
       <Hero />
       <ProductDemo />
       <DemoForm />
+      <TrustBand />
       <LegalBar />
     </main>
   );
