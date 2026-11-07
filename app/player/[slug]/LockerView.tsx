@@ -2067,11 +2067,11 @@ const styleSheet = `
 .locker-photo-tile:hover > img{transform:scale(1.025)}
 .locker-photo-empty{position:relative;min-height:228px;grid-column:1/-1;overflow:hidden;border:1px solid #1E2640;border-radius:14px}
 .locker-hero-stroke{border-radius:24px}
-.locker-hero-portrait-stage{display:none}
+.locker-hero-card--preview>.locker-hero-headshot{display:none}
+.locker-hero-portrait-stage{position:absolute;bottom:100%;left:0;width:100%;height:268px;pointer-events:none}
+.locker-hero-portrait-stage img{display:block;width:100%;height:100%;object-fit:contain;object-position:center bottom}
 @media (min-width:641px){
-  .locker-hero-card--preview>.locker-hero-headshot{display:none}
-  .locker-hero-portrait-stage{display:block;position:absolute;bottom:100%;left:0;width:100%;height:282px;pointer-events:none}
-  .locker-hero-portrait-stage img{display:block;width:100%;height:100%;object-fit:contain;object-position:center bottom}
+  .locker-hero-portrait-stage{height:282px}
 }
 .bio-overview-grid{display:grid;grid-template-columns:minmax(0,42fr) minmax(0,58fr);gap:8px;align-items:start;padding:14px 18px 10px}
 .bio-headshot-card{min-width:0;overflow:hidden;border:1px solid #1E2640;border-radius:14px;background:#131829;display:flex;flex-direction:column}
