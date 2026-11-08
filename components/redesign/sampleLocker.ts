@@ -46,7 +46,7 @@ export const sampleLocker: LockerData = {
     { id: "rd-photo-1", url: "/images/redesign/locker/night-catch.jpg", title: "Under the Lights", credits: "Team Archive", sourceUrl: null, provenance: "cal_archive", licenseLabel: "TEAM ARCHIVE" },
     { id: "rd-photo-2", url: "/images/redesign/locker/sideline-portrait.jpg", title: "Game Day", credits: "BLTZ Archive", sourceUrl: null, provenance: "founder_archive", licenseLabel: "BLTZ CLEARED" },
     { id: "rd-photo-3", url: "/images/redesign/locker/breakaway.jpg", title: "Breakaway", credits: "Athlete Upload", sourceUrl: null, provenance: "athlete_uploaded", licenseLabel: "ATHLETE UPLOAD" },
-    { id: "rd-photo-4", url: "/images/redesign/locker/warmups-portrait.jpg", title: "Pregame", credits: "Team Archive", sourceUrl: null, provenance: "cal_archive", licenseLabel: "TEAM ARCHIVE" },
+    { id: "rd-photo-4", url: "/images/redesign/locker/warmups.jpg", title: "Pregame", credits: "Team Archive", sourceUrl: null, provenance: "cal_archive", licenseLabel: "TEAM ARCHIVE" },
     { id: "rd-photo-5", url: "/images/redesign/locker/tackle.jpg", title: "Built for the Moment", credits: "BLTZ Archive", sourceUrl: null, provenance: "founder_archive", licenseLabel: "BLTZ CLEARED" },
   ],
 };
