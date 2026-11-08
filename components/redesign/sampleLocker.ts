@@ -1,8 +1,8 @@
 import type { LockerData } from "@/app/player/[slug]/LockerView";
 
 // A fictional athlete for the scroll-through demo. School and team names are
-// invented so the mockup doesn't lean on real marks. The headshot and video are
-// placeholders until the AI-generated images are ready.
+// invented so the mockup doesn't lean on real marks. The photos are AI-generated;
+// the hero video is still a placeholder.
 export const sampleLocker: LockerData = {
   athleteId: null,
   slug: "redesign-sample",
@@ -12,7 +12,6 @@ export const sampleLocker: LockerData = {
   jersey: "#1",
   levelLabel: "College",
   headshotUrl: "/images/redesign/locker-headshot.png",
-  // Placeholders until the AI-generated photos are ready (see docs/redesign/ai-photo-prompts.md).
   heroVideoUrl: null,
   logoSrc: "/bltz-white-logo.svg",
   bio: "Jordan Carter built a career around preparation, leadership, and making the biggest plays when the moment demanded it.",
@@ -39,13 +38,15 @@ export const sampleLocker: LockerData = {
     { year: "2024", label: "Team Defensive MVP" },
   ],
   videos: [
-    { id: "rd-film-1", title: "Season Highlights", thumb: "/images/redesign/placeholders/photo-01.jpg" },
-    { id: "rd-film-2", title: "Game Day Cut", thumb: "/images/redesign/placeholders/photo-02.jpg" },
-    { id: "rd-film-3", title: "Top Plays", thumb: "/images/redesign/placeholders/photo-03.jpg" },
+    { id: "rd-film-1", title: "Season Highlights", thumb: "/images/redesign/locker/breakaway.jpg" },
+    { id: "rd-film-2", title: "Under the Lights", thumb: "/images/redesign/locker/night-catch.jpg" },
+    { id: "rd-film-3", title: "Top Plays", thumb: "/images/redesign/locker/tackle.jpg" },
   ],
   photos: [
-    { id: "rd-photo-1", url: "/images/redesign/placeholders/photo-01.jpg", title: "Game Day", credits: "BLTZ Archive", sourceUrl: null, provenance: "founder_archive", licenseLabel: "BLTZ CLEARED" },
-    { id: "rd-photo-2", url: "/images/redesign/placeholders/photo-02.jpg", title: "Under the Lights", credits: "Team Archive", sourceUrl: null, provenance: "cal_archive", licenseLabel: "TEAM ARCHIVE" },
-    { id: "rd-photo-3", url: "/images/redesign/placeholders/photo-03.jpg", title: "Built for the Moment", credits: "Athlete Upload", sourceUrl: null, provenance: "athlete_uploaded", licenseLabel: "ATHLETE UPLOAD" },
+    { id: "rd-photo-1", url: "/images/redesign/locker/night-catch.jpg", title: "Under the Lights", credits: "Team Archive", sourceUrl: null, provenance: "cal_archive", licenseLabel: "TEAM ARCHIVE" },
+    { id: "rd-photo-2", url: "/images/redesign/locker/sideline-portrait.jpg", title: "Game Day", credits: "BLTZ Archive", sourceUrl: null, provenance: "founder_archive", licenseLabel: "BLTZ CLEARED" },
+    { id: "rd-photo-3", url: "/images/redesign/locker/breakaway.jpg", title: "Breakaway", credits: "Athlete Upload", sourceUrl: null, provenance: "athlete_uploaded", licenseLabel: "ATHLETE UPLOAD" },
+    { id: "rd-photo-4", url: "/images/redesign/locker/warmups.jpg", title: "Pregame", credits: "Team Archive", sourceUrl: null, provenance: "cal_archive", licenseLabel: "TEAM ARCHIVE" },
+    { id: "rd-photo-5", url: "/images/redesign/locker/tackle.jpg", title: "Built for the Moment", credits: "BLTZ Archive", sourceUrl: null, provenance: "founder_archive", licenseLabel: "BLTZ CLEARED" },
   ],
 };
