@@ -372,16 +372,18 @@ export function createJersey(font: string, initialName: string, number = "1") {
   torso.receiveShadow = true;
 
   // Sleeves hang down and out from the shoulders.
-  const sleeveGeo = new THREE.CylinderGeometry(0.1, 0.076, 0.28, 40, 6, true);
+  // The top rim is tucked below the shoulder slope (inside the torso) so no
+  // edge pokes up past the shoulder seam.
+  const SLEEVE_LEN = 0.3;
+  const sleeveGeo = new THREE.CylinderGeometry(0.082, 0.074, SLEEVE_LEN, 40, 6, true);
   const sleeves = [-1, 1].map((side) => {
     const m = new THREE.Mesh(sleeveGeo, sleeveMat);
-    const angle = 0.86;
+    const angle = 0.95;
     const dir = new THREE.Vector3(side * Math.sin(angle), -Math.cos(angle), 0);
     // cylinder +y (radiusTop) points back toward the shoulder
     m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().negate());
-    // Start the sleeve inside the torso so the shoulder seam reads as one piece.
-    const shoulder = new THREE.Vector3(side * 0.165, TOP - 0.085, 0);
-    m.position.copy(shoulder).addScaledVector(dir, 0.14);
+    const shoulder = new THREE.Vector3(side * 0.142, TOP - 0.128, 0);
+    m.position.copy(shoulder).addScaledVector(dir, SLEEVE_LEN / 2);
     m.scale.set(1, 1, 0.78);
     m.castShadow = true;
     m.receiveShadow = true;
