@@ -431,7 +431,8 @@ function paint(g: CanvasRenderingContext2D, name: string, number: string, font: 
   g.beginPath();
   for (let x = -0.084; x <= 0.0841; x += 0.006) {
     const y = 0.088 + 0.024 * (x / 0.086) ** 2 - 0.016;
-    x === -0.084 ? g.moveTo(px(x), py(y)) : g.lineTo(px(x), py(y));
+    if (x === -0.084) g.moveTo(px(x), py(y));
+    else g.lineTo(px(x), py(y));
   }
   g.stroke();
   g.fillStyle = v("rgba(241,239,232,0.85)", 170, 150);
@@ -445,7 +446,8 @@ function paint(g: CanvasRenderingContext2D, name: string, number: string, font: 
     g.beginPath();
     for (let x = -0.24; x <= 0.2401; x += 0.01) {
       const y = -0.818 + 0.012 * (x / 0.234) ** 2 + off;
-      x === -0.24 ? g.moveTo(px(x), py(y)) : g.lineTo(px(x), py(y));
+      if (x === -0.24) g.moveTo(px(x), py(y));
+      else g.lineTo(px(x), py(y));
     }
     g.stroke();
   }
