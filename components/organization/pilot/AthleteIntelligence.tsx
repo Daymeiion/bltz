@@ -41,6 +41,8 @@ import { CopyLockerLink } from "./CopyLockerLink";
 import { AthleteAvatars } from "./AthleteAvatars";
 import { MediaAttach, MediaThumb, mediaPayload, type PendingMedia } from "./MediaAttach";
 import { PlayerColumn } from "./PlayerColumn";
+import { SignalSuggestions } from "./SignalSuggestions";
+import { reachHistory, type ReachHistory } from "@/lib/enterprise-crm/pilot/suggestions";
 import { AnimatePresence, HeroTitle, MotionItem } from "./PilotMotion";
 
 const KIND_LABEL: Record<ActivationKind, string> = { post: "Social post", video: "Video", article: "Article", campaign: "Campaign", event: "Event" };
@@ -74,7 +76,7 @@ async function send<T>(url: string, method: "POST" | "PATCH", body: unknown): Pr
  * The school's Intelligence workspace: players on the left, the selected
  * player's file in the center, and signals, activations and reach on the right.
  */
-export function AthleteIntelligence({ organizationId, schoolName, file, roster = [], contactEmail = null, initialActivations, initialReach, initialMedia = [], canManage, profileBaseHref, preview = false }: {
+export function AthleteIntelligence({ organizationId, schoolName, file, roster = [], contactEmail = null, initialActivations, initialReach, initialMedia = [], schoolHistory, canManage, profileBaseHref, preview = false }: {
   organizationId: string;
   schoolName: string;
   file: AthleteFile;
@@ -83,6 +85,8 @@ export function AthleteIntelligence({ organizationId, schoolName, file, roster =
   initialActivations: PilotActivation[];
   initialReach: PilotSocialReach[];
   initialMedia?: PilotAthleteMedia[];
+  /** Reach of every posted activation at the school, by kind; falls back to this athlete's own. */
+  schoolHistory?: ReachHistory;
   canManage: boolean;
   profileBaseHref: string;
   preview?: boolean;
@@ -103,6 +107,7 @@ export function AthleteIntelligence({ organizationId, schoolName, file, roster =
   const { player } = file;
   const totals = summarizeReach(activations);
   const followers = reach.reduce((sum, row) => sum + row.followers, 0);
+  const history = schoolHistory ?? reachHistory(activations);
 
   function upsert(next: PilotActivation) {
     setActivations((current) => {
@@ -269,6 +274,8 @@ export function AthleteIntelligence({ organizationId, schoolName, file, roster =
                                 <span><i style={{ "--pilot-meter": `${Math.round(signal.confidence * 100)}%` } as CSSProperties} />Confidence {Math.round(signal.confidence * 100)}%</span>
                                 <span>{signal.sources} source{signal.sources === 1 ? "" : "s"}</span>
                               </div>
+                              <SignalSuggestions signal={signal} playerName={player.name} momentTitle={file.moments.find((moment) => moment.id === signal.momentId)?.title ?? null} media={media} hasContact={Boolean(contactEmail)} followers={followers} history={history} canManage={canManage && !planned}
+                                onPlan={(idea) => setDraft({ kind: idea.kind, title: idea.title, brief: idea.brief, dueOn: signal.targetDate, signalKey: signal.key, momentId: signal.momentId })} />
                               {canManage ? (
                                 planned ? <span className="pilot-planned"><IconCheck stroke={1.5} aria-hidden />Activation planned</span>
                                   : <button type="button" className="pilot-pill pilot-pill--ghost" onClick={() => setDraft({ kind: "post", title: signal.headline, brief: "", dueOn: signal.targetDate, signalKey: signal.key, momentId: signal.momentId })}><span>Plan activation</span><span className="pilot-pill__icon" aria-hidden><IconPlus stroke={1.5} /></span></button>

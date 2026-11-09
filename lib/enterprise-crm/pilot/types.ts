@@ -85,6 +85,8 @@ export function summarizeReach(activations: readonly PilotActivation[]): PilotRe
   }), { posted: 0, planned: 0, impressions: 0, engagements: 0, visits: 0 });
 }
 
+export type SignalSubject = "birthday" | "anniversary" | "milestone" | "business" | "school_media";
+
 /** The serializable slice of the Intelligence engine a school sees for one athlete. */
 export interface AthleteFile {
   player: PilotPlayer;
@@ -101,6 +103,10 @@ export interface AthleteFile {
     priority: number;
     confidence: number;
     sources: number;
+    /** What the date is about, so suggestions can fit it. Absent on older payloads. */
+    type?: SignalSubject;
+    /** Age for a birthday, years since for an anniversary. */
+    years?: number | null;
   }>;
   opportunities: Array<{ key: string; label: string; explanation: string; strength: number; signalKeys: string[] }>;
   moments: Array<{ id: string; title: string; date: string | null; status: string; sources: number }>;
@@ -182,6 +188,7 @@ export function mediaSignals(media: readonly PilotAthleteMedia[], today = new Da
         : `Your staff connected this ${item.kind}. Re-share it with the player's Locker link on the day.`,
       targetDate: next.targetDate, daysUntil: next.daysUntil, verdict: signalVerdict(next.daysUntil),
       priority: item.kind === "business" ? 70 : 60, confidence: 1, sources: 1,
+      type: item.kind === "business" ? "business" as const : "school_media" as const, years: next.years,
     }];
   });
 }

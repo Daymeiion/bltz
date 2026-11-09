@@ -66,6 +66,10 @@ function seasonLine(stats: Record<string, unknown>): string {
 }
 
 /** Projects the Lab read into what the school workspace renders; no raw evidence or provider data. */
+function numberOrNull(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
 export function toAthleteFile(athlete: SchoolAthlete): AthleteFile {
   const lab = athlete.lab;
   const ready = lab?.intelligenceState === "ready";
@@ -77,6 +81,8 @@ export function toAthleteFile(athlete: SchoolAthlete): AthleteFile {
       key: signal.key, momentId: signal.momentId, headline: signalHeadline(signal), explanation: signal.explanation,
       targetDate: signal.targetDate, daysUntil: signal.daysUntil, verdict: signal.verdict, priority: signal.score,
       confidence: signal.confidence, sources: signal.evidence.length,
+      type: signal.type === "birthday" ? "birthday" as const : signal.type === "career_milestone" ? "milestone" as const : "anniversary" as const,
+      years: signal.type === "birthday" ? numberOrNull(signal.data.age) : numberOrNull(signal.data.anniversaryYears),
     })) : [],
     opportunities: ready ? lab!.intelligence.opportunities
       .filter((opportunity) => lab!.intelligence.signals.find((signal) => opportunity.signalKeys.includes(signal.key))?.verdict !== "upcoming")

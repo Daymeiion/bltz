@@ -1285,6 +1285,27 @@
 .pilot-signal__meta i { position: relative; width: 40px; height: 4px; overflow: hidden; border-radius: 999px; background: rgba(18, 19, 22, 0.08); }
 .pilot-signal__meta i::after { position: absolute; inset: 0 auto 0 0; width: var(--pilot-meter); border-radius: inherit; background: var(--pilot-accent); content: ""; }
 .pilot-signal .pilot-pill--ghost { background: var(--pilot-core); }
+/* Suggested activations: the decision, the reasons, and ready-made ideas with expected reach. */
+.pilot-signal__do { margin: 0; color: var(--pilot-ink); font-size: 14px; line-height: 1.5; }
+.pilot-why h4 { margin: 4px 0 6px; color: var(--pilot-ink); font-size: 13px; font-weight: 600; }
+.pilot-why ul { display: grid; gap: 4px; margin: 0; padding-left: 18px; color: var(--pilot-muted); font-size: 13px; line-height: 1.5; }
+.pilot-ideas > summary { display: inline-flex; align-items: center; gap: 6px; padding: 4px 0; color: var(--pilot-accent); font-size: 13px; font-weight: 600; cursor: pointer; list-style: none; }
+.pilot-ideas > summary::-webkit-details-marker { display: none; }
+.pilot-ideas > summary::after { width: 7px; height: 7px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: translateY(-2px) rotate(45deg); transition: transform 300ms var(--pilot-ease); content: ""; }
+.pilot-ideas[open] > summary::after { transform: translateY(1px) rotate(225deg); }
+.pilot-ideas > ul { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px; margin: 8px 0 0; padding: 0; list-style: none; }
+.pilot-idea { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; padding: 14px; border-radius: 16px; background: var(--pilot-core); box-shadow: 0 0 0 1px var(--pilot-hairline); }
+.pilot-idea__icon { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 10px; background: color-mix(in srgb, var(--pilot-accent) 9%, white); color: var(--pilot-accent); }
+.pilot-idea__icon svg { width: 18px; height: 18px; }
+.pilot-idea__body { display: grid; gap: 4px; min-width: 0; }
+.pilot-idea__body > strong { font-size: 14px; font-weight: 600; }
+.pilot-idea__body > p { margin: 0; color: var(--pilot-muted); font-size: 12.5px; line-height: 1.45; }
+.pilot-idea__reach { display: flex; gap: 6px; padding: 6px 8px; border-radius: 10px; background: #f3f4f6; color: var(--pilot-ink) !important; }
+.pilot-idea__reach svg { flex: none; width: 15px; height: 15px; margin-top: 1px; color: var(--pilot-accent); }
+.pilot-idea__foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-top: 4px; }
+.pilot-idea__status { color: var(--pilot-muted); font-size: 11.5px; font-weight: 600; }
+.pilot-idea__status--ready { color: #1f7a4d; }
+.pilot-idea .pilot-pill--ghost { padding-block: 4px; font-size: 12.5px; box-shadow: inset 0 0 0 1px var(--pilot-hairline); }
 .pilot-planned { display: inline-flex; align-items: center; gap: 6px; color: var(--pilot-accent); font-size: 13px; font-weight: 600; }
 .pilot-planned svg { width: 16px; height: 16px; }
 .pilot-opps { margin-top: 20px; }

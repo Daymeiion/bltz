@@ -71,19 +71,30 @@ export const previewReach: Record<string, PilotSocialReach[]> = {
   ],
 };
 
+/** Sample signals carry what they are about, read from the sample headline. */
+function subjectOf(headline: string): { type: NonNullable<AthleteFile["signals"][number]["type"]>; years: number | null } {
+  const birthday = /^Turns (\d+)/.exec(headline);
+  if (birthday) return { type: "birthday", years: Number(birthday[1]) };
+  const years = /^(\d+)[ -]year/.exec(headline);
+  return { type: "anniversary", years: years ? Number(years[1]) : null };
+}
+
 export function previewAthleteFile(playerId: string): AthleteFile | null {
   const player = previewRoster.players.find((row) => row.id === playerId);
   if (!player) return null;
   const signal = player.next ? [{
-    key: `${player.id}-s1`, momentId: `${player.id}-m1`, headline: player.next.headline,
+    key: `${player.id}-s1`,
+    // Dante's sample signal is a season milestone, not one of the generic sample games.
+    momentId: player.id === "p5" ? null : `${player.id}-m1`, headline: player.next.headline,
     explanation: `${player.name}'s recorded game on this date is a natural throwback moment for fans and letterwinners.`,
     targetDate: player.next.targetDate, daysUntil: player.next.daysUntil, verdict: player.next.verdict, priority: 82, confidence: 0.92, sources: 2,
+    ...subjectOf(player.next.headline),
   }] : [];
   return {
     player,
     state: "ready",
     evaluatedAt: "2026-11-02T15:00:00.000Z",
-    signals: [...signal, { key: `${player.id}-s2`, momentId: null, headline: "Turns 33", explanation: "A reviewed birthday on the player's Locker record.", targetDate: "2027-02-14", daysUntil: 104, verdict: "upcoming", priority: 40, confidence: 1, sources: 1 }],
+    signals: [...signal, { key: `${player.id}-s2`, momentId: null, headline: "Turns 33", explanation: "A reviewed birthday on the player's Locker record.", targetDate: "2027-02-14", daysUntil: 104, verdict: "upcoming", priority: 40, confidence: 1, sources: 1, type: "birthday", years: 33 }],
     opportunities: signal.length ? [{ key: `${player.id}-o1`, label: "Anniversary retrospective", explanation: "Pair the throwback with archive photos and the player's Locker link.", strength: 78, signalKeys: [signal[0].key] }] : [],
     moments: [
       { id: `${player.id}-m1`, title: "First career touchdown vs. Ridgeview", date: "2016-11-04", status: "verified", sources: 2 },
