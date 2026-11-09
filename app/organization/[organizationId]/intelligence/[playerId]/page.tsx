@@ -8,6 +8,8 @@ import { listAthleteMedia, listLaunches, mergeMediaSignals } from "@/lib/enterpr
 import { reachHistory } from "@/lib/enterprise-crm/pilot/suggestions";
 import { listIntegrations } from "@/lib/enterprise-crm/pilot/integrations";
 import { listSchoolSignals, mergeSchoolSignals } from "@/lib/enterprise-crm/pilot/school-signals";
+import { listDismissals } from "@/lib/enterprise-crm/pilot/dismissals";
+import { listBriefs } from "@/lib/enterprise-crm/pilot/briefs";
 import { resolveWorkspaceAccess } from "@/lib/enterprise-crm/workspace-access";
 import { resolveOrganizationContext } from "@/lib/organization/context";
 
@@ -31,7 +33,7 @@ export default async function OrganizationAthletePage({
   if (!athlete) notFound();
 
   const canReadActivity = access.capabilities["navigation.activations"];
-  const [activity, reach, media, roster, orgMedia, launches, schoolActivity, connections, schoolSignals] = await Promise.all([
+  const [activity, reach, media, roster, orgMedia, launches, schoolActivity, connections, schoolSignals, dismissals, briefs] = await Promise.all([
     canReadActivity ? loadSchoolRoster(context).then((list) => listActivations(context.organization.id, { playerId, players: new Map(list.players.map((row) => [row.id, { name: row.name, portraitUrl: row.portraitUrl }])) })) : { state: "ready" as const, activations: [] },
     canReadActivity ? listSocialReach(context.organization.id, playerId) : [],
     listAthleteMedia(context.organization.id, playerId),
@@ -42,6 +44,8 @@ export default async function OrganizationAthletePage({
     canReadActivity ? listActivations(context.organization.id, { limit: 200 }) : { state: "ready" as const, activations: [] },
     access.canManageActivations ? listIntegrations(context.organization.id) : { state: "ready" as const, integrations: [] },
     listSchoolSignals(context.organization.id),
+    listDismissals(context.organization.id, playerId),
+    access.canManageActivations ? listBriefs(context.organization.id, playerId) : [],
   ]);
   // The most recent launch for this player carries the email the school gave BLTZ.
   const contactEmail = launches.launches.find((launch) => launch.playerId === playerId && launch.contactEmail)?.contactEmail ?? null;
@@ -57,6 +61,8 @@ export default async function OrganizationAthletePage({
       connections={connections.integrations}
       schoolHistory={schoolActivity.state === "ready" ? reachHistory(schoolActivity.activations) : undefined}
       roster={mergeSchoolSignals(mergeMediaSignals(roster, orgMedia), schoolSignals.signals).players}
+      initialDismissals={dismissals}
+      initialBriefs={briefs}
       initialSchoolSignals={schoolSignals.signals.filter((signal) => signal.playerId === playerId)}
       contactEmail={contactEmail}
       canManage={access.canManageActivations}

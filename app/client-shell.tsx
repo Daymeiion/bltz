@@ -22,6 +22,7 @@ export function ClientShell({ children }: Readonly<{ children: React.ReactNode }
     (pathname?.startsWith("/preview-lockers") ?? false) ||
     (pathname?.startsWith("/admin") ?? false) ||
     (pathname?.startsWith("/organization") ?? false) ||
+    (pathname?.startsWith("/brief") ?? false) ||
     (pathname?.startsWith("/auth") ?? false);
 
   return (
