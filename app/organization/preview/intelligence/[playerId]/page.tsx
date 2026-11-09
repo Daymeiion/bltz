@@ -1,8 +1,9 @@
 import { notFound } from "next/navigation";
 import { requireTemplateAccess } from "@/lib/enterprise-crm/pilot/template-access";
+import { reachHistory } from "@/lib/enterprise-crm/pilot/suggestions";
 import { OrganizationShell } from "@/components/organization/OrganizationShell";
 import { AthleteIntelligence } from "@/components/organization/pilot/AthleteIntelligence";
-import { previewActivations, previewAthleteFile, previewContext, previewMedia, previewOptions, previewOrganizations, previewReach, previewRoster, previewArt, previewTheme } from "@/components/organization/pilot/preview-data";
+import { previewIntegrations, previewActivations, previewAthleteFile, previewContext, previewMedia, previewOptions, previewOrganizations, previewReach, previewRoster, previewArt, previewTheme } from "@/components/organization/pilot/preview-data";
 
 export const metadata = { title: "School template", robots: { index: false, follow: false } };
 
@@ -21,6 +22,8 @@ export default async function OrganizationAthletePreviewPage({ params }: { param
         initialActivations={previewActivations.filter((row) => row.playerId === playerId)}
         initialReach={previewReach[playerId] ?? []}
         initialMedia={previewMedia[playerId] ?? []}
+        schoolHistory={reachHistory(previewActivations)}
+        connections={previewIntegrations}
         canManage
         roster={previewRoster.players}
         contactEmail={playerId === "p1" ? "marcus@halefitness.example" : playerId === "p5" ? "Dante@bltz.me" : null}

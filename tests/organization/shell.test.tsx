@@ -110,6 +110,7 @@ describe("Pilot school workspace shell", () => {
       ["Overview", `/organization/${ORGANIZATION_ID}/dashboard`],
       ["Intelligence", `/organization/${ORGANIZATION_ID}/intelligence`],
       ["Launch a Locker", `/organization/${ORGANIZATION_ID}/launch`],
+      ["Settings", `/organization/${ORGANIZATION_ID}/settings`],
     ]);
     const nav = container.querySelector(".pilot-rail nav")?.textContent ?? "";
     for (const removed of ["Athletes", "Media", "Opportunities", "Activations", "Analytics", "Organization"]) {
@@ -129,6 +130,7 @@ describe("Pilot school workspace shell", () => {
       ["Overview", "/organization/preview"],
       ["Intelligence", "/organization/preview/intelligence"],
       ["Launch a Locker", "/organization/preview/launch"],
+      ["Settings", "/organization/preview/settings"],
     ]);
     expect(container.querySelector('.pilot-rail a[aria-current="page"]')?.textContent).toContain("Intelligence");
   });
@@ -143,7 +145,7 @@ describe("Pilot school workspace shell", () => {
     expect(railLinks().map(([label]) => label)).toEqual(["Overview", "Intelligence"]);
 
     renderShell({ teams: [], seasons: [] }, { ...access(["navigation.home", "navigation.intelligence"]), canManageActivations: true });
-    expect(railLinks().map(([label]) => label)).toEqual(["Overview", "Intelligence", "Launch a Locker"]);
+    expect(railLinks().map(([label]) => label)).toEqual(["Overview", "Intelligence", "Launch a Locker", "Settings"]);
   });
 
   it("opens and closes the mobile menu", () => {

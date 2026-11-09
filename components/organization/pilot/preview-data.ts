@@ -3,6 +3,7 @@ import type {
   OrganizationContext,
   OrganizationWorkspaceOptions,
 } from "@/lib/organization/types";
+import type { IntegrationStatus } from "@/lib/enterprise-crm/pilot/integrations-shared";
 import type { AthleteFile, PilotActivation, PilotAthleteMedia, PilotLaunch, PilotRoster, PilotSocialReach } from "@/lib/enterprise-crm/pilot/types";
 
 export const PREVIEW_ORGANIZATION_ID = "11111111-1111-4111-8111-111111111111";
@@ -71,29 +72,54 @@ export const previewReach: Record<string, PilotSocialReach[]> = {
   ],
 };
 
+/** Sample signals carry what they are about, read from the sample headline. */
+function subjectOf(headline: string): { type: NonNullable<AthleteFile["signals"][number]["type"]>; years: number | null } {
+  const birthday = /^Turns (\d+)/.exec(headline);
+  if (birthday) return { type: "birthday", years: Number(birthday[1]) };
+  const years = /^(\d+)[ -]year/.exec(headline);
+  return { type: "anniversary", years: years ? Number(years[1]) : null };
+}
+
 export function previewAthleteFile(playerId: string): AthleteFile | null {
   const player = previewRoster.players.find((row) => row.id === playerId);
   if (!player) return null;
   const signal = player.next ? [{
-    key: `${player.id}-s1`, momentId: `${player.id}-m1`, headline: player.next.headline,
+    key: `${player.id}-s1`,
+    // Dante's sample signal is a season milestone, not one of the generic sample games.
+    momentId: player.id === "p5" ? null : `${player.id}-m1`, headline: player.next.headline,
     explanation: `${player.name}'s recorded game on this date is a natural throwback moment for fans and letterwinners.`,
     targetDate: player.next.targetDate, daysUntil: player.next.daysUntil, verdict: player.next.verdict, priority: 82, confidence: 0.92, sources: 2,
+    ...subjectOf(player.next.headline),
+    evidence: [
+      { label: "Sample: conference stats feed", url: null, note: `Season record for ${player.name}, checked against the box score.` },
+      { label: "Sample: school media guide", url: null, note: "Career history and honors, reviewed by BLTZ." },
+    ],
   }] : [];
   return {
     player,
     state: "ready",
     evaluatedAt: "2026-11-02T15:00:00.000Z",
-    signals: [...signal, { key: `${player.id}-s2`, momentId: null, headline: "Turns 33", explanation: "A reviewed birthday on the player's Locker record.", targetDate: "2027-02-14", daysUntil: 104, verdict: "upcoming", priority: 40, confidence: 1, sources: 1 }],
+    signals: [...signal, { key: `${player.id}-s2`, momentId: null, headline: "Turns 33", explanation: "A reviewed birthday on the player's Locker record.", targetDate: "2027-02-14", daysUntil: 104, verdict: "upcoming", priority: 40, confidence: 1, sources: 1, type: "birthday", years: 33 }],
     opportunities: signal.length ? [{ key: `${player.id}-o1`, label: "Anniversary retrospective", explanation: "Pair the throwback with archive photos and the player's Locker link.", strength: 78, signalKeys: [signal[0].key] }] : [],
     moments: [
-      { id: `${player.id}-m1`, title: "First career touchdown vs. Ridgeview", date: "2016-11-04", status: "verified", sources: 2 },
-      { id: `${player.id}-m2`, title: "Conference championship game", date: "2015-12-05", status: "verified", sources: 3 },
+      { id: `${player.id}-m1`, title: "First career touchdown vs. Ridgeview", date: "2016-11-04", status: "verified", sources: 2,
+        stats: [{ label: "rec yds", value: "112" }, { label: "rec", value: "7" }, { label: "rec TD", value: "1" }],
+        sourceLinks: [{ label: "Sample: conference stats feed", url: null, note: "Box score for the game, checked by BLTZ." }, { label: "Sample: school game notes", url: "https://example.com/sample-game-notes", note: "Postgame notes from the athletics department." }] },
+      { id: `${player.id}-m2`, title: "Conference championship game", date: "2015-12-05", status: "verified", sources: 3,
+        stats: [{ label: "rec yds", value: "86" }, { label: "rec", value: "5" }], sourceLinks: [{ label: "Sample: conference stats feed", url: null, note: "Box score for the game." }] },
       { id: `${player.id}-m3`, title: "Career-high 186 receiving yards", date: "2015-10-17", status: "candidate", sources: 1 },
     ],
     seasons: [
       { id: "s3", season: "2015", team: "Cal", line: "1,204 rec yds · 78 rec · 11 rec TD" },
       { id: "s2", season: "2014", team: "Cal", line: "866 rec yds · 59 rec · 6 rec TD" },
       { id: "s1", season: "2013", team: "Cal", line: "402 rec yds · 31 rec · 2 rec TD" },
+    ],
+    // Sample coverage; real files list verified articles and interviews from BLTZ research.
+    research: [
+      { id: `${player.id}-r1`, title: `Sample: ${player.name} career retrospective`, url: "https://example.com/sample-retrospective", publisher: "Sample publication", type: "article" as const, date: "2021-09-14", aboutDate: null },
+      { id: `${player.id}-r2`, title: `Sample: Where are they now with ${player.name}`, url: "https://example.com/sample-interview", publisher: "Sample podcast", type: "interview" as const, date: "2024-03-02", aboutDate: null },
+      { id: `${player.id}-r4`, title: `Sample: Game recap, ${player.name} scores first touchdown`, url: "https://example.com/sample-recap", publisher: "Sample student paper", type: "article" as const, date: "2016-11-05", aboutDate: "2016-11-04" },
+      { id: `${player.id}-r3`, title: `Sample: ${player.name} highlight reel`, url: "https://example.com/sample-video", publisher: "Sample video channel", type: "video" as const, date: "2019-11-20", aboutDate: null },
     ],
     socialLinks: playerId === "p1" ? [{ platform: "Instagram", handle: "@marcushale", url: "https://www.instagram.com/p/demo/" }]
       : playerId === "p5" ? [{ platform: "Instagram", handle: "@reallifedh", url: "https://www.instagram.com/reallifedh/" }]
@@ -122,3 +148,6 @@ export const previewTheme = { mode: "school" as const, accent: "#003262", highli
 
 /** California Memorial Stadium from Wikimedia Commons; CC BY 4.0 requires the credit line. */
 export const previewArt = { url: "/images/crm/cal-memorial-stadium.webp", credit: "Stadium photo: Quintin Soloviev, CC BY 4.0, via Wikimedia Commons" };
+
+/** Sample connections: Slack connected, Teams and the website not yet. */
+export const previewIntegrations: IntegrationStatus[] = [{ kind: "slack", label: "#athletics-social", updatedAt: "2026-11-03T15:00:00.000Z" }];

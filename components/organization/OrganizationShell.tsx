@@ -15,6 +15,7 @@ import {
   IconLogout,
   IconPalette,
   IconRocket,
+  IconSettings,
   IconSparkles,
 } from "@tabler/icons-react";
 import { createClient } from "@/lib/supabase/client";
@@ -28,7 +29,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 
 type NavigationItem = {
   label: string;
-  segment: "dashboard" | "intelligence" | "launch";
+  segment: "dashboard" | "intelligence" | "launch" | "settings";
   icon: ComponentType<{ className?: string; stroke?: number; "aria-hidden"?: boolean }>;
   capability: ShellCapabilityKey;
   /** Also requires permission to plan activations. */
@@ -40,6 +41,7 @@ const NAVIGATION: readonly NavigationItem[] = [
   { label: "Overview", segment: "dashboard", icon: IconLayoutDashboard, capability: "navigation.home" },
   { label: "Intelligence", segment: "intelligence", icon: IconSparkles, capability: "navigation.intelligence" },
   { label: "Launch a Locker", segment: "launch", icon: IconRocket, capability: "navigation.intelligence", manage: true },
+  { label: "Settings", segment: "settings", icon: IconSettings, capability: "navigation.intelligence", manage: true },
 ];
 
 const ShellContext = createContext<{ access?: WorkspaceAccess; theme?: WorkspaceAccess["theme"] } | null>(null);

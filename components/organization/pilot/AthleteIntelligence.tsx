@@ -8,6 +8,10 @@ import {
   IconBrandX,
   IconBrandFacebook,
   IconCheck,
+  IconExternalLink,
+  IconMicrophone,
+  IconShare,
+  IconUser,
   IconNews,
   IconPhoto,
   IconVideo,
@@ -40,7 +44,13 @@ import { CopyLockerLink } from "./CopyLockerLink";
 
 import { AthleteAvatars } from "./AthleteAvatars";
 import { MediaAttach, MediaThumb, mediaPayload, type PendingMedia } from "./MediaAttach";
+import { gettyAssetFromLink } from "@/lib/getty/link";
 import { PlayerColumn } from "./PlayerColumn";
+import { SignalSuggestions } from "./SignalSuggestions";
+import { MomentTimeline } from "./MomentTimeline";
+import { ShareActivation } from "./ShareActivation";
+import type { IntegrationStatus } from "@/lib/enterprise-crm/pilot/integrations-shared";
+import { backingFor, reachHistory, type Backing, type ReachHistory } from "@/lib/enterprise-crm/pilot/suggestions";
 import { AnimatePresence, HeroTitle, MotionItem } from "./PilotMotion";
 
 const KIND_LABEL: Record<ActivationKind, string> = { post: "Social post", video: "Video", article: "Article", campaign: "Campaign", event: "Event" };
@@ -74,7 +84,7 @@ async function send<T>(url: string, method: "POST" | "PATCH", body: unknown): Pr
  * The school's Intelligence workspace: players on the left, the selected
  * player's file in the center, and signals, activations and reach on the right.
  */
-export function AthleteIntelligence({ organizationId, schoolName, file, roster = [], contactEmail = null, initialActivations, initialReach, initialMedia = [], canManage, profileBaseHref, preview = false }: {
+export function AthleteIntelligence({ organizationId, schoolName, file, roster = [], contactEmail = null, initialActivations, initialReach, initialMedia = [], schoolHistory, connections = [], canManage, profileBaseHref, preview = false }: {
   organizationId: string;
   schoolName: string;
   file: AthleteFile;
@@ -83,6 +93,10 @@ export function AthleteIntelligence({ organizationId, schoolName, file, roster =
   initialActivations: PilotActivation[];
   initialReach: PilotSocialReach[];
   initialMedia?: PilotAthleteMedia[];
+  /** Reach of every posted activation at the school, by kind; falls back to this athlete's own. */
+  schoolHistory?: ReachHistory;
+  /** Tools connected in Settings, so Share can send directly. */
+  connections?: IntegrationStatus[];
   canManage: boolean;
   profileBaseHref: string;
   preview?: boolean;
@@ -103,6 +117,7 @@ export function AthleteIntelligence({ organizationId, schoolName, file, roster =
   const { player } = file;
   const totals = summarizeReach(activations);
   const followers = reach.reduce((sum, row) => sum + row.followers, 0);
+  const history = schoolHistory ?? reachHistory(activations);
 
   function upsert(next: PilotActivation) {
     setActivations((current) => {
@@ -161,11 +176,29 @@ export function AthleteIntelligence({ organizationId, schoolName, file, roster =
     setError(null);
     const { localPreview, ...fields } = item;
     const next: PilotAthleteMedia | null = preview
-      ? { id: `pm-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, playerId: player.id, launchId: null, activationId: null, kind: fields.kind, title: fields.title, url: fields.url, description: fields.description, occurredOn: fields.occurredOn, reviewStatus: "pending", createdAt: new Date().toISOString(), source: fields.source ?? "link", thumbUrl: localPreview ?? fields.thumbUrl ?? null }
+      ? { id: `pm-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, momentId: fields.momentId ?? null, storagePath: fields.storagePath ?? null, playerId: player.id, launchId: null, activationId: null, kind: fields.kind, title: fields.title, url: fields.url, description: fields.description, occurredOn: fields.occurredOn, reviewStatus: "pending", createdAt: new Date().toISOString(), source: fields.source ?? "link", thumbUrl: localPreview ?? fields.thumbUrl ?? null }
       : await send<{ media: PilotAthleteMedia }>(`${api}/athlete-media`, "POST", { playerId: player.id, ...fields }).then((result) => result.media).catch(() => null);
     if (!next) { setError("That item could not be saved. Links must start with https://"); return false; }
     setMedia((current) => [next, ...current]);
     return true;
+  }
+
+  /** Ties a school media item to a Moment (or unties it with null). */
+  async function linkMedia(mediaId: string, momentId: string | null) {
+    setError(null);
+    const ok = preview ? true : await send(`${api}/athlete-media/${mediaId}`, "PATCH", { momentId }).then(() => true).catch(() => false);
+    if (!ok) { setError("That media could not be updated."); return false; }
+    setMedia((current) => current.map((item) => item.id === mediaId ? { ...item, momentId } : item));
+    return true;
+  }
+
+  /** The Moment's own media, ready to attach to a new activation. */
+  function momentDraftMedia(momentId: string): PendingMedia[] {
+    return media.filter((item) => item.momentId === momentId).flatMap((item) => {
+      const externalId = item.source === "getty" && item.url ? gettyAssetFromLink(item.url)?.id ?? null : null;
+      if ((item.source === "getty" && !externalId) || (item.source === "upload" && !item.storagePath)) return [];
+      return [{ key: item.id, kind: item.kind, title: item.title, url: item.source === "upload" ? null : item.url, source: item.source, storagePath: item.source === "upload" ? item.storagePath ?? null : null, thumbUrl: item.thumbUrl, externalId }];
+    });
   }
 
   async function recordReach(platform: SocialPlatformKey, followersCount: number, handle: string) {
@@ -263,16 +296,14 @@ export function AthleteIntelligence({ organizationId, schoolName, file, roster =
                             <li key={signal.key} id={`signal-${signal.key}`} className={cn("pilot-signal", `pilot-signal--${signal.verdict}`, focusedSignal === signal.key && "pilot-signal--focus")}>
                               <div className="pilot-signal__top"><WhenChip daysUntil={signal.daysUntil} verdict={signal.verdict} /><span className="pilot-signal__verdict">{VERDICT_LABEL[signal.verdict]}</span></div>
                               <strong>{signal.headline}</strong>
-                              <p>{signal.explanation}</p>
                               <div className="pilot-signal__meta">
                                 <span><i style={{ "--pilot-meter": `${signal.priority}%` } as CSSProperties} />Priority {signal.priority}</span>
                                 <span><i style={{ "--pilot-meter": `${Math.round(signal.confidence * 100)}%` } as CSSProperties} />Confidence {Math.round(signal.confidence * 100)}%</span>
                                 <span>{signal.sources} source{signal.sources === 1 ? "" : "s"}</span>
                               </div>
-                              {canManage ? (
-                                planned ? <span className="pilot-planned"><IconCheck stroke={1.5} aria-hidden />Activation planned</span>
-                                  : <button type="button" className="pilot-pill pilot-pill--ghost" onClick={() => setDraft({ kind: "post", title: signal.headline, brief: "", dueOn: signal.targetDate, signalKey: signal.key, momentId: signal.momentId })}><span>Plan activation</span><span className="pilot-pill__icon" aria-hidden><IconPlus stroke={1.5} /></span></button>
-                              ) : null}
+                              <SignalSuggestions signal={signal} playerName={player.name} momentTitle={file.moments.find((moment) => moment.id === signal.momentId)?.title ?? null} media={media} hasContact={Boolean(contactEmail)} followers={followers} history={history} canManage={canManage} planned={planned}
+                                onPlan={(idea) => setDraft({ kind: idea.kind, title: idea.title, brief: idea.brief, dueOn: signal.targetDate, signalKey: signal.key, momentId: signal.momentId })}
+                                onPlanManual={() => setDraft({ kind: "post", title: signal.headline, brief: "", dueOn: signal.targetDate, signalKey: signal.key, momentId: signal.momentId })} />
                             </li>
                           );
                         })}</ul>}
@@ -283,7 +314,9 @@ export function AthleteIntelligence({ organizationId, schoolName, file, roster =
                     <>
                       <section aria-label="Moments">
                         <div className="pilot-card-head"><div><h2>Moments</h2><p>Verified, sourced events that drive the signals</p></div></div>
-                        {file.moments.length ? <ol className="pilot-timeline">{file.moments.map((moment) => <li key={moment.id}><span>{moment.date ?? "Date unknown"}</span><strong>{moment.title}</strong><small>{moment.status === "verified" ? "Verified" : "Awaiting BLTZ review"} · {moment.sources} source{moment.sources === 1 ? "" : "s"}</small></li>)}</ol>
+                        {file.moments.length ? <MomentTimeline file={file} activations={activations} media={media} organizationId={organizationId} preview={preview} canManage={canManage} onShowActivation={showActivation}
+                          onAddMedia={({ key: _key, momentId, ...item }) => addMedia({ ...item, momentId, description: null, occurredOn: null })} onLinkMedia={linkMedia}
+                          onPlan={(moment) => { const signal = file.signals.find((row) => row.momentId === moment.id); setDraft({ kind: "post", title: moment.title, brief: "", dueOn: signal?.targetDate ?? "", signalKey: signal?.key ?? null, momentId: moment.id, media: momentDraftMedia(moment.id) }); }} />
                           : <p className="pilot-quiet">No career moments recorded yet.</p>}
                         {file.seasons.length ? <details className="pilot-seasons-toggle"><summary>Season statistics ({file.seasons.length})</summary><ul className="pilot-seasons">{file.seasons.map((row) => <li key={row.id}><strong>{row.season}</strong><span>{row.team ?? ""}</span><em>{row.line}</em></li>)}</ul></details> : null}
                       </section>
@@ -313,7 +346,8 @@ export function AthleteIntelligence({ organizationId, schoolName, file, roster =
                           <div><h2>Activations</h2><p>{selected ? "The selected activation in detail. Pick another from the list on the right." : "Plan one from a signal, then share its tracked link to measure fan visits."}</p></div>
                           {canManage ? <button type="button" className="pilot-icon-pill" aria-label="Plan a new activation" onClick={() => setDraft({ kind: "post", title: "", brief: "", dueOn: "", signalKey: null, momentId: null })}><IconPlus stroke={1.5} aria-hidden /></button> : null}
                         </div>
-                        {selected ? <ul className="pilot-activations"><AnimatePresence mode="popLayout" initial={false}><ActivationRow key={selected.id} row={selected} canManage={canManage} detailed profileBaseHref={profileBaseHref} onUpdate={(patch) => updateActivation(selected.id, patch)} /></AnimatePresence></ul> : null}
+                        {selected ? <ul className="pilot-activations"><AnimatePresence mode="popLayout" initial={false}><ActivationRow key={selected.id} row={selected} canManage={canManage} detailed profileBaseHref={profileBaseHref} schoolName={schoolName}
+                          share={{ organizationId, connections, preview, settingsHref: `${profileBaseHref.replace(/\/intelligence$/, "")}/settings` }} onUpdate={(patch) => updateActivation(selected.id, patch)} /></AnimatePresence></ul> : null}
                       </section>
                     </>
                   ) : null}
@@ -365,13 +399,14 @@ export function AthleteIntelligence({ organizationId, schoolName, file, roster =
         </aside>
       </div>
 
-      {draft ? <ActivationComposer draft={draft} lead={player} others={roster.filter((row) => row.id !== player.id)} organizationId={organizationId} preview={preview} onClose={() => setDraft(null)} onSave={createActivation} /> : null}
+      {draft ? <ActivationComposer draft={draft} backing={draft.signalKey ? backingFor(file, draft.signalKey) : null} lead={player} others={roster.filter((row) => row.id !== player.id)} organizationId={organizationId} preview={preview} onClose={() => setDraft(null)} onSave={createActivation} /> : null}
     </div>
   );
 }
 
-function ActivationRow({ row, canManage, detailed = false, profileBaseHref, onUpdate }: { row: PilotActivation; canManage: boolean; detailed?: boolean; profileBaseHref?: string; onUpdate: (patch: Partial<PilotActivation>) => Promise<void> }) {
+function ActivationRow({ row, canManage, detailed = false, profileBaseHref, schoolName, share, onUpdate }: { row: PilotActivation; canManage: boolean; detailed?: boolean; profileBaseHref?: string; schoolName?: string; share?: { organizationId: string; connections: IntegrationStatus[]; preview: boolean; settingsHref: string }; onUpdate: (patch: Partial<PilotActivation>) => Promise<void> }) {
   const [mode, setMode] = useState<"idle" | "post" | "reach">("idle");
+  const [sharing, setSharing] = useState(false);
   const [channel, setChannel] = useState<ActivationChannel>(row.channel ?? "instagram");
   const [postUrl, setPostUrl] = useState(row.postUrl ?? "");
   const [impressions, setImpressions] = useState(row.impressions?.toString() ?? "");
@@ -409,6 +444,7 @@ function ActivationRow({ row, canManage, detailed = false, profileBaseHref, onUp
       {row.status !== "cancelled" ? (
         <div className="pilot-activation__actions">
           <CopyLockerLink href={row.trackedHref} name={`${row.title} (tracked link)`} label="Copy tracked link" />
+          {detailed && schoolName && share ? <button type="button" className="pilot-pill pilot-pill--quiet" onClick={() => setSharing(true)}><IconShare stroke={1.5} aria-hidden />Share</button> : null}
           {canManage && row.status === "planned" ? <button type="button" className="pilot-pill pilot-pill--quiet" onClick={() => setMode(mode === "post" ? "idle" : "post")}>Mark posted</button> : null}
           {canManage && row.status === "posted" ? <button type="button" className="pilot-pill pilot-pill--quiet" onClick={() => setMode(mode === "reach" ? "idle" : "reach")}>Update reach</button> : null}
           {canManage && row.status === "planned" ? <button type="button" className="pilot-text-button" onClick={() => void onUpdate({ status: "cancelled" })}>Cancel</button> : null}
@@ -428,11 +464,12 @@ function ActivationRow({ row, canManage, detailed = false, profileBaseHref, onUp
           <button type="submit" className="pilot-pill pilot-pill--primary pilot-pill--compact" disabled={busy}>Save</button>
         </form>
       ) : null}
+      {sharing && schoolName && share ? <ShareActivation row={row} schoolName={schoolName} {...share} onClose={() => setSharing(false)} /> : null}
     </MotionItem>
   );
 }
 
-type NewMedia = { kind: AthleteMediaKind; title: string; url: string | null; description: string | null; occurredOn: string | null; source?: "link" | "upload" | "getty"; storagePath?: string | null; thumbUrl?: string | null; externalId?: string | null; localPreview?: string | null };
+type NewMedia = { momentId?: string | null; kind: AthleteMediaKind; title: string; url: string | null; description: string | null; occurredOn: string | null; source?: "link" | "upload" | "getty"; storagePath?: string | null; thumbUrl?: string | null; externalId?: string | null; localPreview?: string | null };
 
 type HubCategory = "videos" | "images" | "publications";
 const HUB: Array<{ id: HubCategory; label: string; icon: typeof IconVideo; kinds: AthleteMediaKind[]; hint: string }> = [
@@ -543,7 +580,7 @@ function ReachForm({ onSave }: { onSave: (platform: SocialPlatformKey, followers
   );
 }
 
-function ActivationComposer({ draft, lead, others, organizationId, preview, onClose, onSave }: { draft: Draft; lead: PilotPlayer; others: PilotPlayer[]; organizationId: string; preview: boolean; onClose: () => void; onSave: (value: Draft) => Promise<void> }) {
+function ActivationComposer({ draft, backing, lead, others, organizationId, preview, onClose, onSave }: { draft: Draft; backing: Backing | null; lead: PilotPlayer; others: PilotPlayer[]; organizationId: string; preview: boolean; onClose: () => void; onSave: (value: Draft) => Promise<void> }) {
   const [value, setValue] = useState<Draft>({ ...draft, additionalPlayerIds: draft.additionalPlayerIds ?? [], media: draft.media ?? [] });
   const attached = value.media ?? [];
   const [busy, setBusy] = useState(false);
@@ -561,6 +598,7 @@ function ActivationComposer({ draft, lead, others, organizationId, preview, onCl
         </div>
         <label className="pilot-field">Title<input autoFocus required maxLength={200} value={value.title} onChange={(event) => setValue({ ...value, title: event.target.value })} /></label>
         <label className="pilot-field">Date<input type="date" value={value.dueOn} onChange={(event) => setValue({ ...value, dueOn: event.target.value })} /></label>
+        {backing ? <BackedBy backing={backing} /> : null}
         {others.length ? (
           <div className="pilot-field">
             <span>Also featuring</span>
@@ -584,5 +622,52 @@ function ActivationComposer({ draft, lead, others, organizationId, preview, onCl
         </div>
       </form>
     </div>
+  );
+}
+
+const RESEARCH_LABEL: Record<NonNullable<AthleteFile["research"]>[number]["type"], string> = { article: "Article", interview: "Interview", video: "Video", podcast: "Podcast", profile: "Profile" };
+const RESEARCH_ICON: Record<NonNullable<AthleteFile["research"]>[number]["type"], typeof IconNews> = { article: IconNews, interview: IconMicrophone, video: IconVideo, podcast: IconMicrophone, profile: IconUser };
+
+function researchDate(date: string | null): string | null {
+  if (!date) return null;
+  const parsed = new Date(`${date}T00:00:00Z`);
+  return Number.isNaN(parsed.getTime()) ? date : parsed.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+}
+
+/** The reviewed sources and past coverage behind a planned activation, to cite and link. */
+function BackedBy({ backing }: { backing: Backing }) {
+  return (
+    <section className="pilot-backed" aria-label="Backed by">
+      <h3>Backed by</h3>
+      {backing.sources.length ? (
+        <ul className="pilot-backed__sources">
+          {backing.sources.map((source) => (
+            <li key={`${source.label}-${source.url ?? ""}`}>
+              <IconCheck stroke={2} aria-hidden />
+              <span>{source.url ? <a href={source.url} target="_blank" rel="noopener noreferrer">{source.label}</a> : <strong>{source.label}</strong>}{source.note ? <small>{source.note}</small> : null}</span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {backing.research.length ? (
+        <>
+          <h4>Past coverage from BLTZ research</h4>
+          <ul className="pilot-backed__research">
+            {backing.research.map((item) => {
+              const Icon = RESEARCH_ICON[item.type];
+              return (
+                <li key={item.id}>
+                  <a href={item.url} target="_blank" rel="noopener noreferrer">
+                    <span className="pilot-backed__icon" aria-hidden><Icon stroke={1.5} /></span>
+                    <span><strong>{item.title}</strong><small>{[RESEARCH_LABEL[item.type], item.publisher, researchDate(item.date)].filter(Boolean).join(" · ")}</small></span>
+                    <IconExternalLink stroke={1.5} aria-hidden className="pilot-backed__out" />
+                  </a>
+                </li>
+              );
+            })}
+          </ul>
+        </>
+      ) : null}
+    </section>
   );
 }

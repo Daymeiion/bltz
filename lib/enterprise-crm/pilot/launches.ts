@@ -37,7 +37,7 @@ function mediaShape(item: MediaFields, context: z.RefinementCtx) {
 }
 
 export const mediaInput = mediaFields.superRefine(mediaShape);
-export const addMediaInput = mediaFields.extend({ playerId: uuid }).strict().superRefine(mediaShape);
+export const addMediaInput = mediaFields.extend({ playerId: uuid, momentId: z.string().min(1).max(80).nullish() }).strict().superRefine(mediaShape);
 
 export const launchInput = z.object({
   playerId: uuid.nullish(),
@@ -54,6 +54,8 @@ export const mediaRow = z.object({
   url: z.string().nullable(), description: z.string().nullable(), occurred_on: z.string().nullable(),
   review_status: z.enum(["pending", "approved", "rejected"]), created_at: z.string(),
   source: z.enum(["link", "upload", "getty"]), thumb_url: z.string().nullable(),
+  // Present once 20261109120000_crm_pilot_moment_media.sql has run.
+  moment_id: z.string().nullable().optional(), storage_path: z.string().nullable().optional(),
 });
 export const MEDIA_COLUMNS = "id,player_id,launch_id,activation_id,kind,title,url,description,occurred_on,review_status,created_at,source,thumb_url";
 const launchRow = z.object({
@@ -67,7 +69,7 @@ export function toMedia(row: z.infer<typeof mediaRow>): PilotAthleteMedia {
   return {
     id: row.id, playerId: row.player_id, launchId: row.launch_id, activationId: row.activation_id, kind: row.kind, title: row.title,
     url: row.url, description: row.description, occurredOn: row.occurred_on, reviewStatus: row.review_status, createdAt: row.created_at,
-    source: row.source, thumbUrl: row.thumb_url,
+    source: row.source, thumbUrl: row.thumb_url, momentId: row.moment_id ?? null, storagePath: row.storage_path ?? null,
   };
 }
 
@@ -84,9 +86,14 @@ export function mediaRows(organizationId: string, items: MediaFields[], subject:
 export async function listAthleteMedia(organizationId: string, playerId?: string): Promise<PilotAthleteMedia[]> {
   try {
     // Media attached to an activation lives with that activation, not in "From your school".
-    let query = createServiceClient().from("organization_athlete_media").select(MEDIA_COLUMNS).eq("organization_id", organizationId).neq("review_status", "rejected").is("activation_id", null);
-    if (playerId) query = query.eq("player_id", playerId);
-    const { data, error } = await query.order("created_at", { ascending: false }).limit(500);
+    const read = (columns: string) => {
+      let query = createServiceClient().from("organization_athlete_media").select(columns).eq("organization_id", organizationId).neq("review_status", "rejected").is("activation_id", null);
+      if (playerId) query = query.eq("player_id", playerId);
+      return query.order("created_at", { ascending: false }).limit(500);
+    };
+    // Before the Moment media migration runs, read without moment_id rather than showing nothing.
+    let { data, error } = await read(`${MEDIA_COLUMNS},moment_id,storage_path`);
+    if (error) ({ data, error } = await read(`${MEDIA_COLUMNS},storage_path`));
     const parsed = z.array(mediaRow).safeParse(data);
     return error || !parsed.success ? [] : parsed.data.map(toMedia);
   } catch {
@@ -95,9 +102,10 @@ export async function listAthleteMedia(organizationId: string, playerId?: string
 }
 
 export async function addAthleteMedia(organizationId: string, actorUserId: string, input: z.infer<typeof addMediaInput>): Promise<PilotAthleteMedia> {
-  const { playerId, ...item } = input;
+  const { playerId, momentId, ...item } = input;
+  const row = { ...mediaRows(organizationId, [item], { playerId }, actorUserId)[0], ...(momentId ? { moment_id: momentId } : {}) };
   const { data, error } = await createServiceClient().from("organization_athlete_media")
-    .insert(mediaRows(organizationId, [item], { playerId }, actorUserId)).select(MEDIA_COLUMNS).single();
+    .insert(row).select(`${MEDIA_COLUMNS},storage_path${momentId ? ",moment_id" : ""}`).single();
   if (error) throw new Error("media_create_failed");
   return toMedia(mediaRow.parse(data));
 }
