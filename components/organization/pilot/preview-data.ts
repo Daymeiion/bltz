@@ -11,7 +11,7 @@ export const previewContext: OrganizationContext = {
   userId: "22222222-2222-4222-8222-222222222222",
   organization: {
     id: PREVIEW_ORGANIZATION_ID,
-    name: "Westlake University Athletics",
+    name: "Cal Athletics",
     organizationType: "school_athletics",
     status: "approved",
     schoolId: null,
@@ -33,13 +33,13 @@ export const previewOptions: OrganizationWorkspaceOptions = { teams: [], seasons
 export const previewRoster: PilotRoster = {
   state: "ready",
   players: [
-    { id: "p1", name: "Marcus Hale", position: "WR", team: "Westlake 2012–15", portraitUrl: null, lockerHref: "/player/demo-player", next: { headline: "10 years since his first career touchdown", targetDate: "2026-11-04", daysUntil: 2, verdict: "act_now" }, signalCount: 3 },
-    { id: "p2", name: "Dre Coleman", position: "LB", team: "Westlake 2008–11", portraitUrl: null, lockerHref: "/player/demo-player", next: { headline: "Turns 35", targetDate: "2026-11-07", daysUntil: 5, verdict: "act_now" }, signalCount: 1 },
-    { id: "p3", name: "Jalen Brooks", position: "QB", team: "Westlake 2014–17", portraitUrl: null, lockerHref: "/player/demo-player", next: { headline: "5 years since his pro debut", targetDate: "2026-11-08", daysUntil: 6, verdict: "act_now" }, signalCount: 2 },
-    { id: "p4", name: "Terrence Wade", position: "RB", team: "Westlake 2010–13", portraitUrl: null, lockerHref: "/player/demo-player", next: { headline: "15-year game anniversary", targetDate: "2026-11-19", daysUntil: 17, verdict: "prepare" }, signalCount: 1 },
-    { id: "p5", name: "Isaiah Grant", position: "CB", team: "Westlake 2016–19", portraitUrl: null, lockerHref: "/player/demo-player", next: { headline: "Turns 30", targetDate: "2026-11-28", daysUntil: 26, verdict: "prepare" }, signalCount: 1 },
-    { id: "p6", name: "Andre Fulton", position: "DE", team: "Westlake 2005–08", portraitUrl: null, lockerHref: "/player/demo-player", next: { headline: "Career anniversary", targetDate: "2027-01-12", daysUntil: 71, verdict: "plan" }, signalCount: 1 },
-    { id: "p7", name: "Kevin Osei", position: "TE", team: "Westlake 2013–16", portraitUrl: null, lockerHref: "/player/demo-player", next: null, signalCount: 0 },
+    { id: "p1", name: "Marcus Hale", position: "WR", team: "Cal 2012–15", portraitUrl: null, lockerHref: "/player/demo-player", next: { headline: "10 years since his first career touchdown", targetDate: "2026-11-04", daysUntil: 2, verdict: "act_now" }, signalCount: 3 },
+    { id: "p2", name: "Dre Coleman", position: "LB", team: "Cal 2008–11", portraitUrl: null, lockerHref: "/player/demo-player", next: { headline: "Turns 35", targetDate: "2026-11-07", daysUntil: 5, verdict: "act_now" }, signalCount: 1 },
+    { id: "p3", name: "Jalen Brooks", position: "QB", team: "Cal 2014–17", portraitUrl: null, lockerHref: "/player/demo-player", next: { headline: "5 years since his pro debut", targetDate: "2026-11-08", daysUntil: 6, verdict: "act_now" }, signalCount: 2 },
+    { id: "p4", name: "Terrence Wade", position: "RB", team: "Cal 2010–13", portraitUrl: null, lockerHref: "/player/demo-player", next: { headline: "15-year game anniversary", targetDate: "2026-11-19", daysUntil: 17, verdict: "prepare" }, signalCount: 1 },
+    { id: "p5", name: "Dante Hughes", position: "CB", team: "Cal Berkeley 2003–06", portraitUrl: "/images/Headshot.png", lockerHref: "/player/dante-hughes", next: { headline: "20 years since his Lott IMPACT Trophy season", targetDate: "2026-11-28", daysUntil: 26, verdict: "prepare" }, signalCount: 1 },
+    { id: "p6", name: "Andre Fulton", position: "DE", team: "Cal 2005–08", portraitUrl: null, lockerHref: "/player/demo-player", next: { headline: "Career anniversary", targetDate: "2027-01-12", daysUntil: 71, verdict: "plan" }, signalCount: 1 },
+    { id: "p7", name: "Kevin Osei", position: "TE", team: "Cal 2013–16", portraitUrl: null, lockerHref: "/player/demo-player", next: null, signalCount: 0 },
   ],
 };
 
@@ -91,11 +91,13 @@ export function previewAthleteFile(playerId: string): AthleteFile | null {
       { id: `${player.id}-m3`, title: "Career-high 186 receiving yards", date: "2015-10-17", status: "candidate", sources: 1 },
     ],
     seasons: [
-      { id: "s3", season: "2015", team: "Westlake", line: "1,204 rec yds · 78 rec · 11 rec TD" },
-      { id: "s2", season: "2014", team: "Westlake", line: "866 rec yds · 59 rec · 6 rec TD" },
-      { id: "s1", season: "2013", team: "Westlake", line: "402 rec yds · 31 rec · 2 rec TD" },
+      { id: "s3", season: "2015", team: "Cal", line: "1,204 rec yds · 78 rec · 11 rec TD" },
+      { id: "s2", season: "2014", team: "Cal", line: "866 rec yds · 59 rec · 6 rec TD" },
+      { id: "s1", season: "2013", team: "Cal", line: "402 rec yds · 31 rec · 2 rec TD" },
     ],
-    socialLinks: playerId === "p1" ? [{ platform: "Instagram", handle: "@marcushale", url: "https://www.instagram.com/p/demo/" }] : [],
+    socialLinks: playerId === "p1" ? [{ platform: "Instagram", handle: "@marcushale", url: "https://www.instagram.com/p/demo/" }]
+      : playerId === "p5" ? [{ platform: "Instagram", handle: "@reallifedh", url: "https://www.instagram.com/reallifedh/" }]
+      : [],
   };
 }
 
@@ -115,5 +117,8 @@ export const previewMedia: Record<string, PilotAthleteMedia[]> = {
   ],
 };
 
-/** Sample school colors so previews show the school canvas. No logo: the stadium drawing shows instead. */
-export const previewTheme = { mode: "school" as const, accent: "#7d1d3a", highlight: "#f2c14e", logoUrl: null };
+/** Sample school colors (Cal Berkeley Blue and California Gold) so previews show the school canvas. No logo: the stadium drawing shows instead. */
+export const previewTheme = { mode: "school" as const, accent: "#003262", highlight: "#fdb515", logoUrl: null };
+
+/** California Memorial Stadium from Wikimedia Commons; CC BY 4.0 requires the credit line. */
+export const previewArt = { url: "/images/crm/cal-memorial-stadium.webp", credit: "Stadium photo: Quintin Soloviev, CC BY 4.0, via Wikimedia Commons" };

@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { OrganizationShell } from "@/components/organization/OrganizationShell";
 import { AthleteIntelligence } from "@/components/organization/pilot/AthleteIntelligence";
-import { previewActivations, previewAthleteFile, previewContext, previewMedia, previewOptions, previewOrganizations, previewReach, previewRoster, previewTheme } from "@/components/organization/pilot/preview-data";
+import { previewActivations, previewAthleteFile, previewContext, previewMedia, previewOptions, previewOrganizations, previewReach, previewRoster, previewArt, previewTheme } from "@/components/organization/pilot/preview-data";
 
 export default async function OrganizationAthletePreviewPage({ params }: { params: Promise<{ playerId: string }> }) {
   if (process.env.NODE_ENV !== "development") notFound();
@@ -11,7 +11,7 @@ export default async function OrganizationAthletePreviewPage({ params }: { param
   if (!file) notFound();
 
   return (
-    <OrganizationShell context={previewContext} organizations={previewOrganizations} options={previewOptions} previewTheme={previewTheme}>
+    <OrganizationShell context={previewContext} organizations={previewOrganizations} options={previewOptions} previewTheme={previewTheme} previewArt={previewArt}>
       <AthleteIntelligence
         organizationId={previewContext.organization.id}
         schoolName={previewContext.organization.name}
@@ -21,7 +21,7 @@ export default async function OrganizationAthletePreviewPage({ params }: { param
         initialMedia={previewMedia[playerId] ?? []}
         canManage
         roster={previewRoster.players}
-        contactEmail={playerId === "p1" ? "marcus@halefitness.example" : null}
+        contactEmail={playerId === "p1" ? "marcus@halefitness.example" : playerId === "p5" ? "Dante@bltz.me" : null}
         profileBaseHref="/organization/preview/intelligence"
         preview
       />

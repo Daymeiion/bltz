@@ -32,7 +32,7 @@ export function HeroTitle({ text }: { text: string }) {
 }
 
 /** School logo, or a line-drawn stadium when there is none, fading into the corner. */
-export function SchoolArt({ logoUrl }: { logoUrl: string | null }) {
+export function SchoolArt({ logoUrl, photoUrl = null }: { logoUrl: string | null; photoUrl?: string | null }) {
   const reduce = useReducedMotion();
   return (
     <motion.div
@@ -42,7 +42,10 @@ export function SchoolArt({ logoUrl }: { logoUrl: string | null }) {
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 1.6, ease: EASE, delay: 0.2 }}
     >
-      {logoUrl ? (
+      {photoUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element -- decorative background, sized by CSS
+        <img src={photoUrl} alt="" className="pilot-art__photo" />
+      ) : logoUrl ? (
         // eslint-disable-next-line @next/next/no-img-element -- directory logos come from arbitrary HTTPS hosts
         <img src={logoUrl} alt="" className="pilot-art__logo" />
       ) : (

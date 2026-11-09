@@ -2,6 +2,7 @@
 
 import type { ComponentType, CSSProperties, ReactNode } from "react";
 import { useContext, createContext, useEffect, useState, useTransition } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { motion } from "motion/react";
@@ -163,7 +164,7 @@ function RailContents({ context, organizations, pathname, onNavigate }: { contex
   return (
     <>
       <Link href={navigationHref(context.organization.id, "dashboard", isPreviewPath(pathname))} onClick={onNavigate} className="pilot-brand" aria-label="BLTZ home">
-        <span aria-hidden>B</span><strong>BLTZ</strong>
+        <span aria-hidden><Image src="/images/bltz-mark.svg" alt="" width={28} height={28} priority /></span><strong>BLTZ</strong>
       </Link>
       <SchoolSwitcher current={context.organization} organizations={organizations} onNavigate={onNavigate} />
       <Navigation organizationId={context.organization.id} pathname={pathname} onNavigate={onNavigate} />
@@ -179,6 +180,8 @@ type OrganizationShellProps = {
   access?: WorkspaceAccess;
   /** Fictional previews pass a sample school identity instead of server access. */
   previewTheme?: WorkspaceAccess["theme"];
+  /** Fictional previews can fade a school photo (a stadium) into the top right. */
+  previewArt?: { url: string; credit: string };
   children: ReactNode;
 };
 
@@ -197,7 +200,7 @@ export function OrganizationShell(props: OrganizationShellProps) {
   );
 }
 
-function OrganizationShellBody({ context, organizations, access, previewTheme, children }: OrganizationShellProps) {
+function OrganizationShellBody({ context, organizations, access, previewTheme, previewArt, children }: OrganizationShellProps) {
   const pathname = usePathname();
   const { mode, canvas, accent, highlight } = useOrganizationTheme();
   const theme = access?.theme ?? previewTheme;
@@ -219,7 +222,7 @@ function OrganizationShellBody({ context, organizations, access, previewTheme, c
         </aside>
 
         <div className="pilot-mobile-bar">
-          <span className="pilot-brand" aria-hidden><span>B</span><strong>BLTZ</strong></span>
+          <span className="pilot-brand" aria-hidden><span><Image src="/images/bltz-mark.svg" alt="" width={28} height={28} /></span><strong>BLTZ</strong></span>
           <button type="button" className={cn("pilot-burger", menuOpen && "pilot-burger--open")} aria-label={menuOpen ? "Close navigation" : "Open navigation"} aria-expanded={menuOpen} aria-controls="pilot-mobile-menu" onClick={() => setMenuOpen((open) => !open)}>
             <span /><span />
           </button>
@@ -229,9 +232,10 @@ function OrganizationShellBody({ context, organizations, access, previewTheme, c
         </div>
 
         <main id="organization-workspace" className="pilot-main">
-          <SchoolArt logoUrl={mode === "school" ? theme?.logoUrl ?? null : null} />
+          <SchoolArt logoUrl={mode === "school" ? theme?.logoUrl ?? null : null} photoUrl={mode === "school" ? previewArt?.url ?? null : null} />
           <div className="pilot-main__bar"><CanvasToggle /></div>
           {children}
+          {previewArt && mode === "school" ? <p className="pilot-art-credit">{previewArt.credit}</p> : null}
         </main>
       </div>
     </ShellContext.Provider>
