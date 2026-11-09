@@ -1308,8 +1308,8 @@
 .pilot-act__why { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
 .pilot-act__why li { display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: 8px; color: var(--pilot-muted); font-size: 13px; line-height: 1.45; }
 .pilot-act__why svg { width: 14px; height: 14px; margin-top: 2px; color: var(--pilot-accent); }
-.pilot-act__ideas { display: grid; grid-auto-columns: minmax(220px, 1fr); grid-auto-flow: column; gap: 10px; margin: 0 -4px; padding: 4px 4px 8px; overflow-x: auto; list-style: none; scroll-snap-type: x mandatory; scrollbar-width: thin; -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); }
-.pilot-idea { display: flex; flex-direction: column; gap: 6px; padding: 14px; border-radius: 18px; background: var(--pilot-core); box-shadow: 0 0 0 1px var(--pilot-hairline), 0 14px 30px -24px rgba(18, 19, 22, 0.35); scroll-snap-align: start; }
+.pilot-act__ideas { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr)); gap: 10px; margin: 0; padding: 0; list-style: none; }
+.pilot-idea { display: flex; flex-direction: column; gap: 6px; padding: 14px; border-radius: 18px; background: var(--pilot-core); box-shadow: 0 0 0 1px var(--pilot-hairline), 0 14px 30px -24px rgba(18, 19, 22, 0.35); }
 .pilot-idea__head { display: flex; align-items: center; gap: 8px; }
 .pilot-idea__icon { display: grid; width: 30px; height: 30px; place-items: center; border-radius: 10px; background: color-mix(in srgb, var(--pilot-accent) 9%, white); color: var(--pilot-accent); }
 .pilot-idea__icon svg { width: 16px; height: 16px; }
@@ -1323,7 +1323,7 @@
 .pilot-idea__foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: auto; padding-top: 6px; }
 .pilot-idea__status { color: var(--pilot-muted); font-size: 11.5px; font-weight: 600; }
 .pilot-idea__status--ready { color: #1f7a4d; }
-.pilot-idea__plan { display: inline-flex; align-items: center; gap: 4px; min-height: 30px; padding: 0 12px; border: 0; border-radius: 999px; background: var(--pilot-ink); color: #fff; font-size: 12.5px; font-weight: 600; cursor: pointer; transition: transform 250ms var(--pilot-ease); }
+.pilot-idea__plan { flex: none; white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; min-height: 30px; padding: 0 12px; border: 0; border-radius: 999px; background: var(--pilot-ink); color: #fff; font-size: 12.5px; font-weight: 600; cursor: pointer; transition: transform 250ms var(--pilot-ease); }
 .pilot-idea__plan svg { width: 14px; height: 14px; }
 .pilot-idea__plan:hover { transform: translateY(-1px); }
 .pilot-idea__plan:active { transform: scale(0.97); }
