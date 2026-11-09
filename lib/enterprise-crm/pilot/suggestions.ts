@@ -23,6 +23,8 @@ export type Suggestion = {
   reasons: string[];
   /** Expected reach from the school's history for this kind, or why there is no estimate. */
   reach: string;
+  /** The same estimate in a few words, for a chip. */
+  reachShort: string;
   ready: boolean;
   status: string;
   brief: string;
@@ -53,6 +55,13 @@ export function formatCount(value: number): string {
   if (value >= 10_000) return `${Math.round(value / 1000)}K`;
   if (value >= 1000) return `${(value / 1000).toFixed(1)}K`;
   return String(value);
+}
+
+/** Chip-sized version of the estimate: "48K reach · 412 visits", or "First one" with no history. */
+export function reachShort(kind: ActivationKind, history: ReachHistory): string {
+  const row = history[kind];
+  if (!row.posted) return "First one, no estimate";
+  return [row.avgReach !== null ? `${formatCount(row.avgReach)} reach` : null, row.avgVisits !== null ? `${formatCount(row.avgVisits)} visits` : null].filter(Boolean).join(" · ");
 }
 
 /** Never invents a number: with no posted history for this kind, it says so. */
@@ -130,7 +139,7 @@ export function suggestActivations(input: SuggestionInput): Suggestion[] {
   const reach = (kind: ActivationKind) => reachLine(kind, history, followers, first);
   const contact = hasContact ? "Contact on file" : "Add an email first";
   const make = (id: string, kind: ActivationKind, title: string, reasons: string[], ready: boolean, status: string, brief: string): Suggestion =>
-    ({ id: `${signal.key}:${id}`, kind, title, reasons, reach: reach(kind), ready, status, brief });
+    ({ id: `${signal.key}:${id}`, kind, title, reasons, reach: reach(kind), reachShort: reachShort(kind, history), ready, status, brief });
 
   if (signal.type === "birthday") {
     return [

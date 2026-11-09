@@ -1285,27 +1285,50 @@
 .pilot-signal__meta i { position: relative; width: 40px; height: 4px; overflow: hidden; border-radius: 999px; background: rgba(18, 19, 22, 0.08); }
 .pilot-signal__meta i::after { position: absolute; inset: 0 auto 0 0; width: var(--pilot-meter); border-radius: inherit; background: var(--pilot-accent); content: ""; }
 .pilot-signal .pilot-pill--ghost { background: var(--pilot-core); }
-/* Suggested activations: the decision, the reasons, and ready-made ideas with expected reach. */
-.pilot-signal__do { margin: 0; color: var(--pilot-ink); font-size: 14px; line-height: 1.5; }
-.pilot-why h4 { margin: 4px 0 6px; color: var(--pilot-ink); font-size: 13px; font-weight: 600; }
-.pilot-why ul { display: grid; gap: 4px; margin: 0; padding-left: 18px; color: var(--pilot-muted); font-size: 13px; line-height: 1.5; }
-.pilot-ideas > summary { display: inline-flex; align-items: center; gap: 6px; padding: 4px 0; color: var(--pilot-accent); font-size: 13px; font-weight: 600; cursor: pointer; list-style: none; }
-.pilot-ideas > summary::-webkit-details-marker { display: none; }
-.pilot-ideas > summary::after { width: 7px; height: 7px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: translateY(-2px) rotate(45deg); transition: transform 300ms var(--pilot-ease); content: ""; }
-.pilot-ideas[open] > summary::after { transform: translateY(1px) rotate(225deg); }
-.pilot-ideas > ul { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px; margin: 8px 0 0; padding: 0; list-style: none; }
-.pilot-idea { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; padding: 14px; border-radius: 16px; background: var(--pilot-core); box-shadow: 0 0 0 1px var(--pilot-hairline); }
-.pilot-idea__icon { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 10px; background: color-mix(in srgb, var(--pilot-accent) 9%, white); color: var(--pilot-accent); }
-.pilot-idea__icon svg { width: 18px; height: 18px; }
-.pilot-idea__body { display: grid; gap: 4px; min-width: 0; }
-.pilot-idea__body > strong { font-size: 14px; font-weight: 600; }
-.pilot-idea__body > p { margin: 0; color: var(--pilot-muted); font-size: 12.5px; line-height: 1.45; }
-.pilot-idea__reach { display: flex; gap: 6px; padding: 6px 8px; border-radius: 10px; background: #f3f4f6; color: var(--pilot-ink) !important; }
-.pilot-idea__reach svg { flex: none; width: 15px; height: 15px; margin-top: 1px; color: var(--pilot-accent); }
-.pilot-idea__foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-top: 4px; }
+/* Signal card action bar: the instruction, a glowing ideas button, and a dropdown of ready-made activations. */
+.pilot-act { display: grid; margin-top: 2px; }
+.pilot-act__bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; padding-top: 12px; border-top: 1px solid rgba(18, 19, 22, 0.07); }
+.pilot-act__do { margin: 0; color: var(--pilot-ink); font-size: 13.5px; font-weight: 600; }
+.pilot-act__do span { color: var(--pilot-muted); font-weight: 500; }
+.pilot-act__buttons { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.pilot-ideas-btn { position: relative; display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px 0 14px; border: 0; border-radius: 999px; background: var(--pilot-core); color: var(--pilot-ink); font-size: 13px; font-weight: 600; box-shadow: inset 0 0 0 1px var(--pilot-hairline); cursor: pointer; transition: transform 300ms var(--pilot-ease), box-shadow 300ms var(--pilot-ease), background-color 300ms var(--pilot-ease); }
+.pilot-ideas-btn svg { width: 16px; height: 16px; }
+.pilot-ideas-btn:hover { transform: translateY(-1px); }
+.pilot-ideas-btn:active { transform: scale(0.98); }
+.pilot-ideas-btn:focus-visible { outline: 2px solid var(--pilot-accent); outline-offset: 2px; }
+.pilot-ideas-btn__chevron { transition: transform 300ms var(--pilot-ease); }
+.pilot-ideas-btn--open .pilot-ideas-btn__chevron { transform: rotate(180deg); }
+/* Close dates light up: school color, a gold sparkle and a slow glow. */
+.pilot-ideas-btn--urgent { background: var(--pilot-accent); color: #fff; box-shadow: 0 0 0 0 color-mix(in srgb, var(--crm-org-highlight, var(--pilot-accent)) 55%, transparent), 0 10px 24px -14px var(--pilot-accent); animation: pilot-glow 2.4s var(--pilot-ease) infinite; }
+.pilot-ideas-btn--urgent > svg:first-child { color: var(--crm-org-highlight, #fff); }
+.pilot-ideas-btn--urgent.pilot-ideas-btn--open { animation: none; }
+@keyframes pilot-glow { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--crm-org-highlight, var(--pilot-accent)) 50%, transparent), 0 10px 24px -14px var(--pilot-accent); } 50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--crm-org-highlight, var(--pilot-accent)) 0%, transparent), 0 10px 24px -14px var(--pilot-accent); } }
+.pilot-act__panel { overflow: hidden; }
+.pilot-act__inner { display: grid; gap: 14px; padding-top: 14px; }
+.pilot-act__why { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.pilot-act__why li { display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: 8px; color: var(--pilot-muted); font-size: 13px; line-height: 1.45; }
+.pilot-act__why svg { width: 14px; height: 14px; margin-top: 2px; color: var(--pilot-accent); }
+.pilot-act__ideas { display: grid; grid-auto-columns: minmax(220px, 1fr); grid-auto-flow: column; gap: 10px; margin: 0 -4px; padding: 4px 4px 8px; overflow-x: auto; list-style: none; scroll-snap-type: x mandatory; scrollbar-width: thin; -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); }
+.pilot-idea { display: flex; flex-direction: column; gap: 6px; padding: 14px; border-radius: 18px; background: var(--pilot-core); box-shadow: 0 0 0 1px var(--pilot-hairline), 0 14px 30px -24px rgba(18, 19, 22, 0.35); scroll-snap-align: start; }
+.pilot-idea__head { display: flex; align-items: center; gap: 8px; }
+.pilot-idea__icon { display: grid; width: 30px; height: 30px; place-items: center; border-radius: 10px; background: color-mix(in srgb, var(--pilot-accent) 9%, white); color: var(--pilot-accent); }
+.pilot-idea__icon svg { width: 16px; height: 16px; }
+.pilot-idea__kind { color: var(--pilot-muted); font-size: 11.5px; font-weight: 600; }
+.pilot-idea__dot { width: 8px; height: 8px; margin-left: auto; border-radius: 999px; background: #c9ccd2; }
+.pilot-idea__dot--ready { background: #22a06b; box-shadow: 0 0 0 3px rgba(34, 160, 107, 0.15); }
+.pilot-idea > strong { font-size: 14.5px; font-weight: 600; letter-spacing: -0.01em; }
+.pilot-idea > p { margin: 0; color: var(--pilot-muted); font-size: 12.5px; line-height: 1.45; }
+.pilot-idea .pilot-idea__reach { display: inline-flex; align-items: center; gap: 6px; justify-self: start; width: fit-content; padding: 4px 10px; border-radius: 999px; background: color-mix(in srgb, var(--pilot-accent) 7%, white); color: var(--pilot-accent); font-size: 12px; font-weight: 600; }
+.pilot-idea__reach svg { width: 14px; height: 14px; }
+.pilot-idea__foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: auto; padding-top: 6px; }
 .pilot-idea__status { color: var(--pilot-muted); font-size: 11.5px; font-weight: 600; }
 .pilot-idea__status--ready { color: #1f7a4d; }
-.pilot-idea .pilot-pill--ghost { padding-block: 4px; font-size: 12.5px; box-shadow: inset 0 0 0 1px var(--pilot-hairline); }
+.pilot-idea__plan { display: inline-flex; align-items: center; gap: 4px; min-height: 30px; padding: 0 12px; border: 0; border-radius: 999px; background: var(--pilot-ink); color: #fff; font-size: 12.5px; font-weight: 600; cursor: pointer; transition: transform 250ms var(--pilot-ease); }
+.pilot-idea__plan svg { width: 14px; height: 14px; }
+.pilot-idea__plan:hover { transform: translateY(-1px); }
+.pilot-idea__plan:active { transform: scale(0.97); }
+.pilot-idea__plan:focus-visible { outline: 2px solid var(--pilot-accent); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .pilot-ideas-btn--urgent { animation: none; } .pilot-ideas-btn, .pilot-idea__plan { transition: none; } }
 .pilot-planned { display: inline-flex; align-items: center; gap: 6px; color: var(--pilot-accent); font-size: 13px; font-weight: 600; }
 .pilot-planned svg { width: 16px; height: 16px; }
 .pilot-opps { margin-top: 20px; }

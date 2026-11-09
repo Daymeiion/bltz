@@ -7,7 +7,6 @@ import {
   IconBrandLinkedin,
   IconBrandX,
   IconBrandFacebook,
-  IconCheck,
   IconNews,
   IconPhoto,
   IconVideo,
@@ -268,18 +267,14 @@ export function AthleteIntelligence({ organizationId, schoolName, file, roster =
                             <li key={signal.key} id={`signal-${signal.key}`} className={cn("pilot-signal", `pilot-signal--${signal.verdict}`, focusedSignal === signal.key && "pilot-signal--focus")}>
                               <div className="pilot-signal__top"><WhenChip daysUntil={signal.daysUntil} verdict={signal.verdict} /><span className="pilot-signal__verdict">{VERDICT_LABEL[signal.verdict]}</span></div>
                               <strong>{signal.headline}</strong>
-                              <p>{signal.explanation}</p>
                               <div className="pilot-signal__meta">
                                 <span><i style={{ "--pilot-meter": `${signal.priority}%` } as CSSProperties} />Priority {signal.priority}</span>
                                 <span><i style={{ "--pilot-meter": `${Math.round(signal.confidence * 100)}%` } as CSSProperties} />Confidence {Math.round(signal.confidence * 100)}%</span>
                                 <span>{signal.sources} source{signal.sources === 1 ? "" : "s"}</span>
                               </div>
-                              <SignalSuggestions signal={signal} playerName={player.name} momentTitle={file.moments.find((moment) => moment.id === signal.momentId)?.title ?? null} media={media} hasContact={Boolean(contactEmail)} followers={followers} history={history} canManage={canManage && !planned}
-                                onPlan={(idea) => setDraft({ kind: idea.kind, title: idea.title, brief: idea.brief, dueOn: signal.targetDate, signalKey: signal.key, momentId: signal.momentId })} />
-                              {canManage ? (
-                                planned ? <span className="pilot-planned"><IconCheck stroke={1.5} aria-hidden />Activation planned</span>
-                                  : <button type="button" className="pilot-pill pilot-pill--ghost" onClick={() => setDraft({ kind: "post", title: signal.headline, brief: "", dueOn: signal.targetDate, signalKey: signal.key, momentId: signal.momentId })}><span>Plan activation</span><span className="pilot-pill__icon" aria-hidden><IconPlus stroke={1.5} /></span></button>
-                              ) : null}
+                              <SignalSuggestions signal={signal} playerName={player.name} momentTitle={file.moments.find((moment) => moment.id === signal.momentId)?.title ?? null} media={media} hasContact={Boolean(contactEmail)} followers={followers} history={history} canManage={canManage} planned={planned}
+                                onPlan={(idea) => setDraft({ kind: idea.kind, title: idea.title, brief: idea.brief, dueOn: signal.targetDate, signalKey: signal.key, momentId: signal.momentId })}
+                                onPlanManual={() => setDraft({ kind: "post", title: signal.headline, brief: "", dueOn: signal.targetDate, signalKey: signal.key, momentId: signal.momentId })} />
                             </li>
                           );
                         })}</ul>}

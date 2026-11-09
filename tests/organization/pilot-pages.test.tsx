@@ -191,6 +191,21 @@ describe("pilot pages", () => {
     return vi.waitFor(() => expect(container.querySelector(".pilot-signal--focus strong")?.textContent).toBe("10 years since his first career touchdown"));
   });
 
+  it("lights up suggested ideas for close dates and pre-fills the composer from one", () => {
+    render(<AthleteIntelligence organizationId="org" schoolName="Westlake" file={previewAthleteFile("p1")!} initialActivations={[]} initialReach={[]} contactEmail="marcus@example.com" canManage profileBaseHref="/i" preview />);
+
+    const [soon, later] = [...container.querySelectorAll<HTMLButtonElement>(".pilot-ideas-btn")];
+    expect(soon.className).toContain("pilot-ideas-btn--urgent");
+    expect(later.className).not.toContain("pilot-ideas-btn--urgent");
+    expect(container.querySelector(".pilot-idea")).toBeNull();
+
+    act(() => soon.click());
+    expect(soon.getAttribute("aria-expanded")).toBe("true");
+    act(() => container.querySelector<HTMLButtonElement>('button[aria-label^="Plan this: Marcus looks back"]')!.click());
+    expect(container.querySelector<HTMLInputElement>(".pilot-modal input:not([type])")?.value).toBe("Marcus looks back");
+    expect(container.querySelector<HTMLTextAreaElement>(".pilot-modal textarea")?.value).toContain("Interview Marcus Hale about 10 years since his first career touchdown");
+  });
+
   it("hides planning controls from members who cannot manage activations", () => {
     render(<AthleteIntelligence organizationId="org" schoolName="Westlake" file={previewAthleteFile("p1")!} initialActivations={[]} initialReach={[]} canManage={false} profileBaseHref="/i" />);
 
