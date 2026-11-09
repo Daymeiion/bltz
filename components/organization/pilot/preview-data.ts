@@ -89,6 +89,10 @@ export function previewAthleteFile(playerId: string): AthleteFile | null {
     explanation: `${player.name}'s recorded game on this date is a natural throwback moment for fans and letterwinners.`,
     targetDate: player.next.targetDate, daysUntil: player.next.daysUntil, verdict: player.next.verdict, priority: 82, confidence: 0.92, sources: 2,
     ...subjectOf(player.next.headline),
+    evidence: [
+      { label: "Sample: conference stats feed", url: null, note: `Season record for ${player.name}, checked against the box score.` },
+      { label: "Sample: school media guide", url: null, note: "Career history and honors, reviewed by BLTZ." },
+    ],
   }] : [];
   return {
     player,
@@ -105,6 +109,12 @@ export function previewAthleteFile(playerId: string): AthleteFile | null {
       { id: "s3", season: "2015", team: "Cal", line: "1,204 rec yds · 78 rec · 11 rec TD" },
       { id: "s2", season: "2014", team: "Cal", line: "866 rec yds · 59 rec · 6 rec TD" },
       { id: "s1", season: "2013", team: "Cal", line: "402 rec yds · 31 rec · 2 rec TD" },
+    ],
+    // Sample coverage; real files list verified articles and interviews from BLTZ research.
+    research: [
+      { id: `${player.id}-r1`, title: `Sample: ${player.name} career retrospective`, url: "https://example.com/sample-retrospective", publisher: "Sample publication", type: "article" as const, date: "2021-09-14", aboutDate: null },
+      { id: `${player.id}-r2`, title: `Sample: Where are they now with ${player.name}`, url: "https://example.com/sample-interview", publisher: "Sample podcast", type: "interview" as const, date: "2024-03-02", aboutDate: null },
+      { id: `${player.id}-r3`, title: `Sample: ${player.name} highlight reel`, url: "https://example.com/sample-video", publisher: "Sample video channel", type: "video" as const, date: "2019-11-20", aboutDate: null },
     ],
     socialLinks: playerId === "p1" ? [{ platform: "Instagram", handle: "@marcushale", url: "https://www.instagram.com/p/demo/" }]
       : playerId === "p5" ? [{ platform: "Instagram", handle: "@reallifedh", url: "https://www.instagram.com/reallifedh/" }]

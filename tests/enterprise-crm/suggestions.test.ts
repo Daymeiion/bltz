@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { reachHistory, reachLine, signalReasons, suggestActivations, type ReachHistory } from "@/lib/enterprise-crm/pilot/suggestions";
+import { backingFor, reachHistory, reachLine, signalReasons, suggestActivations, type ReachHistory } from "@/lib/enterprise-crm/pilot/suggestions";
 import type { AthleteFile, PilotActivation, PilotAthleteMedia } from "@/lib/enterprise-crm/pilot/types";
 
 type Signal = AthleteFile["signals"][number];
@@ -81,5 +81,26 @@ describe("why it matters", () => {
       "Your staff has connected 1 image to build from.",
       "Dante reaches 12K followers, so a tag or share extends the post past your own accounts.",
     ]);
+  });
+});
+
+describe("what backs a planned activation", () => {
+  const research = (id: string, date: string | null, aboutDate: string | null = null) =>
+    ({ id, title: id, url: `https://example.com/${id}`, publisher: "Pub", type: "article" as const, date, aboutDate });
+  const file = {
+    signals: [signal({ key: "s1", momentId: "m1", evidence: [{ label: "nflverse box score", url: null, note: "8 INT in 2006." }] })],
+    moments: [{ id: "m1", title: "Cal vs. USC", date: "2006-11-18", status: "verified", sources: 1 }],
+    research: [research("old", "2010-01-01"), research("new", "2024-05-01"), research("same-year", "2006-12-01"), research("same-day", "2015-01-01", "2006-11-18"), research("extra", "2023-01-01")],
+  };
+
+  it("lists the signal's sources and puts coverage of the same game first, then the newest, four at most", () => {
+    const backing = backingFor(file, "s1")!;
+    expect(backing.sources).toEqual([{ label: "nflverse box score", url: null, note: "8 INT in 2006." }]);
+    expect(backing.research.map((item) => item.id)).toEqual(["same-day", "same-year", "new", "extra"]);
+  });
+
+  it("still offers research for school-media signals, and nothing when there is none", () => {
+    expect(backingFor(file, "school-media:x")!.sources).toEqual([]);
+    expect(backingFor({ ...file, research: [] }, "school-media:x")).toBeNull();
   });
 });

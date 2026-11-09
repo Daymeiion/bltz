@@ -1,5 +1,5 @@
 import type { SignalVerdict } from "@/lib/intelligence/signals/types";
-import type { ActivationKind, AthleteFile, PilotActivation, PilotAthleteMedia } from "./types";
+import type { ActivationKind, AthleteFile, PilotActivation, PilotAthleteMedia, ResearchItem, ResearchSource } from "./types";
 
 type Signal = AthleteFile["signals"][number];
 
@@ -182,4 +182,22 @@ export function suggestActivations(input: SuggestionInput): Suggestion[] {
   if (round) ideas.push(make("legends-event", "event", `Invite ${first} back`, [`A ${years}-year anniversary is a natural game-day recognition or sideline visit.`], hasContact, contact,
     `Invite ${playerName} to a home game near ${day} for an on-field recognition. Show the Locker QR code on the board.`));
   return ideas;
+}
+
+export type Backing = { sources: ResearchSource[]; research: ResearchItem[] };
+
+/**
+ * What backs an activation planned from a signal: the signal's own reviewed sources,
+ * and up to four pieces of verified coverage, those about the same day or year first.
+ */
+export function backingFor(file: Pick<AthleteFile, "signals" | "moments" | "research">, signalKey: string | null): Backing | null {
+  const signal = signalKey ? file.signals.find((row) => row.key === signalKey) : null;
+  const research = file.research ?? [];
+  if (!signal && !research.length) return null;
+  const momentDate = signal?.momentId ? file.moments.find((moment) => moment.id === signal.momentId)?.date ?? null : null;
+  const year = momentDate?.slice(0, 4) ?? null;
+  const score = (item: ResearchItem) => (momentDate && item.aboutDate === momentDate ? 2 : 0) + (year && (item.aboutDate ?? item.date)?.startsWith(year) ? 1 : 0);
+  const ranked = [...research].sort((a, b) => score(b) - score(a) || (b.date ?? "").localeCompare(a.date ?? ""));
+  const backing = { sources: signal?.evidence ?? [], research: ranked.slice(0, 4) };
+  return backing.sources.length || backing.research.length ? backing : null;
 }

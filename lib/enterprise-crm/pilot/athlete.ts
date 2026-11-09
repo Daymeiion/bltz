@@ -7,9 +7,11 @@ import type { OrganizationContext } from "@/lib/organization/types";
 import { createServiceClient } from "@/lib/supabase/service";
 import { socialPlatformMatches } from "@/lib/preview-lockers/social";
 import { signalHeadline } from "@/lib/intelligence/signal-copy";
-import { scalarStatistics } from "@/lib/intelligence/lab-format";
+import { safeSourceUrl, scalarStatistics } from "@/lib/intelligence/lab-format";
+import { contentItemsFromEvidence } from "@/lib/intelligence/content";
+import type { SignalEvidence } from "@/lib/intelligence/signals/types";
 import { loadSchoolRoster } from "./former-players";
-import type { AthleteFile, PilotPlayer } from "./types";
+import type { AthleteFile, PilotPlayer, ResearchSource } from "./types";
 
 export type SchoolAthlete = {
   player: PilotPlayer;
@@ -66,6 +68,18 @@ function seasonLine(stats: Record<string, unknown>): string {
 }
 
 /** Projects the Lab read into what the school workspace renders; no raw evidence or provider data. */
+/** One row per distinct source, with a safe link when the source has one. */
+function sourcesOf(evidence: readonly SignalEvidence[]): ResearchSource[] {
+  const seen = new Set<string>();
+  return evidence.flatMap((row) => {
+    const url = safeSourceUrl(row.sourceUrl ?? row.sourceLocator);
+    const key = `${row.sourceLabel}|${url ?? ""}`;
+    if (seen.has(key)) return [];
+    seen.add(key);
+    return [{ label: row.sourceLabel, url, note: row.assertion.slice(0, 300) }];
+  }).slice(0, 6);
+}
+
 function numberOrNull(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
@@ -83,6 +97,7 @@ export function toAthleteFile(athlete: SchoolAthlete): AthleteFile {
       confidence: signal.confidence, sources: signal.evidence.length,
       type: signal.type === "birthday" ? "birthday" as const : signal.type === "career_milestone" ? "milestone" as const : "anniversary" as const,
       years: signal.type === "birthday" ? numberOrNull(signal.data.age) : numberOrNull(signal.data.anniversaryYears),
+      evidence: sourcesOf(signal.evidence),
     })) : [],
     opportunities: ready ? lab!.intelligence.opportunities
       .filter((opportunity) => lab!.intelligence.signals.find((signal) => opportunity.signalKeys.includes(signal.key))?.verdict !== "upcoming")
@@ -96,5 +111,10 @@ export function toAthleteFile(athlete: SchoolAthlete): AthleteFile {
       .map((row) => ({ id: row.id, season: row.season, team: row.team, line: seasonLine(row.stats) }))
       .filter((row) => row.line).slice(-12).reverse(),
     socialLinks: athlete.socialLinks,
+    // Only verified coverage reaches schools; unconfirmed identity matches stay in the Lab.
+    research: contentItemsFromEvidence(lab?.evidence.rows ?? []).filter((item) => item.status === "verified").slice(0, 12).map((item) => ({
+      id: item.evidenceId, title: item.title, url: item.url, publisher: item.publisher, type: item.contentType,
+      date: item.publishedOn ?? item.releasedOn, aboutDate: item.describedEventOn,
+    })),
   };
 }

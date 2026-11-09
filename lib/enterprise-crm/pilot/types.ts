@@ -85,6 +85,22 @@ export function summarizeReach(activations: readonly PilotActivation[]): PilotRe
   }), { posted: 0, planned: 0, impressions: 0, engagements: 0, visits: 0 });
 }
 
+/** One reviewed record behind a signal (a stats feed, a box score, the Locker record). */
+export type ResearchSource = { label: string; url: string | null; note: string };
+
+/** A verified article, interview, video, podcast or profile about the athlete, from BLTZ research. */
+export type ResearchItem = {
+  id: string;
+  title: string;
+  url: string;
+  publisher: string;
+  type: "article" | "interview" | "video" | "podcast" | "profile";
+  /** Published or released. */
+  date: string | null;
+  /** The day the piece is about, when recorded (a game, a ceremony). */
+  aboutDate: string | null;
+};
+
 export type SignalSubject = "birthday" | "anniversary" | "milestone" | "business" | "school_media";
 
 /** The serializable slice of the Intelligence engine a school sees for one athlete. */
@@ -107,11 +123,15 @@ export interface AthleteFile {
     type?: SignalSubject;
     /** Age for a birthday, years since for an anniversary. */
     years?: number | null;
+    /** The reviewed records behind this date. */
+    evidence?: ResearchSource[];
   }>;
   opportunities: Array<{ key: string; label: string; explanation: string; strength: number; signalKeys: string[] }>;
   moments: Array<{ id: string; title: string; date: string | null; status: string; sources: number }>;
   seasons: Array<{ id: string; season: string; team: string | null; line: string }>;
   socialLinks: Array<{ platform: string; handle: string; url: string }>;
+  /** Verified coverage of the athlete from BLTZ research, newest first. */
+  research?: ResearchItem[];
 }
 
 export const ATHLETE_MEDIA_KINDS = ["highlight", "image", "archive", "business"] as const;

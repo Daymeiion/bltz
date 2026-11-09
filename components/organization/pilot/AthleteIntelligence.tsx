@@ -7,6 +7,10 @@ import {
   IconBrandLinkedin,
   IconBrandX,
   IconBrandFacebook,
+  IconCheck,
+  IconExternalLink,
+  IconMicrophone,
+  IconUser,
   IconNews,
   IconPhoto,
   IconVideo,
@@ -41,7 +45,7 @@ import { AthleteAvatars } from "./AthleteAvatars";
 import { MediaAttach, MediaThumb, mediaPayload, type PendingMedia } from "./MediaAttach";
 import { PlayerColumn } from "./PlayerColumn";
 import { SignalSuggestions } from "./SignalSuggestions";
-import { reachHistory, type ReachHistory } from "@/lib/enterprise-crm/pilot/suggestions";
+import { backingFor, reachHistory, type Backing, type ReachHistory } from "@/lib/enterprise-crm/pilot/suggestions";
 import { AnimatePresence, HeroTitle, MotionItem } from "./PilotMotion";
 
 const KIND_LABEL: Record<ActivationKind, string> = { post: "Social post", video: "Video", article: "Article", campaign: "Campaign", event: "Event" };
@@ -367,7 +371,7 @@ export function AthleteIntelligence({ organizationId, schoolName, file, roster =
         </aside>
       </div>
 
-      {draft ? <ActivationComposer draft={draft} lead={player} others={roster.filter((row) => row.id !== player.id)} organizationId={organizationId} preview={preview} onClose={() => setDraft(null)} onSave={createActivation} /> : null}
+      {draft ? <ActivationComposer draft={draft} backing={draft.signalKey ? backingFor(file, draft.signalKey) : null} lead={player} others={roster.filter((row) => row.id !== player.id)} organizationId={organizationId} preview={preview} onClose={() => setDraft(null)} onSave={createActivation} /> : null}
     </div>
   );
 }
@@ -545,7 +549,7 @@ function ReachForm({ onSave }: { onSave: (platform: SocialPlatformKey, followers
   );
 }
 
-function ActivationComposer({ draft, lead, others, organizationId, preview, onClose, onSave }: { draft: Draft; lead: PilotPlayer; others: PilotPlayer[]; organizationId: string; preview: boolean; onClose: () => void; onSave: (value: Draft) => Promise<void> }) {
+function ActivationComposer({ draft, backing, lead, others, organizationId, preview, onClose, onSave }: { draft: Draft; backing: Backing | null; lead: PilotPlayer; others: PilotPlayer[]; organizationId: string; preview: boolean; onClose: () => void; onSave: (value: Draft) => Promise<void> }) {
   const [value, setValue] = useState<Draft>({ ...draft, additionalPlayerIds: draft.additionalPlayerIds ?? [], media: draft.media ?? [] });
   const attached = value.media ?? [];
   const [busy, setBusy] = useState(false);
@@ -563,6 +567,7 @@ function ActivationComposer({ draft, lead, others, organizationId, preview, onCl
         </div>
         <label className="pilot-field">Title<input autoFocus required maxLength={200} value={value.title} onChange={(event) => setValue({ ...value, title: event.target.value })} /></label>
         <label className="pilot-field">Date<input type="date" value={value.dueOn} onChange={(event) => setValue({ ...value, dueOn: event.target.value })} /></label>
+        {backing ? <BackedBy backing={backing} /> : null}
         {others.length ? (
           <div className="pilot-field">
             <span>Also featuring</span>
@@ -586,5 +591,52 @@ function ActivationComposer({ draft, lead, others, organizationId, preview, onCl
         </div>
       </form>
     </div>
+  );
+}
+
+const RESEARCH_LABEL: Record<NonNullable<AthleteFile["research"]>[number]["type"], string> = { article: "Article", interview: "Interview", video: "Video", podcast: "Podcast", profile: "Profile" };
+const RESEARCH_ICON: Record<NonNullable<AthleteFile["research"]>[number]["type"], typeof IconNews> = { article: IconNews, interview: IconMicrophone, video: IconVideo, podcast: IconMicrophone, profile: IconUser };
+
+function researchDate(date: string | null): string | null {
+  if (!date) return null;
+  const parsed = new Date(`${date}T00:00:00Z`);
+  return Number.isNaN(parsed.getTime()) ? date : parsed.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+}
+
+/** The reviewed sources and past coverage behind a planned activation, to cite and link. */
+function BackedBy({ backing }: { backing: Backing }) {
+  return (
+    <section className="pilot-backed" aria-label="Backed by">
+      <h3>Backed by</h3>
+      {backing.sources.length ? (
+        <ul className="pilot-backed__sources">
+          {backing.sources.map((source) => (
+            <li key={`${source.label}-${source.url ?? ""}`}>
+              <IconCheck stroke={2} aria-hidden />
+              <span>{source.url ? <a href={source.url} target="_blank" rel="noopener noreferrer">{source.label}</a> : <strong>{source.label}</strong>}{source.note ? <small>{source.note}</small> : null}</span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {backing.research.length ? (
+        <>
+          <h4>Past coverage from BLTZ research</h4>
+          <ul className="pilot-backed__research">
+            {backing.research.map((item) => {
+              const Icon = RESEARCH_ICON[item.type];
+              return (
+                <li key={item.id}>
+                  <a href={item.url} target="_blank" rel="noopener noreferrer">
+                    <span className="pilot-backed__icon" aria-hidden><Icon stroke={1.5} /></span>
+                    <span><strong>{item.title}</strong><small>{[RESEARCH_LABEL[item.type], item.publisher, researchDate(item.date)].filter(Boolean).join(" · ")}</small></span>
+                    <IconExternalLink stroke={1.5} aria-hidden className="pilot-backed__out" />
+                  </a>
+                </li>
+              );
+            })}
+          </ul>
+        </>
+      ) : null}
+    </section>
   );
 }
