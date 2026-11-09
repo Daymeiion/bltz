@@ -8,6 +8,8 @@ import { LAUNCH_STATUSES } from "@/lib/enterprise-crm/pilot/types";
 export type QueueLaunch = { id: string; organizationId: string; school: string; playerName: string; existingPlayer: boolean; position: string | null; years: string | null; contactEmail: string | null; message: string | null; status: string; statusNote: string | null; createdAt: string };
 export type QueueSchool = { id: string; name: string; status: string };
 export type QueueSignal = { id: string; organizationId: string; school: string; player: string | null; title: string; kind: string; targetDate: string; recurrence: "yearly" | "once"; origin: "ai" | "manual"; status: "active" | "archived"; request: string | null; sources: number; createdAt: string };
+export type QueueBrief = { id: string; organizationId: string; school: string; player: string; brandName: string; status: "shared" | "revoked"; expiresAt: string; createdAt: string; viewCount: number; lastViewedAt: string | null };
+export type QueueDismissal = { id: string; school: string; player: string | null; targetType: "signal" | "moment"; label: string | null; scope: "this_year" | "always"; reason: string | null; createdAt: string };
 export type QueueMedia = { id: string; launchId: string | null; school: string; player: string | null; kind: string; title: string; url: string | null; description: string | null; occurredOn: string | null };
 
 const STATUS_LABEL: Record<string, string> = { requested: "Requested", building: "Building", invited: "Invite sent", live: "Live", declined: "Declined" };
@@ -19,10 +21,11 @@ async function patch(url: string, body: unknown) {
   if (!response.ok) throw new Error("failed");
 }
 
-export function LaunchQueue({ schools, launches, media, signals = [], signalsUnavailable = false, unavailable }: { schools: QueueSchool[] | null; launches: QueueLaunch[]; media: QueueMedia[]; signals?: QueueSignal[]; signalsUnavailable?: boolean; unavailable: boolean }) {
+export function LaunchQueue({ schools, launches, media, signals = [], signalsUnavailable = false, briefs = [], briefsUnavailable = false, dismissals = [], dismissalsUnavailable = false, unavailable }: { schools: QueueSchool[] | null; launches: QueueLaunch[]; media: QueueMedia[]; signals?: QueueSignal[]; signalsUnavailable?: boolean; briefs?: QueueBrief[]; briefsUnavailable?: boolean; dismissals?: QueueDismissal[]; dismissalsUnavailable?: boolean; unavailable: boolean }) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [openedAt] = useState(() => Date.now());
 
   async function run(key: string, action: () => Promise<void>) {
     setBusy(key); setError(null);
@@ -51,7 +54,7 @@ export function LaunchQueue({ schools, launches, media, signals = [], signalsUna
               <li key={school.id} className="flex flex-wrap items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
                 <div>
                   <p className="font-semibold">{school.name}</p>
-                  <p className={muted}>{school.status === "restricted" ? "Restricted" : "Active"} · {launches.filter((launch) => launch.organizationId === school.id).length} launch request(s) · {signals.filter((signal) => signal.organizationId === school.id && signal.status === "active").length} school signal(s)</p>
+                  <p className={muted}>{school.status === "restricted" ? "Restricted" : "Active"} · {launches.filter((launch) => launch.organizationId === school.id).length} launch request(s) · {signals.filter((signal) => signal.organizationId === school.id && signal.status === "active").length} school signal(s) · {briefs.filter((brief) => brief.organizationId === school.id).length} brief(s)</p>
                 </div>
                 <Link href={`/organization/${school.id}/dashboard`} className="rounded bg-[#ffbb00] px-3 py-1.5 text-sm font-semibold text-black">Open dashboard</Link>
               </li>
@@ -74,6 +77,44 @@ export function LaunchQueue({ schools, launches, media, signals = [], signalsUna
                 </div>
                 <p className={muted}>{signal.kind} · {signal.recurrence === "yearly" ? "yearly from" : "on"} {signal.targetDate} · {signal.sources} source(s) · added {new Date(signal.createdAt).toLocaleDateString()}</p>
                 {signal.request ? <p className="text-sm">Staff wrote: “{signal.request}”</p> : null}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className={panel} aria-label="Partnership briefs">
+        <h2 className="mb-1 text-lg font-semibold">Partnership briefs</h2>
+        <p className={`${muted} mb-3`}>Briefs schools shared with brands, newest first, and whether the brand opened them.</p>
+        {briefsUnavailable ? <p role="alert" className="text-sm text-amber-700">Briefs could not be loaded. The briefs migration may not be applied yet.</p>
+          : briefs.length === 0 ? <p className={muted}>No school has shared a brief yet.</p> : (
+          <ul className="divide-y divide-neutral-200 dark:divide-neutral-800">
+            {briefs.map((brief) => {
+              const live = brief.status === "shared" && new Date(brief.expiresAt).getTime() > openedAt;
+              return (
+                <li key={brief.id} className="flex flex-wrap items-baseline justify-between gap-2 py-3 first:pt-0 last:pb-0">
+                  <div>
+                    <p className="font-semibold">{brief.player} → {brief.brandName} <span className={muted}>· {brief.school}</span></p>
+                    <p className={muted}>Shared {new Date(brief.createdAt).toLocaleDateString()} · {brief.status === "revoked" ? "link turned off" : live ? `works until ${new Date(brief.expiresAt).toLocaleDateString()}` : "expired"}</p>
+                  </div>
+                  <span className="text-sm font-semibold">{brief.viewCount ? `Opened ${brief.viewCount}×${brief.lastViewedAt ? `, last ${new Date(brief.lastViewedAt).toLocaleDateString()}` : ""}` : "Not opened"}</span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
+
+      <section className={panel} aria-label="Dismissed by schools">
+        <h2 className="mb-1 text-lg font-semibold">Dismissed by schools</h2>
+        <p className={`${muted} mb-3`}>What schools hid from their own workspace. Nothing changes in the Lab; a Moment dismissed as &ldquo;Wrong date&rdquo; is worth a review there.</p>
+        {dismissalsUnavailable ? <p role="alert" className="text-sm text-amber-700">Dismissals could not be loaded. The dismissals migration may not be applied yet.</p>
+          : dismissals.length === 0 ? <p className={muted}>Nothing dismissed yet.</p> : (
+          <ul className="divide-y divide-neutral-200 dark:divide-neutral-800">
+            {dismissals.map((item) => (
+              <li key={item.id} className="py-3 first:pt-0 last:pb-0">
+                <p className="font-semibold">{item.label ?? (item.targetType === "moment" ? "A Moment" : "A signal")} <span className={muted}>· {item.school}{item.player ? ` · ${item.player}` : ""}</span></p>
+                <p className={muted}>{item.targetType === "moment" ? "Moment" : item.scope === "this_year" ? "Signal, this year only" : "Signal, every year"}{item.reason ? ` · ${item.reason}` : ""} · {new Date(item.createdAt).toLocaleDateString()}</p>
               </li>
             ))}
           </ul>

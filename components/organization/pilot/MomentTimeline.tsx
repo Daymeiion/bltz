@@ -6,6 +6,8 @@ import { IconCheck, IconChevronDown, IconExternalLink, IconPlus } from "@tabler/
 import type { AthleteFile, PilotActivation, PilotAthleteMedia } from "@/lib/enterprise-crm/pilot/types";
 import type { PendingMedia } from "./MediaAttach";
 import { MomentMedia } from "./MomentMedia";
+import { DismissMenu } from "./Dismiss";
+import { MOMENT_REASONS } from "@/lib/enterprise-crm/pilot/dismissals-shared";
 import { cn } from "@/lib/utils";
 
 type Moment = AthleteFile["moments"][number];
@@ -21,7 +23,7 @@ function longDate(date: string | null): string {
  * Career Moments as an expandable timeline: game numbers up front, then the
  * sources, coverage of the same day, and what the school has already run from it.
  */
-export function MomentTimeline({ file, activations, media, organizationId, preview, canManage, onPlan, onShowActivation, onAddMedia, onLinkMedia }: {
+export function MomentTimeline({ file, activations, media, organizationId, preview, canManage, onPlan, onShowActivation, onAddMedia, onLinkMedia, onDismiss }: {
   file: AthleteFile;
   activations: readonly PilotActivation[];
   media: readonly PilotAthleteMedia[];
@@ -30,6 +32,8 @@ export function MomentTimeline({ file, activations, media, organizationId, previ
   canManage: boolean;
   onAddMedia: (item: PendingMedia & { momentId: string }) => Promise<boolean>;
   onLinkMedia: (mediaId: string, momentId: string | null) => Promise<boolean>;
+  /** Hides the Moment, and the signals it drives, from this school only. */
+  onDismiss?: (moment: Moment, reason: string) => void;
   onPlan: (moment: Moment) => void;
   onShowActivation: (id: string) => void;
 }) {
@@ -75,6 +79,7 @@ export function MomentTimeline({ file, activations, media, organizationId, previ
                     <div className="pilot-moment__foot">
                       {runs.length ? <span className="pilot-moment__runs">{runs.map((row) => <button key={row.id} type="button" onClick={() => onShowActivation(row.id)}>{row.title}</button>)}</span>
                         : <span className="pilot-quiet">Nothing planned from this Moment yet.</span>}
+                      {canManage && onDismiss ? <DismissMenu choices={MOMENT_REASONS.map((reason) => ({ label: reason, onSelect: () => onDismiss(moment, reason) }))} /> : null}
                       {canManage ? <button type="button" className="pilot-pill pilot-pill--ghost" onClick={() => onPlan(moment)}><span>Plan from this Moment</span><span className="pilot-pill__icon" aria-hidden><IconPlus stroke={1.5} /></span></button> : null}
                     </div>
                   </div>

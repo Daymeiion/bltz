@@ -11,6 +11,7 @@ import {
   IconExternalLink,
   IconMicrophone,
   IconShare,
+  IconSparkles,
   IconUser,
   IconNews,
   IconPhoto,
@@ -49,6 +50,10 @@ import { PlayerColumn } from "./PlayerColumn";
 import { SignalSuggestions } from "./SignalSuggestions";
 import { MomentTimeline } from "./MomentTimeline";
 import { AddSignal } from "./AddSignal";
+import { DismissMenu, DismissedList } from "./Dismiss";
+import { BriefBuilder } from "./BriefBuilder";
+import type { BriefSummary } from "@/lib/enterprise-crm/pilot/briefs-shared";
+import { dismissalKey, isMomentDismissed, isSignalDismissed, type Dismissal, type DismissalInput } from "@/lib/enterprise-crm/pilot/dismissals-shared";
 import { toFileSignal, type SchoolSignal } from "@/lib/enterprise-crm/pilot/school-signals-shared";
 import { ShareActivation } from "./ShareActivation";
 import type { IntegrationStatus } from "@/lib/enterprise-crm/pilot/integrations-shared";
@@ -86,7 +91,7 @@ async function send<T>(url: string, method: "POST" | "PATCH", body: unknown): Pr
  * The school's Intelligence workspace: players on the left, the selected
  * player's file in the center, and signals, activations and reach on the right.
  */
-export function AthleteIntelligence({ organizationId, schoolName, file, roster = [], contactEmail = null, initialActivations, initialReach, initialMedia = [], initialSchoolSignals = [], schoolHistory, connections = [], canManage, profileBaseHref, preview = false }: {
+export function AthleteIntelligence({ organizationId, schoolName, file, roster = [], contactEmail = null, initialActivations, initialReach, initialMedia = [], initialSchoolSignals = [], initialDismissals = [], initialBriefs = [], schoolHistory, connections = [], canManage, profileBaseHref, preview = false }: {
   organizationId: string;
   schoolName: string;
   file: AthleteFile;
@@ -99,6 +104,10 @@ export function AthleteIntelligence({ organizationId, schoolName, file, roster =
   schoolHistory?: ReachHistory;
   /** Signals the school added itself for this player. */
   initialSchoolSignals?: SchoolSignal[];
+  /** What this school hid; hidden only here, never in the shared engine. */
+  initialDismissals?: Dismissal[];
+  /** Partnership briefs this school shared about the player. */
+  initialBriefs?: BriefSummary[];
   /** Tools connected in Settings, so Share can send directly. */
   connections?: IntegrationStatus[];
   canManage: boolean;
@@ -110,7 +119,14 @@ export function AthleteIntelligence({ organizationId, schoolName, file, roster =
   const [media, setMedia] = useState(initialMedia);
   // Engine signals plus anniversaries of what the school connected, soonest first.
   const [schoolSignals, setSchoolSignals] = useState(initialSchoolSignals);
-  const signals = [...file.signals, ...mediaSignals(media), ...schoolSignals.flatMap((row) => toFileSignal(row) ?? [])].sort((a, b) => a.daysUntil - b.daysUntil);
+  const [dismissals, setDismissals] = useState(initialDismissals);
+  const signals = [...file.signals, ...mediaSignals(media), ...schoolSignals.flatMap((row) => toFileSignal(row) ?? [])]
+    .filter((signal) => !isSignalDismissed(signal, dismissals)).sort((a, b) => a.daysUntil - b.daysUntil);
+  const visibleMoments = file.moments.filter((moment) => !isMomentDismissed(moment.id, dismissals));
+  const [briefs, setBriefs] = useState(initialBriefs);
+  const [briefOpen, setBriefOpen] = useState(false);
+  // Read once per visit; a link that expires while the page is open shows as live until reload.
+  const [openedAt] = useState(() => Date.now());
   const [draft, setDraft] = useState<Draft | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(initialActivations[0]?.id ?? null);
@@ -206,6 +222,40 @@ export function AthleteIntelligence({ organizationId, schoolName, file, roster =
     });
   }
 
+  /** Hides a signal or Moment from this school's workspace only. */
+  async function dismiss(input: DismissalInput) {
+    setError(null);
+    const saved: Dismissal | null = preview
+      ? { id: crypto.randomUUID(), playerId: input.playerId, targetType: input.targetType, targetKey: input.targetKey, scope: input.scope, label: input.label ?? null, reason: input.reason ?? null, createdAt: new Date().toISOString() }
+      : await send<{ dismissal: Dismissal }>(`${api}/dismissals`, "POST", input).then((result) => result.dismissal).catch(() => null);
+    if (!saved) { setError("That could not be dismissed. Try again."); return; }
+    setDismissals((current) => [saved, ...current]);
+  }
+
+  async function restore(id: string) {
+    setError(null);
+    const ok = preview ? true : await send(`${api}/dismissals/${id}`, "PATCH", { restored: true }).then(() => true).catch(() => false);
+    if (!ok) { setError("That could not be restored. Try again."); return; }
+    setDismissals((current) => current.filter((row) => row.id !== id));
+  }
+
+  /** The school's own signals are removed (archived), not dismissed. */
+  async function removeSchoolSignal(signalKey: string) {
+    const id = signalKey.replace(/^school:/, "");
+    setError(null);
+    const ok = preview ? true : await send(`${api}/signals/${id}`, "PATCH", { status: "archived" }).then(() => true).catch(() => false);
+    if (!ok) { setError("That signal could not be removed. Try again."); return; }
+    setSchoolSignals((current) => current.filter((row) => row.id !== id));
+  }
+
+  /** Turns off a shared brief's link. */
+  async function revokeBrief(id: string) {
+    setError(null);
+    const ok = preview ? true : await send(`${api}/briefs/${id}`, "PATCH", { status: "revoked" }).then(() => true).catch(() => false);
+    if (!ok) { setError("That link could not be turned off. Try again."); return; }
+    setBriefs((current) => current.map((row) => row.id === id ? { ...row, status: "revoked" } : row));
+  }
+
   async function recordReach(platform: SocialPlatformKey, followersCount: number, handle: string) {
     setError(null);
     const body = { playerId: player.id, platform, followers: followersCount, handle: handle || null };
@@ -277,7 +327,7 @@ export function AthleteIntelligence({ organizationId, schoolName, file, roster =
               document.getElementById(`folder-tab-${next}`)?.focus();
             }}>
               {FOLDER_TABS.map((item) => {
-                const count = item.id === "intelligence" ? signals.length : item.id === "moments" ? file.moments.length : file.opportunities.length + activations.length;
+                const count = item.id === "intelligence" ? signals.length : item.id === "moments" ? visibleMoments.length : file.opportunities.length + activations.length;
                 return (
                   <button key={item.id} id={`folder-tab-${item.id}`} type="button" role="tab" aria-selected={tab === item.id} aria-controls="folder-panel" tabIndex={tab === item.id ? 0 : -1} className="pilot-folder__tab" onClick={() => setTab(item.id)}>
                     {tab === item.id ? <motion.span layoutId="pilot-folder-tab" className="pilot-folder__tab-bg" transition={{ type: "spring", stiffness: 420, damping: 36 }} /> : null}
@@ -299,7 +349,12 @@ export function AthleteIntelligence({ organizationId, schoolName, file, roster =
                           const planned = activations.some((row) => row.signalKey === signal.key && row.status !== "cancelled");
                           return (
                             <li key={signal.key} id={`signal-${signal.key}`} className={cn("pilot-signal", `pilot-signal--${signal.verdict}`, focusedSignal === signal.key && "pilot-signal--focus")}>
-                              <div className="pilot-signal__top"><span className="pilot-signal__chips"><WhenChip daysUntil={signal.daysUntil} verdict={signal.verdict} />{signal.key.startsWith("school:") ? <span className="pilot-signal__mine">Added by your staff</span> : null}</span><span className="pilot-signal__verdict">{VERDICT_LABEL[signal.verdict]}</span></div>
+                              <div className="pilot-signal__top"><span className="pilot-signal__chips"><WhenChip daysUntil={signal.daysUntil} verdict={signal.verdict} />{signal.key.startsWith("school:") ? <span className="pilot-signal__mine">Added by your staff</span> : null}</span><span className="pilot-signal__end"><span className="pilot-signal__verdict">{VERDICT_LABEL[signal.verdict]}</span>{canManage ? <DismissMenu label={signal.key.startsWith("school:") ? "Remove" : "Dismiss"} choices={signal.key.startsWith("school:")
+                                ? [{ label: "Remove this signal", hint: "Your staff added it; it leaves your workspace.", onSelect: () => void removeSchoolSignal(signal.key) }]
+                                : [
+                                  { label: "Not this year", hint: "Comes back next year.", onSelect: () => void dismiss({ playerId: player.id, targetType: "signal", targetKey: dismissalKey(signal.key, "this_year"), scope: "this_year", label: signal.headline }) },
+                                  { label: "Never show this", hint: "Hidden every year. You can restore it.", onSelect: () => void dismiss({ playerId: player.id, targetType: "signal", targetKey: dismissalKey(signal.key, "always"), scope: "always", label: signal.headline }) },
+                                ]} /> : null}</span></div>
                               <strong>{signal.headline}</strong>
                               <div className="pilot-signal__meta">
                                 <span><i style={{ "--pilot-meter": `${signal.priority}%` } as CSSProperties} />Priority {signal.priority}</span>
@@ -312,6 +367,7 @@ export function AthleteIntelligence({ organizationId, schoolName, file, roster =
                             </li>
                           );
                         })}</ul>}
+                      <DismissedList items={dismissals.filter((row) => row.targetType === "signal")} noun="signals" onRestore={(id) => void restore(id)} />
                     </section>
                   ) : null}
 
@@ -319,10 +375,12 @@ export function AthleteIntelligence({ organizationId, schoolName, file, roster =
                     <>
                       <section aria-label="Moments">
                         <div className="pilot-card-head"><div><h2>Moments</h2><p>Verified, sourced events that drive the signals</p></div></div>
-                        {file.moments.length ? <MomentTimeline file={file} activations={activations} media={media} organizationId={organizationId} preview={preview} canManage={canManage} onShowActivation={showActivation}
+                        {visibleMoments.length ? <MomentTimeline file={{ ...file, moments: visibleMoments }} activations={activations}
+                          onDismiss={(moment, reason) => void dismiss({ playerId: player.id, targetType: "moment", targetKey: moment.id, scope: "always", label: moment.title, reason })} media={media} organizationId={organizationId} preview={preview} canManage={canManage} onShowActivation={showActivation}
                           onAddMedia={({ key: _key, momentId, ...item }) => addMedia({ ...item, momentId, description: null, occurredOn: null })} onLinkMedia={linkMedia}
                           onPlan={(moment) => { const signal = file.signals.find((row) => row.momentId === moment.id); setDraft({ kind: "post", title: moment.title, brief: "", dueOn: signal?.targetDate ?? "", signalKey: signal?.key ?? null, momentId: moment.id, media: momentDraftMedia(moment.id) }); }} />
-                          : <p className="pilot-quiet">No career moments recorded yet.</p>}
+                          : <p className="pilot-quiet">{file.moments.length ? "Every Moment here is dismissed." : "No career moments recorded yet."}</p>}
+                        <DismissedList items={dismissals.filter((row) => row.targetType === "moment")} noun="Moments" onRestore={(id) => void restore(id)} />
                         {file.seasons.length ? <details className="pilot-seasons-toggle"><summary>Season statistics ({file.seasons.length})</summary><ul className="pilot-seasons">{file.seasons.map((row) => <li key={row.id}><strong>{row.season}</strong><span>{row.team ?? ""}</span><em>{row.line}</em></li>)}</ul></details> : null}
                       </section>
                       <section aria-label="From your school" className="pilot-folder__section">
@@ -345,6 +403,26 @@ export function AthleteIntelligence({ organizationId, schoolName, file, roster =
                             </li>
                           );
                         })}</ul> : <p className="pilot-quiet">No opportunities in the next 90 days.</p>}
+                      </section>
+                      <section aria-label="Partnership briefs" className="pilot-folder__section">
+                        <div className="pilot-card-head">
+                          <div><h2>Partnership briefs</h2><p>Send a brand a brief on {firstName}: reach, brands, Locker placements and what is coming up.</p></div>
+                          {canManage ? <button type="button" className="pilot-pill pilot-pill--primary pilot-pill--compact pilot-add-signal" onClick={() => setBriefOpen(true)}><IconSparkles stroke={1.5} aria-hidden />Create a brief</button> : null}
+                        </div>
+                        {briefs.length ? (
+                          <ul className="pilot-briefs">
+                            {briefs.map((brief) => {
+                              const expired = new Date(brief.expiresAt).getTime() < openedAt;
+                              return (
+                                <li key={brief.id}>
+                                  <span><strong>{brief.brandName}</strong><small>{brief.contactName ? `${brief.contactName} · ` : ""}Sent {new Date(brief.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })} · {brief.status === "revoked" ? "Link turned off" : expired ? "Link expired" : `Works until ${new Date(brief.expiresAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}`}</small></span>
+                                  <span className="pilot-briefs__views">{brief.viewCount ? `Opened ${brief.viewCount} time${brief.viewCount === 1 ? "" : "s"}` : "Not opened yet"}</span>
+                                  {canManage && brief.status === "shared" && !expired ? <button type="button" className="pilot-text-button" onClick={() => void revokeBrief(brief.id)}>Turn off link</button> : null}
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        ) : <p className="pilot-quiet">No briefs sent yet.</p>}
                       </section>
                       <section aria-label="Activation detail" className="pilot-folder__section">
                         <div id="activation-detail" className="pilot-card-head">
@@ -404,6 +482,9 @@ export function AthleteIntelligence({ organizationId, schoolName, file, roster =
         </aside>
       </div>
 
+      {briefOpen ? <BriefBuilder organizationId={organizationId} playerName={player.name} preview={preview}
+        sources={{ schoolName, origin: "", file, activations, reach, media, schoolSignals, dismissals }}
+        onShared={(brief) => setBriefs((current) => [brief, ...current])} onClose={() => setBriefOpen(false)} /> : null}
       {draft ? <ActivationComposer draft={draft} backing={draft.signalKey ? backingFor(file, draft.signalKey) : null} lead={player} others={roster.filter((row) => row.id !== player.id)} organizationId={organizationId} preview={preview} onClose={() => setDraft(null)} onSave={createActivation} /> : null}
     </div>
   );
