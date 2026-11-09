@@ -28,6 +28,12 @@ const robotoCondensed = localFont({
   display: "swap",
 });
 
+const barlowCondensed = localFont({
+  src: [{ path: "../node_modules/@fontsource/barlow-condensed/files/barlow-condensed-latin-700-normal.woff2", weight: "700", style: "normal" }],
+  variable: "--font-barlow-condensed",
+  display: "swap",
+});
+
 const bebasNeue = Bebas_Neue({
   subsets: ["latin"],
   weight: ["400"],
@@ -49,7 +55,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${oswald.variable} ${robotoCondensed.variable} ${bebasNeue.variable} ${openSans.variable}`}
+      className={`${geistSans.variable} ${oswald.variable} ${robotoCondensed.variable} ${barlowCondensed.variable} ${bebasNeue.variable} ${openSans.variable}`}
     >
       <head>
         {/* Locker design type system — Barlow (body + heavy-weight display),

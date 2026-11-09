@@ -187,7 +187,7 @@ export function AthleteIntelligence({ organizationId, schoolName, file, roster =
       {preview ? <p className="pilot-preview-note">Fictional preview · sample data, changes are not saved</p> : null}
       <header className="pilot-intel__head">
         <Eyebrow>{schoolName}</Eyebrow>
-        <h1>Intelligence</h1>
+        <h1>Intelligence Engine</h1>
       </header>
 
       <div className="pilot-intel__grid">
@@ -204,7 +204,7 @@ export function AthleteIntelligence({ organizationId, schoolName, file, roster =
               <p>{[player.position, player.team].filter(Boolean).join(" · ") || "Former player"}</p>
               <dl className="pilot-id__contact">
                 <div><dt><IconMail stroke={1.5} aria-hidden />Email</dt><dd>{contactEmail ? <a href={`mailto:${contactEmail}`}>{contactEmail}</a> : <span>Not on file</span>}</dd></div>
-                <div><dt><IconLink stroke={1.5} aria-hidden />Locker</dt><dd><a href={player.lockerHref} target="_blank" rel="noopener">{player.lockerHref.replace("/player/", "bltz.app/")}</a></dd></div>
+                <div><dt><IconLink stroke={1.5} aria-hidden />Locker</dt><dd><a href={player.lockerHref} target="_blank" rel="noopener">{player.lockerHref.replace("/player/", "bltz.me/")}</a></dd></div>
                 <div><dt><IconUsers stroke={1.5} aria-hidden />Socials</dt><dd className="pilot-id__socials">
                   {file.socialLinks.length || reach.length ? <>
                     {file.socialLinks.map((link) => {
