@@ -16,6 +16,14 @@ describe("isPublicPath", () => {
     expect(isPublicPath("/unknown-player")).toBe(true);
   });
 
+  it("treats the marketing pages as public", () => {
+    expect(isPublicPath("/enterprise")).toBe(true);
+    expect(isPublicPath("/privacy")).toBe(true);
+    expect(isPublicPath("/redesign")).toBe(true);
+    expect(isPublicPath("/redesign/enterprise")).toBe(true);
+    expect(isPublicPath("/enterprise/settings")).toBe(false);
+  });
+
   it("treats application routes as private outside development preview mode", () => {
     expect(isPublicPath("/dashboard")).toBe(false);
     expect(isPublicPath("/onboarding")).toBe(false);

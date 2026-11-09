@@ -1,0 +1,1241 @@
+/* Enterprise page: section layouts mirror sponsorcx.com, on the BLTZ night palette. */
+
+.page {
+  --blue: #2f5bff;
+  --blue-deep: #0d2a9e;
+  --tint: #111a33;
+  --tint-2: #17224a;
+  --pop: #ffc21a;
+  --wrap: min(1152px, calc(100% - 2 * var(--gutter)));
+}
+
+.wrap {
+  width: var(--wrap);
+  margin: 0 auto;
+}
+
+.eyebrow {
+  margin: 0;
+  color: var(--pop);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+/* Pill CTA with a round icon, as on sponsorcx.com */
+.pillCta {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 48px;
+  padding: 0 4px 0 24px;
+  color: #0b1a5e;
+  background: #eef2ff;
+  border: 0;
+  border-radius: 999px;
+  font: 700 16px/1 var(--text);
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 160ms ease;
+}
+
+.page .pillCta {
+  color: #0b1a5e;
+}
+
+.pillCta i {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  color: #120d00;
+  background: var(--pop);
+  border-radius: 999px;
+  transition: transform 220ms ease;
+}
+
+.pillCta:hover i {
+  transform: rotate(45deg);
+}
+
+.textLink {
+  color: var(--chalk);
+  font-weight: 600;
+}
+
+/* 1. Hero ---------------------------------------------------------------- */
+
+.hero {
+  position: relative;
+  min-height: 100svh;
+  overflow: hidden;
+  padding: 150px 0 clamp(160px, 18vw, 240px);
+}
+
+.heroShade {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(5, 6, 7, 0.94) 0%, rgba(5, 6, 7, 0.6) 46%, rgba(5, 6, 7, 0.25) 100%),
+    linear-gradient(0deg, var(--night) 0%, transparent 40%);
+}
+
+.heroGrid {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  align-items: center;
+  gap: 48px;
+  width: var(--wrap);
+  margin: 0 auto;
+}
+
+.heroCopy {
+  display: grid;
+  gap: 24px;
+}
+
+.heroCopy h1 {
+  font-size: clamp(56px, 6.6vw, 104px);
+}
+
+.heroActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 24px;
+}
+
+.heroCards {
+  position: relative;
+  min-height: 420px;
+}
+
+.floatCard {
+  position: absolute;
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+  color: #121316;
+  background: #fff;
+  border-radius: 24px;
+  box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.08), 0 40px 80px rgba(0, 0, 0, 0.5);
+  font-family: var(--text);
+}
+
+.floatA {
+  top: 0;
+  right: 8%;
+  width: min(380px, 90%);
+  animation: bob 7s ease-in-out infinite;
+}
+
+.floatB {
+  bottom: 0;
+  left: 0;
+  width: min(300px, 76%);
+  animation: bob 8s ease-in-out -3s infinite;
+}
+
+@keyframes bob {
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.floatHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 17px;
+}
+
+.badge {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  color: #fff;
+  background: #2952ff;
+  border-radius: 999px;
+  font-size: 13px;
+}
+
+.floatRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  background: #f4f4f2;
+  border-radius: 14px;
+}
+
+.floatRow > div {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+
+.floatRow strong {
+  font-size: 14px;
+}
+
+.floatRow small {
+  overflow: hidden;
+  color: #6a6d75;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.initials {
+  display: grid;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  color: #2952ff;
+  background: #e7ecff;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.dayChip {
+  flex: none;
+  padding: 4px 8px;
+  color: #2952ff;
+  background: #e7ecff;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.floatStats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.floatStats div {
+  display: grid;
+  gap: 2px;
+  padding: 10px;
+  background: #f4f4f2;
+  border-radius: 12px;
+}
+
+.floatStats strong {
+  font-size: 22px;
+}
+
+.floatStats small {
+  color: #6a6d75;
+  font-size: 12px;
+}
+
+/* 2. Product demo screen ------------------------------------------------- */
+
+.demoScreen {
+  position: relative;
+  z-index: 3;
+  display: grid;
+  justify-items: center;
+  gap: 20px;
+  width: min(1240px, calc(100% - 2 * var(--gutter)));
+  margin: clamp(-150px, -11vw, -80px) auto 0;
+}
+
+.demoTabs {
+  display: inline-flex;
+  padding: 4px;
+  background: rgba(22, 25, 29, 0.9);
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.demoTabs button {
+  min-height: 40px;
+  padding: 0 18px;
+  color: var(--concrete);
+  background: none;
+  border: 0;
+  border-radius: 999px;
+  font: 600 15px/1 var(--text);
+  cursor: pointer;
+}
+
+.demoTabs button[aria-selected="true"] {
+  color: #fff;
+  background: var(--blue);
+}
+
+.demoTilt {
+  --tilt: 1;
+  width: 100%;
+  perspective: 1800px;
+}
+
+.demoTilt > * {
+  transform: rotateX(calc(var(--tilt) * 16deg)) scale(calc(1 - var(--tilt) * 0.05));
+  transform-origin: center top;
+  will-change: transform;
+}
+
+/* 3. Trust band ---------------------------------------------------------- */
+
+.trust {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 32px;
+  width: var(--wrap);
+  margin: clamp(64px, 8vw, 110px) auto 0;
+  padding: 36px 32px;
+  overflow: hidden;
+  background: linear-gradient(90deg, var(--blue-deep), #2a6fe0 50%, var(--blue-deep));
+  border-radius: 28px;
+}
+
+.trust strong {
+  font: 600 22px/1.2 var(--text);
+  white-space: nowrap;
+}
+
+.trustRail {
+  display: flex;
+  overflow: hidden;
+  mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+}
+
+.trustTrack {
+  display: flex;
+  flex: none;
+  gap: 48px;
+  padding-right: 48px;
+  color: rgba(255, 255, 255, 0.82);
+  font: 700 26px/1 var(--display);
+  white-space: nowrap;
+  animation: slide 40s linear infinite;
+}
+
+@keyframes slide {
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+/* 4. Problem statement --------------------------------------------------- */
+
+.problem {
+  position: relative;
+  width: var(--wrap);
+  margin: 0 auto;
+  padding: clamp(110px, 12vw, 170px) 0;
+}
+
+.problemTitle {
+  max-width: 900px;
+  margin: 0 auto;
+  color: #b9c8ff;
+  font: 700 clamp(36px, 4.4vw, 64px)/1.05 var(--display);
+  text-align: center;
+  text-wrap: balance;
+}
+
+.tile {
+  position: absolute;
+  display: grid;
+  width: 76px;
+  height: 76px;
+  place-items: center;
+  color: var(--pop);
+  background: var(--steel);
+  border-radius: 22px;
+  box-shadow: inset 0 0 0 1px var(--line-strong), 0 20px 40px rgba(0, 0, 0, 0.4);
+  animation: bob 6s ease-in-out infinite;
+}
+
+.tile1 { top: 40px; left: 4%; }
+.tile2 { top: 40px; right: 6%; animation-delay: -2s; }
+.tile3 { bottom: 40px; left: 10%; animation-delay: -4s; }
+.tile4 { right: 3%; bottom: 30px; animation-delay: -1s; }
+
+/* 5. What BLTZ does ------------------------------------------------------ */
+
+.what {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: clamp(32px, 6vw, 96px);
+  width: var(--wrap);
+  margin: 0 auto;
+  padding-bottom: clamp(80px, 10vw, 130px);
+}
+
+.whatLeft {
+  display: grid;
+  align-content: start;
+  gap: 22px;
+}
+
+.quote {
+  margin: 12px 0 0;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+
+.quote blockquote {
+  margin: 0 0 10px;
+  color: #b9c8ff;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.quote figcaption {
+  color: var(--concrete);
+}
+
+.whatRight {
+  display: grid;
+  align-content: start;
+  gap: 28px;
+  padding-top: 40px;
+}
+
+.whatTabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-bottom: 1px solid var(--line-strong);
+}
+
+.whatTabs button {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 16px 8px 18px;
+  color: var(--concrete);
+  background: none;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  font: 600 20px/1 var(--text);
+  cursor: pointer;
+}
+
+.whatTabs button[aria-selected="true"] {
+  color: var(--chalk);
+  border-bottom-color: var(--pop);
+}
+
+.whatPanel {
+  display: grid;
+  gap: 14px;
+  padding: 32px;
+  background: var(--tint);
+  border-radius: 24px;
+  animation: fade 400ms ease both;
+}
+
+.whatPanel p {
+  margin: 0;
+  color: rgba(238, 236, 230, 0.78);
+  font-size: 18px;
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+/* 6. Metrics band -------------------------------------------------------- */
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  padding: clamp(48px, 6vw, 72px) max(var(--gutter), calc((100% - 1152px) / 2));
+  background: radial-gradient(60% 140% at 50% 50%, #1c3aa8, #101e5a 80%);
+}
+
+.metrics div {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.metrics strong {
+  color: #fff;
+  font: 700 clamp(36px, 3.6vw, 52px)/1 var(--display);
+}
+
+.metrics strong .num,
+.metrics strong span {
+  font-weight: 500;
+}
+
+.metrics span {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+/* 7. Two perspectives ---------------------------------------------------- */
+
+.perspectives {
+  display: grid;
+  gap: 22px;
+  width: var(--wrap);
+  margin: 0 auto;
+  padding: clamp(90px, 11vw, 140px) 0 0;
+}
+
+.perspGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 28px;
+  margin-top: 30px;
+}
+
+.perspCard {
+  overflow: hidden;
+  background: var(--tint-2);
+  border-radius: 28px;
+}
+
+.perspCard header {
+  padding: 36px 24px 56px;
+  color: #b9c8ff;
+  font: 700 32px/1 var(--display);
+  text-align: center;
+}
+
+.perspStrong header {
+  color: #fff;
+  background: var(--blue-deep);
+}
+
+.perspCard > div {
+  display: grid;
+  gap: 18px;
+  margin-top: -28px;
+  padding: 36px 40px 40px;
+  background: var(--tint);
+  border-radius: 28px 28px 0 0;
+}
+
+.perspCard p {
+  margin: 0;
+  color: rgba(238, 236, 230, 0.8);
+  font-size: 18px;
+}
+
+.perspCard ul {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 16px;
+  padding-left: 20px;
+  color: rgba(238, 236, 230, 0.78);
+}
+
+.perspCard .pillCta {
+  justify-self: start;
+}
+
+/* 8. Rotating headline --------------------------------------------------- */
+
+.rotator {
+  padding: clamp(90px, 11vw, 140px) var(--gutter);
+  text-align: center;
+}
+
+.rotWord {
+  display: inline-block;
+  color: var(--pop);
+  animation: rotIn 500ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes rotIn {
+  from {
+    opacity: 0;
+    transform: translateY(0.4em);
+  }
+}
+
+/* 9. Programs (stacked sticky cards) ------------------------------------ */
+
+.programs {
+  width: var(--wrap);
+  margin: 0 auto;
+}
+
+.stack {
+  position: sticky;
+  top: calc(96px + var(--i) * 14px);
+}
+
+.programHeader {
+  z-index: 0;
+  padding: 26px 30px 120px;
+  background: linear-gradient(90deg, var(--blue-deep), #5a6cf0);
+  border-radius: 16px 16px 0 0;
+}
+
+.programHeader h2 {
+  margin: 0;
+  font: 600 22px/1.2 var(--text);
+}
+
+.programCard {
+  position: relative;
+  display: grid;
+  height: 300px;
+  place-items: end center;
+  margin-top: -90px;
+  overflow: hidden;
+  padding: 0 0 36px;
+  color: #fff;
+  background: #000;
+  border-radius: 16px;
+  text-decoration: none;
+  box-shadow: 0 -20px 40px rgba(0, 0, 0, 0.45);
+}
+
+.programCard + .programCard {
+  margin-top: 0;
+}
+
+.programCard img {
+  object-fit: cover;
+  transition: transform 700ms ease;
+}
+
+.programCard:hover img {
+  transform: scale(1.04);
+}
+
+.programShade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.1) 20%, rgba(0, 0, 0, 0.75) 62%, rgba(13, 42, 158, 0.95));
+}
+
+.programLabel {
+  position: relative;
+  font: 700 clamp(26px, 2.6vw, 36px)/1 var(--display);
+}
+
+.programIcon {
+  position: absolute;
+  top: 26px;
+  right: 26px;
+  color: var(--pop);
+}
+
+.programNote {
+  position: relative;
+  z-index: 10;
+  padding: 72px 60px;
+  color: #b9c8ff;
+  background: var(--tint);
+  border-radius: 0 0 16px 16px;
+  font-size: 19px;
+}
+
+/* 10. Reality check ------------------------------------------------------ */
+
+.reality {
+  display: grid;
+  justify-items: center;
+  gap: 18px;
+  width: var(--wrap);
+  margin: clamp(90px, 11vw, 140px) auto 0;
+  padding: clamp(56px, 7vw, 90px) clamp(24px, 6vw, 80px);
+  text-align: center;
+  background: radial-gradient(70% 70% at 50% 100%, #2a7be0, var(--blue-deep) 75%);
+  border-radius: 64px;
+}
+
+.realityEyebrow {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 16px;
+}
+
+.realitySub {
+  margin: 0 0 24px;
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.realityGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 32px;
+  width: 100%;
+  text-align: left;
+}
+
+.realityCol h3 {
+  margin: 0 0 12px;
+  font: 600 22px/1 var(--text);
+  text-align: center;
+}
+
+.realityCol ul {
+  display: grid;
+  gap: 28px;
+  margin: 0;
+  padding: 40px 48px;
+  list-style: none;
+  border: 2px solid rgba(255, 255, 255, 0.7);
+  border-radius: 28px;
+}
+
+.realityCol li {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: 12px;
+  font-size: 17px;
+}
+
+.realityCol li svg {
+  margin-top: 4px;
+}
+
+.realityUs ul {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: var(--pop);
+}
+
+.realityUs li svg {
+  color: var(--pop);
+}
+
+.realityUs h3 {
+  font-weight: 700;
+}
+
+/* 11. Statement card ----------------------------------------------------- */
+
+.statementCard {
+  width: var(--wrap);
+  margin: clamp(80px, 10vw, 120px) auto 0;
+  padding: clamp(56px, 7vw, 90px) clamp(24px, 6vw, 90px);
+  background: var(--tint);
+  border-radius: 64px;
+  text-align: center;
+}
+
+.statementCard h2 {
+  max-width: 980px;
+  margin: 0 auto;
+  color: #b9c8ff;
+  font: 700 clamp(36px, 4.4vw, 64px)/1.05 var(--display);
+  text-wrap: balance;
+}
+
+.statementCard em {
+  color: var(--pop);
+  font-style: normal;
+}
+
+/* 12. How it works ------------------------------------------------------- */
+
+.how {
+  display: grid;
+  gap: 22px;
+  width: var(--wrap);
+  margin: 0 auto;
+  padding: clamp(90px, 11vw, 140px) 0;
+}
+
+.accordion {
+  margin-top: 40px;
+}
+
+.accItem {
+  border-top: 1px solid var(--line-strong);
+}
+
+.accItem:last-child {
+  border-bottom: 1px solid var(--line-strong);
+}
+
+.accItem > button {
+  width: 100%;
+  padding: 22px 0;
+  color: var(--concrete);
+  background: none;
+  border: 0;
+  font: 600 24px/1 var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.accItem[data-open="true"] > button {
+  color: var(--chalk);
+}
+
+.accBody {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  align-items: start;
+  gap: 40px;
+  padding-bottom: 36px;
+  animation: fade 400ms ease both;
+}
+
+.accText {
+  display: grid;
+  gap: 16px;
+}
+
+.accText h3 {
+  margin: 0;
+  font: 600 22px/1.2 var(--text);
+}
+
+.accText p {
+  margin: 0;
+  color: rgba(238, 236, 230, 0.76);
+  font-size: 17px;
+}
+
+/* 13. Testimonials ------------------------------------------------------- */
+
+.testimonials {
+  padding-bottom: 0;
+}
+
+.testiHeader {
+  width: var(--wrap);
+  margin: 0 auto;
+  padding: 40px 40px 140px;
+  background: linear-gradient(120deg, #2a2f38, #1a1d22);
+  border-radius: 32px 32px 0 0;
+}
+
+.testiHeader h2 {
+  max-width: 14ch;
+  margin: 0;
+  font: 700 clamp(40px, 4.4vw, 64px)/1 var(--display);
+}
+
+.testiBand {
+  margin-top: -100px;
+  padding: 0 0 clamp(80px, 9vw, 120px);
+  background: linear-gradient(180deg, transparent 100px, var(--tint) 100px);
+}
+
+.testiCard {
+  position: relative;
+  display: grid;
+  gap: 22px;
+  width: min(1300px, calc(100% - 2 * var(--gutter)));
+  margin: 0 auto;
+  padding: clamp(40px, 6vw, 80px) clamp(24px, 5vw, 60px) 40px;
+  background: var(--steel);
+  border-radius: 40px;
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.testiCard blockquote {
+  margin: 0;
+  color: rgba(238, 236, 230, 0.82);
+  font-size: clamp(18px, 1.6vw, 22px);
+  line-height: 1.6;
+}
+
+.testiCard figcaption {
+  display: grid;
+  gap: 4px;
+}
+
+.testiCard figcaption strong {
+  color: #9db3ff;
+}
+
+.testiCard figcaption span {
+  color: var(--concrete);
+}
+
+.placeholderTag {
+  justify-self: start;
+  padding: 4px 10px;
+  color: var(--pop);
+  background: rgba(255, 194, 26, 0.12);
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.testiNav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  color: var(--concrete);
+}
+
+.testiNav button {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  color: var(--chalk);
+  background: var(--steel-2);
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+/* 14. CTA band ----------------------------------------------------------- */
+
+.cta {
+  display: grid;
+  gap: 24px;
+  width: var(--wrap);
+  margin: clamp(80px, 9vw, 110px) auto 0;
+  padding: clamp(48px, 6vw, 80px);
+  background: radial-gradient(60% 90% at 50% 100%, #2a7be0, var(--blue-deep) 70%);
+  border-radius: 64px;
+}
+
+.ctaRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 32px;
+}
+
+.ctaRow h2 {
+  max-width: 16ch;
+  margin: 0;
+  color: #fff;
+  font: 700 clamp(40px, 4.6vw, 68px)/1 var(--display);
+}
+
+.ctaStatus,
+.ctaLink {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.86);
+}
+
+/* 15. Resources ---------------------------------------------------------- */
+
+.resources {
+  display: grid;
+  gap: 40px;
+  width: var(--wrap);
+  margin: clamp(80px, 9vw, 110px) auto 0;
+  padding: clamp(48px, 6vw, 80px);
+  background: var(--tint);
+  border-radius: 64px;
+}
+
+.resGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 32px;
+}
+
+.resGrid article {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  gap: 20px;
+  padding: 22px 0;
+  border-bottom: 1px solid var(--line-strong);
+}
+
+.resThumb {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border-radius: 10px;
+}
+
+.resThumb img {
+  object-fit: cover;
+}
+
+.resGrid small {
+  color: var(--concrete);
+}
+
+.resGrid h3 {
+  margin: 6px 0 10px;
+  font: 600 18px/1.3 var(--text);
+}
+
+.soon {
+  color: #9db3ff;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.athleteLink {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  padding: clamp(56px, 7vw, 90px) var(--gutter);
+  color: var(--concrete);
+}
+
+.athleteLink a {
+  color: var(--pop);
+  font-weight: 600;
+}
+
+/* Responsive ------------------------------------------------------------- */
+
+@media (max-width: 900px) {
+  .heroGrid,
+  .what,
+  .perspGrid,
+  .realityGrid,
+  .accBody,
+  .resGrid,
+  .ctaRow,
+  .metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .heroCards {
+    min-height: 360px;
+  }
+
+  .heroShade {
+    background: linear-gradient(0deg, var(--night) 10%, rgba(5, 6, 7, 0.7) 60%, rgba(5, 6, 7, 0.4));
+  }
+
+  .trust {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .tile {
+    display: none;
+  }
+
+  .whatTabs button {
+    font-size: 16px;
+  }
+
+  .metrics {
+    gap: 32px;
+  }
+
+  .realityCol ul {
+    padding: 28px 24px;
+  }
+
+  .reality,
+  .statementCard,
+  .cta,
+  .resources {
+    border-radius: 32px;
+  }
+
+  .resGrid article {
+    grid-template-columns: 100px minmax(0, 1fr);
+  }
+
+  .programCard {
+    height: 220px;
+  }
+
+  .programNote {
+    padding: 40px 24px;
+  }
+
+  .demoTabs button {
+    padding: 0 12px;
+    font-size: 13px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .floatA,
+  .floatB,
+  .tile,
+  .trustTrack,
+  .rotWord,
+  .whatPanel,
+  .accBody {
+    animation: none;
+  }
+}
+
+/* Demo request form (live enterprise page) -------------------------------- */
+
+.demoForm {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: clamp(32px, 5vw, 72px);
+  width: min(1240px, calc(100% - 2 * var(--gutter)));
+  margin: clamp(80px, 9vw, 120px) auto 0;
+  padding: clamp(32px, 5vw, 64px);
+  background: radial-gradient(80% 120% at 0% 100%, rgba(41, 82, 255, 0.35), transparent 60%), var(--steel);
+  border-radius: 40px;
+  box-shadow: inset 0 0 0 1px var(--line);
+  scroll-margin-top: 120px;
+}
+
+.demoFormIntro {
+  display: grid;
+  align-content: start;
+  gap: 18px;
+}
+
+.demoFormIntro h2 {
+  max-width: 14ch;
+  margin: 0;
+  font: 700 clamp(40px, 4.4vw, 64px)/1 var(--display);
+}
+
+.demoFormIntro p:not(.eyebrow) {
+  max-width: 34em;
+  margin: 0;
+  color: var(--concrete);
+  font-size: 17px;
+  line-height: 1.55;
+}
+
+.page .demoFormAlt a {
+  color: var(--chalk);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.demoFormFields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.demoFormFields label {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.demoFormFields label small {
+  color: var(--concrete);
+  font-weight: 500;
+}
+
+.demoFormFields input,
+.demoFormFields select,
+.demoFormFields textarea {
+  width: 100%;
+  min-height: 50px;
+  padding: 12px 16px;
+  color: var(--chalk);
+  background: rgba(5, 6, 7, 0.55);
+  border: 0;
+  border-radius: 14px;
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+  font: 500 16px/1.4 var(--text);
+}
+
+.demoFormFields textarea {
+  resize: vertical;
+}
+
+.demoFormFields select:invalid {
+  color: rgba(238, 236, 230, 0.5);
+}
+
+.demoFormFields option {
+  color: #111;
+}
+
+.demoFormFields input::placeholder,
+.demoFormFields textarea::placeholder {
+  color: rgba(238, 236, 230, 0.4);
+}
+
+.demoFormFields input:focus-visible,
+.demoFormFields select:focus-visible,
+.demoFormFields textarea:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 0;
+}
+
+.demoFormWide,
+.demoFormSubmit {
+  grid-column: 1 / -1;
+}
+
+.demoFormSubmit {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 20px;
+  margin-top: 4px;
+}
+
+.demoFormSubmit p {
+  flex: 1 1 260px;
+  margin: 0;
+  color: var(--concrete);
+  font-size: 15px;
+}
+
+.demoFormSubmit p[data-tone="error"] {
+  color: #ff8f7a;
+}
+
+.demoFormSubmit p[data-tone="success"] {
+  color: var(--chalk);
+}
+
+.demoFormSubmit button:disabled {
+  opacity: 0.7;
+  cursor: progress;
+}
+
+@media (max-width: 860px) {
+  .demoForm {
+    grid-template-columns: minmax(0, 1fr);
+    border-radius: 28px;
+  }
+}
+
+@media (max-width: 520px) {
+  .demoFormFields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Tabs docked in the nav while the CRM fills the screen. */
+.demoTabsNav {
+  background: rgba(22, 25, 29, 0.8);
+}
+
+.demoTabsNav button {
+  min-height: 36px;
+  padding: 0 16px;
+}
+
+.tabShort {
+  display: none;
+}
+
+@media (max-width: 520px) {
+  .demoTabsNav button {
+    padding: 0 10px;
+    font-size: 13px;
+  }
+
+  .tabFull {
+    display: none;
+  }
+
+  .tabShort {
+    display: inline;
+  }
+}
