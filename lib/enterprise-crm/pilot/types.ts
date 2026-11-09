@@ -127,7 +127,12 @@ export interface AthleteFile {
     evidence?: ResearchSource[];
   }>;
   opportunities: Array<{ key: string; label: string; explanation: string; strength: number; signalKeys: string[] }>;
-  moments: Array<{ id: string; title: string; date: string | null; status: string; sources: number }>;
+  moments: Array<{
+    id: string; title: string; date: string | null; status: string; sources: number;
+    /** Source-reported numbers from the game, such as 2 INT. */
+    stats?: Array<{ label: string; value: string }>;
+    sourceLinks?: ResearchSource[];
+  }>;
   seasons: Array<{ id: string; season: string; team: string | null; line: string }>;
   socialLinks: Array<{ platform: string; handle: string; url: string }>;
   /** Verified coverage of the athlete from BLTZ research, newest first. */

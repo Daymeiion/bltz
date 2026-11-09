@@ -101,8 +101,11 @@ export function previewAthleteFile(playerId: string): AthleteFile | null {
     signals: [...signal, { key: `${player.id}-s2`, momentId: null, headline: "Turns 33", explanation: "A reviewed birthday on the player's Locker record.", targetDate: "2027-02-14", daysUntil: 104, verdict: "upcoming", priority: 40, confidence: 1, sources: 1, type: "birthday", years: 33 }],
     opportunities: signal.length ? [{ key: `${player.id}-o1`, label: "Anniversary retrospective", explanation: "Pair the throwback with archive photos and the player's Locker link.", strength: 78, signalKeys: [signal[0].key] }] : [],
     moments: [
-      { id: `${player.id}-m1`, title: "First career touchdown vs. Ridgeview", date: "2016-11-04", status: "verified", sources: 2 },
-      { id: `${player.id}-m2`, title: "Conference championship game", date: "2015-12-05", status: "verified", sources: 3 },
+      { id: `${player.id}-m1`, title: "First career touchdown vs. Ridgeview", date: "2016-11-04", status: "verified", sources: 2,
+        stats: [{ label: "rec yds", value: "112" }, { label: "rec", value: "7" }, { label: "rec TD", value: "1" }],
+        sourceLinks: [{ label: "Sample: conference stats feed", url: null, note: "Box score for the game, checked by BLTZ." }, { label: "Sample: school game notes", url: "https://example.com/sample-game-notes", note: "Postgame notes from the athletics department." }] },
+      { id: `${player.id}-m2`, title: "Conference championship game", date: "2015-12-05", status: "verified", sources: 3,
+        stats: [{ label: "rec yds", value: "86" }, { label: "rec", value: "5" }], sourceLinks: [{ label: "Sample: conference stats feed", url: null, note: "Box score for the game." }] },
       { id: `${player.id}-m3`, title: "Career-high 186 receiving yards", date: "2015-10-17", status: "candidate", sources: 1 },
     ],
     seasons: [
@@ -114,6 +117,7 @@ export function previewAthleteFile(playerId: string): AthleteFile | null {
     research: [
       { id: `${player.id}-r1`, title: `Sample: ${player.name} career retrospective`, url: "https://example.com/sample-retrospective", publisher: "Sample publication", type: "article" as const, date: "2021-09-14", aboutDate: null },
       { id: `${player.id}-r2`, title: `Sample: Where are they now with ${player.name}`, url: "https://example.com/sample-interview", publisher: "Sample podcast", type: "interview" as const, date: "2024-03-02", aboutDate: null },
+      { id: `${player.id}-r4`, title: `Sample: Game recap, ${player.name} scores first touchdown`, url: "https://example.com/sample-recap", publisher: "Sample student paper", type: "article" as const, date: "2016-11-05", aboutDate: "2016-11-04" },
       { id: `${player.id}-r3`, title: `Sample: ${player.name} highlight reel`, url: "https://example.com/sample-video", publisher: "Sample video channel", type: "video" as const, date: "2019-11-20", aboutDate: null },
     ],
     socialLinks: playerId === "p1" ? [{ platform: "Instagram", handle: "@marcushale", url: "https://www.instagram.com/p/demo/" }]

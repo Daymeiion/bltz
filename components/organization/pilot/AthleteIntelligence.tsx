@@ -10,6 +10,7 @@ import {
   IconCheck,
   IconExternalLink,
   IconMicrophone,
+  IconShare,
   IconUser,
   IconNews,
   IconPhoto,
@@ -45,6 +46,8 @@ import { AthleteAvatars } from "./AthleteAvatars";
 import { MediaAttach, MediaThumb, mediaPayload, type PendingMedia } from "./MediaAttach";
 import { PlayerColumn } from "./PlayerColumn";
 import { SignalSuggestions } from "./SignalSuggestions";
+import { MomentTimeline } from "./MomentTimeline";
+import { ShareActivation } from "./ShareActivation";
 import { backingFor, reachHistory, type Backing, type ReachHistory } from "@/lib/enterprise-crm/pilot/suggestions";
 import { AnimatePresence, HeroTitle, MotionItem } from "./PilotMotion";
 
@@ -289,7 +292,8 @@ export function AthleteIntelligence({ organizationId, schoolName, file, roster =
                     <>
                       <section aria-label="Moments">
                         <div className="pilot-card-head"><div><h2>Moments</h2><p>Verified, sourced events that drive the signals</p></div></div>
-                        {file.moments.length ? <ol className="pilot-timeline">{file.moments.map((moment) => <li key={moment.id}><span>{moment.date ?? "Date unknown"}</span><strong>{moment.title}</strong><small>{moment.status === "verified" ? "Verified" : "Awaiting BLTZ review"} · {moment.sources} source{moment.sources === 1 ? "" : "s"}</small></li>)}</ol>
+                        {file.moments.length ? <MomentTimeline file={file} activations={activations} canManage={canManage} onShowActivation={showActivation}
+                          onPlan={(moment) => { const signal = file.signals.find((row) => row.momentId === moment.id); setDraft({ kind: "post", title: moment.title, brief: "", dueOn: signal?.targetDate ?? "", signalKey: signal?.key ?? null, momentId: moment.id }); }} />
                           : <p className="pilot-quiet">No career moments recorded yet.</p>}
                         {file.seasons.length ? <details className="pilot-seasons-toggle"><summary>Season statistics ({file.seasons.length})</summary><ul className="pilot-seasons">{file.seasons.map((row) => <li key={row.id}><strong>{row.season}</strong><span>{row.team ?? ""}</span><em>{row.line}</em></li>)}</ul></details> : null}
                       </section>
@@ -319,7 +323,7 @@ export function AthleteIntelligence({ organizationId, schoolName, file, roster =
                           <div><h2>Activations</h2><p>{selected ? "The selected activation in detail. Pick another from the list on the right." : "Plan one from a signal, then share its tracked link to measure fan visits."}</p></div>
                           {canManage ? <button type="button" className="pilot-icon-pill" aria-label="Plan a new activation" onClick={() => setDraft({ kind: "post", title: "", brief: "", dueOn: "", signalKey: null, momentId: null })}><IconPlus stroke={1.5} aria-hidden /></button> : null}
                         </div>
-                        {selected ? <ul className="pilot-activations"><AnimatePresence mode="popLayout" initial={false}><ActivationRow key={selected.id} row={selected} canManage={canManage} detailed profileBaseHref={profileBaseHref} onUpdate={(patch) => updateActivation(selected.id, patch)} /></AnimatePresence></ul> : null}
+                        {selected ? <ul className="pilot-activations"><AnimatePresence mode="popLayout" initial={false}><ActivationRow key={selected.id} row={selected} canManage={canManage} detailed profileBaseHref={profileBaseHref} schoolName={schoolName} onUpdate={(patch) => updateActivation(selected.id, patch)} /></AnimatePresence></ul> : null}
                       </section>
                     </>
                   ) : null}
@@ -376,8 +380,9 @@ export function AthleteIntelligence({ organizationId, schoolName, file, roster =
   );
 }
 
-function ActivationRow({ row, canManage, detailed = false, profileBaseHref, onUpdate }: { row: PilotActivation; canManage: boolean; detailed?: boolean; profileBaseHref?: string; onUpdate: (patch: Partial<PilotActivation>) => Promise<void> }) {
+function ActivationRow({ row, canManage, detailed = false, profileBaseHref, schoolName, onUpdate }: { row: PilotActivation; canManage: boolean; detailed?: boolean; profileBaseHref?: string; schoolName?: string; onUpdate: (patch: Partial<PilotActivation>) => Promise<void> }) {
   const [mode, setMode] = useState<"idle" | "post" | "reach">("idle");
+  const [sharing, setSharing] = useState(false);
   const [channel, setChannel] = useState<ActivationChannel>(row.channel ?? "instagram");
   const [postUrl, setPostUrl] = useState(row.postUrl ?? "");
   const [impressions, setImpressions] = useState(row.impressions?.toString() ?? "");
@@ -415,6 +420,7 @@ function ActivationRow({ row, canManage, detailed = false, profileBaseHref, onUp
       {row.status !== "cancelled" ? (
         <div className="pilot-activation__actions">
           <CopyLockerLink href={row.trackedHref} name={`${row.title} (tracked link)`} label="Copy tracked link" />
+          {detailed && schoolName ? <button type="button" className="pilot-pill pilot-pill--quiet" onClick={() => setSharing(true)}><IconShare stroke={1.5} aria-hidden />Share</button> : null}
           {canManage && row.status === "planned" ? <button type="button" className="pilot-pill pilot-pill--quiet" onClick={() => setMode(mode === "post" ? "idle" : "post")}>Mark posted</button> : null}
           {canManage && row.status === "posted" ? <button type="button" className="pilot-pill pilot-pill--quiet" onClick={() => setMode(mode === "reach" ? "idle" : "reach")}>Update reach</button> : null}
           {canManage && row.status === "planned" ? <button type="button" className="pilot-text-button" onClick={() => void onUpdate({ status: "cancelled" })}>Cancel</button> : null}
@@ -434,6 +440,7 @@ function ActivationRow({ row, canManage, detailed = false, profileBaseHref, onUp
           <button type="submit" className="pilot-pill pilot-pill--primary pilot-pill--compact" disabled={busy}>Save</button>
         </form>
       ) : null}
+      {sharing && schoolName ? <ShareActivation row={row} schoolName={schoolName} onClose={() => setSharing(false)} /> : null}
     </MotionItem>
   );
 }
