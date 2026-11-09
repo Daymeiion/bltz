@@ -3,7 +3,9 @@
 import { useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { IconCheck, IconChevronDown, IconExternalLink, IconPlus } from "@tabler/icons-react";
-import type { AthleteFile, PilotActivation } from "@/lib/enterprise-crm/pilot/types";
+import type { AthleteFile, PilotActivation, PilotAthleteMedia } from "@/lib/enterprise-crm/pilot/types";
+import type { PendingMedia } from "./MediaAttach";
+import { MomentMedia } from "./MomentMedia";
 import { cn } from "@/lib/utils";
 
 type Moment = AthleteFile["moments"][number];
@@ -19,10 +21,15 @@ function longDate(date: string | null): string {
  * Career Moments as an expandable timeline: game numbers up front, then the
  * sources, coverage of the same day, and what the school has already run from it.
  */
-export function MomentTimeline({ file, activations, canManage, onPlan, onShowActivation }: {
+export function MomentTimeline({ file, activations, media, organizationId, preview, canManage, onPlan, onShowActivation, onAddMedia, onLinkMedia }: {
   file: AthleteFile;
   activations: readonly PilotActivation[];
+  media: readonly PilotAthleteMedia[];
+  organizationId: string;
+  preview: boolean;
   canManage: boolean;
+  onAddMedia: (item: PendingMedia & { momentId: string }) => Promise<boolean>;
+  onLinkMedia: (mediaId: string, momentId: string | null) => Promise<boolean>;
   onPlan: (moment: Moment) => void;
   onShowActivation: (id: string) => void;
 }) {
@@ -64,6 +71,7 @@ export function MomentTimeline({ file, activations, canManage, onPlan, onShowAct
                         <li key={item.id}><IconExternalLink stroke={1.5} aria-hidden /><span><a href={item.url} target="_blank" rel="noopener noreferrer">{item.title}</a><small>{item.publisher}</small></span></li>
                       ))}</ul></div>
                     ) : null}
+                    <MomentMedia moment={moment} media={media} organizationId={organizationId} playerId={file.player.id} playerName={file.player.name} preview={preview} canManage={canManage} onAdd={onAddMedia} onLink={onLinkMedia} />
                     <div className="pilot-moment__foot">
                       {runs.length ? <span className="pilot-moment__runs">{runs.map((row) => <button key={row.id} type="button" onClick={() => onShowActivation(row.id)}>{row.title}</button>)}</span>
                         : <span className="pilot-quiet">Nothing planned from this Moment yet.</span>}

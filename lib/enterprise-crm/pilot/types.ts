@@ -144,6 +144,10 @@ export type AthleteMediaKind = (typeof ATHLETE_MEDIA_KINDS)[number];
 
 /** Media or a business the school connects to a former player. */
 export interface PilotAthleteMedia {
+  /** The career Moment this item illustrates, when staff tied it to one. */
+  momentId?: string | null;
+  /** Private upload path; lets an upload be re-attached to an activation. */
+  storagePath?: string | null;
   id: string;
   playerId: string | null;
   launchId: string | null;

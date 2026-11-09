@@ -44,6 +44,7 @@ import { CopyLockerLink } from "./CopyLockerLink";
 
 import { AthleteAvatars } from "./AthleteAvatars";
 import { MediaAttach, MediaThumb, mediaPayload, type PendingMedia } from "./MediaAttach";
+import { gettyAssetFromLink } from "@/lib/getty/link";
 import { PlayerColumn } from "./PlayerColumn";
 import { SignalSuggestions } from "./SignalSuggestions";
 import { MomentTimeline } from "./MomentTimeline";
@@ -172,11 +173,29 @@ export function AthleteIntelligence({ organizationId, schoolName, file, roster =
     setError(null);
     const { localPreview, ...fields } = item;
     const next: PilotAthleteMedia | null = preview
-      ? { id: `pm-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, playerId: player.id, launchId: null, activationId: null, kind: fields.kind, title: fields.title, url: fields.url, description: fields.description, occurredOn: fields.occurredOn, reviewStatus: "pending", createdAt: new Date().toISOString(), source: fields.source ?? "link", thumbUrl: localPreview ?? fields.thumbUrl ?? null }
+      ? { id: `pm-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, momentId: fields.momentId ?? null, storagePath: fields.storagePath ?? null, playerId: player.id, launchId: null, activationId: null, kind: fields.kind, title: fields.title, url: fields.url, description: fields.description, occurredOn: fields.occurredOn, reviewStatus: "pending", createdAt: new Date().toISOString(), source: fields.source ?? "link", thumbUrl: localPreview ?? fields.thumbUrl ?? null }
       : await send<{ media: PilotAthleteMedia }>(`${api}/athlete-media`, "POST", { playerId: player.id, ...fields }).then((result) => result.media).catch(() => null);
     if (!next) { setError("That item could not be saved. Links must start with https://"); return false; }
     setMedia((current) => [next, ...current]);
     return true;
+  }
+
+  /** Ties a school media item to a Moment (or unties it with null). */
+  async function linkMedia(mediaId: string, momentId: string | null) {
+    setError(null);
+    const ok = preview ? true : await send(`${api}/athlete-media/${mediaId}`, "PATCH", { momentId }).then(() => true).catch(() => false);
+    if (!ok) { setError("That media could not be updated."); return false; }
+    setMedia((current) => current.map((item) => item.id === mediaId ? { ...item, momentId } : item));
+    return true;
+  }
+
+  /** The Moment's own media, ready to attach to a new activation. */
+  function momentDraftMedia(momentId: string): PendingMedia[] {
+    return media.filter((item) => item.momentId === momentId).flatMap((item) => {
+      const externalId = item.source === "getty" && item.url ? gettyAssetFromLink(item.url)?.id ?? null : null;
+      if ((item.source === "getty" && !externalId) || (item.source === "upload" && !item.storagePath)) return [];
+      return [{ key: item.id, kind: item.kind, title: item.title, url: item.source === "upload" ? null : item.url, source: item.source, storagePath: item.source === "upload" ? item.storagePath ?? null : null, thumbUrl: item.thumbUrl, externalId }];
+    });
   }
 
   async function recordReach(platform: SocialPlatformKey, followersCount: number, handle: string) {
@@ -292,8 +311,9 @@ export function AthleteIntelligence({ organizationId, schoolName, file, roster =
                     <>
                       <section aria-label="Moments">
                         <div className="pilot-card-head"><div><h2>Moments</h2><p>Verified, sourced events that drive the signals</p></div></div>
-                        {file.moments.length ? <MomentTimeline file={file} activations={activations} canManage={canManage} onShowActivation={showActivation}
-                          onPlan={(moment) => { const signal = file.signals.find((row) => row.momentId === moment.id); setDraft({ kind: "post", title: moment.title, brief: "", dueOn: signal?.targetDate ?? "", signalKey: signal?.key ?? null, momentId: moment.id }); }} />
+                        {file.moments.length ? <MomentTimeline file={file} activations={activations} media={media} organizationId={organizationId} preview={preview} canManage={canManage} onShowActivation={showActivation}
+                          onAddMedia={({ key: _key, momentId, ...item }) => addMedia({ ...item, momentId, description: null, occurredOn: null })} onLinkMedia={linkMedia}
+                          onPlan={(moment) => { const signal = file.signals.find((row) => row.momentId === moment.id); setDraft({ kind: "post", title: moment.title, brief: "", dueOn: signal?.targetDate ?? "", signalKey: signal?.key ?? null, momentId: moment.id, media: momentDraftMedia(moment.id) }); }} />
                           : <p className="pilot-quiet">No career moments recorded yet.</p>}
                         {file.seasons.length ? <details className="pilot-seasons-toggle"><summary>Season statistics ({file.seasons.length})</summary><ul className="pilot-seasons">{file.seasons.map((row) => <li key={row.id}><strong>{row.season}</strong><span>{row.team ?? ""}</span><em>{row.line}</em></li>)}</ul></details> : null}
                       </section>
@@ -445,7 +465,7 @@ function ActivationRow({ row, canManage, detailed = false, profileBaseHref, scho
   );
 }
 
-type NewMedia = { kind: AthleteMediaKind; title: string; url: string | null; description: string | null; occurredOn: string | null; source?: "link" | "upload" | "getty"; storagePath?: string | null; thumbUrl?: string | null; externalId?: string | null; localPreview?: string | null };
+type NewMedia = { momentId?: string | null; kind: AthleteMediaKind; title: string; url: string | null; description: string | null; occurredOn: string | null; source?: "link" | "upload" | "getty"; storagePath?: string | null; thumbUrl?: string | null; externalId?: string | null; localPreview?: string | null };
 
 type HubCategory = "videos" | "images" | "publications";
 const HUB: Array<{ id: HubCategory; label: string; icon: typeof IconVideo; kinds: AthleteMediaKind[]; hint: string }> = [

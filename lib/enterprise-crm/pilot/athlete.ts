@@ -146,3 +146,9 @@ export function toAthleteFile(athlete: SchoolAthlete): AthleteFile {
     })),
   };
 }
+
+/** True when the Moment is on this school player's own career file. */
+export async function isPlayerMoment(context: OrganizationContext, playerId: string, momentId: string): Promise<boolean> {
+  const athlete = await loadSchoolAthlete(context, playerId);
+  return Boolean(athlete?.lab?.moments.rows.some((moment) => moment.id === momentId && moment.status !== "rejected"));
+}

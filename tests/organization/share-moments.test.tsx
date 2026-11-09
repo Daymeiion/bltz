@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import { describe, expect, it, vi } from "vitest";
 import { sitePost, staffMessage } from "@/components/organization/pilot/ShareActivation";
 import { MomentTimeline } from "@/components/organization/pilot/MomentTimeline";
-import { previewActivations, previewAthleteFile } from "@/components/organization/pilot/preview-data";
+import { previewActivations, previewAthleteFile, previewMedia } from "@/components/organization/pilot/preview-data";
 import type { PilotActivation } from "@/lib/enterprise-crm/pilot/types";
 
 const row: PilotActivation = {
@@ -41,7 +41,9 @@ describe("Moment timeline", () => {
     document.body.replaceChildren(container);
     const onPlan = vi.fn();
     const file = previewAthleteFile("p1")!;
-    act(() => createRoot(container).render(<MomentTimeline file={file} activations={previewActivations} canManage onPlan={onPlan} onShowActivation={vi.fn()} />));
+    const onLinkMedia = vi.fn().mockResolvedValue(true);
+    const archive = { ...previewMedia.p1[0], id: "img-1", kind: "image" as const, title: "Archive photo", momentId: null };
+    act(() => createRoot(container).render(<MomentTimeline file={file} activations={previewActivations} media={[archive]} organizationId="org" preview canManage onPlan={onPlan} onShowActivation={vi.fn()} onAddMedia={vi.fn()} onLinkMedia={onLinkMedia} />));
 
     const first = container.querySelector<HTMLButtonElement>(".pilot-moment__head")!;
     expect(first.getAttribute("aria-expanded")).toBe("false");
@@ -52,7 +54,18 @@ describe("Moment timeline", () => {
     expect(open.textContent).toContain("Sample: Game recap, Marcus Hale scores first touchdown");
     expect(open.querySelector(".pilot-moment__runs")?.textContent).toBe("10 years since his first career touchdown");
 
+    act(() => open.querySelector<HTMLButtonElement>('button[aria-label="Add Archive photo to this Moment"]')!.click());
+    expect(onLinkMedia).toHaveBeenCalledWith("img-1", file.moments[0].id);
+
     act(() => [...open.querySelectorAll("button")].find((button) => button.textContent?.includes("Plan from this Moment"))!.click());
     expect(onPlan).toHaveBeenCalledWith(file.moments[0]);
+  });
+});
+
+describe("Getty suggestions for a Moment", () => {
+  it("puts photos from the Moment's year first", async () => {
+    const { rankForMoment } = await import("@/components/organization/pilot/MomentMedia");
+    const image = (id: string, date: string | null) => ({ id, title: id, caption: null, date, artist: null, collection: null, thumb: "", comp: null, detailUrl: `https://www.gettyimages.com/detail/${id}` });
+    expect(rankForMoment([image("a", "2013-01-01"), image("b", "2016-11-04"), image("c", null)], "2016-11-04").map((row) => row.id)).toEqual(["b", "a", "c"]);
   });
 });

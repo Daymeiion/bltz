@@ -1447,6 +1447,22 @@
 .pilot-moment__runs { display: flex; flex-wrap: wrap; gap: 6px; }
 .pilot-moment__runs button { padding: 4px 10px; border: 0; border-radius: 999px; background: var(--pilot-core); color: var(--pilot-accent); font-size: 12px; font-weight: 600; cursor: pointer; box-shadow: inset 0 0 0 1px var(--pilot-hairline); }
 @media (max-width: 767px) { .pilot-moment__head { grid-template-columns: minmax(0, 1fr) 18px; gap: 2px 12px; } .pilot-moment__date, .pilot-moment__title { grid-column: 1; } .pilot-moment__chevron { grid-column: 2; grid-row: 1 / span 2; } .pilot-moment__peek { display: none; } }
+/* Moment media: what is tied to the Moment, plus one-click archive and Getty suggestions. */
+.pilot-moment-media { display: grid; gap: 10px; padding: 12px; border-radius: 16px; background: var(--pilot-core); box-shadow: 0 0 0 1px var(--pilot-hairline); }
+.pilot-moment-media h4 { margin: 0; font-size: 12.5px; font-weight: 600; }
+.pilot-moment-media h5 { margin: 0 0 6px; color: var(--pilot-muted); font-size: 12px; font-weight: 600; }
+.pilot-moment-media__group { display: grid; gap: 8px; }
+.pilot-suggest-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr)); gap: 8px; margin: 0; padding: 0; list-style: none; }
+.pilot-suggest { position: relative; display: grid; grid-template-columns: 44px minmax(0, 1fr) 22px; align-items: center; gap: 8px; width: 100%; padding: 6px; border: 0; border-radius: 12px; background: #f3f4f6; color: var(--pilot-ink); font: inherit; text-align: left; cursor: pointer; transition: transform 250ms var(--pilot-ease), background-color 250ms var(--pilot-ease); }
+.pilot-suggest:hover:not(:disabled) { background: #ebedf0; transform: translateY(-1px); }
+.pilot-suggest:focus-visible { outline: 2px solid var(--pilot-accent); outline-offset: 2px; }
+.pilot-suggest:disabled { cursor: default; opacity: 0.7; }
+.pilot-suggest .pilot-thumb { width: 44px; height: 44px; border-radius: 9px; }
+.pilot-suggest > span:not(.pilot-thumb) { display: grid; min-width: 0; overflow: hidden; font-size: 12px; font-weight: 600; line-height: 1.3; }
+.pilot-suggest small { color: var(--pilot-muted); font-weight: 500; }
+.pilot-suggest > i { display: grid; width: 22px; height: 22px; place-items: center; border-radius: 999px; background: var(--pilot-ink); color: #fff; }
+.pilot-suggest > i svg { width: 13px; height: 13px; }
+.pilot-suggest:disabled > i { background: #1f7a4d; }
 .pilot-timeline { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
 .pilot-timeline li { position: relative; display: grid; gap: 2px; padding: 0 0 18px 22px; }
 .pilot-timeline li::before { position: absolute; top: 5px; left: 0; width: 9px; height: 9px; border-radius: 999px; background: var(--pilot-accent); content: ""; }
