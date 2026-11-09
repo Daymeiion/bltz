@@ -5,6 +5,7 @@ import { ActivityPanel } from "./ActivityPanel";
 import { PlayerColumn } from "./PlayerColumn";
 import { Bezel, Eyebrow, PlayerMomentRow } from "./PilotPrimitives";
 import { DismissibleNotice, HeroTitle } from "./PilotMotion";
+import { AddSignal } from "./AddSignal";
 
 const HOW_IT_WORKS = [
   { icon: IconUsers, title: "BLTZ builds the Lockers", body: "Every former player gets a fan Locker with their career, stats, photos and video." },
@@ -15,8 +16,11 @@ const HOW_IT_WORKS = [
 const HERO_TITLE = "Every legend deserves an encore.";
 
 /** Overview: players on the left, this week's moments and activity in the center, what's next on the right. */
-export function ThisWeek({ schoolName, roster, activity, intelligenceHref, preview = false }: {
+export function ThisWeek({ schoolName, roster, activity, intelligenceHref, organizationId, canAddSignal = false, preview = false }: {
   schoolName: string;
+  /** With canAddSignal, staff can describe a date of their own for AI to draft. */
+  organizationId?: string;
+  canAddSignal?: boolean;
   roster: PilotRoster;
   activity: { state: "ready" | "unavailable"; activations: PilotActivation[] };
   intelligenceHref: string;
@@ -33,6 +37,7 @@ export function ThisWeek({ schoolName, roster, activity, intelligenceHref, previ
       <header className="pilot-hero">
         <Eyebrow>{schoolName}</Eyebrow>
         <HeroTitle text={HERO_TITLE} />
+        {canAddSignal && organizationId ? <div className="pilot-hero__actions"><AddSignal organizationId={organizationId} players={roster.players} profileBaseHref={intelligenceHref} preview={preview} /></div> : null}
       </header>
 
       <DismissibleNotice storageKey="bltz-pilot-how-it-works" label="How the pilot works">

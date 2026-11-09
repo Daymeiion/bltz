@@ -13,6 +13,7 @@ In the Supabase SQL Editor:
 5. `supabase/migrations/20261102160000_crm_pilot_media_uploads.sql` — private upload bucket for school video and photos, Getty media, and media on activations.
 6. `supabase/migrations/20261109120000_crm_pilot_moment_media.sql` — ties school media to a career Moment.
 7. `supabase/migrations/20261109130000_crm_pilot_integrations.sql` — Settings connections (Slack, Teams, WordPress). Server-only; links and passwords never reach the browser.
+8. `supabase/migrations/20261109140000_crm_pilot_school_signals.sql` — signals schools add themselves (AI-drafted or by hand), tracked in admin under School Launches. AI drafting needs `ANTHROPIC_API_KEY` in Vercel; web sources use the existing `TAVILY_API_KEY`.
 
 All five are additive and empty: nobody gains access until step 3 below.
 

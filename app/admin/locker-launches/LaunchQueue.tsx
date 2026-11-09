@@ -7,6 +7,7 @@ import { LAUNCH_STATUSES } from "@/lib/enterprise-crm/pilot/types";
 
 export type QueueLaunch = { id: string; organizationId: string; school: string; playerName: string; existingPlayer: boolean; position: string | null; years: string | null; contactEmail: string | null; message: string | null; status: string; statusNote: string | null; createdAt: string };
 export type QueueSchool = { id: string; name: string; status: string };
+export type QueueSignal = { id: string; organizationId: string; school: string; player: string | null; title: string; kind: string; targetDate: string; recurrence: "yearly" | "once"; origin: "ai" | "manual"; status: "active" | "archived"; request: string | null; sources: number; createdAt: string };
 export type QueueMedia = { id: string; launchId: string | null; school: string; player: string | null; kind: string; title: string; url: string | null; description: string | null; occurredOn: string | null };
 
 const STATUS_LABEL: Record<string, string> = { requested: "Requested", building: "Building", invited: "Invite sent", live: "Live", declined: "Declined" };
@@ -18,7 +19,7 @@ async function patch(url: string, body: unknown) {
   if (!response.ok) throw new Error("failed");
 }
 
-export function LaunchQueue({ schools, launches, media, unavailable }: { schools: QueueSchool[] | null; launches: QueueLaunch[]; media: QueueMedia[]; unavailable: boolean }) {
+export function LaunchQueue({ schools, launches, media, signals = [], signalsUnavailable = false, unavailable }: { schools: QueueSchool[] | null; launches: QueueLaunch[]; media: QueueMedia[]; signals?: QueueSignal[]; signalsUnavailable?: boolean; unavailable: boolean }) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -50,9 +51,29 @@ export function LaunchQueue({ schools, launches, media, unavailable }: { schools
               <li key={school.id} className="flex flex-wrap items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
                 <div>
                   <p className="font-semibold">{school.name}</p>
-                  <p className={muted}>{school.status === "restricted" ? "Restricted" : "Active"} · {launches.filter((launch) => launch.organizationId === school.id).length} launch request(s)</p>
+                  <p className={muted}>{school.status === "restricted" ? "Restricted" : "Active"} · {launches.filter((launch) => launch.organizationId === school.id).length} launch request(s) · {signals.filter((signal) => signal.organizationId === school.id && signal.status === "active").length} school signal(s)</p>
                 </div>
                 <Link href={`/organization/${school.id}/dashboard`} className="rounded bg-[#ffbb00] px-3 py-1.5 text-sm font-semibold text-black">Open dashboard</Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className={panel} aria-label="School signals">
+        <h2 className="mb-1 text-lg font-semibold">School signals</h2>
+        <p className={`${muted} mb-3`}>Dates schools added themselves, newest first. AI drafts show what staff typed.</p>
+        {signalsUnavailable ? <p role="alert" className="text-sm text-amber-700">School signals could not be loaded. The school signals migration may not be applied yet.</p>
+          : signals.length === 0 ? <p className={muted}>No school has added a signal yet.</p> : (
+          <ul className="divide-y divide-neutral-200 dark:divide-neutral-800">
+            {signals.map((signal) => (
+              <li key={signal.id} className="grid gap-1 py-3 first:pt-0 last:pb-0">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <p className="font-semibold">{signal.title} <span className={muted}>· {signal.school}{signal.player ? ` · ${signal.player}` : " · program-wide"}</span></p>
+                  <span className="rounded bg-neutral-100 px-2 py-0.5 text-xs font-semibold dark:bg-neutral-800">{signal.origin === "ai" ? "AI draft" : "Entered by hand"}{signal.status === "archived" ? " · removed" : ""}</span>
+                </div>
+                <p className={muted}>{signal.kind} · {signal.recurrence === "yearly" ? "yearly from" : "on"} {signal.targetDate} · {signal.sources} source(s) · added {new Date(signal.createdAt).toLocaleDateString()}</p>
+                {signal.request ? <p className="text-sm">Staff wrote: “{signal.request}”</p> : null}
               </li>
             ))}
           </ul>

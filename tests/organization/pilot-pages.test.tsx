@@ -187,7 +187,7 @@ describe("pilot pages", () => {
     Element.prototype.scrollIntoView = vi.fn();
     render(<AthleteIntelligence organizationId="org" schoolName="Westlake" file={previewAthleteFile("p1")!} roster={previewRoster.players} initialActivations={[]} initialReach={[]} canManage profileBaseHref="/i" preview />);
 
-    act(() => container.querySelector<HTMLButtonElement>('[aria-label="Signals list"] button')!.click());
+    act(() => container.querySelector<HTMLButtonElement>('[aria-label="Signals list"] .pilot-side-list button')!.click());
     return vi.waitFor(() => expect(container.querySelector(".pilot-signal--focus strong")?.textContent).toBe("10 years since his first career touchdown"));
   });
 

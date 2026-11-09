@@ -48,6 +48,8 @@ import { gettyAssetFromLink } from "@/lib/getty/link";
 import { PlayerColumn } from "./PlayerColumn";
 import { SignalSuggestions } from "./SignalSuggestions";
 import { MomentTimeline } from "./MomentTimeline";
+import { AddSignal } from "./AddSignal";
+import { toFileSignal, type SchoolSignal } from "@/lib/enterprise-crm/pilot/school-signals-shared";
 import { ShareActivation } from "./ShareActivation";
 import type { IntegrationStatus } from "@/lib/enterprise-crm/pilot/integrations-shared";
 import { backingFor, reachHistory, type Backing, type ReachHistory } from "@/lib/enterprise-crm/pilot/suggestions";
@@ -84,7 +86,7 @@ async function send<T>(url: string, method: "POST" | "PATCH", body: unknown): Pr
  * The school's Intelligence workspace: players on the left, the selected
  * player's file in the center, and signals, activations and reach on the right.
  */
-export function AthleteIntelligence({ organizationId, schoolName, file, roster = [], contactEmail = null, initialActivations, initialReach, initialMedia = [], schoolHistory, connections = [], canManage, profileBaseHref, preview = false }: {
+export function AthleteIntelligence({ organizationId, schoolName, file, roster = [], contactEmail = null, initialActivations, initialReach, initialMedia = [], initialSchoolSignals = [], schoolHistory, connections = [], canManage, profileBaseHref, preview = false }: {
   organizationId: string;
   schoolName: string;
   file: AthleteFile;
@@ -95,6 +97,8 @@ export function AthleteIntelligence({ organizationId, schoolName, file, roster =
   initialMedia?: PilotAthleteMedia[];
   /** Reach of every posted activation at the school, by kind; falls back to this athlete's own. */
   schoolHistory?: ReachHistory;
+  /** Signals the school added itself for this player. */
+  initialSchoolSignals?: SchoolSignal[];
   /** Tools connected in Settings, so Share can send directly. */
   connections?: IntegrationStatus[];
   canManage: boolean;
@@ -105,7 +109,8 @@ export function AthleteIntelligence({ organizationId, schoolName, file, roster =
   const [reach, setReach] = useState(initialReach);
   const [media, setMedia] = useState(initialMedia);
   // Engine signals plus anniversaries of what the school connected, soonest first.
-  const signals = [...file.signals, ...mediaSignals(media)].sort((a, b) => a.daysUntil - b.daysUntil);
+  const [schoolSignals, setSchoolSignals] = useState(initialSchoolSignals);
+  const signals = [...file.signals, ...mediaSignals(media), ...schoolSignals.flatMap((row) => toFileSignal(row) ?? [])].sort((a, b) => a.daysUntil - b.daysUntil);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(initialActivations[0]?.id ?? null);
@@ -294,7 +299,7 @@ export function AthleteIntelligence({ organizationId, schoolName, file, roster =
                           const planned = activations.some((row) => row.signalKey === signal.key && row.status !== "cancelled");
                           return (
                             <li key={signal.key} id={`signal-${signal.key}`} className={cn("pilot-signal", `pilot-signal--${signal.verdict}`, focusedSignal === signal.key && "pilot-signal--focus")}>
-                              <div className="pilot-signal__top"><WhenChip daysUntil={signal.daysUntil} verdict={signal.verdict} /><span className="pilot-signal__verdict">{VERDICT_LABEL[signal.verdict]}</span></div>
+                              <div className="pilot-signal__top"><span className="pilot-signal__chips"><WhenChip daysUntil={signal.daysUntil} verdict={signal.verdict} />{signal.key.startsWith("school:") ? <span className="pilot-signal__mine">Added by your staff</span> : null}</span><span className="pilot-signal__verdict">{VERDICT_LABEL[signal.verdict]}</span></div>
                               <strong>{signal.headline}</strong>
                               <div className="pilot-signal__meta">
                                 <span><i style={{ "--pilot-meter": `${signal.priority}%` } as CSSProperties} />Priority {signal.priority}</span>
@@ -359,7 +364,7 @@ export function AthleteIntelligence({ organizationId, schoolName, file, roster =
 
         <aside className="pilot-intel__right" aria-label="Signals, activations and analytics">
           <Bezel label="Signals list">
-            <div className="pilot-card-head"><div><h2>Signals</h2></div><span className="pilot-count pilot-count--muted">{signals.length}</span></div>
+            <div className="pilot-card-head"><div><h2>Signals</h2></div><span className="pilot-signals-head"><span className="pilot-count pilot-count--muted">{signals.length}</span>{canManage ? <AddSignal compact organizationId={organizationId} players={roster.length ? roster : [player]} defaultPlayerId={player.id} profileBaseHref={profileBaseHref} preview={preview} onSaved={(signal) => { if (signal.playerId === player.id) { setSchoolSignals((current) => [...current, signal]); window.setTimeout(() => showSignal(`school:${signal.id}`), 400); } }} /> : null}</span></div>
             {signals.length ? <ul className="pilot-side-list">{(showAll.signals ? signals : signals.slice(0, SIDE_LIMIT)).map((signal) => (
               <li key={signal.key}><button type="button" onClick={() => showSignal(signal.key)}>
                 <span className={cn("pilot-side-list__dot", `pilot-side-list__dot--${signal.verdict}`)} aria-hidden />

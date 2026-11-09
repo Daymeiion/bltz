@@ -10,7 +10,7 @@ export default async function OrganizationPreviewPage() {
 
   return (
     <OrganizationShell context={previewContext} organizations={previewOrganizations} options={previewOptions} previewTheme={previewTheme} previewArt={previewArt}>
-      <ThisWeek schoolName={previewContext.organization.name} roster={previewRoster} activity={{ state: "ready", activations: previewActivations }} intelligenceHref="/organization/preview/intelligence" preview />
+      <ThisWeek schoolName={previewContext.organization.name} roster={previewRoster} activity={{ state: "ready", activations: previewActivations }} intelligenceHref="/organization/preview/intelligence" organizationId={previewContext.organization.id} canAddSignal preview />
     </OrganizationShell>
   );
 }
