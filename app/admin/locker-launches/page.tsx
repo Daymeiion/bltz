@@ -2,8 +2,9 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { authorizeIntelligenceLab, IntelligenceAccessError } from "@/lib/intelligence/lab-server";
 import { listAccessibleOrganizations } from "@/lib/organization/context";
+import { listAllSchoolSignals } from "@/lib/enterprise-crm/pilot/school-signals";
 import { createServiceClient } from "@/lib/supabase/service";
-import { LaunchQueue, type QueueLaunch, type QueueMedia, type QueueSchool } from "./LaunchQueue";
+import { LaunchQueue, type QueueLaunch, type QueueMedia, type QueueSchool, type QueueSignal } from "./LaunchQueue";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "School Locker launches", robots: { index: false, follow: false } };
@@ -25,10 +26,11 @@ export default async function LockerLaunchesPage() {
     throw error;
   }
   const db = createServiceClient();
-  const [launches, media, enrolled] = await Promise.all([
+  const [launches, media, enrolled, schoolSignals] = await Promise.all([
     db.from("organization_locker_launches").select("id,organization_id,player_id,player_name,position,years,contact_email,message,status,status_note,created_at").order("created_at", { ascending: false }).limit(200),
     db.from("organization_athlete_media").select("id,organization_id,player_id,launch_id,kind,title,url,description,occurred_on,review_status,created_at").eq("review_status", "pending").order("created_at").limit(300),
     listAccessibleOrganizations().catch(() => null),
+    listAllSchoolSignals(),
   ]);
   // Admins see every approved or restricted organization; each opens its own dashboard.
   const schools: QueueSchool[] | null = enrolled?.ok
@@ -37,8 +39,8 @@ export default async function LockerLaunchesPage() {
   const launchRows = z.array(launchRow).safeParse(launches.data);
   const mediaRows = z.array(mediaRow).safeParse(media.data);
   const unavailable = Boolean(launches.error || media.error || !launchRows.success || !mediaRows.success);
-  const orgIds = [...new Set([...(launchRows.success ? launchRows.data : []), ...(mediaRows.success ? mediaRows.data : [])].map((row) => row.organization_id))];
-  const playerIds = [...new Set((mediaRows.success ? mediaRows.data : []).flatMap((row) => row.player_id ? [row.player_id] : []))];
+  const orgIds = [...new Set([...(launchRows.success ? launchRows.data : []), ...(mediaRows.success ? mediaRows.data : [])].map((row) => row.organization_id).concat(schoolSignals.signals.map((row) => row.organizationId)))];
+  const playerIds = [...new Set([...(mediaRows.success ? mediaRows.data : []).flatMap((row) => row.player_id ? [row.player_id] : []), ...schoolSignals.signals.flatMap((row) => row.playerId ? [row.playerId] : [])])];
   const [orgs, players] = await Promise.all([
     orgIds.length ? db.from("organizations").select("id,name").in("id", orgIds) : Promise.resolve({ data: [] }),
     playerIds.length ? db.from("players").select("id,name").in("id", playerIds) : Promise.resolve({ data: [] }),
@@ -54,5 +56,9 @@ export default async function LockerLaunchesPage() {
     id: row.id, organizationId: row.organization_id, school: orgName.get(row.organization_id) ?? "School", playerName: row.player_name, existingPlayer: Boolean(row.player_id),
     position: row.position, years: row.years, contactEmail: row.contact_email, message: row.message, status: row.status, statusNote: row.status_note, createdAt: row.created_at,
   }));
-  return <LaunchQueue schools={schools} launches={queueLaunches} media={queueMedia} unavailable={unavailable} />;
+  const queueSignals: QueueSignal[] = schoolSignals.signals.map((row) => ({
+    id: row.id, organizationId: row.organizationId, school: orgName.get(row.organizationId) ?? "School", player: row.playerId ? playerName.get(row.playerId) ?? null : null,
+    title: row.title, kind: row.kind, targetDate: row.targetDate, recurrence: row.recurrence, origin: row.origin, status: row.status, request: row.request, sources: row.sources.length, createdAt: row.createdAt,
+  }));
+  return <LaunchQueue schools={schools} launches={queueLaunches} media={queueMedia} signals={queueSignals} signalsUnavailable={schoolSignals.state === "unavailable"} unavailable={unavailable} />;
 }
