@@ -3,6 +3,7 @@ import type {
   OrganizationContext,
   OrganizationWorkspaceOptions,
 } from "@/lib/organization/types";
+import type { IntegrationStatus } from "@/lib/enterprise-crm/pilot/integrations-shared";
 import type { AthleteFile, PilotActivation, PilotAthleteMedia, PilotLaunch, PilotRoster, PilotSocialReach } from "@/lib/enterprise-crm/pilot/types";
 
 export const PREVIEW_ORGANIZATION_ID = "11111111-1111-4111-8111-111111111111";
@@ -147,3 +148,6 @@ export const previewTheme = { mode: "school" as const, accent: "#003262", highli
 
 /** California Memorial Stadium from Wikimedia Commons; CC BY 4.0 requires the credit line. */
 export const previewArt = { url: "/images/crm/cal-memorial-stadium.webp", credit: "Stadium photo: Quintin Soloviev, CC BY 4.0, via Wikimedia Commons" };
+
+/** Sample connections: Slack connected, Teams and the website not yet. */
+export const previewIntegrations: IntegrationStatus[] = [{ kind: "slack", label: "#athletics-social", updatedAt: "2026-11-03T15:00:00.000Z" }];

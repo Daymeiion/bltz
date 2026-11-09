@@ -6,6 +6,7 @@ import { loadSchoolAthlete, toAthleteFile } from "@/lib/enterprise-crm/pilot/ath
 import { loadSchoolRoster } from "@/lib/enterprise-crm/pilot/former-players";
 import { listAthleteMedia, listLaunches, mergeMediaSignals } from "@/lib/enterprise-crm/pilot/launches";
 import { reachHistory } from "@/lib/enterprise-crm/pilot/suggestions";
+import { listIntegrations } from "@/lib/enterprise-crm/pilot/integrations";
 import { resolveWorkspaceAccess } from "@/lib/enterprise-crm/workspace-access";
 import { resolveOrganizationContext } from "@/lib/organization/context";
 
@@ -29,7 +30,7 @@ export default async function OrganizationAthletePage({
   if (!athlete) notFound();
 
   const canReadActivity = access.capabilities["navigation.activations"];
-  const [activity, reach, media, roster, orgMedia, launches, schoolActivity] = await Promise.all([
+  const [activity, reach, media, roster, orgMedia, launches, schoolActivity, connections] = await Promise.all([
     canReadActivity ? loadSchoolRoster(context).then((list) => listActivations(context.organization.id, { playerId, players: new Map(list.players.map((row) => [row.id, { name: row.name, portraitUrl: row.portraitUrl }])) })) : { state: "ready" as const, activations: [] },
     canReadActivity ? listSocialReach(context.organization.id, playerId) : [],
     listAthleteMedia(context.organization.id, playerId),
@@ -38,6 +39,7 @@ export default async function OrganizationAthletePage({
     access.canManageActivations ? listLaunches(context.organization.id) : { state: "ready" as const, launches: [] },
     // Every activation the school has run sets the reach estimates on suggestions.
     canReadActivity ? listActivations(context.organization.id, { limit: 200 }) : { state: "ready" as const, activations: [] },
+    access.canManageActivations ? listIntegrations(context.organization.id) : { state: "ready" as const, integrations: [] },
   ]);
   // The most recent launch for this player carries the email the school gave BLTZ.
   const contactEmail = launches.launches.find((launch) => launch.playerId === playerId && launch.contactEmail)?.contactEmail ?? null;
@@ -50,6 +52,7 @@ export default async function OrganizationAthletePage({
       initialActivations={activity.activations}
       initialReach={reach}
       initialMedia={media}
+      connections={connections.integrations}
       schoolHistory={schoolActivity.state === "ready" ? reachHistory(schoolActivity.activations) : undefined}
       roster={mergeMediaSignals(roster, orgMedia).players}
       contactEmail={contactEmail}

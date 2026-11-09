@@ -11,6 +11,8 @@ In the Supabase SQL Editor:
 3. `supabase/migrations/20261102140000_crm_pilot_locker_launches.sql` — Locker launches and school-connected media.
 4. `supabase/migrations/20261102150000_crm_pilot_activation_athletes.sql` — more than one former player featured in an activation.
 5. `supabase/migrations/20261102160000_crm_pilot_media_uploads.sql` — private upload bucket for school video and photos, Getty media, and media on activations.
+6. `supabase/migrations/20261109120000_crm_pilot_moment_media.sql` — ties school media to a career Moment.
+7. `supabase/migrations/20261109130000_crm_pilot_integrations.sql` — Settings connections (Slack, Teams, WordPress). Server-only; links and passwords never reach the browser.
 
 All five are additive and empty: nobody gains access until step 3 below.
 

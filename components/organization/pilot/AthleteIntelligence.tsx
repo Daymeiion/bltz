@@ -49,6 +49,7 @@ import { PlayerColumn } from "./PlayerColumn";
 import { SignalSuggestions } from "./SignalSuggestions";
 import { MomentTimeline } from "./MomentTimeline";
 import { ShareActivation } from "./ShareActivation";
+import type { IntegrationStatus } from "@/lib/enterprise-crm/pilot/integrations-shared";
 import { backingFor, reachHistory, type Backing, type ReachHistory } from "@/lib/enterprise-crm/pilot/suggestions";
 import { AnimatePresence, HeroTitle, MotionItem } from "./PilotMotion";
 
@@ -83,7 +84,7 @@ async function send<T>(url: string, method: "POST" | "PATCH", body: unknown): Pr
  * The school's Intelligence workspace: players on the left, the selected
  * player's file in the center, and signals, activations and reach on the right.
  */
-export function AthleteIntelligence({ organizationId, schoolName, file, roster = [], contactEmail = null, initialActivations, initialReach, initialMedia = [], schoolHistory, canManage, profileBaseHref, preview = false }: {
+export function AthleteIntelligence({ organizationId, schoolName, file, roster = [], contactEmail = null, initialActivations, initialReach, initialMedia = [], schoolHistory, connections = [], canManage, profileBaseHref, preview = false }: {
   organizationId: string;
   schoolName: string;
   file: AthleteFile;
@@ -94,6 +95,8 @@ export function AthleteIntelligence({ organizationId, schoolName, file, roster =
   initialMedia?: PilotAthleteMedia[];
   /** Reach of every posted activation at the school, by kind; falls back to this athlete's own. */
   schoolHistory?: ReachHistory;
+  /** Tools connected in Settings, so Share can send directly. */
+  connections?: IntegrationStatus[];
   canManage: boolean;
   profileBaseHref: string;
   preview?: boolean;
@@ -343,7 +346,8 @@ export function AthleteIntelligence({ organizationId, schoolName, file, roster =
                           <div><h2>Activations</h2><p>{selected ? "The selected activation in detail. Pick another from the list on the right." : "Plan one from a signal, then share its tracked link to measure fan visits."}</p></div>
                           {canManage ? <button type="button" className="pilot-icon-pill" aria-label="Plan a new activation" onClick={() => setDraft({ kind: "post", title: "", brief: "", dueOn: "", signalKey: null, momentId: null })}><IconPlus stroke={1.5} aria-hidden /></button> : null}
                         </div>
-                        {selected ? <ul className="pilot-activations"><AnimatePresence mode="popLayout" initial={false}><ActivationRow key={selected.id} row={selected} canManage={canManage} detailed profileBaseHref={profileBaseHref} schoolName={schoolName} onUpdate={(patch) => updateActivation(selected.id, patch)} /></AnimatePresence></ul> : null}
+                        {selected ? <ul className="pilot-activations"><AnimatePresence mode="popLayout" initial={false}><ActivationRow key={selected.id} row={selected} canManage={canManage} detailed profileBaseHref={profileBaseHref} schoolName={schoolName}
+                          share={{ organizationId, connections, preview, settingsHref: `${profileBaseHref.replace(/\/intelligence$/, "")}/settings` }} onUpdate={(patch) => updateActivation(selected.id, patch)} /></AnimatePresence></ul> : null}
                       </section>
                     </>
                   ) : null}
@@ -400,7 +404,7 @@ export function AthleteIntelligence({ organizationId, schoolName, file, roster =
   );
 }
 
-function ActivationRow({ row, canManage, detailed = false, profileBaseHref, schoolName, onUpdate }: { row: PilotActivation; canManage: boolean; detailed?: boolean; profileBaseHref?: string; schoolName?: string; onUpdate: (patch: Partial<PilotActivation>) => Promise<void> }) {
+function ActivationRow({ row, canManage, detailed = false, profileBaseHref, schoolName, share, onUpdate }: { row: PilotActivation; canManage: boolean; detailed?: boolean; profileBaseHref?: string; schoolName?: string; share?: { organizationId: string; connections: IntegrationStatus[]; preview: boolean; settingsHref: string }; onUpdate: (patch: Partial<PilotActivation>) => Promise<void> }) {
   const [mode, setMode] = useState<"idle" | "post" | "reach">("idle");
   const [sharing, setSharing] = useState(false);
   const [channel, setChannel] = useState<ActivationChannel>(row.channel ?? "instagram");
@@ -440,7 +444,7 @@ function ActivationRow({ row, canManage, detailed = false, profileBaseHref, scho
       {row.status !== "cancelled" ? (
         <div className="pilot-activation__actions">
           <CopyLockerLink href={row.trackedHref} name={`${row.title} (tracked link)`} label="Copy tracked link" />
-          {detailed && schoolName ? <button type="button" className="pilot-pill pilot-pill--quiet" onClick={() => setSharing(true)}><IconShare stroke={1.5} aria-hidden />Share</button> : null}
+          {detailed && schoolName && share ? <button type="button" className="pilot-pill pilot-pill--quiet" onClick={() => setSharing(true)}><IconShare stroke={1.5} aria-hidden />Share</button> : null}
           {canManage && row.status === "planned" ? <button type="button" className="pilot-pill pilot-pill--quiet" onClick={() => setMode(mode === "post" ? "idle" : "post")}>Mark posted</button> : null}
           {canManage && row.status === "posted" ? <button type="button" className="pilot-pill pilot-pill--quiet" onClick={() => setMode(mode === "reach" ? "idle" : "reach")}>Update reach</button> : null}
           {canManage && row.status === "planned" ? <button type="button" className="pilot-text-button" onClick={() => void onUpdate({ status: "cancelled" })}>Cancel</button> : null}
@@ -460,7 +464,7 @@ function ActivationRow({ row, canManage, detailed = false, profileBaseHref, scho
           <button type="submit" className="pilot-pill pilot-pill--primary pilot-pill--compact" disabled={busy}>Save</button>
         </form>
       ) : null}
-      {sharing && schoolName ? <ShareActivation row={row} schoolName={schoolName} onClose={() => setSharing(false)} /> : null}
+      {sharing && schoolName && share ? <ShareActivation row={row} schoolName={schoolName} {...share} onClose={() => setSharing(false)} /> : null}
     </MotionItem>
   );
 }
