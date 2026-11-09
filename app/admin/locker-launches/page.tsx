@@ -1,8 +1,9 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { authorizeIntelligenceLab, IntelligenceAccessError } from "@/lib/intelligence/lab-server";
+import { listAccessibleOrganizations } from "@/lib/organization/context";
 import { createServiceClient } from "@/lib/supabase/service";
-import { LaunchQueue, type QueueLaunch, type QueueMedia } from "./LaunchQueue";
+import { LaunchQueue, type QueueLaunch, type QueueMedia, type QueueSchool } from "./LaunchQueue";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "School Locker launches", robots: { index: false, follow: false } };
@@ -16,7 +17,7 @@ const mediaRow = z.object({
   url: z.string().nullable(), description: z.string().nullable(), occurred_on: z.string().nullable(), review_status: z.string(), created_at: z.string(),
 });
 
-/** BLTZ's queue of school launches and school-connected media awaiting review. */
+/** Enrolled school workspaces, BLTZ's queue of school launches, and school-connected media awaiting review. */
 export default async function LockerLaunchesPage() {
   try { await authorizeIntelligenceLab(); }
   catch (error) {
@@ -24,10 +25,15 @@ export default async function LockerLaunchesPage() {
     throw error;
   }
   const db = createServiceClient();
-  const [launches, media] = await Promise.all([
+  const [launches, media, enrolled] = await Promise.all([
     db.from("organization_locker_launches").select("id,organization_id,player_id,player_name,position,years,contact_email,message,status,status_note,created_at").order("created_at", { ascending: false }).limit(200),
     db.from("organization_athlete_media").select("id,organization_id,player_id,launch_id,kind,title,url,description,occurred_on,review_status,created_at").eq("review_status", "pending").order("created_at").limit(300),
+    listAccessibleOrganizations().catch(() => null),
   ]);
+  // Admins see every approved or restricted organization; each opens its own dashboard.
+  const schools: QueueSchool[] | null = enrolled?.ok
+    ? enrolled.organizations.map(({ organization }) => ({ id: organization.id, name: organization.name, status: organization.status }))
+    : null;
   const launchRows = z.array(launchRow).safeParse(launches.data);
   const mediaRows = z.array(mediaRow).safeParse(media.data);
   const unavailable = Boolean(launches.error || media.error || !launchRows.success || !mediaRows.success);
@@ -45,8 +51,8 @@ export default async function LockerLaunchesPage() {
     kind: row.kind, title: row.title, url: row.url, description: row.description, occurredOn: row.occurred_on,
   }));
   const queueLaunches: QueueLaunch[] = (launchRows.success ? launchRows.data : []).map((row) => ({
-    id: row.id, school: orgName.get(row.organization_id) ?? "School", playerName: row.player_name, existingPlayer: Boolean(row.player_id),
+    id: row.id, organizationId: row.organization_id, school: orgName.get(row.organization_id) ?? "School", playerName: row.player_name, existingPlayer: Boolean(row.player_id),
     position: row.position, years: row.years, contactEmail: row.contact_email, message: row.message, status: row.status, statusNote: row.status_note, createdAt: row.created_at,
   }));
-  return <LaunchQueue launches={queueLaunches} media={queueMedia} unavailable={unavailable} />;
+  return <LaunchQueue schools={schools} launches={queueLaunches} media={queueMedia} unavailable={unavailable} />;
 }

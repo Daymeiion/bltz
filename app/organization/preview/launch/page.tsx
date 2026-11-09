@@ -1,10 +1,12 @@
-import { notFound } from "next/navigation";
+import { requireTemplateAccess } from "@/lib/enterprise-crm/pilot/template-access";
 import { OrganizationShell } from "@/components/organization/OrganizationShell";
 import { LaunchLocker } from "@/components/organization/pilot/LaunchLocker";
 import { previewContext, previewLaunches, previewOptions, previewOrganizations, previewRoster, previewArt, previewTheme } from "@/components/organization/pilot/preview-data";
 
-export default function OrganizationLaunchPreviewPage() {
-  if (process.env.NODE_ENV !== "development") notFound();
+export const metadata = { title: "School template", robots: { index: false, follow: false } };
+
+export default async function OrganizationLaunchPreviewPage() {
+  await requireTemplateAccess("/organization/preview/launch");
 
   return (
     <OrganizationShell context={previewContext} organizations={previewOrganizations} options={previewOptions} previewTheme={previewTheme} previewArt={previewArt}>
