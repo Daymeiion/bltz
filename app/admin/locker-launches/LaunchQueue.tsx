@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LAUNCH_STATUSES } from "@/lib/enterprise-crm/pilot/types";
 
-export type QueueLaunch = { id: string; school: string; playerName: string; existingPlayer: boolean; position: string | null; years: string | null; contactEmail: string | null; message: string | null; status: string; statusNote: string | null; createdAt: string };
+export type QueueLaunch = { id: string; organizationId: string; school: string; playerName: string; existingPlayer: boolean; position: string | null; years: string | null; contactEmail: string | null; message: string | null; status: string; statusNote: string | null; createdAt: string };
+export type QueueSchool = { id: string; name: string; status: string };
 export type QueueMedia = { id: string; launchId: string | null; school: string; player: string | null; kind: string; title: string; url: string | null; description: string | null; occurredOn: string | null };
 
 const STATUS_LABEL: Record<string, string> = { requested: "Requested", building: "Building", invited: "Invite sent", live: "Live", declined: "Declined" };
@@ -16,7 +18,7 @@ async function patch(url: string, body: unknown) {
   if (!response.ok) throw new Error("failed");
 }
 
-export function LaunchQueue({ launches, media, unavailable }: { launches: QueueLaunch[]; media: QueueMedia[]; unavailable: boolean }) {
+export function LaunchQueue({ schools, launches, media, unavailable }: { schools: QueueSchool[] | null; launches: QueueLaunch[]; media: QueueMedia[]; unavailable: boolean }) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -30,11 +32,32 @@ export function LaunchQueue({ launches, media, unavailable }: { launches: QueueL
   return (
     <div className="mx-auto max-w-5xl space-y-6 p-6 text-neutral-950 dark:text-neutral-50">
       <header>
-        <h1 className="text-2xl font-semibold">School Locker launches</h1>
+        <h1 className="text-2xl font-semibold">School launches</h1>
         <p className={muted}>Build each request with the batch builder in Preview Lockers (name + college), then move it along. Approve school media before it goes on a Locker.</p>
       </header>
       {unavailable ? <p role="alert" className="text-sm text-amber-700">Some launch data could not be loaded. The launch migration may not be applied yet.</p> : null}
       {error ? <p role="alert" className="text-sm text-red-700">{error}</p> : null}
+
+      <section className={panel} aria-label="Enrolled schools">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold">Enrolled schools</h2>
+          <Link href="/organization/preview" className="rounded border border-neutral-300 px-3 py-1.5 text-sm font-medium dark:border-neutral-700">Edit the school template</Link>
+        </div>
+        {schools === null ? <p role="alert" className="text-sm text-amber-700">The school list could not be loaded.</p>
+          : schools.length === 0 ? <p className={muted}>No school is enrolled yet. The template shows what each school will see.</p> : (
+          <ul className="divide-y divide-neutral-200 dark:divide-neutral-800">
+            {schools.map((school) => (
+              <li key={school.id} className="flex flex-wrap items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
+                <div>
+                  <p className="font-semibold">{school.name}</p>
+                  <p className={muted}>{school.status === "restricted" ? "Restricted" : "Active"} · {launches.filter((launch) => launch.organizationId === school.id).length} launch request(s)</p>
+                </div>
+                <Link href={`/organization/${school.id}/dashboard`} className="rounded bg-[#ffbb00] px-3 py-1.5 text-sm font-semibold text-black">Open dashboard</Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <section className={panel} aria-label="Launch requests">
         <h2 className="mb-3 text-lg font-semibold">Launch requests</h2>
