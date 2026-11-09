@@ -10,11 +10,16 @@ export { INTEGRATION_KINDS, type IntegrationKind, type IntegrationStatus };
 
 const SLACK_WEBHOOK = /^https:\/\/hooks\.slack\.com\/services\/[A-Za-z0-9/_-]{20,200}$/;
 
+/** True when a link carries sign-in details before the host (https://name:secret@host). */
+function hasUserInfo(value: string): boolean {
+  return /^[a-z][a-z0-9+.-]*:\/\/[^/?#]*@/i.test(value.trim());
+}
+
 /** Classic Teams incoming webhooks and the Workflows ("Post to a channel when a webhook request is received") links. */
 export function isTeamsWebhook(value: string): boolean {
   try {
     const url = new URL(value);
-    return url.protocol === "https:" && !url.username && !url.password && !url.port
+    return url.protocol === "https:" && !hasUserInfo(value) && !url.port
       && (/\.webhook\.office\.com$/i.test(url.hostname) || /\.logic\.azure\.com$/i.test(url.hostname) || /\.environment\.api\.powerplatform\.com$/i.test(url.hostname));
   } catch {
     return false;
@@ -29,7 +34,7 @@ export function publicSiteUrl(value: string): string | null {
   try {
     const url = new URL(value.trim());
     const host = url.hostname.toLowerCase();
-    if (url.protocol !== "https:" || url.username || url.password || url.port || isIP(host.replace(/^\[|\]$/g, "")) !== 0) return null;
+    if (url.protocol !== "https:" || hasUserInfo(value) || url.port || isIP(host.replace(/^\[|\]$/g, "")) !== 0) return null;
     if (!host.includes(".") || /(^|\.)(localhost|local|internal|intranet|lan|home|corp)$/.test(host)) return null;
     return `${url.origin}${url.pathname.replace(/\/+$/, "")}`;
   } catch {
