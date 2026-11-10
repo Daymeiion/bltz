@@ -47,6 +47,9 @@ export function filterSchoolRoster(directory: LabSection<WorkspaceAthleteSummary
 
 async function schoolNames(context: OrganizationContext): Promise<string[]> {
   const names = [context.organization.name];
+  const application = await createServiceClient().from("organization_applications").select("master_list_college").eq("organization_id", context.organization.id).maybeSingle();
+  const college = (application.data as { master_list_college?: unknown } | null)?.master_list_college;
+  if (typeof college === "string" && college.trim()) names.push(college);
   if (!context.organization.schoolId) return names;
   const { data } = await createServiceClient()
     .from("schools")

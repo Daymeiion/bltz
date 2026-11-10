@@ -16,6 +16,13 @@ In the Supabase SQL Editor:
 8. `supabase/migrations/20261109140000_crm_pilot_school_signals.sql` — signals schools add themselves (AI-drafted or by hand), tracked in admin under School Launches. AI drafting needs `ANTHROPIC_API_KEY` in Vercel; web sources use the existing `TAVILY_API_KEY`.
 9. `supabase/migrations/20261110120000_crm_pilot_dismissals.sql` — signals and Moments a school hides from its own workspace (the shared engine is unchanged).
 10. `supabase/migrations/20261110130000_crm_pilot_briefs.sql` — partnership briefs shared with brands by private link (token hash only, expiry, open counts). The `/brief/<token>` page is public by design.
+11. `supabase/migrations/20261110140000_crm_pilot_onboarding.sql` — pilot applications (`/pilot`), each organization's roster from the master player list, and tracked Locker invites (`/join/<token>`). Also makes accounts created from the pilot form start as non-athletes.
+
+## Onboarding without SQL
+
+After migration 11, a school or agency applies at `/pilot`. Approve it in **Admin → School Launches → Pilot applications**: pick the school's college name as the master list spells it (suggestions show player counts), then Approve. That makes the applicant the owner, grants the pilot permissions, links the college's colors and logo, and lists every matching master-list player on their roster. The applicant must confirm their email before you can approve. Steps 2 and 3 below are only needed for manual changes.
+
+Staff invite players from **Launch a Locker → Your players**: an email from BLTZ on the school's behalf (uses the `BLTZ_PREVIEW_EMAIL_*` mailbox settings; 100 emailed invites per school per day) or a personal link they send themselves.
 
 All five are additive and empty: nobody gains access until step 3 below.
 

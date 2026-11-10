@@ -6,6 +6,8 @@ import {
   IconShieldLock,
 } from "@tabler/icons-react";
 import { listAccessibleOrganizations } from "@/lib/organization/context";
+import { pendingApplicationsFor } from "@/lib/enterprise-crm/pilot/applications";
+import { createClient } from "@/lib/supabase/server";
 
 function formatCode(value: string): string {
   return value
@@ -21,6 +23,11 @@ export default async function OrganizationSelectPage() {
   if (!result.ok) {
     redirect(`/auth/login?next=${encodeURIComponent("/organization/select")}`);
   }
+
+  // Applicants waiting on BLTZ see that their application is in, not "no access".
+  const supabase = await createClient();
+  const { data: account } = await supabase.auth.getUser();
+  const pending = result.organizations.length === 0 && account.user?.email ? await pendingApplicationsFor(account.user.email) : [];
 
   return (
     <main className="dark min-h-[100dvh] bg-[#0b0c0e] px-4 py-10 text-white sm:px-6 lg:px-8">
@@ -74,6 +81,14 @@ export default async function OrganizationSelectPage() {
               );
             })}
           </div>
+        ) : pending.length ? (
+          <section className="mt-10 rounded-xl border border-white/10 bg-white/[0.03] p-6 sm:p-8">
+            <IconBuildingStadium className="size-8 text-[#ffbb00]" aria-hidden />
+            <h2 className="mt-5 text-lg font-semibold">Your application is being reviewed</h2>
+            <p className="mt-2 max-w-lg text-sm leading-6 text-neutral-400">
+              BLTZ is reviewing the pilot application for {pending.map((row) => row.organizationName).join(", ")}. This page opens your workspace as soon as it is approved.
+            </p>
+          </section>
         ) : (
           <section className="mt-10 rounded-xl border border-white/10 bg-white/[0.03] p-6 sm:p-8">
             <IconShieldLock className="size-8 text-[#ffbb00]" aria-hidden />

@@ -4,6 +4,7 @@ import type {
   OrganizationWorkspaceOptions,
 } from "@/lib/organization/types";
 import type { IntegrationStatus } from "@/lib/enterprise-crm/pilot/integrations-shared";
+import type { RosterAthlete } from "@/lib/enterprise-crm/pilot/roster-shared";
 import type { AthleteFile, PilotActivation, PilotAthleteMedia, PilotLaunch, PilotRoster, PilotSocialReach } from "@/lib/enterprise-crm/pilot/types";
 
 export const PREVIEW_ORGANIZATION_ID = "11111111-1111-4111-8111-111111111111";
@@ -151,3 +152,16 @@ export const previewArt = { url: "/images/crm/cal-memorial-stadium.webp", credit
 
 /** Sample connections: Slack connected, Teams and the website not yet. */
 export const previewIntegrations: IntegrationStatus[] = [{ kind: "slack", label: "#athletics-social", updatedAt: "2026-11-03T15:00:00.000Z" }];
+
+/** Sample full roster: the players with Lockers above, plus fictional players BLTZ has on record without one. */
+export const previewRosterAthletes: RosterAthlete[] = [
+  ...previewRoster.players.map((player, index): RosterAthlete => ({
+    id: `ra-${player.id}`, name: player.name, position: player.position, years: player.team?.replace(/^\D+/, "") ?? null, sport: "Football", source: "master_list",
+    lockerState: index % 3 === 0 ? "claimed" : "ready", playerId: player.id, lockerHref: player.lockerHref, hasEmail: index % 2 === 0, invite: null,
+  })),
+  ...[["Tony Reyes", "S", "1998–2001"], ["Brandon Whitfield", "OT", "2004–07"], ["Malik Ford", "WR", "2011–14"], ["Eli Navarro", "K", "2009–12"], ["Sam Ortega", "LB", "2001–04"], ["Devin Clarke", "DT", "2015–18"]]
+    .map(([name, position, years], index): RosterAthlete => ({
+      id: `ra-n${index}`, name, position, years, sport: "Football", source: "master_list", lockerState: "none", playerId: null, lockerHref: null, hasEmail: false,
+      invite: index === 0 ? { id: "inv-1", status: "opened", channel: "email", createdAt: "2026-11-05T15:00:00.000Z", expiresAt: "2026-12-05T15:00:00.000Z" } : null,
+    })),
+];

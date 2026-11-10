@@ -12,6 +12,8 @@ import {
 } from "@/lib/enterprise-crm/pilot/types";
 import { Bezel, Eyebrow } from "./PilotPrimitives";
 import { AnimatePresence, HeroTitle, MotionItem } from "./PilotMotion";
+import { RosterPanel } from "./RosterPanel";
+import type { RosterAthlete } from "@/lib/enterprise-crm/pilot/roster-shared";
 
 export const MEDIA_KIND_LABEL: Record<AthleteMediaKind, string> = { highlight: "Highlight", image: "Image", archive: "Archive", business: "Business" };
 const MEDIA_HINT: Record<AthleteMediaKind, string> = {
@@ -33,7 +35,10 @@ function emptyMedia(key: number, kind: AthleteMediaKind = "highlight"): MediaDra
   return { key, kind, title: "", url: "", description: "", occurredOn: "" };
 }
 
-export function LaunchLocker({ organizationId, schoolName, players, initialLaunches, canManage, preview = false }: {
+export function LaunchLocker({ organizationId, schoolName, players, initialLaunches, canManage, roster, intelligenceHref, preview = false }: {
+  /** Every former player on record for the school, with Locker and invite status. */
+  roster?: { state: "ready" | "unavailable"; athletes: RosterAthlete[] };
+  intelligenceHref?: string;
   organizationId: string;
   schoolName: string;
   players: PilotPlayer[];
@@ -108,6 +113,8 @@ export function LaunchLocker({ organizationId, schoolName, players, initialLaunc
         <HeroTitle text="Bring a legend home." />
         <p className="pilot-hero__lede">Add their highlights, archive media and what they&apos;re building now. BLTZ builds the Locker, clears the media and sends them the invite to claim it.</p>
       </header>
+
+      {roster && intelligenceHref && canManage ? <RosterPanel organizationId={organizationId} initial={roster.athletes} unavailable={roster.state === "unavailable"} intelligenceHref={intelligenceHref} preview={preview} /> : null}
 
       {launched ? (
         <Bezel label="Launched" index={1} coreClassName="pilot-launched">

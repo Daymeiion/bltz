@@ -4,6 +4,8 @@ import { StepIndicator } from "@/components/onboarding/StepIndicator";
 import { IdentityForm } from "@/components/onboarding/IdentityForm";
 import { getTestUser } from "@/lib/onboarding/test-auth";
 import { BroadcastHeader } from "@/components/onboarding/BroadcastShell";
+import { cookies } from "next/headers";
+import { INVITE_COOKIE, inviteOnboardingPath } from "@/lib/enterprise-crm/pilot/invites";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +33,13 @@ export default async function OnboardingStartPage({
     .maybeSingle();
 
   if (profile?.player_id) redirect("/dashboard");
+
+  // Invited by a school: an existing unclaimed Locker continues at its claim step.
+  const invite = (await cookies()).get(INVITE_COOKIE)?.value;
+  if (invite) {
+    const path = await inviteOnboardingPath(invite).catch(() => null);
+    if (path && path !== "/onboarding") redirect(path);
+  }
 
   return <OnboardingStartContent />;
 }

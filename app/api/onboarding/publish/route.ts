@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { completeInvite, INVITE_COOKIE } from "@/lib/enterprise-crm/pilot/invites";
 import { getTestRun, getTestUser } from "@/lib/onboarding/test-auth";
 import { birthdateSchema, highSchoolSchema } from "@/lib/player/bio-fields";
 
@@ -189,5 +190,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error, detail }, { status });
   }
 
-  return NextResponse.json(published);
+  const response = NextResponse.json(published);
+  const invite = req.headers.get("cookie")?.match(/(?:^|;\s*)bltz_org_invite=([A-Za-z0-9_-]{32})(?:;|$)/)?.[1];
+  if (invite) {
+    const playerId = typeof (published as { playerId?: unknown }).playerId === "string" ? (published as { playerId: string }).playerId : null;
+    await completeInvite(invite, user.id, playerId).catch(() => undefined);
+    response.cookies.set(INVITE_COOKIE, "", { path: "/", maxAge: 0 });
+  }
+  return response;
 }

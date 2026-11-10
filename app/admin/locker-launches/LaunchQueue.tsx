@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LAUNCH_STATUSES } from "@/lib/enterprise-crm/pilot/types";
+import { Applications, type QueueApplication } from "./Applications";
 
 export type QueueLaunch = { id: string; organizationId: string; school: string; playerName: string; existingPlayer: boolean; position: string | null; years: string | null; contactEmail: string | null; message: string | null; status: string; statusNote: string | null; createdAt: string };
 export type QueueSchool = { id: string; name: string; status: string };
@@ -21,7 +22,7 @@ async function patch(url: string, body: unknown) {
   if (!response.ok) throw new Error("failed");
 }
 
-export function LaunchQueue({ schools, launches, media, signals = [], signalsUnavailable = false, briefs = [], briefsUnavailable = false, dismissals = [], dismissalsUnavailable = false, unavailable }: { schools: QueueSchool[] | null; launches: QueueLaunch[]; media: QueueMedia[]; signals?: QueueSignal[]; signalsUnavailable?: boolean; briefs?: QueueBrief[]; briefsUnavailable?: boolean; dismissals?: QueueDismissal[]; dismissalsUnavailable?: boolean; unavailable: boolean }) {
+export function LaunchQueue({ schools, launches, media, signals = [], signalsUnavailable = false, applications = [], applicationsUnavailable = false, briefs = [], briefsUnavailable = false, dismissals = [], dismissalsUnavailable = false, unavailable }: { schools: QueueSchool[] | null; launches: QueueLaunch[]; media: QueueMedia[]; signals?: QueueSignal[]; signalsUnavailable?: boolean; applications?: QueueApplication[]; applicationsUnavailable?: boolean; briefs?: QueueBrief[]; briefsUnavailable?: boolean; dismissals?: QueueDismissal[]; dismissalsUnavailable?: boolean; unavailable: boolean }) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -41,6 +42,8 @@ export function LaunchQueue({ schools, launches, media, signals = [], signalsUna
       </header>
       {unavailable ? <p role="alert" className="text-sm text-amber-700">Some launch data could not be loaded. The launch migration may not be applied yet.</p> : null}
       {error ? <p role="alert" className="text-sm text-red-700">{error}</p> : null}
+
+      <Applications applications={applications} unavailable={applicationsUnavailable} />
 
       <section className={panel} aria-label="Enrolled schools">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">

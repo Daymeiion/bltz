@@ -23,6 +23,8 @@ export function ClientShell({ children }: Readonly<{ children: React.ReactNode }
     (pathname?.startsWith("/admin") ?? false) ||
     (pathname?.startsWith("/organization") ?? false) ||
     (pathname?.startsWith("/brief") ?? false) ||
+    pathname === "/pilot" ||
+    (pathname?.startsWith("/join/") ?? false) ||
     (pathname?.startsWith("/auth") ?? false);
 
   return (
