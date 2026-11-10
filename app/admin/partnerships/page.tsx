@@ -17,7 +17,7 @@ const partners = [
     name: "Veritone",
     href: "/admin/partnerships/veritone",
     status: "Proposed pilot",
-    summary: "Sports archive licensing one-sheet, media handoff, and a proposed six-week timeline.",
+    summary: "Sports archive licensing one-sheet, media handoff, and proposed pilot timeline.",
     action: "Open Veritone pilot",
   },
 ];
