@@ -25,10 +25,13 @@ function renderSidebar() {
 }
 
 describe("AdminSidebar GTM destination", () => {
-  it("marks Getty current while preserving the dashboard and other destinations", () => {
-    pathname = "/admin/getty-partnership";
+  it.each(["", "/getty", "/veritone", "/veritone/workflow"])("marks Partnerships current at /admin/partnerships%s", (suffix) => {
+    pathname = `/admin/partnerships${suffix}`;
     renderSidebar();
-    expect(document.querySelector('a[href="/admin/getty-partnership"]')?.getAttribute("aria-current")).toBe("page");
+    const partnerships = document.querySelector('a[href="/admin/partnerships"]');
+    expect(partnerships?.getAttribute("aria-label")).toBe("Partnerships");
+    expect(partnerships?.getAttribute("aria-current")).toBe("page");
+    expect(document.querySelector('a[href="/admin/getty-partnership"]')).toBeNull();
     for (const href of ["/admin", "/admin/intelligence", "/admin/gtm", "/admin/preview-lockers"]) {
       const link = document.querySelector(`a[href="${href}"]`);
       expect(link).not.toBeNull();

@@ -32,11 +32,11 @@ function renderShell() {
 }
 
 describe("AdminThemeShell workspaces", () => {
-  it("keeps the temporary Getty presentation outside the legacy hero and palette overrides", () => {
-    pathname = "/admin/getty-partnership";
+  it.each(["", "/getty", "/veritone", "/veritone/workflow"])("renders the partnerships workspace at /admin/partnerships%s", (suffix) => {
+    pathname = `/admin/partnerships${suffix}`;
     renderShell();
 
-    expect(document.querySelector('[data-admin-workspace="getty-partnership"]')).not.toBeNull();
+    expect(document.querySelector('[data-admin-workspace="partnerships"]')).not.toBeNull();
     expect(document.querySelector(".admin-theme-legacy")).toBeNull();
     expect(document.querySelector("[data-admin-header]")).toBeNull();
     expect(document.querySelector("[data-admin-signal-track]")).toBeNull();
