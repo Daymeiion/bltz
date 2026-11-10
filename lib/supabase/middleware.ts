@@ -41,6 +41,7 @@ export function isPublicPath(pathname: string): boolean {
   if (pathname === "/enterprise" || pathname === "/privacy" || pathname === "/redesign" || pathname.startsWith("/redesign/")) return true;
   if (pathname.startsWith("/player/")) return true; // public locker pages
   if (pathname.startsWith("/brief/")) return true; // partnership briefs, opened by private link
+  if (pathname === "/pilot" || pathname.startsWith("/join/")) return true; // pilot application and player invite links
   if (pathname.startsWith("/preview-lockers/")) return true; // public demo-preview locker pages
   return PUBLIC_PATH_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }

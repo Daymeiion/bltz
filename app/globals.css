@@ -1480,6 +1480,28 @@
 .pilot-briefs small { color: var(--pilot-muted); font-size: 12px; }
 .pilot-briefs__views { color: var(--pilot-accent); font-size: 12.5px; font-weight: 600; white-space: nowrap; }
 @media (max-width: 767px) { .pilot-brief-builder__share { grid-template-columns: minmax(0, 1fr); } .pilot-briefs li { grid-template-columns: minmax(0, 1fr); } }
+/* Roster: every former player on record, with Locker and invite status. */
+.pilot-roster { display: grid; gap: 14px; }
+.pilot-roster__tools { display: grid; gap: 10px; }
+.pilot-roster__filters { display: flex; flex-wrap: wrap; gap: 6px; }
+.pilot-roster__filters .pilot-chip { display: inline-flex; align-items: center; gap: 6px; }
+.pilot-roster__filters b { font-weight: 700; opacity: 0.7; font-variant-numeric: tabular-nums; }
+.pilot-roster__list { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.pilot-roster__row { display: grid; grid-template-columns: minmax(0, 1.6fr) auto minmax(90px, auto) auto; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 14px; background: #f3f4f6; }
+.pilot-roster__who { display: grid; min-width: 0; }
+.pilot-roster__who strong { overflow: hidden; font-size: 14px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.pilot-roster__who small { color: var(--pilot-muted); font-size: 12px; }
+.pilot-roster__state { padding: 3px 10px; border-radius: 999px; background: var(--pilot-core); color: var(--pilot-muted); font-size: 12px; font-weight: 600; white-space: nowrap; }
+.pilot-roster__state--claimed { background: rgba(34, 160, 107, 0.14); color: #1f7a4d; }
+.pilot-roster__state--ready { background: color-mix(in srgb, var(--pilot-accent) 10%, white); color: var(--pilot-accent); }
+.pilot-roster__invite { color: var(--pilot-muted); font-size: 12px; font-weight: 600; text-align: right; white-space: nowrap; }
+.pilot-roster__actions { display: inline-flex; gap: 6px; justify-content: flex-end; }
+.pilot-roster__actions .pilot-pill { display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 0 14px; }
+.pilot-roster__actions svg { width: 14px; height: 14px; }
+.pilot-roster-dialog__body { display: grid; gap: 12px; }
+.pilot-roster-dialog__body .pilot-pill { display: inline-flex; align-items: center; gap: 6px; }
+.pilot-roster-dialog__body .pilot-pill svg { width: 15px; height: 15px; }
+@media (max-width: 767px) { .pilot-roster__row { grid-template-columns: minmax(0, 1fr) auto; } .pilot-roster__invite { text-align: left; } .pilot-roster__actions { grid-column: 1 / -1; justify-content: flex-start; } }
 .pilot-planned { display: inline-flex; align-items: center; gap: 6px; color: var(--pilot-accent); font-size: 13px; font-weight: 600; }
 .pilot-planned svg { width: 16px; height: 16px; }
 .pilot-opps { margin-top: 20px; }
@@ -2249,3 +2271,39 @@
   .brief { max-width: none; padding: 0; border-radius: 0; box-shadow: none; }
   .brief section, .brief__ideas li { break-inside: avoid; }
 }
+
+/* Public pilot pages (apply, player invite): the workspace look without the shell. */
+.pilot-public { --pilot-tray: rgba(18, 19, 22, 0.035); --pilot-hairline: rgba(18, 19, 22, 0.08); --pilot-core: #ffffff; --pilot-ink: #121316; --pilot-muted: #6a6d75; --pilot-accent: #003262; --pilot-ease: cubic-bezier(0.32, 0.72, 0, 1); color-scheme: light; display: grid; min-height: 100dvh; place-items: start center; padding: clamp(24px, 6vw, 72px) 16px; background: #f2f2ef; color: var(--pilot-ink); font-family: var(--font-geist-sans), system-ui, sans-serif; }
+.pilot-public__card { display: grid; gap: 16px; width: min(640px, 100%); padding: clamp(24px, 5vw, 44px); border-radius: 28px; background: var(--pilot-core); box-shadow: 0 0 0 1px var(--pilot-hairline), 0 30px 60px -40px rgba(18, 19, 22, 0.3); }
+.pilot-public__card--narrow { width: min(520px, 100%); margin-top: 6vh; }
+.pilot-public__brand { display: inline-flex; align-items: center; gap: 10px; color: inherit; font-size: 16px; text-decoration: none; }
+.pilot-public h1 { margin: 4px 0 0; font-family: var(--font-barlow-condensed), var(--font-geist-sans), sans-serif; font-size: clamp(34px, 6vw, 48px); font-weight: 700; line-height: 1.02; }
+.pilot-public__eyebrow { margin: 0; color: var(--pilot-accent); font-size: 13px; font-weight: 600; }
+.pilot-public__lede { max-width: 58ch; margin: 0; color: var(--pilot-muted); font-size: 16px; line-height: 1.55; }
+.pilot-public__form { display: grid; gap: 14px; margin-top: 8px; }
+.pilot-public__form .pilot-field input, .pilot-public__form .pilot-field textarea { width: 100%; min-height: 42px; padding: 10px 12px; border: 0; border-radius: 12px; background: #f3f4f6; color: var(--pilot-ink); font: inherit; font-size: 14px; font-weight: 500; }
+.pilot-public__form .pilot-field input:focus-visible, .pilot-public__form .pilot-field textarea:focus-visible { outline: 2px solid var(--pilot-accent); outline-offset: 1px; }
+.pilot-public__form .pilot-field input[readonly] { color: var(--pilot-muted); }
+.pilot-public__row { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+.pilot-public__kinds { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+.pilot-public__kind { display: grid; grid-template-columns: 24px minmax(0, 1fr); align-items: center; gap: 12px; padding: 14px; border: 0; border-radius: 16px; background: #f3f4f6; color: var(--pilot-ink); font: inherit; text-align: left; cursor: pointer; box-shadow: inset 0 0 0 1px transparent; transition: box-shadow 250ms var(--pilot-ease), background-color 250ms var(--pilot-ease); }
+.pilot-public__kind svg { width: 22px; height: 22px; color: var(--pilot-accent); }
+.pilot-public__kind span { display: grid; }
+.pilot-public__kind strong { font-size: 14px; font-weight: 600; }
+.pilot-public__kind small { color: var(--pilot-muted); font-size: 12px; }
+.pilot-public__kind--on { background: color-mix(in srgb, var(--pilot-accent) 7%, white); box-shadow: inset 0 0 0 2px var(--pilot-accent); }
+.pilot-public__kind:focus-visible { outline: 2px solid var(--pilot-accent); outline-offset: 2px; }
+.pilot-public__college { position: relative; }
+.pilot-public__matches { display: grid; margin: 0; padding: 6px; border-radius: 14px; background: var(--pilot-core); list-style: none; box-shadow: 0 0 0 1px var(--pilot-hairline), 0 18px 40px -18px rgba(18, 19, 22, 0.3); }
+.pilot-public__matches button { width: 100%; padding: 8px 10px; border: 0; border-radius: 10px; background: transparent; color: var(--pilot-ink); font: inherit; font-size: 14px; font-weight: 500; text-align: left; cursor: pointer; }
+.pilot-public__matches button:hover, .pilot-public__matches button:focus-visible { background: #f3f4f6; outline: none; }
+.pilot-public__picked { display: inline-flex; align-items: center; gap: 4px; color: #1f7a4d; font-size: 12.5px; font-weight: 600; }
+.pilot-public__picked svg { width: 14px; height: 14px; }
+.pilot-public__note { margin: 0; color: var(--pilot-muted); font-size: 12.5px; line-height: 1.5; }
+.pilot-public__trap { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+.pilot-public .pilot-pill--primary { justify-self: start; min-height: 46px; padding-inline: 22px; font-size: 15px; }
+.pilot-public__done { display: grid; gap: 10px; padding: 8px 0; }
+.pilot-public__done > span { display: grid; width: 44px; height: 44px; place-items: center; border-radius: 999px; background: rgba(34, 160, 107, 0.14); color: #1f7a4d; }
+.pilot-public__done h2 { margin: 0; font-size: 22px; font-weight: 700; }
+.pilot-public__done p { margin: 0; color: var(--pilot-muted); font-size: 15px; line-height: 1.55; }
+.pilot-public a:not(.pilot-pill):not(.pilot-public__brand) { color: var(--pilot-accent); font-weight: 600; }

@@ -5,6 +5,8 @@ import { listAccessibleOrganizations } from "@/lib/organization/context";
 import { listAllSchoolSignals } from "@/lib/enterprise-crm/pilot/school-signals";
 import { listAllDismissals } from "@/lib/enterprise-crm/pilot/dismissals";
 import { listAllBriefs } from "@/lib/enterprise-crm/pilot/briefs";
+import { listApplications, masterListCollegeOptions } from "@/lib/enterprise-crm/pilot/applications";
+import type { QueueApplication } from "./Applications";
 import { createServiceClient } from "@/lib/supabase/service";
 import { LaunchQueue, type QueueBrief, type QueueDismissal, type QueueLaunch, type QueueMedia, type QueueSchool, type QueueSignal } from "./LaunchQueue";
 
@@ -28,14 +30,19 @@ export default async function LockerLaunchesPage() {
     throw error;
   }
   const db = createServiceClient();
-  const [launches, media, enrolled, schoolSignals, dismissals, briefs] = await Promise.all([
+  const [launches, media, enrolled, schoolSignals, dismissals, briefs, applications] = await Promise.all([
     db.from("organization_locker_launches").select("id,organization_id,player_id,player_name,position,years,contact_email,message,status,status_note,created_at").order("created_at", { ascending: false }).limit(200),
     db.from("organization_athlete_media").select("id,organization_id,player_id,launch_id,kind,title,url,description,occurred_on,review_status,created_at").eq("review_status", "pending").order("created_at").limit(300),
     listAccessibleOrganizations().catch(() => null),
     listAllSchoolSignals(),
     listAllDismissals(),
     listAllBriefs(),
+    listApplications(),
   ]);
+  // For each waiting school, the master-list college names it could be, so approval picks the right one.
+  const queueApplications: QueueApplication[] = await Promise.all(applications.applications.map(async (row) => ({
+    ...row, collegeOptions: row.status === "pending" && row.organizationKind === "school_athletics" ? await masterListCollegeOptions(row.collegeName ?? row.organizationName) : [],
+  })));
   // Admins see every approved or restricted organization; each opens its own dashboard.
   const schools: QueueSchool[] | null = enrolled?.ok
     ? enrolled.organizations.map(({ organization }) => ({ id: organization.id, name: organization.name, status: organization.status }))
@@ -73,5 +80,5 @@ export default async function LockerLaunchesPage() {
     brandName: row.brandName, status: row.status, expiresAt: row.expiresAt, createdAt: row.createdAt, viewCount: row.viewCount, lastViewedAt: row.lastViewedAt,
   }));
   return <LaunchQueue schools={schools} launches={queueLaunches} media={queueMedia} signals={queueSignals} signalsUnavailable={schoolSignals.state === "unavailable"}
-    briefs={queueBriefs} briefsUnavailable={briefs.state === "unavailable"} dismissals={queueDismissals} dismissalsUnavailable={dismissals.state === "unavailable"} unavailable={unavailable} />;
+    applications={queueApplications} applicationsUnavailable={applications.state === "unavailable"} briefs={queueBriefs} briefsUnavailable={briefs.state === "unavailable"} dismissals={queueDismissals} dismissalsUnavailable={dismissals.state === "unavailable"} unavailable={unavailable} />;
 }
