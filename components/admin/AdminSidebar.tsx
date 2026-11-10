@@ -30,7 +30,7 @@ interface SidebarLink {
 }
 
 export function isAdminSidebarLinkActive(pathname: string, href: string) {
-  return pathname === href || (["/admin/gtm", "/admin/preview-lockers", "/admin/intelligence"].includes(href) && pathname.startsWith(`${href}/`));
+  return pathname === href || (["/admin/gtm", "/admin/preview-lockers", "/admin/intelligence", "/admin/partnerships"].includes(href) && pathname.startsWith(`${href}/`));
 }
 
 export function AdminSidebar() {
@@ -65,7 +65,7 @@ export function AdminSidebar() {
       icon: <IconChartBar className="h-5 w-5 flex-shrink-0" />,
     },
     { label: "Intelligence Lab", href: "/admin/intelligence", icon: <IconFlask className="h-5 w-5 flex-shrink-0" /> },
-    { label: "Getty Partnership", href: "/admin/getty-partnership", icon: <IconPresentation className="h-5 w-5 flex-shrink-0" /> },
+    { label: "Partnerships", href: "/admin/partnerships", icon: <IconPresentation className="h-5 w-5 flex-shrink-0" /> },
     {
       label: "GTM",
       href: "/admin/gtm",

@@ -15,9 +15,14 @@ vi.mock("@/components/admin/AdminSidebar", () => ({ AdminSidebar: () => <nav>Adm
 vi.mock("@/components/admin/AdminThemeShell", () => ({ AdminThemeShell: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
 
 import AdminLayout from "@/app/admin/layout";
-import GettyPartnershipPage from "@/app/admin/getty-partnership/page";
+import LegacyGettyPartnershipPage from "@/app/admin/getty-partnership/page";
+import GettyPartnershipPage from "@/app/admin/partnerships/getty/page";
 
 describe("Getty partnership presentation", () => {
+  it("keeps existing Getty bookmarks pointed at the presentation", () => {
+    expect(LegacyGettyPartnershipPage).toThrow("REDIRECT:/admin/partnerships/getty");
+  });
+
   it("renders existing local logos, both distribution channels, and the concept qualifier", () => {
     document.body.innerHTML = renderToStaticMarkup(<GettyPartnershipPage />);
     for (const [alt, src] of [["Getty Images", "/images/getty-images-logo.svg"], ["BLTZ", "/bltz-white-logo.svg"]]) {
