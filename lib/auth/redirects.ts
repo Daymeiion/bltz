@@ -18,3 +18,9 @@ export function getDefaultAuthenticatedPath(role: string | null | undefined) {
   if (role === "player") return "/dashboard";
   return "/";
 }
+
+export function getPasswordRecoveryRedirectUrl(origin: string): string {
+  const callbackUrl = new URL("/auth/callback", origin);
+  callbackUrl.searchParams.set("next", "/auth/update-password");
+  return callbackUrl.toString();
+}

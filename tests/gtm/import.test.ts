@@ -1,5 +1,7 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { parseGtmCsv } from "@/lib/gtm/import";
+import { GTM_CSV_MAX_BYTES } from "@/lib/gtm/import-contract";
 
 describe("GTM CSV normalization", () => {
   it("detects common headers and creates stable, normalized identities", () => {
@@ -101,6 +103,17 @@ describe("GTM CSV normalization", () => {
   it("accepts the maximum supported large import", () => {
     const body = ["Name", ...Array.from({ length: 2000 }, (_, index) => `Person ${index}`)].join("\n");
     expect(parseGtmCsv(Buffer.from(body)).rows).toHaveLength(2000);
+  });
+
+  it("accepts CSV payloads above the former framework limit and enforces the application cap", () => {
+    const nextConfig = readFileSync("next.config.ts", "utf8");
+    expect(nextConfig).toContain('bodySizeLimit: "6mb"');
+
+    const accepted = Buffer.from(`Name,Context\nTaylor Lane,${"x".repeat(1_100_000)}`);
+    expect(parseGtmCsv(accepted).rows).toHaveLength(1);
+
+    const rejected = Buffer.alloc(GTM_CSV_MAX_BYTES + 1, 0x61);
+    expect(() => parseGtmCsv(rejected)).toThrow("5 MB or smaller");
   });
 
   it("allows unexpected headers to be mapped explicitly", () => {

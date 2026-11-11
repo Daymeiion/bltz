@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { getPasswordRecoveryRedirectUrl } from "@/lib/auth/redirects";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -33,7 +34,7 @@ export function ForgotPasswordForm({
     try {
       // The url which will be included in the email. This URL needs to be configured in your redirect URLs in the Supabase dashboard at https://supabase.com/dashboard/project/_/auth/url-configuration
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/update-password`,
+        redirectTo: getPasswordRecoveryRedirectUrl(window.location.origin),
       });
       if (error) throw error;
       setSuccess(true);
@@ -76,6 +77,7 @@ export function ForgotPasswordForm({
                   <Input
                     id="email"
                     type="email"
+                    autoComplete="email"
                     placeholder="m@example.com"
                     required
                     value={email}

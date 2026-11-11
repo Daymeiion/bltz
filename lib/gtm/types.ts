@@ -1,12 +1,85 @@
 export const GTM_CONTACT_TYPES = [
-  "enterprise",
   "athlete",
-  "multiplier",
+  "former_athlete",
+  "agent_manager",
+  "nil_staff",
+  "university_athletics",
+  "player_development",
+  "athletic_administration",
+  "coach",
+  "sports_executive",
+  "media_content",
+  "photographer_videographer",
+  "brand_marketing",
+  "creative_brand_builder",
   "investor",
+  "founder_operator",
+  "strategic_partner",
+  "general_network",
+  "other",
+  // Legacy values remain selectable so existing V1 records stay editable.
+  "enterprise",
+  "multiplier",
   "unclassified",
 ] as const;
 
 export type GtmContactType = (typeof GTM_CONTACT_TYPES)[number];
+
+export const GTM_POTENTIAL_ROLES = [
+  "potential_user",
+  "pilot_champion",
+  "buyer",
+  "decision_maker",
+  "decision_influencer",
+  "internal_connector",
+  "referral_source",
+  "distribution_partner",
+  "strategic_partner",
+  "product_discovery",
+  "product_validator",
+  "industry_expert",
+  "content_partner",
+  "media_rights_partner",
+  "brand_partner",
+  "investor",
+  "investor_connector",
+  "advisor",
+  "athlete_recruiter",
+  "university_connector",
+] as const;
+
+export type GtmPotentialRole = (typeof GTM_POTENTIAL_ROLES)[number];
+
+export const GTM_RELATIONSHIP_OBJECTIVES = [
+  "customer_discovery",
+  "user_acquisition",
+  "pilot_development",
+  "product_validation",
+  "institutional_discovery",
+  "partnership_development",
+  "distribution",
+  "investor_relationship",
+  "fundraising_discovery",
+  "referral_generation",
+  "media_rights_discovery",
+  "brand_relationship",
+  "strategic_learning",
+  "relationship_building",
+  "re_engagement",
+] as const;
+
+export type GtmRelationshipObjective =
+  (typeof GTM_RELATIONSHIP_OBJECTIVES)[number];
+
+export const GTM_RELATIONSHIP_PRIORITIES = [
+  "critical",
+  "high",
+  "medium",
+  "low",
+] as const;
+
+export type GtmRelationshipPriority =
+  (typeof GTM_RELATIONSHIP_PRIORITIES)[number];
 
 export const GTM_INVESTOR_TYPES = [
   "angel",
@@ -180,6 +253,11 @@ export interface GtmContactSummary {
   id: string;
   displayName: string;
   contactType: GtmContactType;
+  contactTypeOther: string | null;
+  potentialRoles: GtmPotentialRole[];
+  relationshipObjective: GtmRelationshipObjective | null;
+  relationshipPriority: GtmRelationshipPriority | null;
+  relationshipContext: string | null;
   organizationId: string | null;
   priorityScore: number | null;
   priorityTier: GtmPriorityTier | null;

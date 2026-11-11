@@ -20,6 +20,7 @@ vi.mock("@/app/admin/gtm/actions", () => ({
   setGtmNextAction: vi.fn(),
   setGtmPipelineStage: vi.fn(),
   setGtmPriority: vi.fn(),
+  setGtmRelationshipIntelligence: vi.fn(),
 }));
 
 import {
@@ -41,6 +42,11 @@ function contact(overrides: Partial<GtmContactRow> = {}): GtmContactRow {
     currentCompany: "North Coast Athletics",
     currentTitle: "Athletic Director",
     contactType: "enterprise",
+    contactTypeOther: null,
+    potentialRoles: ["pilot_champion", "decision_maker"],
+    relationshipObjective: "customer_discovery",
+    relationshipPriority: "high",
+    relationshipContext: "Potential university pilot champion.",
     segment: "athletic_department",
     sport: "football",
     leagueLevel: "ncaa",
@@ -79,6 +85,9 @@ function contact(overrides: Partial<GtmContactRow> = {}): GtmContactRow {
 const baseFilters: GtmContactFilters = {
   search: "",
   contactType: "all",
+  potentialRole: "all",
+  relationshipObjective: "all",
+  relationshipPriority: "all",
   priorityTier: "all",
   pipelineStage: "all",
   conversationOutcome: "all",
@@ -171,6 +180,23 @@ describe("GTM contacts workspace", () => {
     expect(filterGtmContacts([investor, enterprise], { ...baseFilters, contactType: "investor", conversationOutcome: "capital" })).toEqual([investor]);
   });
 
+  it("filters relationship intelligence independently from type and pipeline", () => {
+    const pilotChampion = contact();
+    const advisor = contact({
+      id: "1c1ccff9-bfa0-40e7-8654-bbda8d999711",
+      potentialRoles: ["advisor"],
+      relationshipObjective: "strategic_learning",
+      relationshipPriority: "medium",
+    });
+
+    expect(filterGtmContacts([pilotChampion, advisor], {
+      ...baseFilters,
+      potentialRole: "pilot_champion",
+      relationshipObjective: "customer_discovery",
+      relationshipPriority: "high",
+    })).toEqual([pilotChampion]);
+  });
+
   it("renders investor and conversation-outcome filters in the existing workspace", () => {
     const investor = contact({
       contactType: "investor",
@@ -193,6 +219,9 @@ describe("GTM contacts workspace", () => {
 
     expect(markup).toContain("Investor");
     expect(markup).toContain("All conversation outcomes");
+    expect(markup).toContain("All potential roles");
+    expect(markup).toContain("All relationship objectives");
+    expect(markup).toContain("All relationship priorities");
     expect(markup).toContain("Strategic Insight");
   });
 

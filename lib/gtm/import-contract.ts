@@ -1,6 +1,6 @@
 import type { GtmContactType } from "@/lib/gtm/types";
 
-export const GTM_CSV_MAX_BYTES = 750_000;
+export const GTM_CSV_MAX_BYTES = 5_000_000;
 export const GTM_CSV_MAX_ROWS = 2_000;
 
 export const GTM_IMPORT_FIELDS = [

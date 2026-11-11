@@ -32,7 +32,7 @@ describe("GTM Phase 2 form and filter contracts", () => {
   });
 
   it("retains V2 contact intake and uses the versioned interaction workflow", () => {
-    expect(actions).toContain('rpc("create_gtm_contact_v2"');
+    expect(actions).toContain('rpc("create_gtm_contact_v3"');
     expect(actions).toContain('rpc("log_gtm_interaction_v3"');
     expect(actions).toContain("GTM_INVESTOR_TYPES");
     expect(actions).toContain("GTM_CONVERSATION_OUTCOMES");

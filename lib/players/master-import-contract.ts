@@ -1,0 +1,2 @@
+export const PLAYER_MASTER_CSV_MAX_BYTES = 5_000_000;
+export const PLAYER_MASTER_CSV_MAX_ROWS = 25_000;

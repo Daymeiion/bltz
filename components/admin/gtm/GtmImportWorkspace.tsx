@@ -10,6 +10,7 @@ import {
   type GtmCsvInspection, type GtmCsvPreview,
 } from "@/app/admin/gtm/actions";
 import { GtmNavigation } from "@/components/admin/gtm/GtmNavigation";
+import { PlayerMasterImportPanel } from "@/components/admin/gtm/PlayerMasterImportPanel";
 import { GTM_CSV_MAX_BYTES, GTM_IMPORT_FIELDS, type GtmFieldMapping, type GtmImportField } from "@/lib/gtm/import-contract";
 import { cn } from "@/lib/utils";
 
@@ -100,8 +101,16 @@ export function GtmImportWorkspace() {
   return (
     <main className="mx-auto max-w-[1600px] px-4 pb-16 pt-6 sm:px-8 sm:pt-8">
       <div className="flex flex-col gap-5 border-b border-neutral-300 pb-6 lg:flex-row lg:items-end lg:justify-between dark:border-neutral-800">
-        <header><p className="text-xs font-semibold uppercase tracking-[0.12em] text-neutral-500">LinkedIn connections</p><h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em] sm:text-4xl">Import contacts</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-600 dark:text-neutral-300">Map changing export headers, inspect every exception, and approve the import before any contact is committed.</p></header>
+        <header><p className="text-xs font-semibold uppercase tracking-[0.12em] text-neutral-500">Controlled data intake</p><h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em] sm:text-4xl">Import network data</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-600 dark:text-neutral-300">Preview canonical Player Master updates separately from LinkedIn contacts so athlete identity is never duplicated inside GTM.</p></header>
         <GtmNavigation />
+      </div>
+
+      <PlayerMasterImportPanel />
+
+      <div className="mt-8 border-t border-neutral-300 pt-6 dark:border-neutral-800">
+        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-neutral-500">LinkedIn connections</p>
+        <h2 className="mt-1 text-2xl font-semibold tracking-[-0.03em]">Import GTM contacts</h2>
+        <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-300">Upload this export when LinkedIn makes it available. Player Master rows do not belong in this workflow.</p>
       </div>
 
       <ol aria-label="Import progress" className="mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-neutral-200 bg-neutral-200 sm:grid-cols-4 xl:grid-cols-7 dark:border-neutral-800 dark:bg-neutral-800">

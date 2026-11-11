@@ -56,6 +56,11 @@ export interface GtmContactRow {
   currentCompany: string | null;
   currentTitle: string | null;
   contactType: string;
+  contactTypeOther: string | null;
+  potentialRoles: string[];
+  relationshipObjective: string | null;
+  relationshipPriority: string | null;
+  relationshipContext: string | null;
   segment: string | null;
   sport: string | null;
   leagueLevel: string | null;
@@ -175,7 +180,7 @@ export async function getGtmContacts(): Promise<GtmContactsReadModel> {
 
   const { data, error } = await gtm
     .from("gtm_contacts")
-    .select("id,display_name,first_name,last_name,email,phone,geography,current_company,current_title,contact_type,segment,sport,league_level,relationship_strength,network_leverage,bltz_relevance,buying_authority,timing_score,priority_score,priority_tier,pipeline_stage,source,linkedin_url,do_not_automate,is_priority,last_interaction_at,next_action,next_action_at,investor_type,investor_relationship_stage,what_they_need_to_see,investor_thesis_feedback,historical_signal,future_trigger,prior_outcome,relationship_source,next_trigger")
+    .select("id,display_name,first_name,last_name,email,phone,geography,current_company,current_title,contact_type,contact_type_other,potential_roles,relationship_objective,relationship_priority,relationship_context,segment,sport,league_level,relationship_strength,network_leverage,bltz_relevance,buying_authority,timing_score,priority_score,priority_tier,pipeline_stage,source,linkedin_url,do_not_automate,is_priority,last_interaction_at,next_action,next_action_at,investor_type,investor_relationship_stage,what_they_need_to_see,investor_thesis_feedback,historical_signal,future_trigger,prior_outcome,relationship_source,next_trigger")
     .eq("archived", false)
     .order("is_priority", { ascending: false })
     .order("priority_score", { ascending: false, nullsFirst: false })
@@ -284,6 +289,11 @@ export async function getGtmContacts(): Promise<GtmContactsReadModel> {
     currentCompany: contact.current_company as string | null,
     currentTitle: contact.current_title as string | null,
     contactType: (contact.contact_type as string | null) ?? "unclassified",
+    contactTypeOther: contact.contact_type_other as string | null,
+    potentialRoles: Array.isArray(contact.potential_roles) ? contact.potential_roles as string[] : [],
+    relationshipObjective: contact.relationship_objective as string | null,
+    relationshipPriority: contact.relationship_priority as string | null,
+    relationshipContext: contact.relationship_context as string | null,
     segment: contact.segment as string | null,
     sport: contact.sport as string | null,
     leagueLevel: contact.league_level as string | null,
