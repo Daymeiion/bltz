@@ -1,6 +1,7 @@
 // @vitest-environment-options {"settings":{"disableIframePageLoading":true}}
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
+import { renderToString } from "react-dom/server";
 import { beforeEach, afterEach, expect, it, vi } from "vitest";
 import LockerView from "@/app/player/[slug]/LockerView";
 import PhotoRoomView from "@/app/player/[slug]/photos/PhotoRoomView";
@@ -91,6 +92,23 @@ it("selects related preview images in Photo Room and keeps uploaded provenance",
   expect(fetcher).not.toHaveBeenCalled();
 });
 
+it("replaces only Dante’s preview related row with the five product concepts", async () => {
+  vi.stubGlobal("scrollTo", vi.fn());
+  await act(async () => root.render(<PhotoRoomView data={previewPhotoData({ ...record, slug: "dante-hughes", full_name: "Dante Hughes", photos: [...record.photos, { ...record.photos[0], id: "second", url: "https://custom.example.com/second.jpg" }] })} />));
+  expect(host.querySelector('section[aria-label="Related media"]')).toBeNull();
+  expect(host.querySelectorAll('[aria-label="Five product examples"] button')).toHaveLength(5);
+  expect(host.querySelector('[aria-label="Photo grid"] img[src="https://custom.example.com/career.jpg"]')).not.toBeNull();
+  await act(async () => host.querySelector<HTMLButtonElement>('[aria-label="View Career photo"]')!.click());
+  const resume = host.querySelector<HTMLButtonElement>('[aria-label="Resume slideshow"]')!;
+  expect(resume).not.toBeNull();
+  await act(async () => resume.click());
+  expect(host.querySelector('[aria-label="Resume slideshow"]')).toBeNull();
+  const publicData = previewPhotoData({ ...record, slug: "dante-hughes" });
+  delete publicData.lockerHref;
+  await act(async () => root.render(<PhotoRoomView data={publicData} />));
+  expect(host.querySelector('[aria-label="Five product examples"]')).toBeNull();
+});
+
 it("restores portrait and landscape gallery proportions when cached images load before hydration", async () => {
   const complete = vi.spyOn(HTMLImageElement.prototype, "complete", "get").mockReturnValue(true);
   const width = vi.spyOn(HTMLImageElement.prototype, "naturalWidth", "get").mockImplementation(function (this: HTMLImageElement) {
@@ -103,11 +121,39 @@ it("restores portrait and landscape gallery proportions when cached images load 
       { ...record.photos[0], id: "landscape", url: "https://custom.example.com/landscape.jpg" },
     ];
     await act(async () => root.render(<PhotoRoomView data={previewPhotoData({ ...record, photos })} />));
-    const tiles = [...host.querySelectorAll<HTMLButtonElement>('[aria-label="Photo grid"] button')];
+    const tiles = [...host.querySelectorAll<HTMLButtonElement>('[aria-label="Photo grid"] button[aria-label^="View "]')];
     expect(Number(tiles[0].style.getPropertyValue("--photo-ratio"))).toBeCloseTo(2 / 3);
     expect(Number(tiles[1].style.getPropertyValue("--photo-ratio"))).toBeCloseTo(16 / 9);
     expect(analytics).not.toHaveBeenCalled();
   } finally { complete.mockRestore(); width.mockRestore(); height.mockRestore(); }
+});
+it.each(["locker", "room"])("opens the selected grid photo’s Getty licensing modal in the %s", async surface => {
+  const sourceUrl = "https://www.gettyimages.com/detail/news-photo/dante-hughes-news-photo/76443769";
+  const linked = { ...record, photos: [{ ...record.photos[0], sourceUrl }] };
+  await act(async () => root.render(surface === "locker" ? <LockerView data={previewLockerData(linked)} /> : <PhotoRoomView data={previewPhotoData(linked)} />));
+  const grid = host.querySelector(surface === "locker" ? ".locker-photo-contact-sheet" : '[aria-label="Photo grid"]')!;
+  const trigger = grid.querySelector<HTMLButtonElement>('[aria-label^="Explore Getty Images licensing:"]')!;
+  expect(trigger).not.toBeNull();
+  expect(grid.querySelector("button button")).toBeNull();
+  await act(async () => { trigger.focus(); trigger.click(); });
+  const dialog = document.querySelector<HTMLElement>('[role="dialog"]')!;
+  expect(dialog.textContent).toContain("License with Getty Images");
+  expect(dialog.querySelector<HTMLImageElement>('img[src="https://custom.example.com/career.jpg"]')).not.toBeNull();
+  const link = dialog.querySelector<HTMLAnchorElement>("a")!;
+  expect(link.href).toBe(sourceUrl);
+  expect(link.target).toBe("_blank");
+  expect(link.rel).toBe("noopener noreferrer");
+  await act(async () => document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
+  expect(document.querySelector('[role="dialog"]')).toBeNull();
+  await vi.waitFor(() => expect(document.activeElement).toBe(trigger));
+  expect(host.querySelector('button[aria-label="Resume slideshow"]')).toBeNull();
+});
+it.each(["locker", "room"])("keeps personal photos free of Getty licensing controls in the %s", async surface => {
+  await act(async () => root.render(surface === "locker" ? <LockerView data={previewLockerData(record)} /> : <PhotoRoomView data={previewPhotoData(record)} />));
+  expect(host.querySelector('[aria-label^="Explore Getty Images licensing:"]')).toBeNull();
+  expect(host.textContent).not.toContain("Powered by Getty Images");
+  expect(document.querySelector('[role="dialog"]')).toBeNull();
+  expect(host.querySelector('img[src="https://custom.example.com/career.jpg"]')).not.toBeNull();
 });
 it.each([true, false])("keeps award years without the unverified-evidence label (private: %s)", async isPrivate => {
   const data = previewLockerData(record);
@@ -152,6 +198,22 @@ it("opens Photo Room on All and renders an optional linked banner only when comp
   expect(host.querySelector('aside[aria-label="Advertisement"]')).toBeNull();
 });
 
+it("ships one responsive hero player and a photo fallback in the initial HTML", () => {
+  const data = previewLockerData(record);
+  data.heroVideos = { mobile: "https://custom.example.com/portrait.mp4", desktop: "https://custom.example.com/landscape.mp4" };
+  const markup = document.createElement("div");
+  markup.innerHTML = renderToString(<LockerView data={data} />);
+
+  const hero = markup.querySelector(".locker-hero-media");
+  expect(hero?.querySelectorAll("video")).toHaveLength(1);
+  expect(hero?.querySelector('video[autoplay][muted][playsinline]')).not.toBeNull();
+  expect([...hero!.querySelectorAll("video source")].map(source => [source.getAttribute("media"), source.getAttribute("src")])).toEqual([
+    ["(max-width: 767px)", data.heroVideos.mobile],
+    ["not all and (max-width: 767px)", data.heroVideos.desktop],
+  ]);
+  expect(hero?.querySelector(".locker-hero-photo")?.getAttribute("src")).toBe(data.photos[0].url);
+});
+
 it("keeps the hero video muted without playback controls and centers section headings", async () => {
   const data = previewLockerData(record);
   data.heroVideos = undefined;
@@ -159,11 +221,14 @@ it("keeps the hero video muted without playback controls and centers section hea
   await act(async () => root.render(<LockerView data={data} />));
   expect(host.querySelector('.locker-hero-video')).not.toBeNull();
   const hero = host.querySelector<HTMLVideoElement>('.locker-hero-video')!;
-  const backdrop = host.querySelector<HTMLVideoElement>('.locker-hero-video-backdrop')!;
   expect(hero.muted).toBe(true);
-  expect(backdrop.muted).toBe(true);
   expect(hero.volume).toBe(0);
-  expect(backdrop.volume).toBe(0);
+  expect(host.querySelectorAll('.locker-hero-media video')).toHaveLength(1);
+  expect(host.querySelector('.locker-hero-photo')).not.toBeNull();
+  await act(async () => hero.dispatchEvent(new Event("playing")));
+  expect(host.querySelector('.locker-hero-photo')).toBeNull();
+  await act(async () => hero.dispatchEvent(new Event("error")));
+  expect(host.querySelector('.locker-hero-photo')).not.toBeNull();
   await act(async () => {
     hero.muted = false;
     hero.volume = 1;

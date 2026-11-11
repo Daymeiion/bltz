@@ -1,0 +1,37 @@
+.section { position: relative; z-index: 6; margin-top: 24px; padding: 24px 0 4px; border-top: 1px solid #293047; color: #fff; }
+.header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+.eyebrow { margin: 0; color: #ffbb00; font-family: "JetBrains Mono", monospace; font-size: 10px; font-weight: 600; line-height: 1.5; letter-spacing: .12em; }
+.header h2 { margin: 5px 0 0; font-family: "Barlow", sans-serif; font-size: clamp(22px, 2.5vw, 28px); font-weight: 800; line-height: 1.1; }
+.row { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+.card { display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; min-width: 0; padding: 0; border: 0; background: transparent; color: #fff; text-align: left; cursor: pointer; }
+.visual { position: relative; display: block; aspect-ratio: 1; overflow: hidden; border: 1px solid #3a435a; border-radius: 6px; background: #ddd; }
+.visual > img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.preview { position: absolute; bottom: 10px; left: 50%; display: flex; align-items: center; justify-content: center; gap: 5px; width: max-content; min-height: 40px; max-width: calc(100% - 16px); padding: 0 10px; border: 1px solid #757986; border-radius: 4px; background: #0b0e1a; color: #fff; font-size: 12px; font-weight: 700; opacity: 0; translate: -50% 0; transition: opacity 150ms ease; }
+.preview svg { width: 16px; height: 16px; }
+.card:hover .preview, .card:focus-visible .preview { opacity: 1; }
+.card:hover .visual, .card:focus-visible .visual { border-color: #ffbb00; }
+.card:focus-visible, .resume:focus-visible, .close:focus-visible, .sources a:focus-visible { outline: 2px solid #ffbb00; outline-offset: 4px; }
+.cardTitle { display: block; padding-top: 10px; font-size: 15px; font-weight: 700; line-height: 1.25; }
+.caption { margin: 12px 0 0; color: #a2aabb; font-size: 12px; line-height: 1.5; }
+.resume { display: grid; flex: none; place-items: center; width: 44px; height: 44px; padding: 0; border: 1px solid #ffbb00; border-radius: 4px; background: transparent; color: #ffbb00; cursor: pointer; }
+.resume svg { width: 18px; height: 18px; }
+.backdrop { position: fixed; inset: 0; z-index: 80; background: rgba(0,0,0,.82); }
+.modal { position: fixed; top: 50%; left: 50%; z-index: 81; display: flex; flex-direction: column; gap: 14px; width: min(590px, calc(100vw - 32px)); max-height: calc(100dvh - 40px); overflow-y: auto; box-sizing: border-box; transform: translate(-50%, -50%); padding: 24px; border: 1px solid #30374c; border-radius: 10px; background: #0b0e1a; color: #fff; font-family: "Barlow", sans-serif; box-shadow: 0 24px 80px rgba(0,0,0,.5); }
+.close { position: absolute; top: 10px; right: 10px; display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 4px; background: transparent; color: #c1c8d6; cursor: pointer; }
+.close svg { width: 20px; height: 20px; }
+.title { margin: 0; padding-right: 24px; font-size: 28px; font-weight: 800; line-height: 1.1; }
+.modalImage { display: block; width: 100%; height: min(37dvh, 320px); object-fit: contain; border-radius: 4px; background: #e2e2e2; }
+.description { margin: 0; color: #c1c8d6; font-size: 16px; line-height: 1.45; }
+.purchase { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding-top: 4px; }
+.price { display: flex; flex-direction: column; gap: 2px; }
+.price span { color: #a2aabb; font-size: 12px; }
+.price strong { color: #fff; font-size: 32px; line-height: 1.1; }
+.buy { min-width: 130px; min-height: 44px; padding: 10px 22px; border: 1px solid #a27b16; border-radius: 4px; background: #b08b27; color: #171717; font-size: 16px; font-weight: 800; cursor: not-allowed; opacity: .65; }
+.note { margin: 0; color: #a2aabb; font-size: 12px; line-height: 1.4; }
+.sources { display: flex; flex-wrap: wrap; gap: 7px 14px; padding-top: 10px; border-top: 1px solid #293047; }
+.sources a { display: inline-flex; align-items: center; gap: 3px; min-height: 24px; color: #c1c8d6; font-size: 12px; text-decoration: underline; text-underline-offset: 3px; }
+.sources svg { width: 13px; height: 13px; }
+.srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@media (max-width: 760px) { .row { grid-template-columns: repeat(5, minmax(180px, 1fr)); overflow-x: auto; padding: 4px 2px 12px; scroll-snap-type: x proximity; scrollbar-width: thin; } .card { scroll-snap-align: start; } .section { margin-top: 20px; padding-top: 20px; } .modal { padding: 20px; } }
+@media (hover: none), (pointer: coarse) { .preview { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .preview { transition: none; } }

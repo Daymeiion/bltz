@@ -5,8 +5,10 @@ import { schoolHistoryName, proHistoryName } from "@/lib/player/team-history-nam
 import { formatHometown, highSchoolName } from "@/lib/player/locker-format";
 import { FittedHeroName } from "@/components/player/FittedHeroName";
 import { EditorialCard } from "@/components/player/EditorialCard";
+import { GettyLicenseControl } from "@/components/player/GettyLicenseControl";
+import licenseStyles from "@/components/player/related-media-strip.module.css";
 
-import { useEffect, useRef, useState, type ChangeEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
 import { ChevronDown, ChevronUp, Mic } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { SearchResult } from "@/components/ui/search-modal";
@@ -284,19 +286,33 @@ export default function LockerView({
   const isEmbedded = presentation === "embedded";
   const isPrivatePreview = data.lockerHref?.startsWith("/preview-lockers/") === true;
   const merchandise: NonNullable<LockerData["merch"]> = data.merch ?? [];
-  const [heroMobile, setHeroMobile] = useState<boolean | null>(null);
+  const mobileHeroUrl = data.heroVideos?.mobile;
+  const desktopHeroUrl = data.heroVideos?.desktop;
+  const legacyHeroUrl = data.heroVideos ? null : data.heroVideoUrl;
+  const hasHeroVideo = Boolean(legacyHeroUrl || mobileHeroUrl || desktopHeroUrl);
+  const heroVideoKey = JSON.stringify([legacyHeroUrl, mobileHeroUrl, desktopHeroUrl]);
+  const heroVideoRef = useRef<HTMLVideoElement | null>(null);
+  const [playingHeroKey, setPlayingHeroKey] = useState<string | null>(null);
+  const showsHeroVideo = hasHeroVideo && playingHeroKey === heroVideoKey;
+  const attachHeroVideo = useCallback((video: HTMLVideoElement | null) => {
+    heroVideoRef.current = video;
+    keepHeroVideoSilent(video);
+    // Playback can start before React hydrates the server-rendered player.
+    if (video && !video.paused && video.readyState >= video.HAVE_CURRENT_DATA) {
+      setPlayingHeroKey(heroVideoKey);
+    }
+  }, [heroVideoKey]);
   useEffect(() => {
+    if (mobileHeroUrl === desktopHeroUrl) return;
     const media = window.matchMedia("(max-width: 767px)");
-    const update = () => setHeroMobile(media.matches);
-    update();
-    media.addEventListener("change", update);
-    return () => media.removeEventListener("change", update);
-  }, []);
-  const [failedHeroVideo, setFailedHeroVideo] = useState<string | null>(null);
-  const selectedHeroVideoUrl = data.heroVideos
-    ? heroMobile === null ? null : data.heroVideos[heroMobile ? "mobile" : "desktop"]
-    : data.heroVideoUrl;
-  const heroVideoUrl = selectedHeroVideoUrl === failedHeroVideo ? null : selectedHeroVideoUrl;
+    const reload = () => {
+      setPlayingHeroKey(null);
+      // Browsers evaluate video source media queries when selecting a resource.
+      heroVideoRef.current?.load();
+    };
+    media.addEventListener("change", reload);
+    return () => media.removeEventListener("change", reload);
+  }, [mobileHeroUrl, desktopHeroUrl]);
 
 
   useEffect(() => {
@@ -602,11 +618,13 @@ export default function LockerView({
   const [slideshowIndex, setSlideshowIndex] = useState(0);
   useEffect(() => {
     setSlideshowIndex(0);
-    if (!isPrivatePreview || heroVideoUrl || slideshowPhotos.length < 2) return;
+    if (!isPrivatePreview || showsHeroVideo || slideshowPhotos.length < 2) return;
     const timer = window.setInterval(() => setSlideshowIndex(index => (index + 1) % slideshowPhotos.length), 6000);
     return () => window.clearInterval(timer);
-  }, [isPrivatePreview, heroVideoUrl, slideshowKey, slideshowPhotos.length]);
+  }, [isPrivatePreview, showsHeroVideo, slideshowKey, slideshowPhotos.length]);
   const slideshowPhoto = slideshowPhotos[slideshowIndex % slideshowPhotos.length];
+  const showsHeroPhoto = !showsHeroVideo && isPrivatePreview && Boolean(slideshowPhoto);
+  const heroBackdropUrl = isPrivatePreview ? slideshowPhotos[0]?.url : poolAt(0);
 
 
   const schoolAbbr = data.school?.abbr || "SCHOOL";
@@ -985,55 +1003,45 @@ export default function LockerView({
           <section className="locker-hero-section" style={{ padding: "0 18px" }}>
             <div className={`locker-hero-card${isPrivatePreview ? " locker-hero-card--preview" : ""}`} style={{ position: "relative", height: 610, borderRadius: 24, overflow: "hidden", background: "linear-gradient(180deg,#161B30 0%,#10142404 55%,#0B0E1A 100%)" }}>
               {/* video / photo-reel background */}
-              <div className="locker-hero-media">
-                {heroVideoUrl ? (
-                  <>
-                    <video
-                      ref={keepHeroVideoSilent}
-                      className="locker-hero-video-backdrop"
-                      src={heroVideoUrl}
-                      autoPlay
-                      loop
-                      muted
-                      playsInline
-                      onVolumeChange={(event) => keepHeroVideoSilent(event.currentTarget)}
-                      aria-hidden="true"
-                    />
-                    <video
-                      ref={keepHeroVideoSilent}
-                      key={heroVideoUrl}
-                      className="locker-hero-video"
-                      src={heroVideoUrl}
-                      autoPlay
-                      loop
-                      muted
-                      playsInline
-                      onVolumeChange={(event) => keepHeroVideoSilent(event.currentTarget)}
-                      onError={() => setFailedHeroVideo(heroVideoUrl)}
-                      aria-label={`${data.fullName} hero video`}
-                    >
-                      Your browser does not support video playback.
-                    </video>
-                  </>
+              <div className={`locker-hero-media${showsHeroVideo ? " locker-hero-media--video" : showsHeroPhoto ? " locker-hero-media--photo" : ""}`}>
+                {hasHeroVideo && (
+                  <video
+                    ref={attachHeroVideo}
+                    key={heroVideoKey}
+                    className="locker-hero-video"
+                    src={legacyHeroUrl ?? undefined}
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    onVolumeChange={(event) => keepHeroVideoSilent(event.currentTarget)}
+                    onPlaying={() => setPlayingHeroKey(heroVideoKey)}
+                    onError={() => setPlayingHeroKey(null)}
+                    aria-label={`${data.fullName} hero video`}
+                  >
+                    {mobileHeroUrl && <source media="(max-width: 767px)" src={mobileHeroUrl} />}
+                    {desktopHeroUrl && <source media="not all and (max-width: 767px)" src={desktopHeroUrl} />}
+                    Your browser does not support video playback.
+                  </video>
+                )}
+                {showsHeroVideo ? (
+                  heroBackdropUrl && <img src={heroBackdropUrl} alt="" className="locker-hero-video-backdrop" />
                 ) : (
-                  isPrivatePreview ? (slideshowPhoto ? <div style={{ position: "absolute", inset: 0 }}>
-                    <img src={slideshowPhoto.url} alt="" aria-hidden="true" className="locker-hero-photo-backdrop" />
-                    <img src={slideshowPhoto.url} alt="" className="locker-hero-photo" />
-                  </div> : null) : [0, 6, 12].map((delay, i) => {
-                    const img = poolAt(i);
-                    return img ? isPrivatePreview ? (
-                      <div key={i} style={{ ...reelBase, animationDelay: `${delay}s` }}>
-                        <img src={img} alt="" aria-hidden="true" className="locker-hero-photo-backdrop" />
-                        <img src={img} alt="" className="locker-hero-photo" />
-                      </div>
-                    ) : <div key={i} style={{ ...reelBase, backgroundImage: `url(${img})`, animationDelay: `${delay}s` }} /> : null;
-                  })
+                  <div className={hasHeroVideo ? "locker-hero-video-fallback" : undefined}>
+                    {isPrivatePreview ? slideshowPhoto && <>
+                      <img src={slideshowPhoto.url} alt="" aria-hidden="true" className="locker-hero-photo-backdrop" />
+                      <img src={slideshowPhoto.url} alt="" className="locker-hero-photo" />
+                    </> : [0, 6, 12].map((delay, i) => {
+                      const img = poolAt(i);
+                      return img ? <div key={i} style={{ ...reelBase, backgroundImage: `url(${img})`, animationDelay: `${delay}s` }} /> : null;
+                    })}
+                  </div>
                 )}
                 {/* glows */}
                 <div style={{ position: "absolute", top: -60, left: -80, width: 340, height: 340, borderRadius: 9999, background: "radial-gradient(circle,rgba(41,82,255,.35),transparent 70%)", animation: "glowA 7s ease-in-out infinite", pointerEvents: "none" }} />
                 <div style={{ position: "absolute", bottom: 120, right: -70, width: 260, height: 260, borderRadius: 9999, background: "radial-gradient(circle,rgba(245,166,35,.28),transparent 70%)", animation: "glowB 8s ease-in-out infinite", pointerEvents: "none" }} />
                 {/* bottom blend */}
-                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom,rgba(11,14,26,.08) 0%,rgba(11,14,26,0) 24%,rgba(11,14,26,.28) 44%,rgba(11,14,26,.72) 64%,rgba(11,14,26,.94) 82%,#0B0E1A 100%)", pointerEvents: "none" }} />
+                {!showsHeroPhoto && <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom,rgba(11,14,26,.08) 0%,rgba(11,14,26,0) 24%,rgba(11,14,26,.28) 44%,rgba(11,14,26,.72) 64%,rgba(11,14,26,.94) 82%,#0B0E1A 100%)", pointerEvents: "none" }} />}
               </div>
 
               {/* Spotify "now playing" — live. Collapses entirely when the athlete
@@ -1080,8 +1088,8 @@ export default function LockerView({
               <img className="locker-hero-headshot" src={data.headshotUrl} alt={data.fullName} style={{ position: "absolute", bottom: 74, left: "50%", transform: "translateX(-50%)", height: 268, width: "80vw", objectFit: "cover", objectPosition: "top", zIndex: 4, opacity: 1, clipPath: "inset(0 0 39px 0)" }} />
               <img className="locker-hero-headshot locker-hero-headshot-gradient" src={data.headshotUrl} alt="" aria-hidden="true" style={{ position: "absolute", bottom: 74, left: "50%", transform: "translateX(-50%)", height: 268, width: "80vw", objectFit: "cover", objectPosition: "top", zIndex: 4, clipPath: "inset(0 0 39px 0)", filter: "brightness(0)", WebkitMaskImage: "linear-gradient(to bottom, transparent 66%, rgba(0,0,0,.72) 82%, #000 100%)", maskImage: "linear-gradient(to bottom, transparent 66%, rgba(0,0,0,.72) 82%, #000 100%)", pointerEvents: "none" }} />
 
-              {/* hero-video gradient — behind the headshot and name */}
-              <div style={{ position: "absolute", inset: 0, zIndex: 3, background: "linear-gradient(to bottom, transparent 0%, transparent 30%, rgba(5,7,15,.35) 38%, rgba(5,7,15,.65) 52%, rgba(5,7,15,.85) 68%, rgba(11,14,26,.98) 86%, #0B0E1A 100%)", pointerEvents: "none" }} />
+              {/* Keep the headshot and name readable over the hero media. */}
+              <div className={showsHeroPhoto ? "locker-hero-content-shade--photo" : "locker-hero-content-shade"} />
 
               {/* name block */}
             <div className="locker-hero-copy" style={{ position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 5, textAlign: "center", padding: "0 16px" }}>
@@ -1174,7 +1182,7 @@ export default function LockerView({
                     const index = rowIndex * 3 + columnIndex;
                     return <div
                     key={photo.id}
-                    className="locker-photo-tile"
+                    className={`locker-photo-tile ${licenseStyles.licenseTile}`}
                     style={{
                       "--photo-ratio": photoRatio(photo.id),
                       "--photo-mobile-order": index === 2 ? 3 : index === 3 ? 2 : index,
@@ -1195,6 +1203,7 @@ export default function LockerView({
                     {index === previewPhotos.length - 1 && eligiblePhotoCount > previewPhotos.length ? (
                       <div className="locker-photo-more" style={{ fontFamily: mono }}>+{eligiblePhotoCount - previewPhotos.length} MORE</div>
                     ) : null}
+                    {(isPrivatePreview || photo.sourceUrl?.startsWith("https://www.gettyimages.com/detail/")) && <GettyLicenseControl image={photo} athleteName={data.fullName} />}
                   </div>;
                   })}
                   </div>
@@ -2047,23 +2056,28 @@ const styleSheet = `
 .bltz-frame{position:relative;width:390px;height:844px;background:#0B0E1A;overflow:hidden;box-shadow:0 30px 90px rgba(0,0,0,.6);border-radius:0}
 .locker-hero-card{contain:paint;isolation:isolate;transform:translateZ(0);clip-path:inset(0 round 24px);outline:1px solid rgba(255,255,255,.12);outline-offset:-1px}
 .locker-hero-media{position:absolute;inset:3px;overflow:hidden;border-radius:21px;clip-path:inset(0 round 21px)}
+.locker-hero-media--photo{inset:0;border-radius:0;clip-path:none}
 .locker-hero-photo-backdrop,.locker-hero-photo{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
-.locker-hero-photo-backdrop{object-fit:cover;filter:blur(28px) brightness(.65);transform:scale(1.12)}
+.locker-hero-photo-backdrop{object-fit:cover;filter:blur(24px) brightness(.82);transform:scale(1.12)}
 .locker-hero-photo{object-fit:contain;object-position:center}
+.locker-hero-content-shade,.locker-hero-content-shade--photo{position:absolute;inset:0;z-index:3;pointer-events:none}
+.locker-hero-content-shade{background:linear-gradient(to bottom,transparent 30%,rgba(5,7,15,.35) 38%,rgba(5,7,15,.65) 52%,rgba(5,7,15,.85) 68%,rgba(11,14,26,.98) 86%,#0B0E1A 100%)}
+.locker-hero-content-shade--photo{background:linear-gradient(to bottom,transparent 40%,rgba(5,7,15,.18) 56%,rgba(5,7,15,.58) 78%,rgba(11,14,26,.88) 100%)}
 .locker-hero-video-backdrop,.locker-hero-video{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 .locker-hero-video-backdrop{z-index:0;object-fit:cover;transform:scale(1.1);filter:blur(24px) saturate(.82) brightness(.62)}
 .locker-hero-video{z-index:1;object-fit:contain;object-position:center;background:transparent}
+.locker-hero-video-fallback{position:absolute;inset:0;z-index:2;background:#101424}
 .locker-photo-contact-sheet{height:390px;display:grid;grid-template-columns:repeat(12,minmax(0,1fr));grid-template-rows:repeat(3,minmax(0,1fr));grid-auto-flow:row;gap:8px;overflow:hidden}
 .locker-photo-tile{position:relative;min-width:0;grid-column:span var(--photo-mobile-span,2);overflow:hidden;border:1px solid #1E2640;border-radius:14px;background:${GRAD_FIELD}}
-.locker-photo-tile img{transition:transform .35s ease}
-.locker-photo-tile:hover img{transform:scale(1.025)}
+.locker-photo-tile > img{transition:transform .35s ease}
+.locker-photo-tile:hover > img{transform:scale(1.025)}
 .locker-photo-empty{position:relative;min-height:228px;grid-column:1/-1;overflow:hidden;border:1px solid #1E2640;border-radius:14px}
 .locker-hero-stroke{border-radius:24px}
-.locker-hero-portrait-stage{display:none}
+.locker-hero-card--preview>.locker-hero-headshot{display:none}
+.locker-hero-portrait-stage{position:absolute;bottom:100%;left:0;width:100%;height:268px;pointer-events:none}
+.locker-hero-portrait-stage img{display:block;width:100%;height:100%;object-fit:contain;object-position:center bottom}
 @media (min-width:641px){
-  .locker-hero-card--preview>.locker-hero-headshot{display:none}
-  .locker-hero-portrait-stage{display:block;position:absolute;bottom:100%;left:0;width:100%;height:282px;pointer-events:none}
-  .locker-hero-portrait-stage img{display:block;width:100%;height:100%;object-fit:contain;object-position:center bottom}
+  .locker-hero-portrait-stage{height:282px}
 }
 .bio-overview-grid{display:grid;grid-template-columns:minmax(0,42fr) minmax(0,58fr);gap:8px;align-items:start;padding:14px 18px 10px}
 .bio-headshot-card{min-width:0;overflow:hidden;border:1px solid #1E2640;border-radius:14px;background:#131829;display:flex;flex-direction:column}
@@ -2128,8 +2142,8 @@ const styleSheet = `
 .basic-info-grid>div{grid-column:1/-1}
 .locker-photo-contact-sheet{height:390px;display:grid;grid-template-columns:repeat(12,minmax(0,1fr));grid-template-rows:repeat(3,minmax(0,1fr));gap:8px;overflow:hidden}
 .locker-photo-tile{position:relative;min-width:0;grid-column:span var(--photo-mobile-span,6);overflow:hidden;border:1px solid #1E2640;border-radius:14px;background:${GRAD_FIELD}}
-.locker-photo-tile img{display:block;width:100%;height:100%;object-fit:cover;transition:transform .35s ease}
-.locker-photo-tile:hover img{transform:scale(1.025)}
+.locker-photo-tile > img{display:block;width:100%;height:100%;object-fit:cover;transition:transform .35s ease}
+.locker-photo-tile:hover > img{transform:scale(1.025)}
 .locker-photo-shade{position:absolute;inset:0;background:linear-gradient(to top,rgba(5,7,15,.62),transparent 58%);pointer-events:none}
 .locker-photo-label{position:absolute;left:9px;bottom:9px;max-width:calc(100% - 18px);overflow:hidden;color:rgba(255,255,255,.76);font-size:7.5px;letter-spacing:.12em;text-overflow:ellipsis;text-transform:uppercase;white-space:nowrap}
 .locker-photo-more{position:absolute;right:9px;bottom:9px;top:auto;display:inline-flex;width:max-content;height:max-content;white-space:nowrap;line-height:1;padding:5px 7px;border-radius:999px;background:rgba(5,7,15,.82);color:#fff;font-size:9px;font-weight:700;letter-spacing:.12em;text-shadow:0 1px 6px rgba(0,0,0,.8)}
@@ -2141,18 +2155,31 @@ const styleSheet = `
 @media (max-width:640px){
   .locker-photo-contact-sheet--preview{display:flex;flex-wrap:wrap;height:auto;align-items:flex-start}
   .locker-photo-contact-sheet--preview .locker-photo-tile{order:var(--photo-mobile-order,0);flex:0 0 calc((100% - 8px) * var(--photo-mobile-share,.5));min-height:0;aspect-ratio:var(--photo-ratio,1)}
-  .locker-photo-contact-sheet--preview .locker-photo-tile img{position:absolute;inset:0;object-fit:contain!important;transform:none}
+  .locker-photo-contact-sheet--preview .locker-photo-tile > img{position:absolute;inset:0;object-fit:contain!important;transform:none}
 }
 
 @media (min-width:641px){
   .locker-photo-contact-sheet--preview{display:flex;flex-direction:column;height:auto}
   .locker-photo-contact-sheet--preview .locker-photo-row{display:flex;align-items:flex-start;min-height:0;gap:10px}
   .locker-photo-contact-sheet--preview .locker-photo-tile{flex:var(--photo-ratio,1) 1 0%;min-width:0;min-height:0;aspect-ratio:var(--photo-ratio,1)}
-  .locker-photo-contact-sheet--preview .locker-photo-tile img{position:absolute;inset:0;object-fit:contain!important;transform:none}
+  .locker-photo-contact-sheet--preview .locker-photo-tile > img{position:absolute;inset:0;object-fit:contain!important;transform:none}
+}
+@media (max-width:767px){
+  .locker-hero-photo{object-fit:cover;object-position:center top}
+  .locker-hero-media--video{inset:0;border-radius:0;clip-path:none}
+  .locker-hero-video{object-fit:cover;object-position:center center}
+  .locker-hero-portrait-stage{z-index:-2}
+  .locker-hero-card--preview .locker-hero-copy::before{
+    content:"";
+    position:absolute;
+    inset:-88px 0 0;
+    z-index:-1;
+    background:linear-gradient(to top,#0B0E1A,rgba(11,14,26,.94) 42%,rgba(11,14,26,0) 100%);
+    pointer-events:none;
+  }
 }
 @media (max-width:640px){
   .bltz-frame{width:100vw;height:100dvh;box-shadow:none}
-  .locker-hero-video{object-fit:cover;object-position:center center}
   .locker-hero-video-backdrop{transform:scale(1.16);filter:blur(20px) saturate(.82) brightness(.58)}
   .locker-filter-row{gap:6px!important;padding-right:12px!important;padding-left:12px!important}
   .locker-filter-pill{min-width:0;padding:7px 9px!important;font-size:9px!important;letter-spacing:.08em!important}
@@ -2168,7 +2195,7 @@ const styleSheet = `
 .bltz-frame.bltz-frame-embedded{width:100%;max-width:575px;height:100%;border-radius:18px;box-shadow:none}
 @media (min-width:641px) and (max-width:899px){
   .bltz-frame:not(.bltz-frame-embedded){width:100vw;height:100dvh;border-radius:0;box-shadow:none}
-  .locker-athlete-quote{font-size:16px}
+  .locker-athlete-quote{font-size:20px}
   .locker-athlete-quote-author{font-size:11px}
 }
 @media (min-width:900px){
@@ -2180,7 +2207,7 @@ const styleSheet = `
   .career-stat-card{flex-basis:calc((100% - 24px)/4);min-height:100px!important}
   .locker-main-tabs-list{height:65px!important}
   .locker-main-tab{height:53px!important;font-size:19px}
-  .locker-athlete-quote{font-size:18px}
+  .locker-athlete-quote{font-size:22px}
   .locker-athlete-quote-author{font-size:12px}
   .locker-tabs-nav{width:70%;margin-right:auto;margin-left:auto}
   .locker-page-shell{align-items:flex-start!important;background:linear-gradient(180deg,#05070F,#080B17 46%,#05070F)!important}
@@ -2191,7 +2218,7 @@ const styleSheet = `
   .bltz-frame:not(.bltz-frame-embedded) .scr>section{width:min(1180px,calc(100% - 64px));margin-right:auto;margin-left:auto}
   .bltz-frame:not(.bltz-frame-embedded) .locker-hero-section{width:calc(100% - 32px)!important;max-width:none!important;padding:0!important}
   .bltz-frame:not(.bltz-frame-embedded) .locker-hero-card{height:min(calc(76vh + 10px),770px)!important;min-height:650px;border-radius:8px!important;clip-path:inset(0 round 8px)}
-  .bltz-frame:not(.bltz-frame-embedded) .locker-hero-media{border-radius:5px;clip-path:inset(0 round 5px)}
+  .bltz-frame:not(.bltz-frame-embedded) .locker-hero-media:not(.locker-hero-media--photo){border-radius:5px;clip-path:inset(0 round 5px)}
   .bltz-frame:not(.bltz-frame-embedded) .locker-hero-stroke{border-radius:8px}
   .bltz-frame:not(.bltz-frame-embedded) .locker-hero-headshot{bottom:82px!important;width:80vw!important;height:282px!important;clip-path:inset(0 0 clamp(47px,4.5vw,68px) 0)!important}
   .bltz-frame:not(.bltz-frame-embedded) .locker-hero-copy{right:50%!important;left:50%!important;width:min(560px,calc(100% - 48px));padding:0!important;transform:translateX(-50%)}

@@ -51,6 +51,13 @@ it("issues one immutable private-path token after admin and record checks", asyn
   expect(mocks.signed).toHaveBeenCalledWith(body.path);
 });
 
+it("allows a 250 MiB video and rejects a video one byte over the limit", async () => {
+  const upload = (size: number) => POST(request({ kind: "video", mimeType: "video/mp4", size }, "http://localhost"), { params: Promise.resolve({ id }) });
+  expect((await upload(250 * 1024 * 1024)).status).toBe(200);
+  expect((await upload(250 * 1024 * 1024 + 1)).status).toBe(400);
+  expect(mocks.signed).toHaveBeenCalledTimes(1);
+});
+
 it("issues a private photo-bucket ticket for an ad image without using a gallery slot", async () => {
   mocks.maybeSingle.mockResolvedValueOnce({ data: { photos: Array(40).fill({}), videos: [] }, error: null });
   const response = await POST(request({ kind: "banner", mimeType: "image/png", size: 1024 }, "http://localhost"), { params: Promise.resolve({ id }) });

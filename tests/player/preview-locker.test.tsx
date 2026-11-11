@@ -40,7 +40,7 @@ describe("preview Locker parity", () => {
       })),
     ];
     const html = renderToStaticMarkup(<LockerView data={toLockerData({ ...row, headshot_url: photos[0].url, photos })} />);
-    expect((html.match(/class="locker-photo-tile"/g) ?? [])).toHaveLength(6);
+    expect((html.match(/class="locker-photo-tile(?:\s[^"]*)?"/g) ?? [])).toHaveLength(6);
     expect(html).not.toContain('alt="OFFICIAL HEADSHOT"');
     expect(html).toContain("+1 MORE");
     expect(html).not.toContain('alt="CAREER PHOTO 7"');

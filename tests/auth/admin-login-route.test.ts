@@ -126,7 +126,7 @@ describe("dedicated admin login", () => {
     expect(client.rpc).toHaveBeenCalledExactlyOnceWith("is_internal_admin");
   });
 
-  it("redirects an assigned platform admin to Beta Intelligence", async () => {
+  it("redirects an assigned platform admin to the GTM preview funnel", async () => {
     const client = supabaseFor(true);
     createServerClient.mockImplementationOnce((_url, _key, options) => {
       options.cookies.setAll([{ name: "sb-unit-auth-token.0", value: "allowed-test-session", options: { path: "/", httpOnly: true, sameSite: "lax" } }]);
@@ -135,7 +135,7 @@ describe("dedicated admin login", () => {
     const { POST } = await import("@/app/api/admin/login/route");
     const response = await POST(request("email=admin%40bltz.test&password=secret"));
     expect(response.status).toBe(303);
-    expect(response.headers.get("location")).toBe("http://localhost/admin/beta");
+    expect(response.headers.get("location")).toBe("http://localhost/admin/gtm/funnel");
     expect(response.headers.get("set-cookie")).toContain("bltz_test_auth=");
     expect(response.cookies.get("sb-unit-auth-token.0")).toMatchObject({ value: "allowed-test-session", httpOnly: true, sameSite: "lax" });
     expect(response.headers.get("cache-control")).toBe("private, no-store");

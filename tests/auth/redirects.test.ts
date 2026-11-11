@@ -29,7 +29,7 @@ describe("authenticated redirect selection", () => {
   );
 
   it("selects a useful default by role", () => {
-    expect(getDefaultAuthenticatedPath("admin")).toBe("/admin/beta");
+    expect(getDefaultAuthenticatedPath("admin")).toBe("/admin/gtm/funnel");
     expect(getDefaultAuthenticatedPath("player")).toBe("/dashboard");
     expect(getDefaultAuthenticatedPath("fan")).toBe("/");
   });

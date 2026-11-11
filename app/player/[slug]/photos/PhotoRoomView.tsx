@@ -1,6 +1,9 @@
 "use client";
 
 import { RelatedMediaStrip } from "@/components/player/RelatedMediaStrip";
+import { ProductConceptRow } from "@/components/player/ProductConceptRow";
+import { GettyLicenseControl } from "@/components/player/GettyLicenseControl";
+import licenseStyles from "@/components/player/related-media-strip.module.css";
 import Image from "next/image";
 import PreviewRoomNav from "@/components/preview-lockers/PreviewRoomNav";
 import Link from "next/link";
@@ -368,10 +371,14 @@ export default function PhotoRoomView({ data, previewId }: { data: PhotoRoomData
               >
                 <div className={styles.bentoGrid}>
                   {filteredImages.map((image, index) => (
-                    <button
+                    <div
                       key={image.id}
+                      className={`${styles.photoTile} ${licenseStyles.licenseTile} ${isPrivatePreview ? "" : `${index % 7 === 0 ? styles.photoTileLarge : ""} ${index % 7 === 3 ? styles.photoTileWide : ""}`}`}
+                      style={isPrivatePreview ? { "--photo-ratio": photoRatio(image) } as CSSProperties : undefined}
+                    >
+                    <button
                       type="button"
-                      className={`${styles.photoTile} ${isPrivatePreview ? "" : `${index % 7 === 0 ? styles.photoTileLarge : ""} ${index % 7 === 3 ? styles.photoTileWide : ""}`}`}
+                      className={styles.tileSelect}
                       style={isPrivatePreview ? { "--photo-ratio": photoRatio(image) } as CSSProperties : undefined}
                       onClick={() => selectImage(image.id)}
                       aria-label={`View ${image.title}`}
@@ -391,6 +398,8 @@ export default function PhotoRoomView({ data, previewId }: { data: PhotoRoomData
                       </span>
                       </>}
                     </button>
+                    {(isPrivatePreview || image.sourceUrl?.startsWith("https://www.gettyimages.com/detail/")) && <GettyLicenseControl image={image} athleteName={data.athleteName} />}
+                    </div>
                   ))}
                   {Array.from({ length: sparseSlotCount }).map((_, index) => (
                     <div key={`sparse-${activeFilter}-${index}`} className={styles.photoTilePlaceholder}>
@@ -414,7 +423,9 @@ export default function PhotoRoomView({ data, previewId }: { data: PhotoRoomData
                 {loadMoreError ? <span role="alert">Photos could not load. Try again.</span> : null}
               </div>
             ) : null}
-            {isPrivatePreview && hasAnyImages && <RelatedMediaStrip images={images} athleteName={data.athleteName} athleteSlug={data.slug} activeImageId={slideshowImages[activeIndex]?.id} onSelect={photo => selectImage(photo.id)} onResume={!autoplayEnabled ? resumeSlideshow : undefined} />}
+            {isPrivatePreview && hasAnyImages && (data.slug === "dante-hughes"
+              ? <ProductConceptRow onResume={!autoplayEnabled ? resumeSlideshow : undefined} />
+              : <RelatedMediaStrip images={images} athleteName={data.athleteName} athleteSlug={data.slug} activeImageId={slideshowImages[activeIndex]?.id} onSelect={photo => selectImage(photo.id)} onResume={!autoplayEnabled ? resumeSlideshow : undefined} />)}
             <div className={styles.returnRow}>
               <Link className={styles.returnButton} href={data.lockerHref ?? `/player/${data.slug}`}>Return to Locker</Link>
             </div>

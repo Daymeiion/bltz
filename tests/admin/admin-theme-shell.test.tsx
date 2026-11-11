@@ -43,11 +43,11 @@ describe("AdminThemeShell workspaces", () => {
     expect(document.body.textContent).toContain("Workspace content");
   });
 
-  it("keeps Beta Intelligence in its existing dedicated workspace shell", () => {
-    pathname = "/admin/beta";
+  it("renders the preview funnel in the existing GTM workspace", () => {
+    pathname = "/admin/gtm/funnel";
     renderShell();
 
-    expect(document.querySelector('[data-admin-workspace="beta"]')).not.toBeNull();
+    expect(document.querySelector('[data-admin-workspace="gtm"]')).not.toBeNull();
     expect(document.querySelector("[data-admin-header]")).toBeNull();
   });
 

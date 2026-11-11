@@ -1,12 +1,7 @@
-import { BetaIntelligenceDashboard } from "@/components/admin/beta/BetaIntelligenceDashboard";
-import { getBetaIntelligenceDashboard } from "@/lib/beta-intelligence/query";
+import { redirect } from "next/navigation";
+import { ADMIN_DEFAULT_PATH } from "@/lib/auth/redirects";
 
-export const metadata = {
-  title: "Beta Intelligence | BLTZ Admin",
-  description: "Private athlete beta learning and engagement dashboard.",
-};
-
-export default async function BetaIntelligencePage() {
-  const data = await getBetaIntelligenceDashboard();
-  return <BetaIntelligenceDashboard data={data} />;
+/** Keep existing bookmarks working after consolidating preview tracking in GTM. */
+export default function BetaIntelligencePage() {
+  redirect(ADMIN_DEFAULT_PATH);
 }
