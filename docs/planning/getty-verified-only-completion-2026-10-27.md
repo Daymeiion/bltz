@@ -44,3 +44,13 @@ Strengthens existing athlete-media-source attribution and graph accuracy across 
 ## Release validation
 
 Clean release validation passed: 236 test files passed, two skipped; **1,923 tests passed**, 24 skipped. Production Webpack build including TypeScript passed. Full ESLint passed with zero errors and 296 existing warnings. CRLF-aware diff validation passed. Existing disabled-iframe test diagnostics remain nonfatal.
+
+## Live verification and release evidence
+
+Release `1577b67184a58f7187b39d998df86d5a3d8981d7` reached Ready on the existing Vercel production project (`AK4nZjCx6Cnx9zdMxLFXNmfao52H`). Browser checks confirmed **32 photos, 13 Getty buttons, and 19 photos without Getty controls** in Photo Room, plus 13 Getty controls in the primary related-row sequence. Both new exact URLs were verified from their live modal links. The main Locker's six currently displayed unmatched images correctly have zero Getty controls.
+
+The focused licensing button measured **0px horizontal offset from the image center** and **8px above the image bottom**, with full opacity and keyboard focus. Escape restored focus. The follow-up CSS refinement `64451cf3` gives the button its intrinsic label width so absolute positioning cannot compress the wordmark on narrow images; the production build including TypeScript passed again after that CSS-only change. All other test-covered behavior is unchanged.
+
+The existing source links and all other photos were retained. No additional private metadata, rights, or financial information was exposed. The pre-existing unsaved editor remains untouched. Screenshot evidence is stored at `tmp/getty-dante/verified-only-centered-button.png`.
+
+Final production refinement `64451cf31159e11242d6c6cf055a08bb402303cb` reached Ready in Vercel deployment `3s4fGHKo7LmKEV3aDYxCvfsdQtxb`, with production domains assigned. After reload, the final gallery still showed 13 Getty controls for 32 photos and the newly matched `90326775` modal linked to its exact canonical page. The narrow tile's focused button measured 120px wide, centered with 0px horizontal offset and an 8px bottom inset. Final screenshot evidence was refreshed. No requested work remains for the confirmed match set; the 19 unconfirmed photos have no Getty licensing UI.
