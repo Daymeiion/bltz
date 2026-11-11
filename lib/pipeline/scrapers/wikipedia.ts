@@ -1,4 +1,6 @@
 import { findAwardDescription } from "@/lib/preview-lockers/award-descriptions";
+import { fetchSourceFacts } from "@/lib/source-policy/fetch";
+import { evaluateSource, requireSourceAction } from "@/lib/source-policy/policy";
 import { fetchHtml, stripHtml } from "../fetch";
 import type { PlayerIdentityInput, ScraperResult, ScrapedAward } from "../types";
 import { NFL_FULL_NAMES } from "../teams";
@@ -50,7 +52,7 @@ async function searchCandidates(
   const out: SearchHit[] = [];
   for (const q of queries) {
     const url = `https://en.wikipedia.org/w/api.php?action=query&list=search&format=json&origin=*&srlimit=5&srsearch=${encodeURIComponent(q)}`;
-    const r = await fetch(url, {
+    const r = await fetchSourceFacts(url, {
       headers: { "User-Agent": "BLTZ-OnboardBot/1.0" },
     });
     if (!r.ok) continue;
@@ -74,18 +76,24 @@ async function fetchSummary(title: string): Promise<{
   thumbnail?: string;
 } | null> {
   const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`;
-  const r = await fetch(url, {
+  const r = await fetchSourceFacts(url, {
     headers: { "User-Agent": "BLTZ-OnboardBot/1.0" },
   });
   if (!r.ok) return null;
   const j = (await r.json()) as SummaryResponse;
   if (!j?.extract) return null;
+  const articleUrl = j.content_urls?.desktop?.page;
+  // Facts came from this registered Wikipedia adapter. A response-provided
+  // article URL cannot redirect extraction or attribution to another source.
+  const canonicalUrl = articleUrl && evaluateSource(articleUrl).policy_id === "wikipedia-player"
+    ? articleUrl
+    : `https://en.wikipedia.org/wiki/${encodeURIComponent(title)}`;
   return {
     extract: j.extract,
     description: j.description ?? "",
     type: j.type ?? "",
     title,
-    url: j.content_urls?.desktop?.page ?? `https://en.wikipedia.org/wiki/${encodeURIComponent(title)}`,
+    url: canonicalUrl,
     thumbnail: j.thumbnail?.source,
   };
 }
@@ -178,12 +186,39 @@ function parseWeight(text: string): number | undefined {
   return Number.isNaN(w) ? undefined : w;
 }
 
-function extractAwards(text: string, sourceUrl: string): ScrapedAward[] {
+export function extractWikipediaAwardEvidence(html: string, sourceUrl: string): ScrapedAward[] {
+  requireSourceAction(sourceUrl, "EXTRACT_FACTS");
+  requireSourceAction(sourceUrl, "PERSIST_FACTS");
+  // Read the athlete infobox's own honors list, not mentions of other winners
+  // in biographical prose. Preserve unknown honors and original edition text.
+  const heading = /(?:Career highlights and awards|Awards and highlights)/i.exec(html);
+  if (!heading) return [];
+  const section = html.slice(heading.index, heading.index + 24000);
+  const cell = /<td\b[^>]*>([\s\S]*?)<\/td>/i.exec(section)?.[1] ?? "";
+  return [...cell.matchAll(/<li\b[^>]*>([\s\S]*?)<\/li>/gi)].slice(0, 40).flatMap(match => {
+    const rawName = stripHtml(match[1]).replace(/\[\d+\]/g, "").replace(/\s+/g, " ").trim();
+    if (!rawName || rawName.length > 220) return [];
+    const year = [...new Set(rawName.match(/\b(?:19|20)\d{2}\b/g) ?? [])].join(", ");
+    // Keep the governing body and level in the award name. A trailing
+    // parenthetical that contains only award years belongs in `year`, while
+    // meaningful editions such as "Super Bowl champion (XLVI)" stay intact.
+    const name = rawName.replace(/\s*\(\s*(?:19|20)\d{2}(?:\s*[,–—−-]\s*(?:19|20)\d{2})*\s*\)\s*$/, "").trim();
+    if (!name || name.length > 200) return [];
+    return [{ name, year: year.slice(0, 20), source_url: sourceUrl }];
+  });
+}
+
+function extractAwards(text: string, sourceUrl: string, html?: string): ScrapedAward[] {
+  const infobox = html ? extractWikipediaAwardEvidence(html, sourceUrl) : [];
+  if (infobox.length) return infobox;
   const awards: ScrapedAward[] = [];
   // Very conservative — Wikipedia bios mention these by name. We pull
   // each match as a candidate; the synthesis step will dedupe.
+  const qualifiedAllAmerican = text.match(/\b(?:(?:NJCAA|NCAA(?:\s+Division\s+[IVX]+)?|NAIA|junior college|consensus|unanimous|first-team|second-team|third-team|honorable mention)\s+){1,3}All-American\b/i)?.[0];
+  if (qualifiedAllAmerican) {
+    awards.push({ name: qualifiedAllAmerican.replace(/\s+/g, " "), source_url: sourceUrl, description: findAwardDescription(qualifiedAllAmerican, text) });
+  }
   const patterns: { name: string; re: RegExp }[] = [
-    { name: "All-American", re: /All-American/g },
     { name: "Pro Bowl", re: /Pro Bowl/g },
     { name: "Heisman Trophy", re: /Heisman Trophy/g },
     { name: "Lott Trophy", re: /Lott Trophy/g },
@@ -195,6 +230,29 @@ function extractAwards(text: string, sourceUrl: string): ScrapedAward[] {
     }
   }
   return awards;
+}
+
+function extractCareerHistory(html: string, sourceUrl: string): string[] {
+  requireSourceAction(sourceUrl, "EXTRACT_FACTS");
+  requireSourceAction(sourceUrl, "PERSIST_FACTS");
+  const heading = /Career history/i.exec(html);
+  if (!heading) return [];
+  const section = html.slice(heading.index, heading.index + 30000);
+  const cell = /<td\b[^>]*>([\s\S]*?)<\/td>/i.exec(section)?.[1] ?? "";
+  const seen = new Set<string>();
+  const teams: string[] = [];
+  for (const match of cell.matchAll(/<li\b[^>]*>([\s\S]*?)<\/li>/gi)) {
+    const raw = stripHtml(match[1]).replace(/\[\d+\]/g, "").replace(/\s+/g, " ").trim();
+    const name = raw
+      .replace(/\s*\(\s*(?:c\.\s*)?(?:19|20)\d{2}\s*(?:[–—−-]\s*(?:(?:19|20)\d{2}|present))?\s*\)\*?\s*$/i, "")
+      .replace(/\*+\s*$/, "")
+      .trim();
+    const key = name.toLocaleLowerCase("en-US");
+    if (!name || name.length > 80 || /^(?:offseason|practice squad)/i.test(name) || seen.has(key)) continue;
+    seen.add(key);
+    teams.push(name);
+  }
+  return teams;
 }
 
 // US state allow-list. Hometown must end with a real state (or D.C.), otherwise
@@ -310,7 +368,7 @@ function extractProTeams(text: string): string[] {
     if (idx >= 0) positions.push({ team, idx });
   }
   positions.sort((a, b) => a.idx - b.idx);
-  return positions.map((p) => p.team).slice(0, 8);
+  return positions.map((p) => p.team);
 }
 
 export async function scrapeWikipedia(
@@ -340,6 +398,7 @@ export async function scrapeWikipedia(
     const articleUrl = summary.url;
     const articleHtml = await fetchHtml(articleUrl, { timeoutMs: 7000 });
     const fullText = articleHtml.ok ? stripHtml(articleHtml.html) : summary.extract;
+    const infoboxTeams = articleHtml.ok ? extractCareerHistory(articleHtml.html, summary.url) : [];
 
     return {
       source: "wikipedia",
@@ -350,8 +409,8 @@ export async function scrapeWikipedia(
         height_in: parseHeightInches(fullText),
         weight_lbs: parseWeight(fullText),
         hometown: extractHometown(fullText),
-        pro_teams: extractProTeams(fullText),
-        awards: extractAwards(fullText, summary.url),
+        pro_teams: infoboxTeams.length ? infoboxTeams : extractProTeams(fullText),
+        awards: extractAwards(fullText, summary.url, articleHtml.ok ? articleHtml.html : undefined),
         photos: summary.thumbnail
           ? [{ url: summary.thumbnail, credits: "Wikipedia" }]
           : [],

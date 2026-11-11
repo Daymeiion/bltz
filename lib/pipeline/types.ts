@@ -2,6 +2,7 @@
  * Shared types for the onboarding pipeline. These are the only things the
  * SSE consumer (client) and the run orchestrator (server) need to agree on.
  */
+import type { PolicyDiagnostics, SourceProvenance } from "@/lib/source-policy/policy";
 
 export type PipelineStatus =
   | "pending"
@@ -72,6 +73,16 @@ export interface ScrapedAward {
   evidence_quote?: string;
 }
 
+export interface ScrapedAffiliation {
+  label: string;
+  /** Canonical school name used to dedupe directory abbreviations. */
+  name?: string;
+  color?: string;
+  logo?: string | null;
+  start_year?: number;
+  end_year?: number;
+}
+
 /**
  * Why a scraper failed. The distinction that matters: `no_match` /`ambiguous`
  * are EXPECTED misses (the athlete just isn't in that source) and stay quiet.
@@ -106,12 +117,13 @@ export interface ScraperResult {
     games_played: number;
     position: string;
     school: string;
+    schools: ScrapedAffiliation[];
     hometown: string;
     pro_teams: string[];
     bio_text: string;
     awards: ScrapedAward[];
     youtube_urls: string[];
-    photos: { url: string; credits?: string; width?: number; height?: number }[];
+    photos: { url: string; credits?: string; width?: number; height?: number; source_url?: string; provenance?: SourceProvenance }[];
     /**
      * Stable cross-source player ID. Currently only emitted by the nflverse
      * scraper (NFL `gsis_id`). Persisted to `players.gsis_id` on publish so
@@ -121,6 +133,10 @@ export interface ScraperResult {
   }>;
   /** Raw URLs visited so we can show provenance to the athlete. */
   urls?: string[];
+  /** Actual registered extraction endpoints, distinct from display citations. */
+  fact_source_urls?: string[];
+  provenance?: SourceProvenance[];
+  source_policy?: PolicyDiagnostics;
 }
 
 export interface PipelineDraft {
@@ -133,6 +149,7 @@ export interface PipelineDraft {
   position?: string | null;
   level?: PlayerIdentityInput["level"];
   school?: string | null;
+  schools?: ScrapedAffiliation[];
   hometown?: string | null;
   pro_teams?: string[];
   /**
@@ -156,5 +173,5 @@ export interface PipelineDraft {
    * scrapers default to false until the athlete confirms during Review. */
   confirmed: Partial<Record<string, boolean>>;
   /** Provenance summary for ClaimRecap and the Review trust badges. */
-  sources: { url: string; source: ScraperSource }[];
+  sources: { url: string; source: ScraperSource; provenance?: SourceProvenance }[];
 }
