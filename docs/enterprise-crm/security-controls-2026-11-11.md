@@ -60,6 +60,6 @@ where i.organization_id <> a.organization_id;
 - `npx tsc --noEmit`: passed.
 - `npm run lint`: passed, 0 errors / 300 existing warnings.
 - `git diff --cached --check`: passed.
-- Initial sandboxed full test execution failed; subprocess-based tests received empty stdout. A one-worker recheck passed the analytics tests but reproduced five subprocess-output failures. Full-suite execution outside the sandbox is being checked separately.
+- Full suite outside the command sandbox, `npm test -- --maxWorkers=2`: **269 files passed, 2 skipped; 2,186 tests passed, 24 skipped**. Initial sandboxed runs failed because subprocess-based tests received empty stdout; outside-sandbox execution resolved these failures.
 - `npm run build`: blocked inside the sandbox by empty TypeScript `--showConfig` subprocess output. Outside the sandbox it progressed to webpack and failed in the existing `next/font` Google Open Sans loader (`TypeError: Cannot read properties of null (reading '1')`). No application code or build configuration was modified.
 - Live/manual browser workflows, remote migration status and production RLS were not verified; Supabase access is absent. These remain deployment acceptance checks, not passed checks.
