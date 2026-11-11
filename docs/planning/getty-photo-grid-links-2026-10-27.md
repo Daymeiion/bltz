@@ -54,3 +54,15 @@ Product reference: `docs/product/BLTZ_PRODUCT_DOCTRINE.md`. This strengthens sou
 - Persistence: source links remain useful after organization changes.
 - Integration: Getty retains its licensing and transaction workflow.
 - Scope drift: no generalized media-management or DAM features added.
+
+## Release validation
+
+Final clean-release validation passed: 236 test files passed, two skipped; 1,921 tests passed, 24 skipped. Full lint passed with zero errors and 296 warnings. Production Webpack build including TypeScript passed. Commit `c443f2b963978babcd173b1a9d374ed65daa1ac7` was fast-forwarded onto the existing production branch from `1ffed97e1dbcc4c995f2c6c465a5792a82e85029`. Vercel production deployment `82pijbdcCYzcQk2S8J3Rnha1cD4s` was confirmed building the exact commit in the existing `daymeiions-projects/bltz` project. The primary checkout's unrelated work and browser editor draft were preserved.
+
+## Live production verification
+
+Vercel deployment `82pijbdcCYzcQk2S8J3Rnha1cD4s` reached **Ready** for commit `c443f2b963978babcd173b1a9d374ed65daa1ac7`, with production domains assigned. Live browser verification confirmed 32 Photo Room grid controls for 32 photos, six controls for six main Locker grid tiles, and no nested buttons. The grid modal showed the selected `76443769` photo, and activating its external link opened the matching canonical Getty page in a separate browser tab. The main Locker modal's unmatched-photo search fallback and Escape/focus restoration were verified. Existing image selection and the related row remain available.
+
+Screenshot evidence: `tmp/getty-dante/live-photo-room-modal.png`. The browser viewport capability did not apply the requested mobile size (measured viewport remained 1864 x 939 on both attempts), so responsive styling is implemented but narrow-viewport and physical touch verification remain limitations; the desktop screenshot is not mobile evidence. The temporary viewport override was reset, and the local verification server was stopped.
+
+No requested behavior remains deferred for the 11 identified Getty assets. Additional exact-source matching for non-numbered photos remains outside the verified match set. The user's older unsaved editor remains untouched and may show a revision conflict if saved without reconciling the new source links.
