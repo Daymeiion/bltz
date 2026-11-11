@@ -1,3 +1,4 @@
+import ConversionSurface from "@/components/preview-lockers/ConversionSurface";
 import { notFound } from "next/navigation";
 import { readPrivatePreview } from "@/lib/preview-lockers/read";
 import { toFilmRoomData } from "@/lib/preview-lockers/mapper";
@@ -10,5 +11,5 @@ export default async function PreviewVideoPage({ params }: { params: Promise<{ s
   const film = toFilmRoomData(data as PreviewLockerRow);
   const video = film.videos.find((item) => item.id === videoId);
   if (!video) return notFound();
-  return <VideoDetailView data={{ ...film, video, views: 0, likes: 0, taggedTeammates: [], playerId: null, isFollowing: false }} />;
+  return <VideoDetailView footer={<ConversionSurface previewId={(data as PreviewLockerRow).id} room="film_view" />} data={{ ...film, video, views: 0, likes: 0, taggedTeammates: [], playerId: null, isFollowing: false }} />;
 }

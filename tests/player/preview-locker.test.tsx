@@ -50,6 +50,8 @@ describe("preview Locker parity", () => {
     const photoHtml = renderToStaticMarkup(<PhotoRoomView data={toPhotoRoomData(row)} />);
     const filmHtml = renderToStaticMarkup(<FilmRoomView data={toFilmRoomData(row)} />);
     for (const html of [photoHtml, filmHtml]) {
+      expect(html).toContain('aria-haspopup="dialog"');
+      expect(html).toContain('>CLAIM</button>');
       expect(html).toContain('href="/preview-lockers/preview-athlete"');
       expect(html).not.toContain('href="/player/preview-athlete');
     }
@@ -70,6 +72,7 @@ describe("preview Locker parity", () => {
     expect(html).not.toContain('href="/player/preview-athlete');
     expect(html).toContain("not cleared for publication");
     expect(html).not.toContain("verified public BLTZ archive");
+    expect(html).toContain('>CLAIM</button>');
   });
 
   it("maps missing media without adding demo content or canonical identity", () => {

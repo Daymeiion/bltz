@@ -33,10 +33,11 @@ describe("preview media route boundaries", () => {
   });
 
   it("renders an existing preview video with preview navigation and no canonical write target", async () => {
-    mocks.maybeSingle.mockResolvedValue({ data: { slug: "preview", full_name: "Athlete", videos: [{ id: "film", title: "Film", url: null, thumb: null }] }, error: null });
+    mocks.maybeSingle.mockResolvedValue({ data: { id: "preview-id", slug: "preview", full_name: "Athlete", videos: [{ id: "film", title: "Film", url: null, thumb: null }] }, error: null });
     const result = await PreviewVideoPage({ params });
     expect(result.props.data.lockerHref).toBe("/preview-lockers/preview");
     expect(result.props.data.playerId).toBeNull();
     expect(result.props.data.video.id).toBe("film");
+    expect(result.props.footer.props).toMatchObject({ previewId: "preview-id", room: "film_view" });
   });
 });

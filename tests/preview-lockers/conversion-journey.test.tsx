@@ -2,12 +2,20 @@ import {act} from "react";
 import {createRoot,type Root} from "react-dom/client";
 import {beforeEach,afterEach,it,expect,vi} from "vitest";
 import Journey from "@/components/preview-lockers/ConversionJourney";
+import PreviewClaimButton from "@/components/preview-lockers/PreviewClaimButton";
 let host:HTMLDivElement;let root:Root;const fetcher=vi.fn();
 const id="00000000-0000-4000-8000-000000000001";
 beforeEach(()=>{host=document.createElement("div");document.body.append(host);root=createRoot(host);vi.stubGlobal("fetch",fetcher);fetcher.mockReset();fetcher.mockImplementation(async()=>new Response(JSON.stringify({saved:true})));});
 afterEach(async()=>{await act(async()=>root.unmount());host.remove();vi.unstubAllGlobals();});
 async function click(text:string){await act(async()=>{[...document.body.querySelectorAll("button")].find(b=>b.textContent?.includes(text))!.click();});}
 async function fill(selector:string,value:string){const element=document.body.querySelector<HTMLInputElement>(selector)!;await act(async()=>{Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,"value")!.set!.call(element,value);element.dispatchEvent(new Event("input",{bubbles:true}));});}
+it("opens the footer claim dialog from the navigation without duplicating the claim event", async () => {
+  await act(async () => root.render(<><nav><PreviewClaimButton /></nav><Journey previewId={id} room="film_view" /></>));
+  await click("CLAIM");
+  expect(document.body.querySelector('[role="dialog"]')).not.toBeNull();
+  expect(document.body.querySelector('input[type="email"]')).not.toBeNull();
+  expect(fetcher.mock.calls.filter(call => JSON.parse(call[1].body).action === "claim_click")).toHaveLength(1);
+});
 it("keeps claim clicks separate, retains failed form contents and reveals next steps only after persistence",async()=>{
   await act(async()=>root.render(<Journey previewId={id} bookingUrl="https://example.test/booking"/>));
   await click("Claim the locker");expect(fetcher.mock.calls.some(c=>JSON.parse(c[1].body).action==="claim_click")).toBe(true);
