@@ -67,7 +67,7 @@ export function SiteNav({
         </div>
         <div className={styles.navRight}>
           {audience === "enterprise" ? (
-            <Link className={styles.navSignIn} href="/auth/login">Sign in</Link>
+            <Link className={styles.navSignIn} href="/auth/login?next=/organization">Sign in</Link>
           ) : null}
           <a className={`${styles.button} ${styles.navCta}`} href={audience === "athletes" ? "#claim" : "#demo"}>
             {audience === "athletes" ? "Claim my locker" : "Book a demo"}
@@ -103,6 +103,7 @@ export function SiteFooter() {
           <ul>
             <li><Link href={`${ROUTES.athletes}#claim`}>Claim a locker</Link></li>
             <li><Link href={`${ROUTES.enterprise}#demo`}>Book a demo</Link></li>
+            <li><Link href="/pilot">Apply for the pilot</Link></li>
             <li><Link href="/auth/login">Sign in</Link></li>
           </ul>
         </div>
