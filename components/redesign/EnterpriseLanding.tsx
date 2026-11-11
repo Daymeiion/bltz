@@ -87,6 +87,7 @@ function Hero() {
           </p>
           <div className={s.heroActions}>
             <PillCta href="#demo">Book a demo</PillCta>
+            <Link className={s.textLink} href="/pilot">Apply for the pilot</Link>
             <a className={s.textLink} href="#product">See the workspace</a>
           </div>
         </div>
@@ -687,6 +688,10 @@ function DemoForm() {
           Prefer to pick a time now?{" "}
           <a href={PREVIEW_CALENDLY_URL} target="_blank" rel="noopener noreferrer">Open the calendar</a>
         </p>
+        <p className={s.demoFormAlt}>
+          Ready to start?{" "}
+          <Link href="/pilot">Apply for the pilot</Link>
+        </p>
       </div>
       <form className={s.demoFormFields} onSubmit={submit} aria-describedby="demo-note">
         <label>
@@ -738,7 +743,7 @@ function EnterpriseNav({ demo }: { demo: DemoState }) {
       announcement={
         <>
           <span>Pilot programs are open for athletic departments and NIL collectives.</span>
-          <a href="#demo">Book a demo</a>
+          <Link href="/pilot">Apply for the pilot</Link>
         </>
       }
     />
