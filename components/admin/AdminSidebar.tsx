@@ -181,7 +181,7 @@ export function AdminSidebar() {
       </div>
 
       {/* Mobile Menu */}
-        <SheetContent side="left" aria-modal="true" aria-describedby={undefined} className="w-full sm:max-w-none bg-[#f7f6f3] dark:bg-neutral-950">
+        <SheetContent side="left" aria-modal="true" aria-describedby={undefined} className="w-full overflow-y-auto overscroll-contain sm:max-w-none bg-[#f7f6f3] dark:bg-neutral-950 [&>button]:grid [&>button]:size-11 [&>button]:place-items-center">
           <SheetTitle className="px-4 pt-4">BLTZ Admin navigation</SheetTitle>
           <nav className="flex flex-col p-4 space-y-1">
             {links.map((link, idx) => (

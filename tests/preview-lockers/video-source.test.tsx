@@ -6,7 +6,8 @@ import { PreviewVideoSource } from "@/app/preview-lockers/[slug]/videos/page";
 it("preserves the original YouTube URL for client playback and fallback", () => {
   const html = renderToStaticMarkup(<PreviewVideoSource video={{ id: "youtube", title: "YouTube source", url: "https://www.youtube.com/watch?v=abcdefghijk" }} />);
   expect(html).toContain("https://www.youtube.com/watch?v=abcdefghijk");
-  expect(html).toContain("Watch on YouTube");
+  expect(html).toContain('href="https://www.youtube.com/watch?v=abcdefghijk"');
+  expect(html).toContain("Open source · rights unverified");
   expect(html).not.toContain("<video");
 });
 

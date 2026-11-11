@@ -1,3 +1,4 @@
+import { schoolShortLabel } from "@/lib/player/school-identity";
 import { previewVideoSource } from "@/lib/preview-lockers/video";
 import { notFound } from "next/navigation";
 import { readStructuredStats } from "@/lib/player/structured-stats";
@@ -351,9 +352,10 @@ export default async function PlayerLocker({ params }: { params: Promise<{ slug:
 
   // Rotating college pill — one entry today (we store a single cfb_team), but
   // shaped as a list so multi-school careers slot in once that data exists.
-  const schools: { label: string; color: string; logo: string | null }[] = cfbTeam
+  const schools: { label: string; color: string; logo: string | null; fullLabel?: string }[] = cfbTeam
     ? [{
-        label: cfbTeam.abbreviation || (cfbTeam.display_name ?? "").slice(0, 3).toUpperCase(),
+        label: schoolShortLabel(cfbTeam.display_name || "", cfbTeam.abbreviation),
+        fullLabel: cfbTeam.display_name || undefined,
         color: cfbTeam.primary_color || "#1A3DCC",
         logo: cfbTeam.logo_url ?? cfbTeam.logo_dark_url ?? null,
       }]
@@ -401,7 +403,7 @@ export default async function PlayerLocker({ params }: { params: Promise<{ slug:
     school: cfbTeam
       ? {
           name: cfbTeam.display_name ?? "",
-          abbr: cfbTeam.abbreviation || (cfbTeam.display_name ?? "").slice(0, 3).toUpperCase(),
+          abbr: schoolShortLabel(cfbTeam.display_name || "", cfbTeam.abbreviation),
           primaryColor: cfbTeam.primary_color || "#1A3DCC",
           logoUrl: cfbTeam.logo_url ?? null,
         }

@@ -1,3 +1,4 @@
+import { policyCheckedResult } from "@/lib/source-policy/results";
 /**
  * Onboarding pipeline orchestrator.
  *
@@ -202,7 +203,7 @@ export async function executePipeline(
 
   for (const { source, run } of SCRAPERS) {
     try {
-      const result = await withTimeout(run(identity), 12_000, source);
+      const result = policyCheckedResult(await withTimeout(run(identity), 12_000, source));
       results.push(result);
       if (result.ok) {
         await sink.emit({
@@ -210,6 +211,7 @@ export async function executePipeline(
           phase: "scrape_hit",
           source,
           url: result.urls?.[0],
+          provenance: result.provenance, source_policy: result.source_policy,
           message: friendlyHit(source, result),
         });
       } else {
@@ -226,6 +228,7 @@ export async function executePipeline(
           at: nowIso(),
           phase: "scrape_miss",
           source,
+          source_policy: result.source_policy,
           message: friendlyMiss(source, result.reason),
         });
       }

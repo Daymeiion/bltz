@@ -1,3 +1,5 @@
+import { SourcePolicyError } from "@/lib/source-policy/policy";
+import { fetchSourceFacts } from "@/lib/source-policy/fetch";
 /**
  * Tiny fetch helper for scrapers.
  *
@@ -23,9 +25,9 @@ export async function fetchHtml(
   const ctl = new AbortController();
   const timer = setTimeout(() => ctl.abort(), opts.timeoutMs ?? 8000);
   try {
-    const r = await fetch(url, {
+    const r = await fetchSourceFacts(url, {
       signal: ctl.signal,
-      redirect: "follow",
+      redirect: "error",
       headers: {
         "User-Agent": opts.ua ?? DEFAULT_UA,
         Accept: "text/html,application/xhtml+xml",
@@ -39,6 +41,7 @@ export async function fetchHtml(
     return { ok: true, html, finalUrl: r.url };
   } catch (e: any) {
     clearTimeout(timer);
+    if (e instanceof SourcePolicyError) return { ok: false, reason: "blocked" };
     if (e?.name === "AbortError") return { ok: false, reason: "timeout" };
     return { ok: false, reason: "network" };
   }

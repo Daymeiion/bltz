@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,6 +47,7 @@ export default function PreviewLockerForm({
 }) {
   const [enroll, setEnroll] = useState(enrollmentEnabled && !record && !reservedId);
   const [enrollment, setEnrollment] = useState({contact_id:"",campaign:"",source:"",channel:"email",relationship:"warm",is_test:false});
+  const router = useRouter();
   const [draft, setDraft] = useState<PreviewContent>(() => record ? previewContent.parse(Object.fromEntries(Object.keys(previewContent.shape).map(k => [k, record[k as keyof PreviewRecord]]))) : { ...initial(), full_name: referralName ?? "", slug: "" });
   const [busy, setBusy] = useState<"discovery" | "upload" | "save" | "complete" | "stats" | null>(null);
   const [showStats, setShowStats] = useState(false);
@@ -155,6 +157,7 @@ export default function PreviewLockerForm({
       });
       if (!response.ok) throw new Error(response.status === 409 ? "Save conflict: this slug or GTM contact may already be linked, enrollment details changed, or the record changed. Your draft is retained. Open the saved list before retrying." : response.status === 401 || response.status === 403 ? "Your Admin session is no longer authorized. Sign in again before saving." : "Save failed. Your draft is retained; retry is safe.");
       const data = await response.json(); savedDraft.current = JSON.stringify(parsed.data); setSaved(data); revision.current = data.revision; setReviewed(false); setCompletionReviewed(false); setDirty(false);
+      if (record) router.refresh();
       if (gtmLinked) setCompleted(data.complete === true);
       setMessage(asDraft ? "Draft saved privately. You can close this editor and resume from the preview list. No new enrollment or completion was recorded." : data.completionStatus === "unavailable"
         ? "Saved privately. Completion status could not be refreshed; reload before marking this preview complete."

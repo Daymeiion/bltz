@@ -144,7 +144,7 @@ it("disables the form if the session expires at the actual password write", asyn
   expect(host.querySelector('[role="alert"]')?.textContent).toContain("could not be verified");
 });
 
-it("keeps the released server recovery callback target and hides upstream failures", async () => {
+it("keeps the browser-initialized recovery target and hides upstream failures", async () => {
   resetPasswordForEmail.mockResolvedValueOnce({ error: new Error("private-detail") });
   resetPasswordForEmail.mockResolvedValueOnce({ error: null });
   await act(async () => root.render(<ForgotPasswordForm />));
@@ -155,9 +155,9 @@ it("keeps the released server recovery callback target and hides upstream failur
   });
   await submit();
   expect(resetPasswordForEmail).toHaveBeenCalledExactlyOnceWith("synthetic@bltz.invalid", {
-    redirectTo: window.location.origin + "/auth/callback?next=%2Fauth%2Fupdate-password",
+    redirectTo: window.location.origin + "/auth/update-password",
   });
-  expect(host.querySelector('[role="alert"]')?.textContent).toBe("Unable to send a reset email right now. Please try again.");
+  expect(host.querySelector('[role="alert"]')?.textContent).toBe("Could not request a password-reset link. Please try again later.");
   expect(host.textContent).not.toContain("private-detail");
   await submit();
   expect(host.textContent).toContain("If you registered");

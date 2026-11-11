@@ -1,3 +1,4 @@
+import { evaluateSource, requireSourceAction } from "@/lib/source-policy/policy";
 import { z } from "zod";
 import { DISPLAY_STAT_FIELDS as STAT_FIELDS } from "@/lib/sportradar/types";
 import type { StoredStats } from "@/lib/player/structured-stats-types";
@@ -8,9 +9,10 @@ export type CfbCategory = typeof cfbCategories[number];
 export const sourcePage = z.string().max(2048).url().refine(value => {
   const url = new URL(value);
   return url.protocol === "https:" && !url.username && !url.password && !url.port
-    && ["sports-reference.com", "www.sports-reference.com"].includes(url.hostname)
-    && /^\/cfb\/players\/[^/]+\.html$/.test(url.pathname);
-}, "Use the athlete's HTTPS Sports Reference college football player page.");
+    && ((["sports-reference.com", "www.sports-reference.com"].includes(url.hostname)
+      && /^\/cfb\/players\/[^/]+\.html$/.test(url.pathname))
+      || evaluateSource(value).allowed_actions.includes("PERSIST_FACTS"));
+}, "Use an HTTPS player source permitted for statistics storage. Existing Sports Reference records are read-only.");
 const count = z.number().int().min(0).max(1000).nullable();
 export const cfbSeason = z.object({
   year: z.number().int().min(1869).max(2100), team: z.string().trim().min(1).max(160),
@@ -96,6 +98,7 @@ export function inspectCsv(input: string, category: CfbCategory): CsvTable {
   return { headers, rows: rows.slice(index + 1), mapping: mapping.map(key => key && mapping.filter(other => other === key).length > 1 ? "" : key) };
 }
 export function reviewCsv(table: CsvTable, mapping: string[], category: CfbCategory, sourceUrl: string): { imported: CfbImport; warnings: string[] } {
+  requireSourceAction(sourceUrl, "PERSIST_FACTS");
   const selected = mapping.filter(Boolean);
   if (!selected.includes("year") || !selected.includes("team")) throw new Error("Map Season and School / team before reviewing.");
   if (new Set(selected).size !== selected.length) throw new Error("Each statistic may only be mapped once.");
@@ -136,5 +139,5 @@ export function combineCfbImports(imports: CfbImport[]): StoredStats[] {
       gamesPlayed: season.gamesPlayed ?? previous?.gamesPlayed ?? null, gamesStarted: season.gamesStarted ?? previous?.gamesStarted ?? null,
       statistics: { ...previous?.statistics, ...season.statistics } });
   }
-  return [{ league: "ncaafb", source: "Sports Reference · manually imported for private preview", syncedAt: imports.map(item => item.importedAt).sort().at(-1)!, seasons: [...rows.values()] }];
+  return [{ league: "ncaafb", source: `${[...new Set(imports.map(item => evaluateSource(item.sourceUrl).policy_id === "sports-reference-family" ? "Sports Reference (legacy)" : new URL(item.sourceUrl).hostname))].join(", ")} · manually imported for private preview`, syncedAt: imports.map(item => item.importedAt).sort().at(-1)!, seasons: [...rows.values()] }];
 }

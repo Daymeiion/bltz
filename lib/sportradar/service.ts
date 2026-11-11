@@ -1,3 +1,4 @@
+import { requireSourceAction, sourceProvenance } from "@/lib/source-policy/policy";
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -50,11 +51,13 @@ export async function previewProfile(playerId: string, providerId: string, leagu
       if (status !== 200) throw responseError(status);
       const fetchedAt = new Date().toISOString();
       const normalized = normalizeProfile(response.raw, playerId, providerId, league, fetchedAt);
+      requireSourceAction(`https://api.sportradar.com${endpoint}`, "PERSIST_FACTS");
+      const provenance = { ...sourceProvenance(`https://api.sportradar.com${endpoint}`, "sportradar"), retrieved_at: fetchedAt };
       // Immutable review IDs ensure approval always imports exactly what was shown.
       result = checked(await db.from("player_stat_ingestions").insert({
         player_id: playerId, provider_player_id: providerId, league,
         status: hasStatistics(normalized) ? "MANUAL_REVIEW" : "NO_DATA",
-        raw_profile: response.raw, normalized, fetched_at: fetchedAt,
+        raw_profile: response.raw, normalized: { ...normalized, source_provenance: provenance }, fetched_at: fetchedAt,
       }).select("*").single());
     } catch (error) {
       failure = error instanceof StatsError ? error : new StatsError("stats_ingestion_failed", 503);

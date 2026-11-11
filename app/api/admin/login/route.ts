@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextRequest, NextResponse } from "next/server";
+import { expireAdminSessionCookies } from "@/lib/auth/admin-session-cookies";
 import { TEST_AUTH_COOKIE } from "@/lib/onboarding/test-auth";
 
 function classifySignInError(error: unknown) {
@@ -44,7 +45,6 @@ export async function POST(request: NextRequest) {
   const formData = await request.formData();
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
-  if (!email || !password) return adminLoginRedirect(request, "missing_fields");
 
   const cookieResponse = NextResponse.next();
   const supabase = createServerClient(
@@ -62,20 +62,29 @@ export async function POST(request: NextRequest) {
     },
   );
 
+  async function reject(reason: string) {
+    try { await supabase.auth.signOut({ scope: "local" }); } catch { /* Cookie expiry must still complete. */ }
+    const response = adminLoginRedirect(request, reason);
+    response.headers.set("Cache-Control", "private, no-store");
+    expireAdminSessionCookies(request, response, cookieResponse);
+    return response;
+  }
+  if (!email || !password) return reject("missing_fields");
+
   const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     .catch((error: unknown) => ({ data: { user: null }, error }));
   if (error || !data.user) {
     const reason = classifySignInError(error);
     console.warn("admin_login_failed", { reason });
-    return adminLoginRedirect(request, reason);
+    return reject(reason);
   }
 
   const { data: isAdmin, error: authorizationError } = await Promise.resolve(supabase.rpc(
     "is_internal_admin",
   )).catch(() => ({ data: null, error: true }));
 
-  if (authorizationError) return adminLoginRedirect(request, "authorization_unavailable");
-  if (isAdmin !== true) return adminLoginRedirect(request, "not_admin");
+  if (authorizationError) return reject("authorization_unavailable");
+  if (isAdmin !== true) return reject("not_admin");
 
   const response = NextResponse.redirect(new URL("/admin/beta", request.url), 303);
   cookieResponse.cookies.getAll().forEach((cookie) => response.cookies.set(cookie));

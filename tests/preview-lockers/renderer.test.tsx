@@ -117,3 +117,74 @@ it("uses assigned award art and real social posts in the existing grids", async 
  expect(host.querySelector('iframe')?.getAttribute('src')).toBe('https://www.instagram.com/reel/fixture/embed/');
  expect(host.querySelector('a[href="https://www.instagram.com/reel/fixture/"]')).not.toBeNull();
 });
+
+it("fits the complete hero name to measured width and keeps career badges abbreviated", async () => {
+  let available = 300;
+  const nativeWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "clientWidth");
+  const width = vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockImplementation(function(this: HTMLElement) { return this.classList.contains("locker-hero-name") ? available : nativeWidth?.get?.call(this) ?? 0; });
+  const rect = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function(this: HTMLElement) { return { width: this.parentElement?.classList.contains("locker-hero-name") ? 600 * Number(this.style.getPropertyValue("--fit-scale") || 1) : 0, height: 0, top: 0, right: 0, bottom: 0, left: 0, x: 0, y: 0, toJSON() {} }; });
+  try {
+    const name = "Christopher Alexander Montgomery-Wellington Junior";
+    const data = previewLockerData({ ...record, full_name: name, school: "University of California, Berkeley", schools: [{ label: "California Golden Bears", color: "#003262", logo: null }], pro_teams: [{ label: "Indianapolis Colts", color: "#002C5F", logo: null }], position: "Cornerback" });
+    await act(async () => root.render(<LockerView data={data} />));
+    const heading = host.querySelector<HTMLHeadingElement>(".locker-hero-name")!;
+    expect(heading.textContent).toBe(name);
+    expect(heading.style.textOverflow).toBe("");
+    expect(Number(heading.querySelector("span")!.style.getPropertyValue("--fit-scale"))).toBeCloseTo(298 / 600);
+    available = 520;
+    await act(async () => window.dispatchEvent(new Event("resize")));
+    expect(Number(heading.querySelector("span")!.style.getPropertyValue("--fit-scale"))).toBeCloseTo(518 / 600);
+    expect(host.querySelector(".locker-position-badge")?.textContent).toBe("CB");
+    expect(host.querySelector(".locker-position-badge")?.getAttribute("title")).toBe("Cornerback");
+    expect(host.querySelector(".locker-hero-pill .locker-team-short")?.textContent).toBe("CAL");
+    expect(host.querySelector(".locker-hero-pill .locker-team-full")?.textContent).toBe("California");
+    const tab = [...host.querySelectorAll('button')].find(b => b.textContent?.trim() === "CAREER")!;
+    await act(async () => tab.dispatchEvent(new MouseEvent("mousedown", { button: 0, bubbles: true })));
+    const history = host.querySelector(".team-history-sequence")!;
+    expect(history.textContent).toBe("CALIND");
+    expect(history.querySelector(".locker-team-full")).toBeNull();
+  } finally { width.mockRestore(); rect.mockRestore(); }
+});
+
+it("fits a nine-character official abbreviation in hero and career badges without truncating its identity", async () => {
+  let available = 64;
+  const nativeWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "clientWidth");
+  const width = vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockImplementation(function(this: HTMLElement) { return this.classList.contains("locker-fitted-label") ? available : nativeWidth?.get?.call(this) ?? 0; });
+  const rect = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function(this: HTMLElement) { return { width: this.parentElement?.classList.contains("locker-fitted-label") ? 120 * Number(this.style.getPropertyValue("--fit-scale") || 1) : 0, height: 0, top: 0, right: 0, bottom: 0, left: 0, x: 0, y: 0, toJSON() {} }; });
+  try {
+    const data = previewLockerData(record);
+    data.schools = [{ label: "ABCDEFGHI", fullLabel: "Directory Institution", color: "#003262", logo: "/directory.png" }];
+    await act(async () => root.render(<LockerView data={data} />));
+    const short = host.querySelector<HTMLSpanElement>(".locker-hero-pill .locker-team-short .locker-fitted-label > span")!;
+    expect(short.textContent).toBe("ABCDEFGHI");
+    expect(Number(short.style.getPropertyValue("--fit-scale"))).toBeCloseTo(62 / 120);
+    available = 96;
+    await act(async () => window.dispatchEvent(new Event("resize")));
+    expect(Number(short.style.getPropertyValue("--fit-scale"))).toBeCloseTo(94 / 120);
+    const tab = [...host.querySelectorAll('button')].find(b => b.textContent?.trim() === "CAREER")!;
+    await act(async () => tab.dispatchEvent(new MouseEvent("mousedown", { button: 0, bubbles: true })));
+    const badge = host.querySelector<HTMLSpanElement>(".team-history-sequence .locker-team-label .locker-fitted-label > span")!;
+    expect(badge.textContent).toBe("ABCDEFGHI");
+    expect(Number(badge.style.getPropertyValue("--fit-scale"))).toBeCloseTo(94 / 120);
+    expect(host.querySelector(".team-history-sequence .locker-team-full")).toBeNull();
+  } finally { width.mockRestore(); rect.mockRestore(); }
+});
+
+it("corrects badge fitting when letter spacing remains constant after the initial scale", async () => {
+  let available = 201;
+  const nativeWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "clientWidth");
+  const width = vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockImplementation(function(this: HTMLElement) { return this.classList.contains("locker-fitted-label") ? available : nativeWidth?.get?.call(this) ?? 0; });
+  const rect = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function(this: HTMLElement) { const scale = Number(this.style.getPropertyValue("--fit-scale") || 1); return { width: this.parentElement?.classList.contains("locker-fitted-label") && this.textContent === "San Diego Chargers" ? 260 * scale + 10 : 0, height: 0, top: 0, right: 0, bottom: 0, left: 0, x: 0, y: 0, toJSON() {} }; });
+  try {
+    const data = previewLockerData(record);
+    data.proTeams = [{ label: "SD", color: "#0080C6", logo: null }];
+    await act(async () => root.render(<LockerView data={data} />));
+    const label = [...host.querySelectorAll<HTMLSpanElement>(".locker-team-full .locker-fitted-label > span")].find(span => span.textContent === "San Diego Chargers")!;
+    expect(label.getBoundingClientRect().width).toBeLessThanOrEqual(available - 2 + .05);
+    expect(Number(label.style.getPropertyValue("--fit-scale"))).toBeLessThan(199 / 270);
+    available = 160;
+    await act(async () => window.dispatchEvent(new Event("resize")));
+    expect(label.getBoundingClientRect().width).toBeLessThanOrEqual(available - 2 + .05);
+    expect(label.textContent).toBe("San Diego Chargers");
+  } finally { width.mockRestore(); rect.mockRestore(); }
+});

@@ -1,3 +1,4 @@
+import { requireSourceAction } from "@/lib/source-policy/policy";
 import type { PlayerIdentityInput, ScraperResult } from "../types";
 
 /**
@@ -38,6 +39,7 @@ const NFLVERSE_SOURCE_URL =
 export async function scrapeNflverse(
   identity: PlayerIdentityInput,
 ): Promise<ScraperResult> {
+  requireSourceAction("https://github.com/nflverse/nflverse-data/releases/tag/players", "EXTRACT_FACTS");
   const sbUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const sbKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   // Missing env is a config problem, not a missing athlete — we genuinely

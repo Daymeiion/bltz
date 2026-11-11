@@ -67,8 +67,9 @@ export async function POST(req: Request) {
         const sink: PipelineSink = {
           emit(event) {
             if (terminal || stopped || req.signal.aborted) throw new Error("cancelled");
+            if (event.provenance?.length || event.source_policy) console.info("[preview-discovery-policy]", JSON.stringify({ request_id: admission.data, source: event.source, provenance: event.provenance, source_policy: event.source_policy }));
             // Do not forward raw provider error messages, URLs, names or source payloads.
-            send("event", { phase: event.phase, message: event.phase === "scrape_hit" ? "A source returned suggestions." : event.phase === "scrape_miss" ? "A source was unavailable or had no match." : "Preparing discovery suggestions…" });
+            send("event", { phase: event.phase, source_policy: event.source_policy, message: event.phase === "scrape_hit" ? "A source returned suggestions." : event.phase === "scrape_miss" ? "A source was unavailable or had no match." : "Preparing discovery suggestions…" });
           },
           setStatus(status, patch) {
             if (terminal || stopped || req.signal.aborted) throw new Error("cancelled");

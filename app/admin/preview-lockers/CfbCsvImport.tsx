@@ -1,5 +1,6 @@
 "use client";
 
+import { evaluateSource } from "@/lib/source-policy/policy";
 import { useState } from "react";
 import { BuilderSection } from "./BuilderSection";
 import { ZodError } from "zod";
@@ -21,10 +22,11 @@ export default function CfbCsvImport({ athleteName, value, onChange }: { athlete
   const [message, setMessage] = useState("");
   const [reading, setReading] = useState(false);
   function reset() { setTable(null); setReview(null); setApproved(false); setError(""); setMessage(""); }
+  const sourceAllowed = evaluateSource(source).allowed_actions.includes("PERSIST_FACTS");
   function fail(cause: unknown) { setError(cause instanceof ZodError ? cause.issues.map(issue => issue.message).slice(0, 3).join(" ") : cause instanceof Error ? cause.message : "Unable to read CSV."); }
   return <BuilderSection title="Import college statistics" count={value.length} description="Expand to import a college CSV table. No API quota used.">
-    <div><p className="text-sm text-muted-foreground">Paste a Sports Reference season table or upload its CSV export for {athleteName || "this player"}. Imports stay in this private preview. Save the draft after adding a reviewed table.</p></div>
-    <label className="grid gap-2 text-sm font-medium">Player source URL<Input aria-label="Player source URL" type="url" value={source} onChange={e => { setSource(e.target.value); setReview(null); setApproved(false); }} placeholder="https://www.sports-reference.com/cfb/players/player-name-1.html" /></label>
+    <div><p className="text-sm text-muted-foreground">Import a permitted provider export for {athleteName || "this player"}. Sports Reference is reference-only: new table imports are blocked; previously saved statistics remain available.</p></div>
+    <label className="grid gap-2 text-sm font-medium">Player source URL<Input aria-label="Player source URL" type="url" value={source} onChange={e => { setSource(e.target.value); setReview(null); setApproved(false); }} placeholder="https://api.collegefootballdata.com/stats/player/season" /></label>
     <label className="grid gap-2 text-sm font-medium">Table category<select aria-label="Table category" className="rounded border bg-background p-2" value={category} onChange={e => { setCategory(e.target.value as CfbCategory); reset(); }}>{cfbCategories.map(item => <option key={item} value={item}>{item}</option>)}</select></label>
     <label className="grid gap-2 text-sm font-medium">Upload CSV<Input aria-label="Upload college CSV" type="file" accept=".csv,text/csv" disabled={reading} onChange={async e => {
       const file = e.target.files?.[0]; e.target.value = ""; if (!file) return;
@@ -37,7 +39,8 @@ export default function CfbCsvImport({ athleteName, value, onChange }: { athlete
     <Button type="button" variant="outline" disabled={reading || !csv.trim()} onClick={() => { reset(); try { const result = inspectCsv(csv, category); setTable(result); setMapping(result.mapping); } catch (cause) { fail(cause); } }}>Read CSV columns</Button>
     {table && <div className="space-y-3"><p className="text-sm">Confirm what each column means. Unmapped columns are skipped. Map repeated headers such as Yds or TD to their correct category.</p>
       <div className="grid gap-3 sm:grid-cols-2">{table.headers.map((header, index) => <label key={index} className="grid gap-1 text-sm">{header || `Column ${index + 1}`}<select aria-label={`Map column ${index + 1}: ${header}`} className="min-w-0 rounded border bg-background p-2" value={mapping[index]} onChange={e => { setMapping(mapping.map((key, i) => i === index ? e.target.value : key)); setReview(null); setApproved(false); }}><option value="">Skip column</option>{Object.entries(columnOptions).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>)}</div>
-      <Button type="button" variant="outline" onClick={() => { setError(""); setReview(null); setApproved(false); try { const result = reviewCsv(table, mapping, category, source); combineCfbImports([...value.filter(item => item.category !== category), result.imported]); setReview(result); } catch (cause) { fail(cause); } }}>Review college statistics</Button>
+      {!sourceAllowed && <p role="status" className="text-sm">This source is not permitted for statistics import. Use an approved provider source or keep the existing saved data.</p>}
+      <Button type="button" variant="outline" disabled={!sourceAllowed} onClick={() => { setError(""); setReview(null); setApproved(false); try { const result = reviewCsv(table, mapping, category, source); combineCfbImports([...value.filter(item => item.category !== category), result.imported]); setReview(result); } catch (cause) { fail(cause); } }}>Review college statistics</Button>
     </div>}
     {review && <div className="space-y-3">
       <p className="text-sm">{review.imported.seasons.length} season/team rows for {athleteName}. {value.some(item => item.category === category) ? `This replaces the existing ${category} import when you add it to the draft.` : "This adds a new table to the draft."}</p>

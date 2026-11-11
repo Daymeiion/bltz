@@ -57,3 +57,17 @@ describe("preview team branding", () => {
   });
 });
 
+
+it("keeps distinct school affiliations when their display abbreviations collide", () => {
+  const schools = previewTeamBranding({ schools: [
+    { label: "TTU", fullLabel: "Texas Tech", color: "#cc0000", logo: null },
+    { label: "TTU", fullLabel: "Tennessee Tech", color: "#440088", logo: null },
+  ] }).schools;
+  expect(schools.map(team => team.fullLabel)).toEqual(["Texas Tech", "Tennessee Tech"]);
+});
+
+it("preserves longer official directory abbreviations instead of deriving new initialisms", () => {
+  const school = { name: "Directory Institution", abbr: "ABCDEFGHI", primaryColor: "#003262", logoUrl: null };
+  expect(previewTeamBranding({ school: school.name, school_info: school }).schools[0].label).toBe("ABCDEFGHI");
+  expect(previewTeamBranding({ schools: [{ label: "ABCDEFGHI", fullLabel: school.name, color: school.primaryColor, logo: null }] }).schools[0].label).toBe("ABCDEFGHI");
+});

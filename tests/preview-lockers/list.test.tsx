@@ -7,7 +7,7 @@ let request: { select: ReturnType<typeof vi.fn>; ilike: ReturnType<typeof vi.fn>
 beforeEach(() => {
   request = { select: vi.fn(), ilike: vi.fn(), order: vi.fn(), range: vi.fn() };
   request.select.mockReturnValue(request); request.ilike.mockReturnValue(request); request.order.mockReturnValue(request);
-  mocked.admin.mockResolvedValue({ client: { from: () => request } });
+  mocked.admin.mockResolvedValue({ client: { from: (table: string) => table === "preview_locker_short_links" ? { select: () => ({ in: async () => ({ data: [{ preview_id: "id-0", public_access_enabled: true }], error: null }) }) } : request } });
 });
 it("searches before pagination, retains filters, and provides compact accessible row actions", async () => {
   request.range.mockResolvedValue({ data: Array.from({ length: 51 }, (_, i) => ({ id: `id-${i}`, slug: `athlete-${i}`, full_name: `Athlete ${i}`, school: null })), error: null });
@@ -17,6 +17,8 @@ it("searches before pagination, retains filters, and provides compact accessible
   expect(request.order).toHaveBeenCalledWith("full_name", { ascending: true });
   const host = document.createElement("div"); host.innerHTML = html;
   expect(host.querySelectorAll("li")).toHaveLength(50);
+  expect(host.querySelector('[aria-label="Share invite for Athlete 0"]')?.textContent).toBe("Share link");
+  expect(host.querySelector('[aria-label="Publish invite for Athlete 1"]')?.textContent).toBe("Publish");
   expect(host.querySelector('[aria-label="Edit Athlete 0"]')?.textContent).toBe("Edit");
   expect(host.querySelector('[title="Photos"]')?.getAttribute("href")).toBe("/preview-lockers/athlete-0/photos");
   expect(host.querySelector('[title="Film Room"]')?.getAttribute("aria-label")).toBe("Film Room for Athlete 0");

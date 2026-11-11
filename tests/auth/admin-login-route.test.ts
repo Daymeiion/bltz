@@ -1,12 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { NextRequest } from "next/server";
+import { NextRequest } from "next/server";
 
 const createServerClient = vi.fn();
 vi.mock("@supabase/ssr", () => ({ createServerClient }));
 
 function request(body: string, origin = "http://localhost") {
   const crossSite = origin !== "http://localhost";
-  return new Request("http://localhost/api/admin/login", {
+  return new NextRequest("http://localhost/api/admin/login", {
     method: "POST",
     headers: {
       host: "localhost",
@@ -21,6 +21,7 @@ function request(body: string, origin = "http://localhost") {
 function supabaseFor(isInternalAdmin: boolean) {
   return {
     auth: {
+      signOut: vi.fn(async () => ({ error: null })),
       signInWithPassword: vi.fn(async () => ({ data: { user: { id: "user-1" } }, error: null })),
     },
     rpc: vi.fn(async () => ({ data: isInternalAdmin, error: null })),
@@ -30,9 +31,10 @@ function supabaseFor(isInternalAdmin: boolean) {
 describe("dedicated admin login", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://unit.supabase.co");
     vi.spyOn(console, "warn").mockImplementation(() => {});
   });
-  afterEach(() => vi.restoreAllMocks());
+  afterEach(() => { vi.restoreAllMocks(); vi.unstubAllEnvs(); });
 
   it.each([
     [{ name: "AuthRetryableFetchError", status: 0, message: "fetch failed private detail" }, "authentication_unavailable"],
@@ -55,19 +57,23 @@ describe("dedicated admin login", () => {
     const response = await POST(request("email=synthetic%40bltz.invalid&password=unit-test-only"));
     expect(response.status).toBe(303);
     expect(response.headers.get("location")).toBe("http://localhost/auth/admin?error=" + reason);
-    expect(response.headers.get("set-cookie")).toBeNull();
+    expect(response.cookies.getAll().every(cookie => cookie.value === "" && (cookie.maxAge === 0 || Number(cookie.expires) <= Date.now()))).toBe(true);
+    expect(response.headers.get("set-cookie")).not.toContain("must-not-escape");
+    expect(client.auth.signOut).toHaveBeenCalledWith({ scope: "local" });
     expect(client.rpc).not.toHaveBeenCalled();
     expect(console.warn).toHaveBeenCalledExactlyOnceWith("admin_login_failed", { reason });
   });
 
-  it("handles a thrown network error without exposing details or issuing cookies", async () => {
+  it("handles a thrown network error without exposing details or issuing session cookies", async () => {
     const client = supabaseFor(true);
     client.auth.signInWithPassword.mockRejectedValueOnce(new TypeError("fetch failed with private detail"));
     createServerClient.mockReturnValue(client);
     const { POST } = await import("@/app/api/admin/login/route");
     const response = await POST(request("email=synthetic%40bltz.invalid&password=unit-test-only"));
     expect(response.headers.get("location")).toContain("error=authentication_unavailable");
-    expect(response.headers.get("set-cookie")).toBeNull();
+    expect(response.cookies.getAll().every(cookie => cookie.value === "" && (cookie.maxAge === 0 || Number(cookie.expires) <= Date.now()))).toBe(true);
+    expect(response.headers.get("set-cookie")).not.toContain("must-not-escape");
+    expect(client.auth.signOut).toHaveBeenCalledWith({ scope: "local" });
     expect(client.rpc).not.toHaveBeenCalled();
     expect(console.warn).toHaveBeenCalledExactlyOnceWith("admin_login_failed", { reason: "authentication_unavailable" });
   });
@@ -80,7 +86,9 @@ describe("dedicated admin login", () => {
     const { POST } = await import("@/app/api/admin/login/route");
     const response = await POST(request("email=synthetic%40bltz.invalid&password=unit-test-only"));
     expect(response.headers.get("location")).toContain("error=authorization_unavailable");
-    expect(response.headers.get("set-cookie")).toBeNull();
+    expect(response.cookies.getAll().every(cookie => cookie.value === "" && (cookie.maxAge === 0 || Number(cookie.expires) <= Date.now()))).toBe(true);
+    expect(response.headers.get("set-cookie")).not.toContain("must-not-escape");
+    expect(client.auth.signOut).toHaveBeenCalledWith({ scope: "local" });
     expect(client.rpc).toHaveBeenCalledExactlyOnceWith("is_internal_admin");
   });
 
@@ -101,7 +109,9 @@ describe("dedicated admin login", () => {
     const response = await POST(request("email=player%40bltz.test&password=secret"));
     expect(response.status).toBe(303);
     expect(response.headers.get("location")).toBe("http://localhost/auth/admin?error=not_admin");
-    expect(response.headers.get("set-cookie")).toBeNull();
+    expect(response.cookies.getAll().every(cookie => cookie.value === "" && (cookie.maxAge === 0 || Number(cookie.expires) <= Date.now()))).toBe(true);
+    expect(response.headers.get("set-cookie")).not.toContain("must-not-escape");
+    expect(client.auth.signOut).toHaveBeenCalledWith({ scope: "local" });
     expect(client.rpc).toHaveBeenCalledExactlyOnceWith("is_internal_admin");
   });
 

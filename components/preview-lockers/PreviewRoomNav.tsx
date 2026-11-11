@@ -14,7 +14,7 @@ export default function PreviewRoomNav({ lockerHref, onSearch, athleteName, head
     return () => window.removeEventListener("scroll", update);
   }, []);
   const actions = <div style={{ display: "flex", alignItems: "center", gap: 16, flexShrink: 0 }}>
-      <button type="button" aria-label="Search BLTZ" onClick={onSearch} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", display: "flex", alignItems: "center" }}>
+      <button type="button" aria-label="Search BLTZ" onClick={onSearch} className="rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#ffbb00]" style={{ width: 44, height: 44, justifyContent: "center", background: "none", border: "none", padding: 0, cursor: "pointer", display: "flex", alignItems: "center" }}>
         <Search size={22} color="#FFB940" strokeWidth={2.4} aria-hidden="true" />
       </button>
       <PreviewClaimButton />

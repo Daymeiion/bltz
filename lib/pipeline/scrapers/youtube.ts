@@ -1,3 +1,4 @@
+import { fetchSourceFacts } from "@/lib/source-policy/fetch";
 import type { PlayerIdentityInput, ScraperResult } from "../types";
 
 /**
@@ -62,7 +63,7 @@ export async function scrapeYouTube(
   try {
     const ctl = new AbortController();
     const t = setTimeout(() => ctl.abort(), 6000);
-    const r = await fetch(url, {
+    const r = await fetchSourceFacts(url, {
       signal: ctl.signal,
       headers: {
         "User-Agent":

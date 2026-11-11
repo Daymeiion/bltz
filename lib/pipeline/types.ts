@@ -40,6 +40,8 @@ export interface PipelineEvent {
   message: string;
   /** Optional source the event refers to. */
   source?: ScraperSource;
+  source_policy?: import("@/lib/source-policy/policy").PolicyDiagnostics;
+  provenance?: import("@/lib/source-policy/policy").SourceProvenance[];
   /** Optional URL discovered or visited. */
   url?: string;
 }
@@ -93,6 +95,8 @@ export const SOURCE_UNHEALTHY_REASONS: ReadonlySet<ScraperFailureReason> =
   new Set(["unreachable", "timeout", "blocked"]);
 
 export interface ScraperResult {
+  provenance?: import("@/lib/source-policy/policy").SourceProvenance[];
+  source_policy?: import("@/lib/source-policy/policy").PolicyDiagnostics;
   source: ScraperSource;
   ok: boolean;
   /** When ok = false: why. See ScraperFailureReason. */
@@ -111,7 +115,7 @@ export interface ScraperResult {
     bio_text: string;
     awards: ScrapedAward[];
     youtube_urls: string[];
-    photos: { url: string; credits?: string; width?: number; height?: number }[];
+    photos: { url: string; source_url?: string; provenance?: import("@/lib/source-policy/policy").SourceProvenance; credits?: string; width?: number; height?: number }[];
     /**
      * Stable cross-source player ID. Currently only emitted by the nflverse
      * scraper (NFL `gsis_id`). Persisted to `players.gsis_id` on publish so
@@ -151,10 +155,10 @@ export interface PipelineDraft {
   cfb_team_id?: string | null;
   awards: ScrapedAward[];
   youtube_urls: string[];
-  photos: { url: string; credits?: string; width?: number; height?: number }[];
+  photos: { url: string; source_url?: string; provenance?: import("@/lib/source-policy/policy").SourceProvenance; credits?: string; width?: number; height?: number }[];
   /** Per-field flag — true if a human source backed it up; numeric stats from
    * scrapers default to false until the athlete confirms during Review. */
   confirmed: Partial<Record<string, boolean>>;
   /** Provenance summary for ClaimRecap and the Review trust badges. */
-  sources: { url: string; source: ScraperSource }[];
+  sources: { url: string; source: ScraperSource; provenance?: import("@/lib/source-policy/policy").SourceProvenance }[];
 }

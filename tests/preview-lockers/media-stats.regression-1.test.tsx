@@ -20,8 +20,11 @@ afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi
 it("renders the draft college and explicit sourced stats without demo values", async () => {
   const content = previewContent.parse({ slug: "fixture-player", full_name: "Fixture Player", school: "Fixture University", games_played: 42, career_stats: [{ key: "tackles", value: 127 }, { key: "sacks", value: 8.5 }] });
   const record = { ...content, id: "00000000-0000-4000-8000-000000000001", revision: 1, created_at: "", updated_at: "" };
-  await act(async () => root.render(<LockerView data={previewLockerData(record)} />));
-  expect(host.textContent).toContain("Fixture University");
+  const data = previewLockerData(record);
+  expect(data.school?.name).toBe("Fixture University");
+  expect(data.schools).toContainEqual({ label: "FIX", color: "#1A3DCC", logo: null });
+  await act(async () => root.render(<LockerView data={data} />));
+  expect([...host.querySelectorAll("span")].some(node => node.textContent === "FIX")).toBe(true);
   const career = [...host.querySelectorAll("button")].find(button => button.textContent?.trim() === "CAREER")!;
   await act(async () => career.dispatchEvent(new MouseEvent("mousedown", { button: 0, bubbles: true })));
   expect(host.textContent).toContain("127");

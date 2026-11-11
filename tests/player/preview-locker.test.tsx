@@ -115,3 +115,33 @@ it.each(["pro", "cfb", "hs", "off-field"] as const)("honors the explicit %s cate
   const film = toFilmRoomData({ ...row, videos: [{ ...row.videos[0], title: "NFL high school interview", level }] });
   expect(film.videos[0].level).toBe(level);
 });
+
+it("shows only saved preview films and navigates them without fabricated engagement metadata", () => {
+  const host = document.createElement("div");
+  host.innerHTML = renderToStaticMarkup(<LockerView data={toLockerData(row)} />);
+  const film = host.querySelector(".locker-film-section")!;
+  expect(film.querySelectorAll(".hs > a")).toHaveLength(1);
+  expect(film.querySelector('a[aria-label="Watch Career film"]')?.getAttribute("href")).toBe("/preview-lockers/preview-athlete/videos/film");
+  expect(film.textContent).toContain("Career film");
+  expect(film.textContent).not.toMatch(/RISING|TRENDING|842K|512K|0:47|WEEK 6|COMING SOON|GAME DAY CUT/);
+});
+
+it("shows an honest empty preview film shelf without demo media", () => {
+  const host = document.createElement("div");
+  host.innerHTML = renderToStaticMarkup(<LockerView data={toLockerData({ ...row, videos: [] })} />);
+  const film = host.querySelector(".locker-film-section")!;
+  expect(film.textContent).toContain("No videos added yet.");
+  expect(film.querySelectorAll(".hs > a")).toHaveLength(0);
+  expect(film.textContent).not.toMatch(/SEASON HIGHLIGHTS|UP NEXT|COMING SOON/);
+});
+
+it("preserves the existing public demo film presentation", () => {
+  const data = toLockerData(row);
+  delete data.lockerHref;
+  const host = document.createElement("div");
+  host.innerHTML = renderToStaticMarkup(<LockerView data={data} />);
+  const film = host.querySelector(".locker-film-section")!;
+  expect(film.querySelectorAll(".hs > a")).toHaveLength(4);
+  expect(film.textContent).toContain("842K");
+  expect(film.textContent).toContain("COMING SOON");
+});

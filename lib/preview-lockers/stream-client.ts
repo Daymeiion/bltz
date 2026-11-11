@@ -6,6 +6,8 @@ export async function readDiscovery(response: Response, onProgress: (text: strin
     : "Discovery unavailable. Your manual draft is still here.");
   const reader = response.body?.getReader();
   if (!reader) throw new Error("Discovery unavailable. Continue manually.");
+  let policySummary = "";
+  const totals = { discovered: 0, allowed: 0, reference_only: 0, rejected: 0 };
   const decoder = new TextDecoder(); let buffer = ""; let bytes = 0;
   try {
     while (true) {
@@ -21,10 +23,17 @@ export async function readDiscovery(response: Response, onProgress: (text: strin
         const raw = block.match(/^data: (.+)$/m)?.[1];
         if (!raw) continue;
         const data = JSON.parse(raw);
-        if (event === "event") onProgress(typeof data.message === "string" ? data.message.slice(0, 200) : "Searching…");
+        if (event === "event") {
+          const policy = data.source_policy;
+          if (policy && [policy.discovered, policy.allowed, policy.reference_only, policy.rejected].every(v => Number.isInteger(v) && v >= 0 && v <= 100)) {
+            for (const key of ["discovered", "allowed", "reference_only", "rejected"] as const) totals[key] += policy[key];
+            policySummary = ` Source decisions: ${totals.discovered} discovered, ${totals.allowed} allowed, ${totals.reference_only} reference only, ${totals.rejected} blocked.`;
+          }
+          onProgress((typeof data.message === "string" ? data.message.slice(0, 200) : "Searching…") + policySummary);
+        }
         if (event === "done") {
           const parsed = previewContent.safeParse(data.draft);
-          return { draft: parsed.success ? parsed.data : undefined, message: data.status === "complete" ? "Suggestions ready. Review every field before saving; identity and rights are not verified." : "Discovery did not complete. Review available suggestions or continue manually." };
+          return { draft: parsed.success ? parsed.data : undefined, message: data.status === "complete" ? "Suggestions ready. Review every field before saving; identity and rights are not verified." + policySummary : "Discovery did not complete. Review available suggestions or continue manually." };
         }
       }
     }

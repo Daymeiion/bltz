@@ -1,3 +1,4 @@
+import { fetchSourceFacts } from "@/lib/source-policy/fetch";
 import type { PlayerIdentityInput, ScraperResult } from "../types";
 
 /**
@@ -110,7 +111,7 @@ async function searchAthletes(name: string): Promise<SearchMatch[]> {
     const url =
       `https://site.web.api.espn.com/apis/search/v2` +
       `?region=us&lang=en&limit=10&query=${encodeURIComponent(name)}`;
-    const res = await fetch(url, {
+    const res = await fetchSourceFacts(url, {
       signal: ctl.signal,
       headers: { "User-Agent": "BLTZ-OnboardBot/1.0" },
     });
@@ -215,11 +216,9 @@ async function fetchAthleteProfile(
   const ctl = new AbortController();
   const timer = setTimeout(() => ctl.abort(), PROFILE_TIMEOUT_MS);
   try {
-    // Note: this is the `core` API on http (not https). It's the only
-    // one that returns full athlete profiles for inactive/historical
-    // players; the `site` API errors out for them.
-    const url = `http://sports.core.api.espn.com/v2/sports/football/leagues/${league}/athletes/${athleteId}`;
-    const res = await fetch(url, {
+    // The core API supports HTTPS, including historical athlete profiles.
+    const url = `https://sports.core.api.espn.com/v2/sports/football/leagues/${league}/athletes/${athleteId}`;
+    const res = await fetchSourceFacts(url, {
       signal: ctl.signal,
       headers: { "User-Agent": "BLTZ-OnboardBot/1.0" },
     });

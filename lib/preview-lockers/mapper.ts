@@ -13,7 +13,7 @@ export function previewHeadshot(row: { headshot_url: string | null; photos?: Arr
 }
 
 function previewAwards(row: { awards: import("./types").PreviewAward[]; photos: Array<{ id: string; url?: string | null }> }) {
-  return row.awards.map(award => ({ ...award, imageUrl: row.photos.find(photo => photo.id === award.photoId)?.url || award.imageUrl || null }));
+  return row.awards.map(award => ({ ...award, evidenceStatus: "unverified" as const, imageUrl: row.photos.find(photo => photo.id === award.photoId)?.url || award.imageUrl || null }));
 }
 function previewSocialItems(row: { social?: import("./social").PreviewSocial[]; photos: Array<{ id: string; url?: string | null }>; videos: Array<{ id: string; url?: string | null }> }) {
   return (row.social ?? []).map(item => ({ ...item, imageUrl: row.photos.find(photo => photo.id === item.photoId)?.url || null, videoUrl: previewVideoSource(row.videos.find(video => video.id === item.videoId)?.url ?? null).playbackUrl }));

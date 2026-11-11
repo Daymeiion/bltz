@@ -1,3 +1,4 @@
+import { remoteAssetReference } from "@/lib/source-policy/policy";
 import { awardDescription } from "./award-descriptions";
 import type { PipelineDraft, PlayerIdentityInput } from "@/lib/pipeline/types";
 import { previewContent, previewUrl, previewPhoto, previewVideo, slugify, youtubeEmbed, type PreviewContent } from "./validation";
@@ -23,7 +24,8 @@ export function discoveryDraft(identity: PlayerIdentityInput, draft?: PipelineDr
       return video.success ? [video.data] : [];
     }),
     photos: (draft?.photos || []).slice(0, 40).flatMap((photo, i) => {
-      const item = previewPhoto.safeParse({ id: `photo-${i}`, url: photo.url, title: `Discovered photo ${i + 1}`, credits: photo.credits?.slice(0, 300) || null, sourceUrl: null, level: identity.level === "college" ? "cfb" : identity.level === "hs" ? "hs" : "pro", season: null });
+      if (!remoteAssetReference(photo.url)) return [];
+      const item = previewPhoto.safeParse({ id: `photo-${i}`, url: photo.url, title: `Discovered photo ${i + 1}`, credits: photo.credits?.slice(0, 300) || null, sourceUrl: photo.source_url && previewUrl.safeParse(photo.source_url).success ? photo.source_url : null, level: identity.level === "college" ? "cfb" : identity.level === "hs" ? "hs" : "pro", season: null });
       return item.success ? [item.data] : [];
     }),
     awards: (draft?.awards || []).slice(0, 40).filter(a => a.name?.trim()).map(a => ({ year: (a.year || "").slice(0, 20), label: a.name.slice(0, 200), description: awardDescription(a.name, a.description).slice(0, 160), sourceUrl: previewUrl.safeParse(a.source_url).success ? a.source_url : null })),

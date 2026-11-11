@@ -13,7 +13,7 @@ async function click(text: string) { const button = [...host.querySelectorAll("b
 it("reviews a college CSV, saves only to the private preview, and reloads the import", async () => {
   const record = { ...previewContent.parse({ slug: "synthetic-preview", full_name: "Synthetic Preview" }), id: "00000000-0000-4000-8000-000000000001", revision: 3, created_at: "", updated_at: "" };
   await act(async () => root.render(<PreviewLockerForm record={record} />));
-  await fill("Player source URL", "https://www.sports-reference.com/cfb/players/fixture-player-1.html");
+  await fill("Player source URL", "https://api.collegefootballdata.com/stats/player/season");
   await fill("College statistics CSV", "Year,School,G,Solo,Ast,Tot,Sk\n2007,Fixture University,12,20,10,30,2.5");
   await click("Read CSV columns"); await click("Review college statistics");
   const add = [...host.querySelectorAll("button")].find(button => button.textContent === "Add reviewed statistics to draft")!;
@@ -450,3 +450,5 @@ it("saves and reloads award art and Social fields without altering existing medi
  expect(host.querySelector<HTMLSelectElement>('[aria-label="Social 1 platform"]')?.value).toBe('X');
  expect(host.querySelector<HTMLSelectElement>('[aria-label="Award 1 image"]')?.value).toBe('p1');
 });
+
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));

@@ -60,6 +60,7 @@
     "date-fns": "^4.1.0",
     "dotenv": "^17.2.3",
     "embla-carousel-react": "^8.6.0",
+    "entities": "7.0.1",
     "framer-motion": "^12.23.16",
     "gsap": "^3.15.0",
     "input-otp": "^1.4.2",
@@ -85,6 +86,7 @@
     "zod": "^4.1.8"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.5.8",
     "@eslint/eslintrc": "^3",
     "@types/color": "^4.2.0",
     "@types/node": "^20",

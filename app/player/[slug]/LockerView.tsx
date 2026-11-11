@@ -11,6 +11,8 @@ import { trackProductEvent } from "@/lib/analytics/client";
 import { VideoPreview } from "@/components/player/VideoPreview";
 import { StructuredStats } from "@/components/player/StructuredStats";
 import { SpotifyPreviewBadge } from "@/components/player/SpotifyPreviewBadge";
+import { schoolShortLabel, schoolDisplayName, schoolsMatch } from "@/lib/player/school-identity";
+import { footballPositionLabel, nflTeamCode, nflTeamName } from "@/lib/player/locker-format";
 
 // ---------------------------------------------------------------------------
 // LockerView — fan-facing athlete locker, ported from the standalone design.
@@ -97,10 +99,11 @@ export type LockerData = {
   // Rotating hero pills. `schools` cycles the player's colleges (exact school
   // colors); `proTeams` cycles their pro teams. When proTeams is empty (never
   // made the NFL), the right pill falls back to level/status.
-  schools: { label: string; color: string; logo: string | null }[];
+  schools: { label: string; color: string; logo: string | null; fullLabel?: string }[];
   proTeams: { label: string; color: string; logo: string | null }[];
   social?: LockerSocial[];
-  awards: { imageUrl?: string | null; year: string; label: string; description?: string | null; sourceUrl?: string | null }[];
+  awards: { evidenceStatus?: "unverified" | "verified"; imageUrl?: string | null; year: string; label: string; description?: string | null; sourceUrl?: string | null; attribution?: string | null }[];
+  articles?: import("@/lib/enrichment/news").PlayerArticle[];
   timeline?: { year: string; tag: string; title: string; note: string }[];
   videos: { id: string; title: string; thumb: string | null; playbackUrl?: string | null; embedUrl?: string | null }[];
   podcastAppearances?: {
@@ -600,11 +603,8 @@ export default function LockerView({
   }, [isPrivatePreview, heroVideoUrl, slideshowKey, slideshowPhotos.length]);
   const slideshowPhoto = slideshowPhotos[slideshowIndex % slideshowPhotos.length];
 
-  const schoolAbbr = data.school?.abbr || "SCHOOL";
+  const schoolAbbr = data.school ? schoolShortLabel(data.school.name, data.school.abbr) : "SCHOOL";
 
-  // Hero name shrinks to fit long full names on one line instead of wrapping.
-  const nameLen = data.fullName.length;
-  const heroNameSize = nameLen > 22 ? 22 : nameLen > 18 ? 26 : nameLen > 14 ? 30 : 36;
 
   // ---- pill helpers ----
   const tabTextShadow = "0 1px 3px rgba(0,0,0,.42)";
@@ -613,7 +613,7 @@ export default function LockerView({
       ? { flex: "none", padding: "8px 15px", borderRadius: 9999, border: "1px solid #fff", background: "#fff", color: "#0B0E1A", fontFamily: mono, fontWeight: 700, fontSize: 10, letterSpacing: ".12em", textTransform: "uppercase", cursor: "pointer", whiteSpace: "nowrap", textShadow: "0 1px 1px rgba(255,255,255,.24)" }
       : { flex: "none", padding: "8px 15px", borderRadius: 9999, border: "1px solid #1E2640", background: "rgba(255,255,255,.05)", color: "rgba(255,255,255,.5)", fontFamily: mono, fontWeight: 600, fontSize: 10, letterSpacing: ".12em", textTransform: "uppercase", cursor: "pointer", whiteSpace: "nowrap", textShadow: tabTextShadow };
 
-  // ---- HIGHLIGHT VIDEOS (real title + thumb; SAMPLE tag/dur/views/when) ----
+  // ---- HIGHLIGHT VIDEOS (saved previews expose only recorded media metadata) ----
   const sampleMeta = [
     { tag: "RISING", dur: "0:47", views: "842K", when: "WEEK 6" },
     { tag: "TRENDING", dur: "0:32", views: "512K", when: "WEEK 4" },
@@ -622,14 +622,14 @@ export default function LockerView({
   ];
   const realVideos = data.videos.map((v, i) => ({
     ...v,
-    ...sampleMeta[i % sampleMeta.length],
+    ...(isPrivatePreview ? { tag: null, dur: null, views: null, when: null } : sampleMeta[i % sampleMeta.length]),
     img: v.thumb,
     isPlaceholder: false,
   }));
   const placeholderTitles = ["SEASON HIGHLIGHTS", "GAME DAY CUT", "TOP PLAYS", "FULL SEASON REEL"];
   const videos = [
     ...realVideos,
-    ...Array.from({ length: Math.max(0, 4 - realVideos.length) }, (_, i) => ({
+    ...Array.from({ length: isPrivatePreview ? 0 : Math.max(0, 4 - realVideos.length) }, (_, i) => ({
       id: `placeholder-${i}`,
       playbackUrl: null,
       embedUrl: null,
@@ -688,7 +688,7 @@ export default function LockerView({
     ? data.awards
     : [];
   const awards = awardSrc.map((a, index) => ({
-    cat: "awards", isAward: true, year: a.year, label: a.label, sourceUrl: a.sourceUrl, description: awardDescription(a.label, a.description), img: safeExternalUrl(a.imageUrl ?? "") ?? (isPrivatePreview ? null : poolAt(index)),
+    cat: "awards", isAward: true, evidenceStatus: isPrivatePreview ? "unverified" : a.evidenceStatus, year: a.year, label: a.label, sourceUrl: a.sourceUrl, attribution: a.attribution, description: awardDescription(a.label, a.description), img: safeExternalUrl(a.imageUrl ?? "") ?? (isPrivatePreview ? null : poolAt(index)),
     style: { flex: "none", width: 164, scrollSnapAlign: "start", borderRadius: 16, border: "1px solid #1E2640", background: "linear-gradient(160deg,#1a2035,#131829)" } as React.CSSProperties,
   }));
 
@@ -698,7 +698,7 @@ export default function LockerView({
     .map(([key, label]) => ({ key, label, active: bioSort === key }));
 
   // ---- MEDIA cards (visuals use real photos; SAMPLE article/podcast copy) ----
-  const mediaArticles = [
+  const mediaArticles = isPrivatePreview ? (data.articles ?? []).map(article => ({ source: article.publisher, title: article.headline, meta: article.published_at ? new Date(article.published_at).toLocaleDateString("en-US", { timeZone: "UTC", month: "short", day: "numeric", year: "numeric" }) : "Date unavailable", img: article.thumbnail_url, dek: article.summary, originalUrl: article.article_url })) : [
     { source: "THE ATHLETIC", title: "THE CONFERENCE'S BEST COVER MAN", meta: "6 MIN READ", img: poolAt(0), dek: "Film, leadership, and the week-by-week rise of a verified locker profile.", originalUrl: "https://www.nytimes.com/athletic/" },
     { source: "ESPN", title: "DRAFT STOCK RISING", meta: "4 MIN READ", img: poolAt(3), dek: "Scouts circle the traits, production, and projection behind the latest board movement.", originalUrl: "https://www.espn.com/" },
     { source: "TEAM SITE", title: "LOCKER ROOM STANDARD SETTER", meta: "3 MIN READ", img: poolAt(1), dek: "How preparation and practice habits have become part of the weekly team story.", originalUrl: "https://calbears.com/" },
@@ -793,14 +793,19 @@ export default function LockerView({
     ...suppliedCareerStats.filter((stat) => stat.key.toLowerCase() !== "games"),
   ];
   const visibleCareerCells = showAllCareerStats ? careerCells : careerCells.slice(0, 6);
-  const collegeTeams = data.schools.length
-    ? data.schools
-    : data.school
-      ? [{ label: data.school.abbr, color: data.school.primaryColor, logo: data.school.logoUrl }]
-      : [];
+  const collegeTeams = (data.schools.length ? data.schools : data.school
+    ? [{ label: data.school.abbr, color: data.school.primaryColor, logo: data.school.logoUrl, fullLabel: data.school.name }] : []).map(team => ({
+      ...team,
+      label: schoolShortLabel(team.label, team.fullLabel ? team.label : data.school && schoolsMatch(team.label, data.school.abbr) ? data.school.abbr : undefined),
+      fullLabel: schoolDisplayName(team.fullLabel || (data.school && schoolsMatch(team.label, data.school.abbr) ? data.school.name : team.label)),
+    }));
+  const proTeams = data.proTeams.map(team => {
+    const code = nflTeamCode(team.label);
+    return { ...team, label: code || schoolShortLabel(team.label), fullLabel: nflTeamName(code) || team.label };
+  });
   const careerTeams = Array.from(
     new Map(
-      [...collegeTeams, ...data.proTeams].map((team) => [team.label.trim().toUpperCase(), team]),
+      [...collegeTeams, ...proTeams].map((team) => [(team.fullLabel || team.label).trim().toUpperCase(), team]),
     ).values(),
   );
   const maxCareerGames = Math.max(...careerSeasons.map((season) => season.gamesPlayed), 1);
@@ -952,7 +957,8 @@ export default function LockerView({
               type="button"
               aria-label="Search BLTZ"
               onClick={openSiteSearch}
-              style={{ width: 34, height: 34, borderRadius: 9999, border: "1px solid #1E2640", background: "rgba(255,255,255,.05)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none" }}
+              className="focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#ffbb00]"
+              style={{ width: 44, height: 44, borderRadius: 9999, border: "1px solid #1E2640", background: "rgba(255,255,255,.05)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none" }}
             >
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#FFB940" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
             </button>
@@ -972,7 +978,7 @@ export default function LockerView({
           <div className="locker-topbar" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 18px 12px", position: "relative", zIndex: 6 }}>
             <img src={data.logoSrc} alt="BLTZ" style={{ height: 30, width: "auto", display: "block" }} />
             <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-              <button type="button" aria-label="Search BLTZ" onClick={openSiteSearch} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", display: "flex", alignItems: "center" }}>
+              <button type="button" aria-label="Search BLTZ" onClick={openSiteSearch} className="rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#ffbb00]" style={{ width: 44, height: 44, justifyContent: "center", background: "none", border: "none", padding: 0, cursor: "pointer", display: "flex", alignItems: "center" }}>
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFB940" strokeWidth="2.4" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
               </button>
               {isPrivatePreview ? <button type="button" aria-haspopup="dialog" onClick={() => document.getElementById("preview-locker-claim-trigger")?.click()} style={followOn}>CLAIM</button> : <div style={{ width: 38, height: 38, borderRadius: 9999, overflow: "hidden", background: "#0A1A6E", border: "1px solid rgba(255,255,255,.2)" }}>
@@ -1088,12 +1094,12 @@ export default function LockerView({
                 {isPrivatePreview && <div className="locker-hero-portrait-stage">
                   <img src={data.headshotUrl} alt={data.fullName} />
                 </div>}
-                <h1 style={{ fontFamily: disp, fontWeight: 900, fontSize: heroNameSize, lineHeight: ".9", letterSpacing: "-.005em", textTransform: "uppercase", color: "#fff", margin: 0, paddingTop: 5, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{data.fullName}</h1>
+                <FittedHeroName name={data.fullName} />
                 <div style={{ fontFamily: mono, fontSize: 14, letterSpacing: ".14em", color: "#F5A623", margin: "4px 0 8px", fontWeight: 700 }}>{data.hometown}</div>
                 <div style={{ display: "flex", gap: 8, alignItems: "center", width: "100%" }}>
                   <RotatingPill items={collegeTeams} fallback={{ label: "SCHOOL", color: "#1A3DCC" }} />
-                  <div style={{ width: 46, height: 46, borderRadius: 9999, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(255,255,255,.1)", border: "1px solid rgba(255,255,255,.28)", backdropFilter: "blur(8px)", fontFamily: disp, fontWeight: 800, fontSize: 16, color: "#fff", flex: "none" }}>{data.position || "—"}</div>
-                  <RotatingPill items={data.proTeams} fallback={{ label: data.levelLabel.toUpperCase(), color: "#1A3DCC" }} />
+                  <div className="locker-position-badge" title={data.position || undefined} style={{ width: 46, height: 46, borderRadius: 9999, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(255,255,255,.1)", border: "1px solid rgba(255,255,255,.28)", backdropFilter: "blur(8px)", fontFamily: disp, fontWeight: 800, fontSize: 16, color: "#fff", flex: "none" }}><FittedLabel>{footballPositionLabel(data.position) || "—"}</FittedLabel></div>
+                  <RotatingPill items={proTeams} fallback={{ label: data.levelLabel.toUpperCase(), color: "#1A3DCC" }} />
                 </div>
               </div>
 
@@ -1128,27 +1134,28 @@ export default function LockerView({
               </a>
             </div>
             <div className="hs" style={{ display: "flex", gap: 12, overflowX: "auto", padding: "4px 0 8px", scrollSnapType: "x mandatory" }}>
+              {!videos.length && <p style={{ color: "rgba(255,255,255,.6)", fontSize: 14 }}>No videos added yet.</p>}
               {videos.map((v, i) => (
-                <div key={v.id + i} style={{ flex: "none", width: 262, scrollSnapAlign: "start", cursor: v.isPlaceholder ? "default" : "pointer" }}>
+                <a key={v.id + i} href={isPrivatePreview ? `${data.lockerHref}/videos/${encodeURIComponent(v.id)}` : undefined} aria-label={isPrivatePreview ? `Watch ${v.title}` : undefined} style={{ display: "block", flex: "none", width: 262, scrollSnapAlign: "start", textDecoration: "none", cursor: v.isPlaceholder ? "default" : "pointer" }}>
                   <div style={{ position: "relative", height: 150, borderRadius: 14, overflow: "hidden", border: "1px solid #1E2640", background: GRAD_FIELD }}>
                     <VideoPreview title={v.title} thumbnailUrl={v.img} playbackUrl={v.playbackUrl} embedUrl={v.embedUrl} />
                     <div style={{ position: "absolute", inset: 0, background: "linear-gradient(0deg, #05070F, rgba(5,7,15,.05) 55%)" }} />
-                    <div style={{ position: "absolute", top: 10, left: 10, display: "flex", alignItems: "center", gap: 5, padding: "4px 8px", borderRadius: 9999, background: "rgba(11,14,26,.6)", border: "1px solid rgba(245,166,35,.4)", backdropFilter: "blur(6px)" }}>
+                    {v.tag && <div style={{ position: "absolute", top: 10, left: 10, display: "flex", alignItems: "center", gap: 5, padding: "4px 8px", borderRadius: 9999, background: "rgba(11,14,26,.6)", border: "1px solid rgba(245,166,35,.4)", backdropFilter: "blur(6px)" }}>
                       <span style={{ fontFamily: mono, fontSize: 8.5, letterSpacing: ".14em", color: "#FFB940" }}>▲ {v.tag}</span>
-                    </div>
-                    <div style={{ position: "absolute", top: 10, right: 10, padding: "3px 7px", borderRadius: 6, background: "rgba(11,14,26,.7)", fontFamily: mono, fontSize: 9, letterSpacing: ".08em", color: "#fff" }}>{v.dur}</div>
+                    </div>}
+                    {v.dur && <div style={{ position: "absolute", top: 10, right: 10, padding: "3px 7px", borderRadius: 6, background: "rgba(11,14,26,.7)", fontFamily: mono, fontSize: 9, letterSpacing: ".08em", color: "#fff" }}>{v.dur}</div>}
                     <div style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", width: 33, height: 33, borderRadius: 9999, background: "linear-gradient(135deg,#FFB940,#F5A623,#C77D00)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 6px 20px rgba(245,166,35,.45)" }}>
                       <span style={{ display: "block", width: 0, height: 0, borderLeft: "12px solid #0A0800", borderTop: "8px solid transparent", borderBottom: "8px solid transparent", marginLeft: 3 }} />
                     </div>
                     <div style={{ position: "absolute", left: 10, right: 10, bottom: 10 }}>
                       <div style={{ fontFamily: disp, fontWeight: 700, fontSize: 15, letterSpacing: ".01em", textTransform: "uppercase", color: "#fff", textShadow: "0 2px 8px rgba(0,0,0,.6)", lineHeight: ".95", maxWidth: "82%" }}>{v.title}</div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 7 }}>
+                      {v.views && <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 7 }}>
                         <span style={{ fontFamily: mono, fontSize: 10, letterSpacing: ".08em", color: "#FFB940", fontWeight: 600, textShadow: "0 1px 4px rgba(0,0,0,.6)" }}>{v.views}</span>
                         <span style={{ fontFamily: mono, fontSize: 10, letterSpacing: ".08em", color: "rgba(255,255,255,.55)", textShadow: "0 1px 4px rgba(0,0,0,.6)" }}>· {v.when}</span>
-                      </div>
+                      </div>}
                     </div>
                   </div>
-                </div>
+                </a>
               ))}
             </div>
           </section>
@@ -1363,6 +1370,7 @@ export default function LockerView({
                 {mediaSort === "articles" ? (
                   <div className={isPrivatePreview ? "preview-article-list" : undefined} style={{ padding: "14px 18px 10px" }}>
                     <div className={isPrivatePreview ? "preview-articles-grid grid grid-cols-[repeat(auto-fit,260px)] justify-center gap-3" : "grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"}>
+                      {isPrivatePreview && !mediaArticles.length && <p className="col-span-full py-8 text-center text-sm text-white/60">No matching news articles have been added yet.</p>}
                       {(isPrivatePreview ? mediaArticles : mediaArticles.slice(0, 3)).map((article) => (
                         <EditorialCard compactMobile={isPrivatePreview} key={article.title} title={article.title} image={article.img} description={article.dek} meta={[article.source, article.meta].filter(Boolean).join(' · ')} onClick={isPrivatePreview ? (safeExternalUrl(article.originalUrl) ? () => { const url = safeExternalUrl(article.originalUrl); if (url) setPendingArticleRedirect({ source: article.source, title: article.title, url }); } : undefined) : () => setArticleModalOpen(true)} />
                       ))}
@@ -1820,7 +1828,7 @@ export default function LockerView({
                           style={isPrivatePreview ? { height: "auto", overflowY: "visible", paddingRight: 6 } : { height: 408, overflowY: "auto", overscrollBehavior: "auto", paddingRight: 6, display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 10 }}
                         >
                           {awards.map((award: any, i) => (
-                            <EditorialCard key={i} title={award.label} description={award.description} image={award.img} meta={String(award.year || '')} award={isPrivatePreview} href={safeExternalUrl(award.sourceUrl)} />
+                            <EditorialCard key={i} title={award.label} description={award.description} image={award.img} meta={[award.year, award.evidenceStatus === "unverified" ? "Unverified evidence" : award.evidenceStatus === "verified" ? "Verified award" : null].filter(Boolean).join(" · ")} attribution={award.attribution} award={isPrivatePreview} href={safeExternalUrl(award.sourceUrl)} />
                           ))}
                         </div>
                         {!isPrivatePreview && <div style={{ position: "absolute", top: 14 + awardsScrollProgress * 286, right: 1, width: 2, height: 54, borderRadius: 9999, background: "rgba(210,214,224,.72)", boxShadow: "0 0 8px rgba(210,214,224,.22)", opacity: awardsScrolling ? 1 : 0, transition: "opacity .22s ease, top .08s linear", pointerEvents: "none" }} />}
@@ -1830,7 +1838,7 @@ export default function LockerView({
                         <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: ".16em", color: lockerAccent, textTransform: "uppercase", marginBottom: 12 }}>Awards archive</div>
                         <div style={{ fontFamily: disp, fontWeight: 900, fontSize: 28, lineHeight: .9, textTransform: "uppercase", color: "#fff", marginBottom: 12 }}>Legacy still loading</div>
                         <p style={{ fontFamily: body, fontSize: 14, lineHeight: 1.55, color: "rgba(255,255,255,.68)", margin: 0 }}>
-                          No verified awards are attached yet, but a great career is more than a trophy case. BLTZ will add honors as they are verified.
+                          {isPrivatePreview ? "No award evidence has been added yet. Discovered honors will require verification." : "No awards are attached yet. Honors will appear here when available."}
                         </p>
                       </div>
                     )}
@@ -1996,6 +2004,55 @@ export default function LockerView({
   );
 }
 
+// Measure actual rendered glyphs after font loading and whenever the container resizes.
+// Character counts cannot predict widths of wide letters, punctuation or loaded fonts.
+function useFittedText(text: string) {
+  const outer = useRef<HTMLElement | null>(null);
+  const inner = useRef<HTMLSpanElement | null>(null);
+  useEffect(() => {
+    const box = outer.current, label = inner.current;
+    if (!box || !label) return;
+    let disposed = false;
+    const fit = () => {
+      if (disposed || box.clientWidth <= 0) return;
+      label.style.setProperty("--fit-scale", "1");
+      const target = Math.max(0, box.clientWidth - 2);
+      const width = label.getBoundingClientRect().width;
+      if (width <= 0 || target <= 0) return;
+      let scale = Math.min(1, target / width);
+      label.style.setProperty("--fit-scale", String(scale));
+      // Inherited tracking and fractional font metrics need a measured correction,
+      // not just a ratio against the unscaled line. Keep work bounded per resize.
+      for (let attempt = 0; attempt < 6; attempt++) {
+        const rendered = label.getBoundingClientRect().width;
+        if (rendered <= target + 0.05 || rendered <= 0) break;
+        scale *= target / rendered;
+        label.style.setProperty("--fit-scale", String(scale));
+      }
+    };
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(box);
+    window.addEventListener("resize", fit);
+    document.fonts?.addEventListener("loadingdone", fit);
+    void document.fonts?.ready.then(fit);
+    return () => { disposed = true; observer.disconnect(); window.removeEventListener("resize", fit); document.fonts?.removeEventListener("loadingdone", fit); };
+  }, [text]);
+  return { outer, inner };
+}
+function FittedHeroName({ name }: { name: string }) {
+  const { outer, inner } = useFittedText(name);
+  return <h1 ref={node => { outer.current = node; }} className="locker-hero-name" style={{ fontFamily: disp, fontWeight: 900, lineHeight: 1.05, letterSpacing: "-.005em", textTransform: "uppercase", color: "#fff", margin: 0, paddingTop: 5, whiteSpace: "nowrap" }}>
+    <span ref={inner} style={{ display: "inline-block", letterSpacing: "-.005em", fontSize: "calc(var(--hero-name-size, 36px) * var(--fit-scale, 1))" }}>{name}</span>
+  </h1>;
+}
+function FittedLabel({ children }: { children: string }) {
+  const { outer, inner } = useFittedText(children);
+  return <span ref={node => { outer.current = node; }} className="locker-fitted-label" style={{ display: "block", width: "100%", minWidth: 0, whiteSpace: "nowrap" }}>
+    <span ref={inner} style={{ display: "inline-block", letterSpacing: ".05em", fontSize: "calc(var(--badge-text-size, 19px) * var(--fit-scale, 1))" }}>{children}</span>
+  </span>;
+}
+
 // Pick black or white text for legibility on an arbitrary team color.
 function readableText(hex: string): string {
   const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
@@ -2007,22 +2064,23 @@ function readableText(hex: string): string {
   return lum > 0.62 ? "#0B0E1A" : "#fff";
 }
 
-type PillItem = { label: string; color: string; logo?: string | null };
+type PillItem = { label: string; fullLabel?: string; color: string; logo?: string | null };
 const PILL_H = 44;
 
 // One row of a rotating pill: colored background + optional logo + label.
 // Logo + abbreviation center together as one group; with no logo
 // (level/status fallback) the label centers alone.
-function PillContent({ item }: { item: PillItem }) {
+function PillContent({ item, responsive = false }: { item: PillItem; responsive?: boolean }) {
   const fg = readableText(item.color);
   const hasLogo = !!item.logo;
   return (
-    <div style={{ height: PILL_H, display: "flex", alignItems: "center", justifyContent: "center", gap: hasLogo ? 8 : 0, padding: "0 14px", background: item.color }}>
+    <div className="locker-team-badge-row" title={item.fullLabel || item.label} style={{ height: PILL_H, minWidth: 0, display: "flex", alignItems: "center", justifyContent: "center", gap: hasLogo ? 8 : 0, padding: "0 14px", background: item.color }}>
       {hasLogo ? (
         <img src={item.logo!} alt="" style={{ height: 22, width: 22, objectFit: "contain", flex: "none", filter: "drop-shadow(0 0 1px rgba(255,255,255,.8)) drop-shadow(0 2px 3px rgba(0,0,0,.65))" }} />
       ) : null}
-      <span style={{ maxWidth: "100%", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", fontFamily: disp, fontWeight: 700, fontSize: 19, letterSpacing: ".05em", textTransform: "uppercase", color: fg, textShadow: "0 1px 2px rgba(0,0,0,.45)" }}>
-        {item.label}
+      <span style={{ flex: "1 1 0", minWidth: 0, textAlign: "center", maxWidth: "100%", fontFamily: disp, fontWeight: 700, fontSize: 19, letterSpacing: ".05em", textTransform: "uppercase", color: fg, textShadow: "0 1px 2px rgba(0,0,0,.45)" }}>
+        <span className={responsive && item.fullLabel ? "locker-team-short" : "locker-team-label"}><FittedLabel>{item.label}</FittedLabel></span>
+        {responsive && item.fullLabel && <span className="locker-team-full"><FittedLabel>{item.fullLabel}</FittedLabel></span>}
       </span>
     </div>
   );
@@ -2048,15 +2106,15 @@ function RotatingPill({ items, fallback }: {
   const shell: React.CSSProperties = { flex: 1, minWidth: 0, height: PILL_H, borderRadius: 9999, overflow: "hidden", border: "1px solid rgba(255,255,255,.28)", boxShadow: "0 4px 18px rgba(0,0,0,.35)" };
 
   if (list.length <= 1) {
-    return <div style={shell}><PillContent item={list[0]} /></div>;
+    return <div className="locker-hero-pill" style={shell}><PillContent item={list[0]} responsive /></div>;
   }
   const cur = list[tick % list.length];
   const next = list[(tick + 1) % list.length];
   return (
-    <div style={shell}>
+    <div className="locker-hero-pill" style={shell}>
       <div key={tick} style={{ position: "relative", animation: "pillScroll .6s cubic-bezier(.16,1,.3,1) forwards" }}>
-        <PillContent item={cur} />
-        <PillContent item={next} />
+        <PillContent item={cur} responsive />
+        <PillContent item={next} responsive />
         {/* blended seam where the two colors meet — only visible mid-scroll,
             faded out by the time the column comes to rest on either side */}
         <div style={{ position: "absolute", left: 0, right: 0, top: PILL_H - 7, height: 14, background: `linear-gradient(to bottom, ${cur.color}, ${next.color})`, pointerEvents: "none", animation: "pillSeamFade .6s ease forwards" }} />
@@ -2109,8 +2167,8 @@ function NavBtn({ label, active, children }: { label: string; active: boolean; c
   );
 }
 
-const followOn: React.CSSProperties = { padding: "8px 15px", borderRadius: 9999, border: "none", background: "linear-gradient(135deg,#FFB940,#F5A623,#C77D00)", color: "#0A0800", fontFamily: mono, fontWeight: 700, fontSize: 10, letterSpacing: ".1em", cursor: "pointer", boxShadow: "none" };
-const followOff: React.CSSProperties = { padding: "8px 14px", borderRadius: 9999, border: "1px solid #1E2640", background: "rgba(255,255,255,.06)", color: "rgba(255,255,255,.7)", fontFamily: mono, fontWeight: 600, fontSize: 10, letterSpacing: ".1em", cursor: "pointer" };
+const followOn: React.CSSProperties = { minHeight: 44, padding: "8px 15px", borderRadius: 9999, border: "none", background: "linear-gradient(135deg,#FFB940,#F5A623,#C77D00)", color: "#0A0800", fontFamily: mono, fontWeight: 700, fontSize: 10, letterSpacing: ".1em", cursor: "pointer", boxShadow: "none" };
+const followOff: React.CSSProperties = { minHeight: 44, padding: "8px 14px", borderRadius: 9999, border: "1px solid #1E2640", background: "rgba(255,255,255,.06)", color: "rgba(255,255,255,.7)", fontFamily: mono, fontWeight: 600, fontSize: 10, letterSpacing: ".1em", cursor: "pointer" };
 
 const styleSheet = `
 .bltz-frame{position:relative;width:390px;height:844px;background:#0B0E1A;overflow:hidden;box-shadow:0 30px 90px rgba(0,0,0,.6);border-radius:0}
@@ -2249,7 +2307,7 @@ const styleSheet = `
   .bltz-frame:not(.bltz-frame-embedded) .locker-hero-stroke{border-radius:8px}
   .bltz-frame:not(.bltz-frame-embedded) .locker-hero-headshot{bottom:82px!important;width:80vw!important;height:282px!important;clip-path:inset(0 0 clamp(47px,4.5vw,68px) 0)!important}
   .bltz-frame:not(.bltz-frame-embedded) .locker-hero-copy{right:50%!important;left:50%!important;width:min(560px,calc(100% - 48px));padding:0!important;transform:translateX(-50%)}
-  .bltz-frame:not(.bltz-frame-embedded) .locker-hero-copy h1{font-size:clamp(52px,5vw,76px)!important}
+  .bltz-frame:not(.bltz-frame-embedded) .locker-hero-copy h1{--hero-name-size:clamp(52px,5vw,76px)}
   .bltz-frame:not(.bltz-frame-embedded) .locker-film-section,
   .bltz-frame:not(.bltz-frame-embedded) .locker-photos-section{padding-right:0!important;padding-left:0!important}
   .bltz-frame:not(.bltz-frame-embedded) .locker-film-section .hs{gap:16px!important;padding-bottom:16px!important}
@@ -2287,6 +2345,7 @@ const styleSheet = `
 @keyframes teamHistoryMarquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
 @keyframes careerGamesMarquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
 @keyframes eqbar{0%,100%{height:20%}50%{height:95%}}
+.locker-hero-pill{container-type:inline-size}.locker-team-short,.locker-team-label{display:block}.locker-team-full{display:none}.locker-position-badge{padding:0 5px;--badge-text-size:16px}.locker-team-badge-row{gap:6px!important;padding:0 9px!important}@container (min-width:175px){.locker-hero-pill .locker-team-short{display:none}.locker-hero-pill .locker-team-full{display:block}}
 @keyframes pillScroll{0%{transform:translateY(0)}100%{transform:translateY(-44px)}}
 @keyframes pillSeamFade{0%{opacity:0}45%{opacity:1}100%{opacity:0}}
 `;

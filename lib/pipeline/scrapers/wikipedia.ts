@@ -1,3 +1,5 @@
+import { requireSourceAction } from "@/lib/source-policy/policy";
+import { fetchSourceFacts } from "@/lib/source-policy/fetch";
 import { findAwardDescription } from "@/lib/preview-lockers/award-descriptions";
 import { fetchHtml, stripHtml } from "../fetch";
 import type { PlayerIdentityInput, ScraperResult, ScrapedAward } from "../types";
@@ -50,7 +52,7 @@ async function searchCandidates(
   const out: SearchHit[] = [];
   for (const q of queries) {
     const url = `https://en.wikipedia.org/w/api.php?action=query&list=search&format=json&origin=*&srlimit=5&srsearch=${encodeURIComponent(q)}`;
-    const r = await fetch(url, {
+    const r = await fetchSourceFacts(url, {
       headers: { "User-Agent": "BLTZ-OnboardBot/1.0" },
     });
     if (!r.ok) continue;
@@ -74,7 +76,7 @@ async function fetchSummary(title: string): Promise<{
   thumbnail?: string;
 } | null> {
   const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`;
-  const r = await fetch(url, {
+  const r = await fetchSourceFacts(url, {
     headers: { "User-Agent": "BLTZ-OnboardBot/1.0" },
   });
   if (!r.ok) return null;
@@ -178,7 +180,26 @@ function parseWeight(text: string): number | undefined {
   return Number.isNaN(w) ? undefined : w;
 }
 
-function extractAwards(text: string, sourceUrl: string): ScrapedAward[] {
+export function extractWikipediaAwardEvidence(html: string, sourceUrl: string): ScrapedAward[] {
+  requireSourceAction(sourceUrl, "EXTRACT_FACTS");
+  // Read the athlete infobox's own honors list, not mentions of other winners
+  // in biographical prose. Preserve unknown honors and original edition text.
+  const heading = /Career highlights and awards/i.exec(html);
+  if (!heading) return [];
+  const section = html.slice(heading.index, heading.index + 24000);
+  const cell = /<td\b[^>]*>([\s\S]*?)<\/td>/i.exec(section)?.[1] ?? "";
+  return [...cell.matchAll(/<li\b[^>]*>([\s\S]*?)<\/li>/gi)].slice(0, 40).flatMap(match => {
+    const name = stripHtml(match[1]).replace(/\[\d+\]/g, "").trim();
+    if (!name || name.length > 200) return [];
+    const year = [...new Set(name.match(/\b(?:19|20)\d{2}\b/g) ?? [])].join(", ");
+    return [{ name, year: year.slice(0, 20), source_url: sourceUrl }];
+  });
+}
+
+function extractAwards(text: string, sourceUrl: string, html?: string): ScrapedAward[] {
+  requireSourceAction(sourceUrl, "EXTRACT_FACTS");
+  const infobox = html ? extractWikipediaAwardEvidence(html, sourceUrl) : [];
+  if (infobox.length) return infobox;
   const awards: ScrapedAward[] = [];
   // Very conservative — Wikipedia bios mention these by name. We pull
   // each match as a candidate; the synthesis step will dedupe.
@@ -351,7 +372,7 @@ export async function scrapeWikipedia(
         weight_lbs: parseWeight(fullText),
         hometown: extractHometown(fullText),
         pro_teams: extractProTeams(fullText),
-        awards: extractAwards(fullText, summary.url),
+        awards: extractAwards(fullText, summary.url, articleHtml.ok ? articleHtml.html : undefined),
         photos: summary.thumbnail
           ? [{ url: summary.thumbnail, credits: "Wikipedia" }]
           : [],

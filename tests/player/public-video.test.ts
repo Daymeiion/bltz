@@ -28,8 +28,8 @@ describe("public video mapping", () => {
     expect(video.publishedAt).toBe("2026-07-15T12:00:00.000Z");
   });
 
-  it("provides every public Film Room category in the development preview", () => {
+  it("keeps development footage in its supplied career categories", () => {
     const levels = new Set(createMockPublicVideos("Demo Player").map((video) => video.level));
-    expect(levels).toEqual(new Set(["hs", "cfb", "pro", "off-field"]));
+    expect(levels).toEqual(new Set(["cfb", "pro"]));
   });
 });

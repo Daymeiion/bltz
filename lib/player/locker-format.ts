@@ -27,7 +27,7 @@ export const NFL_TEAM_NAMES: Record<string, string> = {
 
 export function nflTeamName(code: string | null | undefined): string | null {
   if (!code) return null;
-  return NFL_TEAM_NAMES[code] ?? code;
+  return NFL_TEAM_NAMES[code] ?? HISTORICAL_TEAMS[code] ?? code;
 }
 
 // Keep historical labels while resolving their branding to the franchise CDN.
@@ -103,4 +103,18 @@ export function heightDisplay(heightIn?: number | null) {
   const feet = Math.floor(heightIn / 12);
   const inches = heightIn % 12;
   return `${feet}'${inches}"`;
+}
+
+// Presentation only: preserve the saved position; use standard football codes in compact badges.
+const FOOTBALL_POSITION_LABELS: Record<string, string> = {
+  quarterback: "QB", "running back": "RB", fullback: "FB", "wide receiver": "WR", "tight end": "TE",
+  center: "C", tackle: "T", guard: "G", "offensive tackle": "OT", "offensive guard": "OG", "offensive line": "OL",
+  "defensive tackle": "DT", "nose tackle": "NT", "defensive end": "DE", "defensive line": "DL", "edge rusher": "EDGE",
+  linebacker: "LB", "middle linebacker": "MLB", "inside linebacker": "ILB", "outside linebacker": "OLB",
+  cornerback: "CB", safety: "S", "strong safety": "SS", "free safety": "FS", "defensive back": "DB",
+  kicker: "K", punter: "P", "long snapper": "LS", athlete: "ATH",
+};
+export function footballPositionLabel(value: string): string {
+  const clean = value.trim();
+  return FOOTBALL_POSITION_LABELS[clean.toLowerCase().replace(/[-_]+/g, " ")] || clean.toUpperCase();
 }

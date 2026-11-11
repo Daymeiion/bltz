@@ -16,7 +16,9 @@ it("does not read or render statistics before private preview authorization", as
 });
 it("prefers private college imports without replacing NFL statistics", async () => {
   const table = inspectCsv("Year,School,G,Sk\n2007,Fixture,12,2.5", "defense");
-  const imported = reviewCsv(table, table.mapping, "defense", "https://www.sports-reference.com/cfb/players/fixture-1.html").imported;
+  const imported = reviewCsv(table, table.mapping, "defense", "https://api.collegefootballdata.com/stats/player/season").imported;
+  // An already-persisted legacy import remains readable after the new policy.
+  imported.sourceUrl = "https://www.sports-reference.com/cfb/players/fixture-1.html";
   mocks.read.mockResolvedValue({ ...previewContent.parse({ slug: "fixture", full_name: "Fixture", cfb_stats: [imported] }), id: "fixture" });
   mocks.stats.mockResolvedValue([{ league: "nfl", source: "Sportradar", seasons: [], syncedAt: "2026-09-16" }, { league: "ncaafb", source: "Sportradar", seasons: [], syncedAt: "2026-09-16" }]);
   const result = await Page({ params: Promise.resolve({ slug: "fixture" }) });

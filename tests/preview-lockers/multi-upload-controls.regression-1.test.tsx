@@ -54,3 +54,5 @@ it("uploads a PNG as the selected headshot and saves private storage metadata", 
   expect(body.content.photos[0].url).toBeUndefined();
   expect(body.content.headshot_url).toBeNull();
 });
+
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));

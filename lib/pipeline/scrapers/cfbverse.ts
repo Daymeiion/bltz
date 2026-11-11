@@ -1,3 +1,4 @@
+import { requireSourceAction } from "@/lib/source-policy/policy";
 import type { PlayerIdentityInput, ScraperResult } from "../types";
 
 /**
@@ -45,6 +46,7 @@ const CFBD_SOURCE_URL = "https://collegefootballdata.com";
 export async function scrapeCfbverse(
   identity: PlayerIdentityInput,
 ): Promise<ScraperResult> {
+  requireSourceAction("https://api.collegefootballdata.com/roster", "EXTRACT_FACTS");
   const sbUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const sbKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   // Missing env = can't reach the roster cache (config problem), not a

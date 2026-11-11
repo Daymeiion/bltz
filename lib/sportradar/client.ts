@@ -1,3 +1,4 @@
+import { fetchSourceFacts } from "@/lib/source-policy/fetch";
 import "server-only";
 import { z } from "zod";
 import { League } from "./types";
@@ -37,7 +38,7 @@ export async function fetchLookup(endpoint: string) {
 
 async function fetchProviderJson(endpoint: string, key: string): Promise<{ raw: unknown; status: number }> {
   try {
-    const response = await fetch(`https://api.sportradar.com${endpoint}`, {
+    const response = await fetchSourceFacts(`https://api.sportradar.com${endpoint}`, {
       headers: { "x-api-key": key, Accept: "application/json" },
       signal: AbortSignal.timeout(12000), cache: "no-store", redirect: "error",
     });

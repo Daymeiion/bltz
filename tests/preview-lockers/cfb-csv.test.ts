@@ -2,11 +2,11 @@ import { describe, expect, it } from "vitest";
 import { cfbImport, combineCfbImports, csvRows, inspectCsv, reviewCsv } from "@/lib/preview-lockers/cfb-csv";
 import { previewContent } from "@/lib/preview-lockers/validation";
 import { previewLockerData } from "@/lib/preview-lockers/mapper";
-const url = "https://www.sports-reference.com/cfb/players/fixture-player-1.html";
+const url = "https://api.collegefootballdata.com/stats/player/season";
 const csv = 'Year,School,G,Solo,Ast,Tot,Sk\n2006,"Fixture, State",12,20,10,30,2.5\n2007,"Fixture, State",11,,12,32,3\nCareer,,23,40,22,62,5.5';
 const parse = (text = csv) => { const table = inspectCsv(text, "defense"); return reviewCsv(table, table.mapping, "defense", url); };
 describe("private college CSV", () => {
-  it("handles the current Sports Reference grouped defense export and bowl markers", () => {
+  it("handles grouped defense export columns and bowl markers from a permitted source", () => {
     const text = '--- When using SR data, please cite us\n\n,,,,,,Tackles,Tackles,Tackles,Tackles,Tackles,Def Interceptions,Def Interceptions,Def Interceptions,Def Interceptions,Def Interceptions,Fumbles,Fumbles,Fumbles,Fumbles,\nSeason,Team,Conf,Class,Pos,G,Solo,Ast,Comb,TFL,Sk,Int,Yds,Avg,IntTD,PD,FR,Yds,FRTD,FF,Awards\n2007*,Fixture,Conference,SR,LB,12,43,35,78,5.0,0.0,0,0,,0,4,0,0,0,1,\nCareer,Career,Career,Career,,12,43,35,78,5.0,0.0,0,0,,0,4,0,0,0,1,';
     const result = parse(text);
     expect(result.imported.seasons[0]).toMatchObject({ year: 2007, sourceNote: "Includes bowl statistics", statistics: { soloTackles: 43, assists: 35, tackles: 78, tacklesForLoss: 5, sacks: 0, passesDefended: 4, forcedFumbles: 1 } });
