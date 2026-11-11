@@ -8,7 +8,7 @@
 6. **Environment variables:** None changed.
 7. **Permission changes:** None.
 8. **Tests run:** Existing Photo Room renderer, related-media strip and photo-pagination access suites: 3 files / 46 tests passed. Full ESLint: zero errors, 298 existing warnings. Final production build, including TypeScript and 107 static pages, passed. One sandboxed attempt returned EPERM creating a generated build folder; the authorized rerun passed. CRLF-aware diff check passed. No new implementation-mirroring tests added for this CSS-only change.
-9. **Manual verification:** Before-change desktop measurements recorded from the live Dante gallery at 1864px viewport width: first row had five photos, predominantly 188px high. Live after-change verification pending publication.
+9. **Manual verification:** Production commit `74f1fb746b0c1f1191c1d4c7131de9407f12cf24` reached Ready in Vercel deployment `396BZsXCjcuomjgRymqiKjgE1YXM`. The live Dante gallery was reloaded and visually inspected at 1864px viewport width. After natural image dimensions settled, its first row displayed two large photos at 440px high; row packing varies with image aspect ratios. All 32 photo selectors, 13 Getty licensing controls and five product concepts remain present. Screenshot: `tmp/photo-room-size/live-larger-grid.png`.
 10. **Known limitations:** Physical touch/mobile browser verification has not been performed. Mobile and tablet behavior is preserved by placing all enlargement declarations inside the new min-width:1024px query; the existing two-column mobile layout is unchanged.
 11. **Deferred work:** No requested work deferred.
 
